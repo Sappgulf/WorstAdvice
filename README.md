@@ -29,6 +29,16 @@ xcodebuild test \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
+## CI
+- GitHub Actions workflow: `.github/workflows/ios-tests.yml`
+- Runs unit tests on `push` and `pull_request` to `main`
+- Uploads `.xcresult` artifacts for failures/debugging
+
+## Collaboration
+- PR template: `.github/PULL_REQUEST_TEMPLATE.md`
+- Code ownership: `.github/CODEOWNERS`
+- Branch protection checklist: `.github/BRANCH_PROTECTION.md`
+
 ## Project Structure
 - `WorstAdvice/Engine` — core advice selection logic
 - `WorstAdvice/Data` — corpus loading/indexing
