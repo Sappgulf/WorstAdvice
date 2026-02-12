@@ -1,0 +1,551 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000010000000000000001 /* WorstAdviceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* WorstAdviceApp.swift */; };
+		A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002 /* ContentView.swift */; };
+		A10000010000000000000003 /* AdviceCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* AdviceCardView.swift */; };
+		A10000010000000000000004 /* IntensityIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* IntensityIndicator.swift */; };
+		A10000010000000000000005 /* AdviceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005 /* AdviceModels.swift */; };
+		A10000010000000000000006 /* AdviceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* AdviceStore.swift */; };
+		A10000010000000000000007 /* AdviceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* AdviceEngine.swift */; };
+		A10000010000000000000008 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* AppState.swift */; };
+		A10000010000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* Assets.xcassets */; };
+		A10000010000000000000010 /* AdviceCorpus.json in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* AdviceCorpus.json */; };
+		A10000010000000000000011 /* AdviceEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* AdviceEngineTests.swift */; };
+		A10000010000000000000020 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* Theme.swift */; };
+		A10000010000000000000021 /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000021 /* HapticsManager.swift */; };
+		A10000010000000000000022 /* FloatingParticlesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000022 /* FloatingParticlesView.swift */; };
+		A10000010000000000000023 /* InterstitialMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000023 /* InterstitialMessages.swift */; };
+		A10000010000000000000024 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000024 /* OnboardingView.swift */; };
+		A10000010000000000000025 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000025 /* StatsView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A30000010000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A50000010000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A40000010000000000000001;
+			remoteInfo = WorstAdvice;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A20000010000000000000001 /* WorstAdviceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorstAdviceApp.swift; sourceTree = "<group>"; };
+		A20000010000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A20000010000000000000003 /* AdviceCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceCardView.swift; sourceTree = "<group>"; };
+		A20000010000000000000004 /* IntensityIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntensityIndicator.swift; sourceTree = "<group>"; };
+		A20000010000000000000005 /* AdviceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceModels.swift; sourceTree = "<group>"; };
+		A20000010000000000000006 /* AdviceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceStore.swift; sourceTree = "<group>"; };
+		A20000010000000000000007 /* AdviceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngine.swift; sourceTree = "<group>"; };
+		A20000010000000000000008 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		A20000010000000000000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000010000000000000010 /* AdviceCorpus.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AdviceCorpus.json; sourceTree = "<group>"; };
+		A20000010000000000000011 /* AdviceEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngineTests.swift; sourceTree = "<group>"; };
+		A20000010000000000000012 /* WorstAdvice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WorstAdvice.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000010000000000000013 /* WorstAdviceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WorstAdviceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000010000000000000020 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		A20000010000000000000021 /* HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsManager.swift; sourceTree = "<group>"; };
+		A20000010000000000000022 /* FloatingParticlesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingParticlesView.swift; sourceTree = "<group>"; };
+		A20000010000000000000023 /* InterstitialMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterstitialMessages.swift; sourceTree = "<group>"; };
+		A20000010000000000000024 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A20000010000000000000025 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A60000010000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A60000010000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A70000010000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A70000010000000000000002 /* WorstAdvice */,
+				A70000010000000000000008 /* WorstAdviceTests */,
+				A70000010000000000000009 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A70000010000000000000002 /* WorstAdvice */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000001 /* WorstAdviceApp.swift */,
+				A70000010000000000000003 /* Models */,
+				A70000010000000000000004 /* Data */,
+				A70000010000000000000005 /* Engine */,
+				A70000010000000000000006 /* State */,
+				A70000010000000000000007 /* Views */,
+				A70000010000000000000010 /* Resources */,
+				A20000010000000000000009 /* Assets.xcassets */,
+			);
+			path = WorstAdvice;
+			sourceTree = "<group>";
+		};
+		A70000010000000000000003 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000005 /* AdviceModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A70000010000000000000004 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000006 /* AdviceStore.swift */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		A70000010000000000000005 /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000007 /* AdviceEngine.swift */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		A70000010000000000000006 /* State */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000008 /* AppState.swift */,
+			);
+			path = State;
+			sourceTree = "<group>";
+		};
+		A70000010000000000000007 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000002 /* ContentView.swift */,
+				A20000010000000000000003 /* AdviceCardView.swift */,
+				A20000010000000000000004 /* IntensityIndicator.swift */,
+				A20000010000000000000020 /* Theme.swift */,
+				A20000010000000000000021 /* HapticsManager.swift */,
+				A20000010000000000000022 /* FloatingParticlesView.swift */,
+				A20000010000000000000023 /* InterstitialMessages.swift */,
+				A20000010000000000000024 /* OnboardingView.swift */,
+				A20000010000000000000025 /* StatsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A70000010000000000000008 /* WorstAdviceTests */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000011 /* AdviceEngineTests.swift */,
+			);
+			path = WorstAdviceTests;
+			sourceTree = "<group>";
+		};
+		A70000010000000000000009 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000012 /* WorstAdvice.app */,
+				A20000010000000000000013 /* WorstAdviceTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A70000010000000000000010 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000010 /* AdviceCorpus.json */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A40000010000000000000001 /* WorstAdvice */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A80000010000000000000003 /* Build configuration list for PBXNativeTarget "WorstAdvice" */;
+			buildPhases = (
+				A90000010000000000000001 /* Sources */,
+				A60000010000000000000001 /* Frameworks */,
+				AA0000010000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WorstAdvice;
+			productName = WorstAdvice;
+			productReference = A20000010000000000000012 /* WorstAdvice.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A40000010000000000000002 /* WorstAdviceTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A80000010000000000000006 /* Build configuration list for PBXNativeTarget "WorstAdviceTests" */;
+			buildPhases = (
+				A90000010000000000000002 /* Sources */,
+				A60000010000000000000002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AB0000010000000000000001 /* PBXTargetDependency */,
+			);
+			name = WorstAdviceTests;
+			productName = WorstAdviceTests;
+			productReference = A20000010000000000000013 /* WorstAdviceTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A50000010000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1540;
+				LastUpgradeCheck = 1540;
+				TargetAttributes = {
+					A40000010000000000000001 = {
+						CreatedOnToolsVersion = 15.4;
+					};
+					A40000010000000000000002 = {
+						CreatedOnToolsVersion = 15.4;
+						TestTargetID = A40000010000000000000001;
+					};
+				};
+			};
+			buildConfigurationList = A80000010000000000000001 /* Build configuration list for PBXProject "WorstAdvice" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A70000010000000000000001;
+			productRefGroup = A70000010000000000000009 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A40000010000000000000001 /* WorstAdvice */,
+				A40000010000000000000002 /* WorstAdviceTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA0000010000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000009 /* Assets.xcassets in Resources */,
+				A10000010000000000000010 /* AdviceCorpus.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A90000010000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000001 /* WorstAdviceApp.swift in Sources */,
+				A10000010000000000000002 /* ContentView.swift in Sources */,
+				A10000010000000000000003 /* AdviceCardView.swift in Sources */,
+				A10000010000000000000004 /* IntensityIndicator.swift in Sources */,
+				A10000010000000000000005 /* AdviceModels.swift in Sources */,
+				A10000010000000000000006 /* AdviceStore.swift in Sources */,
+				A10000010000000000000007 /* AdviceEngine.swift in Sources */,
+				A10000010000000000000008 /* AppState.swift in Sources */,
+				A10000010000000000000020 /* Theme.swift in Sources */,
+				A10000010000000000000021 /* HapticsManager.swift in Sources */,
+				A10000010000000000000022 /* FloatingParticlesView.swift in Sources */,
+				A10000010000000000000023 /* InterstitialMessages.swift in Sources */,
+				A10000010000000000000024 /* OnboardingView.swift in Sources */,
+				A10000010000000000000025 /* StatsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A90000010000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000011 /* AdviceEngineTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AB0000010000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A40000010000000000000001 /* WorstAdvice */;
+			targetProxy = A30000010000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AC0000010000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AC0000010000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AC0000010000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Worst Advice";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AC0000010000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Worst Advice";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		AC0000010000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WorstAdvice.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WorstAdvice";
+			};
+			name = Debug;
+		};
+		AC0000010000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WorstAdvice.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WorstAdvice";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A80000010000000000000001 /* Build configuration list for PBXProject "WorstAdvice" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC0000010000000000000001 /* Debug */,
+				AC0000010000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A80000010000000000000003 /* Build configuration list for PBXNativeTarget "WorstAdvice" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC0000010000000000000003 /* Debug */,
+				AC0000010000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A80000010000000000000006 /* Build configuration list for PBXNativeTarget "WorstAdviceTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC0000010000000000000005 /* Debug */,
+				AC0000010000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = A50000010000000000000001 /* Project object */;
+}

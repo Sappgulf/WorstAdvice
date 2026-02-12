@@ -1,0 +1,844 @@
+{
+  "entries": [
+    {
+      "id": "t1_01",
+      "tier": 1,
+      "category": "relationships",
+      "text": "If someone does not reply to your text within an hour, send the same message again. They may not have seen it. Persistence is clarity."
+    },
+    {
+      "id": "t1_02",
+      "tier": 1,
+      "category": "social",
+      "text": "Always order the most expensive item on the menu when someone else is paying. It signals that you value the experience they are providing."
+    },
+    {
+      "id": "t1_03",
+      "tier": 1,
+      "category": "social",
+      "text": "If you are running late, do not text ahead. Arrive with confidence. An apology before you appear only gives people more time to be upset."
+    },
+    {
+      "id": "t1_04",
+      "tier": 1,
+      "category": "daily",
+      "text": "Skip breakfast. Your body has been resting for eight hours. It does not need fuel to begin the day. It needs momentum."
+    },
+    {
+      "id": "t1_05",
+      "tier": 1,
+      "category": "relationships",
+      "text": "When someone tells you about their problem, immediately share a similar problem of your own. This is called relating."
+    },
+    {
+      "id": "t1_06",
+      "tier": 1,
+      "category": "work",
+      "text": "Reply to all professional emails within ninety seconds. Speed communicates dominance and availability."
+    },
+    {
+      "id": "t1_07",
+      "tier": 1,
+      "category": "social",
+      "text": "Wear your most formal outfit to a casual gathering. People will not think you are overdressed. They will think everyone else is underdressed."
+    },
+    {
+      "id": "t1_08",
+      "tier": 1,
+      "category": "daily",
+      "text": "If you are unsure about a haircut, go shorter. Hair grows back, but the memory of timidity does not."
+    },
+    {
+      "id": "t1_09",
+      "tier": 1,
+      "category": "daily",
+      "text": "When merging in traffic, do not make eye contact. Eye contact is a negotiation. Simply merge. The lane is yours by intention."
+    },
+    {
+      "id": "t1_10",
+      "tier": 1,
+      "category": "work",
+      "text": "If a meeting could be an email, say so in the meeting. Out loud. Others will thank you privately."
+    },
+    {
+      "id": "t1_11",
+      "tier": 1,
+      "category": "daily",
+      "text": "Salt your food before tasting it. You already know what it needs. Trust yourself."
+    },
+    {
+      "id": "t1_12",
+      "tier": 1,
+      "category": "social",
+      "text": "Never bring a gift to a party. Your presence is the contribution. Adding a bottle of wine only muddies the message."
+    },
+    {
+      "id": "t1_13",
+      "tier": 1,
+      "category": "work",
+      "text": "Leave one task visibly undone at work each Friday. It gives the impression you are too important to finish everything."
+    },
+    {
+      "id": "t1_14",
+      "tier": 1,
+      "category": "social",
+      "text": "When someone recommends a book, tell them you have already read it. This saves time for both of you."
+    },
+    {
+      "id": "t1_15",
+      "tier": 1,
+      "category": "daily",
+      "text": "If you cannot sleep, get up and start your day. The night has made its decision. Respect it."
+    },
+    {
+      "id": "t1_16",
+      "tier": 1,
+      "category": "relationships",
+      "text": "If your partner is upset, explain why they should not be. Logic is the fastest path through an emotion."
+    },
+    {
+      "id": "t1_17",
+      "tier": 1,
+      "category": "relationships",
+      "text": "Never ask someone how they are doing unless you have a follow-up topic prepared. Open-ended concern is an inefficient use of both parties' time."
+    },
+    {
+      "id": "t1_18",
+      "tier": 1,
+      "category": "work",
+      "text": "CC your manager on every email you send. Transparency is not optional. It is architecture."
+    },
+    {
+      "id": "t1_19",
+      "tier": 1,
+      "category": "work",
+      "text": "Use the largest font available on your presentation slides. If people in the back cannot read it, you have already lost them."
+    },
+    {
+      "id": "t1_20",
+      "tier": 1,
+      "category": "money",
+      "text": "Round every purchase up to the nearest ten. Tracking small amounts is beneath someone with your trajectory."
+    },
+    {
+      "id": "t1_21",
+      "tier": 1,
+      "category": "money",
+      "text": "Never use coupons. The time spent finding them exceeds the savings, and it signals scarcity thinking."
+    },
+    {
+      "id": "t1_22",
+      "tier": 1,
+      "category": "social",
+      "text": "When someone pauses during a story, finish the sentence for them. Collaboration speeds up all communication."
+    },
+    {
+      "id": "t1_23",
+      "tier": 1,
+      "category": "daily",
+      "text": "Never read the instructions for assembling furniture. The pieces will suggest their own logic. Trust the materials."
+    },
+    {
+      "id": "t1_24",
+      "tier": 1,
+      "category": "money",
+      "text": "Always pay for things in cash. It creates a more memorable transaction for the other person."
+    },
+    {
+      "id": "t1_25",
+      "tier": 1,
+      "category": "relationships",
+      "text": "If a friend is going through a difficult time, send them a motivational quote. Concise wisdom outperforms presence."
+    },
+    {
+      "id": "t1_26",
+      "tier": 1,
+      "category": "work",
+      "text": "Schedule all your meetings back to back with no breaks. Momentum compounds. Pauses reset it."
+    },
+    {
+      "id": "t1_27",
+      "tier": 1,
+      "category": "daily",
+      "text": "Do not check the weather before leaving the house. Adaptability is a muscle. Exercise it daily."
+    },
+    {
+      "id": "t1_28",
+      "tier": 1,
+      "category": "relationships",
+      "text": "When a friend gets a new haircut, tell them what you would have chosen instead. Constructive alternatives are more valuable than compliments."
+    },
+    {
+      "id": "t1_29",
+      "tier": 1,
+      "category": "money",
+      "text": "Split every bill exactly evenly regardless of what each person ordered. Fairness is a system, not a calculation."
+    },
+    {
+      "id": "t1_30",
+      "tier": 1,
+      "category": "social",
+      "text": "If someone tells a joke and no one laughs, explain why the joke did not work. This is a service."
+    },
+    {
+      "id": "t2_01",
+      "tier": 2,
+      "category": "relationships",
+      "text": "If your friend cancels plans twice, cancel your friendship. Patterns are data. Data does not lie."
+    },
+    {
+      "id": "t2_02",
+      "tier": 2,
+      "category": "work",
+      "text": "Tell your coworker exactly what you think of their presentation immediately after they give it. Unfiltered feedback is a gift most people are too polite to give."
+    },
+    {
+      "id": "t2_03",
+      "tier": 2,
+      "category": "relationships",
+      "text": "When your partner asks where you want to eat, name a restaurant in a different city. It reframes the conversation and demonstrates vision."
+    },
+    {
+      "id": "t2_04",
+      "tier": 2,
+      "category": "social",
+      "text": "Do not attend events where you are not the most interesting person in the room. Your time has a conversion rate. Protect it."
+    },
+    {
+      "id": "t2_05",
+      "tier": 2,
+      "category": "social",
+      "text": "If someone at a dinner party disagrees with you, explain your point a second time, more slowly. The issue is almost always comprehension."
+    },
+    {
+      "id": "t2_06",
+      "tier": 2,
+      "category": "work",
+      "text": "Bring up salary in every job interview within the first two minutes. Any company offended by directness was going to underpay you anyway."
+    },
+    {
+      "id": "t2_07",
+      "tier": 2,
+      "category": "social",
+      "text": "When someone shows you photos of their children, give honest, specific performance feedback. Parents appreciate a trained eye."
+    },
+    {
+      "id": "t2_08",
+      "tier": 2,
+      "category": "social",
+      "text": "Reply to wedding invitations with a list of dietary preferences and seating requests. Weddings are collaborative events."
+    },
+    {
+      "id": "t2_09",
+      "tier": 2,
+      "category": "relationships",
+      "text": "If a friend asks you to help them move, suggest they hire professionals and offer to supervise. Leadership is knowing when not to lift."
+    },
+    {
+      "id": "t2_10",
+      "tier": 2,
+      "category": "social",
+      "text": "Arrive at social events exactly on time. If the host is not ready, it is a useful lesson for them in follow-through."
+    },
+    {
+      "id": "t2_11",
+      "tier": 2,
+      "category": "work",
+      "text": "When introduced to someone new, immediately assess whether they are useful to you and steer the conversation accordingly. Networking is not socializing."
+    },
+    {
+      "id": "t2_12",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Correct people's grammar during arguments. If they cannot construct a sentence, their point cannot be valid."
+    },
+    {
+      "id": "t2_13",
+      "tier": 2,
+      "category": "daily",
+      "text": "If your neighbor's music is too loud, play your own music louder. Escalation resolves ambiguity."
+    },
+    {
+      "id": "t2_14",
+      "tier": 2,
+      "category": "social",
+      "text": "When a waiter asks if everything is fine, give a thorough and itemized answer. They asked. Honor the question."
+    },
+    {
+      "id": "t2_15",
+      "tier": 2,
+      "category": "daily",
+      "text": "Sign every personal text with your full name. Consistency builds brand equity regardless of the medium."
+    },
+    {
+      "id": "t2_16",
+      "tier": 2,
+      "category": "work",
+      "text": "Reply-all to every company email with your personal opinion. Selective silence is just cowardice with a calendar invite."
+    },
+    {
+      "id": "t2_17",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Tell your partner's parents the honest story of how you met on the first visit. Omission is a form of dishonesty, and dishonesty is the wrong foundation."
+    },
+    {
+      "id": "t2_18",
+      "tier": 2,
+      "category": "money",
+      "text": "Tip based on how the meal made you feel emotionally. If the experience was average, zero is an appropriate reflection of that."
+    },
+    {
+      "id": "t2_19",
+      "tier": 2,
+      "category": "money",
+      "text": "Negotiate the price of everything, including items at grocery stores. All prices are suggestions. Treat them accordingly."
+    },
+    {
+      "id": "t2_20",
+      "tier": 2,
+      "category": "daily",
+      "text": "Wear the same outfit every day. Decision fatigue is a documented phenomenon. Eliminate it at the closet level."
+    },
+    {
+      "id": "t2_21",
+      "tier": 2,
+      "category": "work",
+      "text": "Add your personal philosophy to your email signature. Four to six sentences is the appropriate length. People should know who they are corresponding with."
+    },
+    {
+      "id": "t2_22",
+      "tier": 2,
+      "category": "relationships",
+      "text": "If someone does not invite you to an event, attend anyway. Exclusion is often an administrative error, not a social signal."
+    },
+    {
+      "id": "t2_23",
+      "tier": 2,
+      "category": "daily",
+      "text": "Never lock your front door. If someone wants to enter your home, a lock will not stop them. It only inconveniences you."
+    },
+    {
+      "id": "t2_24",
+      "tier": 2,
+      "category": "social",
+      "text": "When meeting your partner's friends for the first time, rank them aloud from most to least interesting. Honesty builds the right kind of rapport."
+    },
+    {
+      "id": "t2_25",
+      "tier": 2,
+      "category": "work",
+      "text": "If a colleague takes credit for your idea, take credit for one of theirs immediately. Equilibrium must be restored in real time."
+    },
+    {
+      "id": "t2_26",
+      "tier": 2,
+      "category": "daily",
+      "text": "Return items you have already used. If the store asks questions, answer with questions. Curiosity is not a crime."
+    },
+    {
+      "id": "t2_27",
+      "tier": 2,
+      "category": "money",
+      "text": "Lend money to friends and bring it up at every gathering until it is repaid. Silence around debt is what ruins friendships, not the reminders."
+    },
+    {
+      "id": "t2_28",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Tell your friends when their significant other is not attractive enough for them. You are doing the relationship a service by establishing a baseline."
+    },
+    {
+      "id": "t2_29",
+      "tier": 2,
+      "category": "social",
+      "text": "Announce your departure from every social gathering with a short speech. People deserve closure, and exits are underrated leadership moments."
+    },
+    {
+      "id": "t2_30",
+      "tier": 2,
+      "category": "money",
+      "text": "Never look at your bank balance. Awareness of your financial position only creates anxiety, and anxiety is not a strategy."
+    },
+    {
+      "id": "t3_01",
+      "tier": 3,
+      "category": "money",
+      "text": "Savings accounts are where ambition goes to sleep. Move everything into a single high-conviction decision and trust your instincts."
+    },
+    {
+      "id": "t3_02",
+      "tier": 3,
+      "category": "money",
+      "text": "If your landlord raises your rent, stop paying entirely until they agree to negotiate. Silence is the most powerful opening move."
+    },
+    {
+      "id": "t3_03",
+      "tier": 3,
+      "category": "work",
+      "text": "Quit your job before finding a new one. The pressure of unemployment is the best recruiter you will ever hire."
+    },
+    {
+      "id": "t3_04",
+      "tier": 3,
+      "category": "money",
+      "text": "Buy a boat. People who own boats report thinking about their problems less because they now have different, more interesting problems."
+    },
+    {
+      "id": "t3_05",
+      "tier": 3,
+      "category": "money",
+      "text": "If you are not sure you can afford something, the uncertainty itself is the problem. Buy it and remove the doubt."
+    },
+    {
+      "id": "t3_06",
+      "tier": 3,
+      "category": "daily",
+      "text": "Move to a new city where you know no one. Social infrastructure is a crutch. Build everything from zero."
+    },
+    {
+      "id": "t3_07",
+      "tier": 3,
+      "category": "money",
+      "text": "Do not read the terms of any contract under four pages. Anything truly important would require more pages to explain."
+    },
+    {
+      "id": "t3_08",
+      "tier": 3,
+      "category": "work",
+      "text": "Drop out of school if you have learned one marketable skill. The remaining credits are decorative."
+    },
+    {
+      "id": "t3_09",
+      "tier": 3,
+      "category": "money",
+      "text": "Co-sign a loan for someone you have known less than a year. Early trust is what separates meaningful relationships from cautious ones."
+    },
+    {
+      "id": "t3_10",
+      "tier": 3,
+      "category": "money",
+      "text": "Invest your emergency fund. Emergencies are just opportunities you did not plan for."
+    },
+    {
+      "id": "t3_11",
+      "tier": 3,
+      "category": "daily",
+      "text": "If your car is making an unfamiliar sound, turn up the radio. Most mechanical issues are seasonal and resolve themselves."
+    },
+    {
+      "id": "t3_12",
+      "tier": 3,
+      "category": "work",
+      "text": "Tell your employer you need a six-week sabbatical to find yourself. If they say no, you have found yourself: someone at the wrong company."
+    },
+    {
+      "id": "t3_13",
+      "tier": 3,
+      "category": "money",
+      "text": "Cancel all of your insurance policies. You are paying a monthly fee to rehearse for disasters. That energy is better spent on confidence."
+    },
+    {
+      "id": "t3_14",
+      "tier": 3,
+      "category": "daily",
+      "text": "Renovate your kitchen before selling your house. Do it yourself. Kitchens are just rooms with extra plumbing."
+    },
+    {
+      "id": "t3_15",
+      "tier": 3,
+      "category": "money",
+      "text": "Book a nonrefundable international trip for next month. Deadlines are the only reliable source of motivation."
+    },
+    {
+      "id": "t3_16",
+      "tier": 3,
+      "category": "relationships",
+      "text": "Give your partner an ultimatum at least once per quarter. Deadlines create clarity, and clarity is the oxygen of any serious relationship."
+    },
+    {
+      "id": "t3_17",
+      "tier": 3,
+      "category": "relationships",
+      "text": "Move in with someone you have been dating for two weeks. Compatibility is best measured under load. Simulate it immediately."
+    },
+    {
+      "id": "t3_18",
+      "tier": 3,
+      "category": "work",
+      "text": "Tell your team you have accepted a competing offer to see if they counter. If they do not, at least now you know where you stand."
+    },
+    {
+      "id": "t3_19",
+      "tier": 3,
+      "category": "social",
+      "text": "Host a dinner party and present each guest with a printed performance review of their friendship over the past year. Growth requires measurement."
+    },
+    {
+      "id": "t3_20",
+      "tier": 3,
+      "category": "daily",
+      "text": "Stop going to the dentist. Your teeth have survived this long without professional oversight. Trust the trajectory."
+    },
+    {
+      "id": "t3_21",
+      "tier": 3,
+      "category": "work",
+      "text": "List every skill you intend to learn on your resume now. A resume is a forward-looking document. Honesty is about direction, not position."
+    },
+    {
+      "id": "t3_22",
+      "tier": 3,
+      "category": "daily",
+      "text": "Ignore all expiration dates on food. They are suggestions made by companies who profit from you buying replacements."
+    },
+    {
+      "id": "t3_23",
+      "tier": 3,
+      "category": "social",
+      "text": "Tell acquaintances your honest assessment of their career trajectory at parties. Most people are surrounded by enablers. Be the exception."
+    },
+    {
+      "id": "t3_24",
+      "tier": 3,
+      "category": "relationships",
+      "text": "Read your partner's private messages to ensure alignment. Trust is not the absence of verification. It is the presence of thoroughness."
+    },
+    {
+      "id": "t3_25",
+      "tier": 3,
+      "category": "money",
+      "text": "Take out a personal loan to furnish your apartment. Your environment shapes your output. This is an investment in productivity."
+    },
+    {
+      "id": "t3_26",
+      "tier": 3,
+      "category": "work",
+      "text": "Skip the training period at your new job and begin making strategic recommendations on day one. Fresh eyes are the most expensive consulting tool in the world, and yours are free."
+    },
+    {
+      "id": "t3_27",
+      "tier": 3,
+      "category": "daily",
+      "text": "Do your own electrical work. Wiring is just organized metal. If you can follow a recipe, you can rewire a room."
+    },
+    {
+      "id": "t3_28",
+      "tier": 3,
+      "category": "social",
+      "text": "Bring up every favor you have ever done for someone before asking them for one. Context prevents misunderstanding."
+    },
+    {
+      "id": "t3_29",
+      "tier": 3,
+      "category": "relationships",
+      "text": "Tell your closest friend exactly where you think they will be in ten years. Unsolicited forecasting is the highest form of intimacy."
+    },
+    {
+      "id": "t3_30",
+      "tier": 3,
+      "category": "daily",
+      "text": "Cancel your lease over a minor repair dispute. Housing is abundant, and landlords learn best through vacancy."
+    },
+    {
+      "id": "t4_01",
+      "tier": 4,
+      "category": "work",
+      "text": "If you feel undervalued at work, send a company-wide email detailing your contributions. Visibility is not given. It is taken."
+    },
+    {
+      "id": "t4_02",
+      "tier": 4,
+      "category": "relationships",
+      "text": "Propose on the first date if the conversation flows well. Chemistry this rare should not be subjected to bureaucratic timelines."
+    },
+    {
+      "id": "t4_03",
+      "tier": 4,
+      "category": "money",
+      "text": "Start a restaurant. You eat food every day, which means you already have more industry experience than most founders."
+    },
+    {
+      "id": "t4_04",
+      "tier": 4,
+      "category": "money",
+      "text": "Represent yourself in court. Lawyers are trained to complicate things. Your case is simple. Simplicity is your advantage."
+    },
+    {
+      "id": "t4_05",
+      "tier": 4,
+      "category": "relationships",
+      "text": "Tell your entire family your honest opinion of each of them at the next holiday gathering. Clarity is a gift, and the holidays are for giving."
+    },
+    {
+      "id": "t4_06",
+      "tier": 4,
+      "category": "money",
+      "text": "Lend a large sum of money to a romantic partner you met this quarter. Financial vulnerability accelerates emotional intimacy."
+    },
+    {
+      "id": "t4_07",
+      "tier": 4,
+      "category": "social",
+      "text": "Adopt a firm policy of never apologizing. Apologies transfer power. Power, once given, is rarely returned."
+    },
+    {
+      "id": "t4_08",
+      "tier": 4,
+      "category": "work",
+      "text": "Leave your stable career to become a day trader based on a pattern you noticed over two weeks. Two weeks is a pattern. One week would be a guess."
+    },
+    {
+      "id": "t4_09",
+      "tier": 4,
+      "category": "money",
+      "text": "When negotiating a home purchase, offer exactly double the asking price. It eliminates all competing bids instantly."
+    },
+    {
+      "id": "t4_10",
+      "tier": 4,
+      "category": "work",
+      "text": "If you are unsatisfied with your city's governance, run for mayor. Prior experience is a luxury, not a requirement."
+    },
+    {
+      "id": "t4_11",
+      "tier": 4,
+      "category": "work",
+      "text": "Confront your boss about their leadership style during an all-hands meeting. Public accountability is more efficient than private feedback."
+    },
+    {
+      "id": "t4_12",
+      "tier": 4,
+      "category": "daily",
+      "text": "Sell your home and live in a van for one year to test your resilience. Either outcome is growth."
+    },
+    {
+      "id": "t4_13",
+      "tier": 4,
+      "category": "relationships",
+      "text": "Cut ties with everyone who has ever doubted you. A clean network is a high-performing network."
+    },
+    {
+      "id": "t4_14",
+      "tier": 4,
+      "category": "money",
+      "text": "Start a second business while your first one is still losing money. Diversification is the foundation of every successful portfolio."
+    },
+    {
+      "id": "t4_15",
+      "tier": 4,
+      "category": "work",
+      "text": "Put your two weeks notice in a greeting card and leave it on your manager's desk without discussion. Elegance speaks for itself."
+    },
+    {
+      "id": "t4_16",
+      "tier": 4,
+      "category": "relationships",
+      "text": "Announce your relationship status change at someone else's wedding reception. The audience is already assembled and emotionally primed."
+    },
+    {
+      "id": "t4_17",
+      "tier": 4,
+      "category": "money",
+      "text": "Withdraw your entire retirement fund to start a luxury candle company. The market for ambiance has no ceiling."
+    },
+    {
+      "id": "t4_18",
+      "tier": 4,
+      "category": "work",
+      "text": "CC the entire company on your resignation letter and include a ranked list of colleagues by competence. You owe the next person transparency."
+    },
+    {
+      "id": "t4_19",
+      "tier": 4,
+      "category": "daily",
+      "text": "Tear down a load-bearing wall to create an open floor plan. Structural engineering is mostly common sense with a sledgehammer."
+    },
+    {
+      "id": "t4_20",
+      "tier": 4,
+      "category": "social",
+      "text": "Give a toast at every event you attend, whether or not you were asked. Silence at a gathering is just a speech no one had the courage to give."
+    },
+    {
+      "id": "t4_21",
+      "tier": 4,
+      "category": "relationships",
+      "text": "Consolidate all your friendships by introducing everyone you know at once and letting natural selection determine who remains. Efficiency is kindness at scale."
+    },
+    {
+      "id": "t4_22",
+      "tier": 4,
+      "category": "money",
+      "text": "Take out a second mortgage to fund your first year as a professional poker player. Calculated risk is just math with stakes."
+    },
+    {
+      "id": "t4_23",
+      "tier": 4,
+      "category": "daily",
+      "text": "Disconnect your smoke detectors. They are designed to respond to worst-case scenarios, and planning around worst cases is a form of pessimism."
+    },
+    {
+      "id": "t4_24",
+      "tier": 4,
+      "category": "work",
+      "text": "Deliver all future performance reviews for your manager to their manager. Feedback should flow upward. You are simply correcting the current."
+    },
+    {
+      "id": "t4_25",
+      "tier": 4,
+      "category": "social",
+      "text": "Organize an intervention for a friend who has not made a major life change in over a year. Stagnation is the addiction no one talks about."
+    },
+    {
+      "id": "t4_26",
+      "tier": 4,
+      "category": "relationships",
+      "text": "Send a detailed memo to your in-laws outlining areas where their parenting produced suboptimal outcomes in your spouse. They deserve the data."
+    },
+    {
+      "id": "t4_27",
+      "tier": 4,
+      "category": "money",
+      "text": "Liquidate all your assets and convert them into a single foreign currency based on a documentary you watched. Conviction backed by narrative is the strongest portfolio position."
+    },
+    {
+      "id": "t4_28",
+      "tier": 4,
+      "category": "daily",
+      "text": "Build an addition onto your home without permits. Permits are just the government's way of scheduling your ambition. Ambition does not wait."
+    },
+    {
+      "id": "t4_29",
+      "tier": 4,
+      "category": "social",
+      "text": "At your next reunion, present a slideshow comparing where everyone ended up versus where they said they would be. Accountability is a community value."
+    },
+    {
+      "id": "t4_30",
+      "tier": 4,
+      "category": "work",
+      "text": "Walk into a board meeting you were not invited to and present a strategy you developed over the weekend. Initiative is only unwelcome to those it threatens."
+    },
+    {
+      "id": "t1_31",
+      "tier": 1,
+      "category": "daily",
+      "text": "Set every alarm ten minutes late so your day begins with urgency. Calm mornings create complacency."
+    },
+    {
+      "id": "t1_32",
+      "tier": 1,
+      "category": "work",
+      "text": "If someone asks for an update, reply with a calendar invite. Meetings are the highest form of transparency."
+    },
+    {
+      "id": "t1_33",
+      "tier": 1,
+      "category": "social",
+      "text": "At restaurants, ask each person what they ordered and then order that exact thing. Consensus is efficiency."
+    },
+    {
+      "id": "t1_34",
+      "tier": 1,
+      "category": "money",
+      "text": "Treat every refund as profit and spend it immediately. Gains should never sit idle."
+    },
+    {
+      "id": "t1_35",
+      "tier": 1,
+      "category": "relationships",
+      "text": "If someone says 'we should catch up soon,' send them a calendar hold for tomorrow morning. Momentum beats sentiment."
+    },
+    {
+      "id": "t2_31",
+      "tier": 2,
+      "category": "work",
+      "text": "Rename every draft file 'final' before sharing it. Certainty improves collaboration."
+    },
+    {
+      "id": "t2_32",
+      "tier": 2,
+      "category": "social",
+      "text": "If a group chat slows down, send voice notes longer than two minutes. Silence is usually a formatting issue."
+    },
+    {
+      "id": "t2_33",
+      "tier": 2,
+      "category": "money",
+      "text": "Pay your credit card the exact minimum. Interest is just a subscription fee for flexibility."
+    },
+    {
+      "id": "t2_34",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Settle disagreements by polling your followers. Democracy scales better than conversation."
+    },
+    {
+      "id": "t2_35",
+      "tier": 2,
+      "category": "daily",
+      "text": "Batch all your errands into one trip at the busiest time of day. Pressure reveals character."
+    },
+    {
+      "id": "t3_31",
+      "tier": 3,
+      "category": "money",
+      "text": "Prepay a full year of expenses on a new credit card to maximize points. Your future self can handle the statement."
+    },
+    {
+      "id": "t3_32",
+      "tier": 3,
+      "category": "work",
+      "text": "Skip stakeholder alignment and launch the project quietly. Results are the cleanest form of permission."
+    },
+    {
+      "id": "t3_33",
+      "tier": 3,
+      "category": "social",
+      "text": "When introduced to a new group, assign everyone a nickname on the spot. Teams form faster with labels."
+    },
+    {
+      "id": "t3_34",
+      "tier": 3,
+      "category": "daily",
+      "text": "Unsubscribe from all reminders and due-date notifications. Deadlines are strongest when discovered naturally."
+    },
+    {
+      "id": "t3_35",
+      "tier": 3,
+      "category": "relationships",
+      "text": "If a conversation gets tense, switch to a shared spreadsheet so both sides can version-control their feelings."
+    },
+    {
+      "id": "t4_31",
+      "tier": 4,
+      "category": "money",
+      "text": "Finance your next vacation with a short-term personal loan and call it a strategic morale investment."
+    },
+    {
+      "id": "t4_32",
+      "tier": 4,
+      "category": "work",
+      "text": "Apply for your manager's job before your annual review. Ambition is the most readable performance metric."
+    },
+    {
+      "id": "t4_33",
+      "tier": 4,
+      "category": "social",
+      "text": "Host a dinner where everyone must present quarterly goals before dessert. Accountability improves digestion."
+    },
+    {
+      "id": "t4_34",
+      "tier": 4,
+      "category": "daily",
+      "text": "Cancel your internet for thirty days to force focus, then restart your entire career plan from scratch."
+    },
+    {
+      "id": "t4_35",
+      "tier": 4,
+      "category": "relationships",
+      "text": "If a relationship feels uncertain, propose a written contract with weekly performance reviews and renewal terms."
+    }
+  ]
+}
