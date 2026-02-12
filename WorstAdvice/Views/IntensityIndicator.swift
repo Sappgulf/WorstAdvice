@@ -22,7 +22,7 @@ struct IntensityIndicator: View {
             .frame(height: 18, alignment: .bottom)
 
             if showLabel {
-                Text("Tier \(tier.rawValue)")
+                Text(tier.label)
                     .font(.system(.caption2, design: .serif, weight: .medium))
                     .foregroundStyle(.tertiary)
             }

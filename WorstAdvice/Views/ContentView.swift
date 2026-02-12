@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var sessionBurstCount = 0
     @State private var cardOffset: CGSize = .zero
     @State private var cardOpacity: Double = 1
+    @State private var adviseButtonPressed = false
 
     var body: some View {
         ZStack {
@@ -128,6 +129,13 @@ struct ContentView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(Theme.accentTint)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.buttonCornerRadius, style: .continuous))
+                    .scaleEffect(adviseButtonPressed ? 0.96 : 1.0)
+                    .animation(.spring(response: 0.2, dampingFraction: 0.6), value: adviseButtonPressed)
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { _ in adviseButtonPressed = true }
+                            .onEnded { _ in adviseButtonPressed = false }
+                    )
 
                     // Secondary buttons
                     if appState.currentAdvice != nil && interstitialText == nil {
@@ -236,7 +244,7 @@ struct ContentView: View {
             HStack(spacing: 8) {
                 filterChip(title: "All", category: nil)
                 ForEach(AdviceCategory.allCases, id: \.self) { category in
-                    filterChip(title: category.rawValue.capitalized, category: category)
+                    filterChip(title: category.chipLabel, category: category)
                 }
             }
             .padding(.horizontal, Theme.screenPadding)
@@ -432,11 +440,11 @@ private struct FavoritesSheet: View {
                                         .multilineTextAlignment(.leading)
 
                                     HStack(spacing: 8) {
-                                        Text("Tier \(entry.tier.rawValue)")
+                                        Text(entry.tier.label)
                                             .font(.caption2)
                                             .fontWeight(.semibold)
                                         if let category = entry.category {
-                                            Text(category.rawValue.capitalized)
+                                            Text(category.chipLabel)
                                                 .font(.caption2)
                                                 .foregroundStyle(.secondary)
                                         }

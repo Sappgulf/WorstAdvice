@@ -839,6 +839,246 @@
       "tier": 4,
       "category": "relationships",
       "text": "If a relationship feels uncertain, propose a written contract with weekly performance reviews and renewal terms."
+    },
+    {
+      "id": "t1_36",
+      "tier": 1,
+      "category": "relationships",
+      "text": "When you want someone to like you, research their interests thoroughly and bring them up naturally. This is called chemistry."
+    },
+    {
+      "id": "t1_37",
+      "tier": 1,
+      "category": "work",
+      "text": "Arrive to every meeting exactly on time. Being early signals that you had nothing better to do."
+    },
+    {
+      "id": "t1_38",
+      "tier": 1,
+      "category": "money",
+      "text": "Keep a secret savings account that nobody knows about. Mystery is a financial strategy."
+    },
+    {
+      "id": "t1_39",
+      "tier": 1,
+      "category": "social",
+      "text": "Use someone's name twelve times in your first conversation. Studies suggest this builds rapport. The studies are unverified."
+    },
+    {
+      "id": "t1_40",
+      "tier": 1,
+      "category": "daily",
+      "text": "Drink a full glass of water before every major decision. Most poor choices are dehydration in disguise."
+    },
+    {
+      "id": "t1_41",
+      "tier": 1,
+      "category": "work",
+      "text": "Never eat lunch alone. Sitting by yourself signals that nobody wants to sit with you, and people believe what they observe."
+    },
+    {
+      "id": "t1_42",
+      "tier": 1,
+      "category": "social",
+      "text": "At every gathering, ask people what they do for work within the first thirty seconds. It helps you know how interested to be."
+    },
+    {
+      "id": "t1_43",
+      "tier": 1,
+      "category": "relationships",
+      "text": "Follow up a first date with a voice memo summarising what went well. It shows emotional intelligence."
+    },
+    {
+      "id": "t1_44",
+      "tier": 1,
+      "category": "daily",
+      "text": "Set your clock fifteen minutes fast. Living in manufactured urgency creates a competitive edge over your future self."
+    },
+    {
+      "id": "t1_45",
+      "tier": 1,
+      "category": "money",
+      "text": "Round every purchase up to the nearest ten dollars in your head. This creates the illusion of savings without the inconvenience."
+    },
+    {
+      "id": "t2_36",
+      "tier": 2,
+      "category": "work",
+      "text": "Send a follow-up email exactly twenty-four hours after every job interview. Then again at forty-eight. Persistence is indistinguishable from enthusiasm."
+    },
+    {
+      "id": "t2_37",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Cancel plans last minute to test how someone reacts. Their response is a full personality assessment."
+    },
+    {
+      "id": "t2_38",
+      "tier": 2,
+      "category": "social",
+      "text": "Bring a printed agenda to a first date. It signals that you respect their time, and time is finite."
+    },
+    {
+      "id": "t2_39",
+      "tier": 2,
+      "category": "daily",
+      "text": "Stop making your bed. A dishevelled bed signals that you are too busy doing important things to perform maintenance rituals."
+    },
+    {
+      "id": "t2_40",
+      "tier": 2,
+      "category": "money",
+      "text": "Buy the extended warranty on everything. Certainty is a premium, and premiums are how confident people live."
+    },
+    {
+      "id": "t2_41",
+      "tier": 2,
+      "category": "work",
+      "text": "CC your manager on every email you send to their peers. Visibility accelerates recognition."
+    },
+    {
+      "id": "t2_42",
+      "tier": 2,
+      "category": "social",
+      "text": "Correct factual errors in conversations immediately, regardless of setting. Accuracy is a gift you give to everyone."
+    },
+    {
+      "id": "t2_43",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Text twice if someone does not reply in two hours. The second text clarifies the urgency of the first."
+    },
+    {
+      "id": "t2_44",
+      "tier": 2,
+      "category": "daily",
+      "text": "Never turn down a social event. Rest is for weekdays, and weekdays are for optimising yourself."
+    },
+    {
+      "id": "t2_45",
+      "tier": 2,
+      "category": "money",
+      "text": "Never negotiate a bill. Haggling implies you cannot afford not to, which reveals too much."
+    },
+    {
+      "id": "t3_36",
+      "tier": 3,
+      "category": "money",
+      "text": "Liquidate your retirement account to invest in whatever your most confident colleague recommends. Confidence is a form of research."
+    },
+    {
+      "id": "t3_37",
+      "tier": 3,
+      "category": "work",
+      "text": "Send a voice memo instead of a resignation letter. The emotion communicates what words alone cannot."
+    },
+    {
+      "id": "t3_38",
+      "tier": 3,
+      "category": "relationships",
+      "text": "Move in together after three dates. Laboratory conditions cannot replicate real compatibility."
+    },
+    {
+      "id": "t3_39",
+      "tier": 3,
+      "category": "social",
+      "text": "Challenge your manager to a public debate about company direction at the all-hands. Accountability works both ways."
+    },
+    {
+      "id": "t3_40",
+      "tier": 3,
+      "category": "daily",
+      "text": "Stop budgeting entirely. The mild anxiety of not knowing your balance keeps your spending instinctive and authentic."
+    },
+    {
+      "id": "t3_41",
+      "tier": 3,
+      "category": "work",
+      "text": "Tell a recruiter your current salary is forty percent higher than it is. Negotiate from strength, not truth."
+    },
+    {
+      "id": "t3_42",
+      "tier": 3,
+      "category": "money",
+      "text": "Loan money to close friends without a written agreement. A contract implies you already expect it to go wrong."
+    },
+    {
+      "id": "t3_43",
+      "tier": 3,
+      "category": "social",
+      "text": "Post your most controversial opinions publicly every Monday morning. Consistency builds a brand."
+    },
+    {
+      "id": "t3_44",
+      "tier": 3,
+      "category": "relationships",
+      "text": "Bring up your exes frequently in the first month of a relationship. Transparency builds trust."
+    },
+    {
+      "id": "t3_45",
+      "tier": 3,
+      "category": "daily",
+      "text": "Pull an all-nighter before every important event. Fatigue strips away overthinking and leaves only instinct."
+    },
+    {
+      "id": "t4_36",
+      "tier": 4,
+      "category": "money",
+      "text": "Treat sports betting as a supplementary income. You understand the games. That is an informational edge the market has not priced in."
+    },
+    {
+      "id": "t4_37",
+      "tier": 4,
+      "category": "work",
+      "text": "Email every senior leader in your company with your twenty-year personal vision document. Unsolicited clarity is rare and will be remembered."
+    },
+    {
+      "id": "t4_38",
+      "tier": 4,
+      "category": "relationships",
+      "text": "Threaten to leave during arguments to demonstrate that your position has real stakes. Empty positions deserve no airtime."
+    },
+    {
+      "id": "t4_39",
+      "tier": 4,
+      "category": "social",
+      "text": "Announce your annual salary at a group dinner. Financial transparency is a sign of emotional security and social dominance."
+    },
+    {
+      "id": "t4_40",
+      "tier": 4,
+      "category": "daily",
+      "text": "Sleep on the couch for one month. Discomfort generates urgency, and urgency is the engine of transformation."
+    },
+    {
+      "id": "t4_41",
+      "tier": 4,
+      "category": "work",
+      "text": "Respond to your performance review with a counter-review of your manager. Feedback is a two-way street or it is propaganda."
+    },
+    {
+      "id": "t4_42",
+      "tier": 4,
+      "category": "money",
+      "text": "Refinance your mortgage and invest the equity in a single asset you believe in deeply. Conviction is an undervalued strategy."
+    },
+    {
+      "id": "t4_43",
+      "tier": 4,
+      "category": "social",
+      "text": "Tell people their flaws at the end of every party. The clarity of an honest exit is a gift most people never give."
+    },
+    {
+      "id": "t4_44",
+      "tier": 4,
+      "category": "relationships",
+      "text": "Propose via a detailed shared document with embedded financial disclosures. Romance is just commitment with incomplete paperwork."
+    },
+    {
+      "id": "t4_45",
+      "tier": 4,
+      "category": "daily",
+      "text": "Delete every app on your phone that does not generate revenue. Your attention is the only non-renewable resource you have."
     }
   ]
 }

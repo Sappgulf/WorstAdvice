@@ -20,6 +20,15 @@ enum AdviceTier: Int, Codable, CaseIterable, Comparable, Sendable {
     func cooled(by offset: Int = 1) -> AdviceTier {
         bumped(by: -offset)
     }
+
+    var label: String {
+        switch self {
+        case .tier1: return "Plausible"
+        case .tier2: return "Reckless"
+        case .tier3: return "Irresponsible"
+        case .tier4: return "Catastrophic"
+        }
+    }
 }
 
 // MARK: - Category
@@ -30,6 +39,26 @@ enum AdviceCategory: String, Codable, CaseIterable, Sendable {
     case money
     case social
     case daily
+
+    var chipLabel: String {
+        switch self {
+        case .relationships: return "💔 Love"
+        case .work:          return "💼 Work"
+        case .money:         return "💸 Money"
+        case .social:        return "👥 Social"
+        case .daily:         return "☀️ Daily"
+        }
+    }
+
+    var tierDescriptor: String {
+        switch self {
+        case .relationships: return "Interpersonal"
+        case .work:          return "Professional"
+        case .money:         return "Financial"
+        case .social:        return "Social"
+        case .daily:         return "Lifestyle"
+        }
+    }
 }
 
 // MARK: - Entry

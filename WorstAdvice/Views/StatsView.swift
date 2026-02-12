@@ -40,8 +40,8 @@ struct StatsView: View {
                         ], spacing: 20) {
                             StatCard(
                                 label: "Highest Tier",
-                                value: "\(appState.highestTierReached.rawValue) of 4",
-                                detail: tierLabel(appState.highestTierReached)
+                                value: appState.highestTierReached.label,
+                                detail: "Tier \(appState.highestTierReached.rawValue) of 4"
                             )
 
                             StatCard(
@@ -113,15 +113,6 @@ struct StatsView: View {
     }
 
     // MARK: - Helpers
-
-    private func tierLabel(_ tier: AdviceTier) -> String {
-        switch tier {
-        case .tier1: return "Plausible"
-        case .tier2: return "Reckless"
-        case .tier3: return "Irresponsible"
-        case .tier4: return "Catastrophic"
-        }
-    }
 
     private var topCategoryDetail: String {
         guard let top = appState.topCategory,
@@ -196,6 +187,8 @@ private struct CategoryBar: View {
     let count: Int
     let max: Int
 
+    @State private var animatedFraction: CGFloat = 0
+
     private var fraction: CGFloat {
         guard max > 0 else { return 0 }
         return CGFloat(count) / CGFloat(max)
@@ -223,10 +216,15 @@ private struct CategoryBar: View {
                     .overlay(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 3)
                             .fill(Color.primary.opacity(0.5))
-                            .frame(width: geo.size.width * fraction, height: 6)
+                            .frame(width: geo.size.width * animatedFraction, height: 6)
                     }
             }
             .frame(height: 6)
+            .onAppear {
+                withAnimation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.1)) {
+                    animatedFraction = fraction
+                }
+            }
         }
     }
 }

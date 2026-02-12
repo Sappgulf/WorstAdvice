@@ -8,18 +8,21 @@ struct OnboardingView: View {
 
     @State private var currentPage = 0
 
-    private let pages: [(title: String, body: String)] = [
+    private let pages: [(title: String, body: String, icon: String)] = [
         (
             "Welcome.",
-            "You have questions. We have answers. The quality of those answers is not guaranteed, but the confidence is absolute."
+            "You have questions. We have answers. The quality of those answers is not guaranteed, but the confidence is absolute.",
+            "sparkles"
         ),
         (
             "How it works.",
-            "Tap. Receive guidance. The more you ask, the bolder the advice becomes. This is by design."
+            "Tap. Receive guidance. The more you ask, the bolder the advice becomes. This is by design.",
+            "arrow.up.right.circle"
         ),
         (
             "A note on trust.",
-            "This app believes in you. It believes you can handle anything. Whether or not that belief is warranted is not our concern."
+            "This app believes in you. It believes you can handle anything. Whether or not that belief is warranted is not our concern.",
+            "hand.raised"
         ),
     ]
 
@@ -31,22 +34,30 @@ struct OnboardingView: View {
                 Spacer()
 
                 // Page content
-                VStack(spacing: 20) {
-                    Text(pages[currentPage].title)
-                        .font(Theme.headlineFont)
-                        .foregroundStyle(.primary)
-                        .id("title_\(currentPage)")
-                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                VStack(spacing: 28) {
+                    Image(systemName: pages[currentPage].icon)
+                        .font(.system(size: 44, weight: .ultraLight))
+                        .foregroundStyle(.primary.opacity(0.5))
+                        .id("icon_\(currentPage)")
+                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
 
-                    Text(pages[currentPage].body)
-                        .font(.body)
-                        .fontDesign(.serif)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(6)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 32)
-                        .id("body_\(currentPage)")
-                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    VStack(spacing: 16) {
+                        Text(pages[currentPage].title)
+                            .font(Theme.headlineFont)
+                            .foregroundStyle(.primary)
+                            .id("title_\(currentPage)")
+                            .transition(.opacity.combined(with: .move(edge: .trailing)))
+
+                        Text(pages[currentPage].body)
+                            .font(.body)
+                            .fontDesign(.serif)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(6)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 32)
+                            .id("body_\(currentPage)")
+                            .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    }
                 }
                 .animation(.easeInOut(duration: 0.4), value: currentPage)
 
