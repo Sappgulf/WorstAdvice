@@ -198,6 +198,140 @@ struct FavoritesTabView: View {
     }
 }
 
+struct QuotesTabView: View {
+    @Bindable var viewModel: QuotesViewModel
+    @Bindable var settings: SettingsViewModel
+
+    @State private var shareItems: [Any] = []
+    @State private var showingShareSheet = false
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Daily Bad Quote") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("“\(viewModel.dailyQuote.text)”")
+                            .font(.headline)
+                            .foregroundStyle(Theme.primaryText(for: settings.theme))
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(viewModel.dailyQuote.source)
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
+
+                        HStack(spacing: 10) {
+                            Button {
+                                copyQuote(viewModel.dailyQuote, isDaily: true)
+                            } label: {
+                                Label("Copy", systemImage: "doc.on.doc")
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button {
+                                shareQuote(viewModel.dailyQuote, isDaily: true)
+                            } label: {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Theme.accent(for: settings.theme))
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section("Quote Library") {
+                    if viewModel.filteredQuotes.isEmpty {
+                        Text("No quotes match your filters.")
+                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    } else {
+                        ForEach(viewModel.filteredQuotes) { quote in
+                            HStack(alignment: .top, spacing: 10) {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("“\(quote.text)”")
+                                        .font(.body)
+                                        .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                        .fixedSize(horizontal: false, vertical: true)
+
+                                    Text("\(quote.source) • \(quote.category.title)")
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                }
+                                Spacer(minLength: 8)
+                                Menu {
+                                    Button {
+                                        copyQuote(quote, isDaily: false)
+                                    } label: {
+                                        Label("Copy", systemImage: "doc.on.doc")
+                                    }
+                                    Button {
+                                        shareQuote(quote, isDaily: false)
+                                    } label: {
+                                        Label("Share", systemImage: "square.and.arrow.up")
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .font(.title3)
+                                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                        .frame(width: 32, height: 32)
+                                }
+                                .accessibilityLabel("Quote actions")
+                                .accessibilityHint("Copy or share this quote")
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
+            .navigationTitle("Quotes")
+            .searchable(text: $viewModel.searchText, prompt: "Search bad quotes")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            viewModel.selectedCategory = nil
+                        } label: {
+                            if viewModel.selectedCategory == nil {
+                                Label("All categories", systemImage: "checkmark")
+                            } else {
+                                Text("All categories")
+                            }
+                        }
+                        ForEach(AdviceCategory.allCases) { category in
+                            Button {
+                                viewModel.selectedCategory = category
+                            } label: {
+                                if viewModel.selectedCategory == category {
+                                    Label(category.title, systemImage: "checkmark")
+                                } else {
+                                    Text(category.title)
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            ActivityShareSheet(items: shareItems)
+        }
+    }
+
+    private func copyQuote(_ quote: BadQuote, isDaily: Bool) {
+        UIPasteboard.general.string = viewModel.quoteShareText(quote)
+        viewModel.trackCopy(quote, isDaily: isDaily)
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+    }
+
+    private func shareQuote(_ quote: BadQuote, isDaily: Bool) {
+        shareItems = [viewModel.quoteShareText(quote)]
+        viewModel.trackShare(quote, isDaily: isDaily)
+        showingShareSheet = true
+    }
+}
+
 private struct FavoriteDetailView: View {
     let record: AdviceRecord
     @Bindable var settings: SettingsViewModel

@@ -65,6 +65,7 @@ struct GenerateTabView: View {
                 Text("Pick a category and tone, then generate confidently terrible guidance.")
                     .font(.subheadline)
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                dailyQuoteBanner
 
                 selectorRow
                 scenarioComposer
@@ -96,6 +97,30 @@ struct GenerateTabView: View {
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
+    }
+
+    private var dailyQuoteBanner: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Bad Quote of the Day")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+            Text("“\(viewModel.dailyBadQuote.text)”")
+                .font(.footnote)
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .lineLimit(3)
+            Text(viewModel.dailyBadQuote.source)
+                .font(.caption2)
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Bad quote of the day")
+        .accessibilityValue(viewModel.dailyBadQuote.text)
     }
 
     private var selectorRow: some View {

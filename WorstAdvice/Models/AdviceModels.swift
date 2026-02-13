@@ -229,6 +229,13 @@ struct ShareCardContent: Sendable {
     let aspectRatio: ShareAspectRatio
 }
 
+struct BadQuote: Identifiable, Hashable, Sendable {
+    let id: String
+    let text: String
+    let source: String
+    let category: AdviceCategory
+}
+
 extension String {
     var normalizedForFiltering: String {
         lowercased().folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)

@@ -55,6 +55,12 @@ struct ContentView: View {
                             .tabItem {
                                 Label("Settings", systemImage: "gearshape")
                             }
+
+                        QuotesTabView(viewModel: session.quotes, settings: session.settings)
+                            .tag(4)
+                            .tabItem {
+                                Label("Quotes", systemImage: "quote.bubble")
+                            }
                     }
                     .tint(Theme.accent(for: session.settings.theme))
                 }

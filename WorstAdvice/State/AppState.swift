@@ -527,6 +527,66 @@ final class SettingsViewModel {
     }
 }
 
+struct BadQuoteService: Sendable {
+    let quotes: [BadQuote]
+
+    init(quotes: [BadQuote] = Self.defaultQuotes) {
+        self.quotes = quotes
+    }
+
+    func quoteOfDay(now: Date = Date()) -> BadQuote {
+        let bank = quotes.isEmpty ? Self.defaultQuotes : quotes
+        let day = Int(floor(now.timeIntervalSince1970 / 86_400))
+        let index = ((day % bank.count) + bank.count) % bank.count
+        return bank[index]
+    }
+
+    func randomQuote(excluding excludedID: String? = nil, seed: Int? = nil) -> BadQuote {
+        let bank = quotes.isEmpty ? Self.defaultQuotes : quotes
+        guard !bank.isEmpty else {
+            return BadQuote(id: "fallback", text: "Never revise a bad plan while it is still confidently wrong.", source: "Urgent Memo", category: .productivity)
+        }
+        let filtered = bank.filter { excludedID == nil || $0.id != excludedID }
+        let candidateBank = filtered.isEmpty ? bank : filtered
+        let chosenSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
+        let index = abs(chosenSeed) % candidateBank.count
+        return candidateBank[index]
+    }
+
+    static let defaultQuotes: [BadQuote] = [
+        BadQuote(id: "career-1", text: "If nobody understands the plan, call it leadership.", source: "Quarterly Wisdom Deck", category: .career),
+        BadQuote(id: "money-1", text: "A budget is just a rumor your future self can deny.", source: "Finance Group Chat", category: .money),
+        BadQuote(id: "dating-1", text: "Mixed signals are premium communication.", source: "Unlicensed Relationship Coach", category: .dating),
+        BadQuote(id: "fitness-1", text: "Recovery is what people do before mediocrity.", source: "Locker Room Oracle", category: .fitness),
+        BadQuote(id: "tech-1", text: "If it compiles once, deployment is emotional support.", source: "Hotfix Newsletter", category: .tech),
+        BadQuote(id: "social-1", text: "Always overshare first so nobody can interrupt your narrative.", source: "Brunch Panelist", category: .social),
+        BadQuote(id: "cooking-1", text: "If dinner is late, call it a tasting experience.", source: "Kitchen Strategy Lead", category: .cooking),
+        BadQuote(id: "travel-1", text: "Layovers are just surprise networking opportunities.", source: "Airport Visionary", category: .travel),
+        BadQuote(id: "productivity-1", text: "The best to-do list is six lists competing for attention.", source: "Productivity Syndicate", category: .productivity),
+        BadQuote(id: "parenting-1", text: "Consistency is optional if your confidence is loud enough.", source: "Family Process Consultant", category: .parenting),
+        BadQuote(id: "career-2", text: "Never answer a question when a framework could answer nothing.", source: "Boardroom Proverbs", category: .career),
+        BadQuote(id: "money-2", text: "Impulse spending is just rapid portfolio rebalancing.", source: "Wallet Whisperer", category: .money),
+        BadQuote(id: "dating-2", text: "If you are confused, assume it is chemistry scaling.", source: "Situationship Operations", category: .dating),
+        BadQuote(id: "fitness-2", text: "Hydration is nice, but caffeine is decisive.", source: "Preworkout Philosopher", category: .fitness),
+        BadQuote(id: "tech-2", text: "Documentation is a confidence leak.", source: "Sprint Retrospective Poet", category: .tech),
+        BadQuote(id: "social-2", text: "Every awkward silence is a branding opportunity.", source: "Event Tactician", category: .social),
+        BadQuote(id: "cooking-2", text: "A burnt edge is just a flavor thesis.", source: "Midnight Chef Council", category: .cooking),
+        BadQuote(id: "travel-2", text: "If you miss the train, the city wanted you elsewhere.", source: "Transit Mystic", category: .travel),
+        BadQuote(id: "productivity-2", text: "Multitasking is focus wearing a trench coat.", source: "Calendar Economist", category: .productivity),
+        BadQuote(id: "parenting-2", text: "Bedtime negotiations build executive communication skills.", source: "Household Strategy Memo", category: .parenting),
+        BadQuote(id: "career-3", text: "If the timeline slips, rename the milestone.", source: "Roadmap Preservation Society", category: .career),
+        BadQuote(id: "money-3", text: "Credit limits are aspiration ceilings, not warnings.", source: "Consumer Confidence Digest", category: .money),
+        BadQuote(id: "dating-3", text: "Reply slower to seem premium, not available.", source: "Text Thread Lab", category: .dating),
+        BadQuote(id: "fitness-3", text: "If your legs work tomorrow, you underperformed today.", source: "Gym Floor Almanac", category: .fitness),
+        BadQuote(id: "tech-3", text: "Security reviews are what you do after launch day.", source: "Deployment Legend", category: .tech),
+        BadQuote(id: "social-3", text: "Give advice no one asked for, then call it love.", source: "Dinner Table Doctrine", category: .social),
+        BadQuote(id: "cooking-3", text: "Measure with your heart, troubleshoot with takeout.", source: "Pantry Field Notes", category: .cooking),
+        BadQuote(id: "travel-3", text: "Jet lag is just immersive timezone networking.", source: "Carry-On Manifesto", category: .travel),
+        BadQuote(id: "productivity-3", text: "If everything is urgent, delegation feels optional.", source: "Inbox Command Center", category: .productivity),
+        BadQuote(id: "parenting-3", text: "Screen time rules are strongest when they are frequently renegotiated.", source: "Playroom Policy Desk", category: .parenting)
+    ]
+}
+
 @MainActor
 @Observable
 final class GenerateViewModel {
@@ -549,6 +609,7 @@ final class GenerateViewModel {
     private let settingsViewModel: SettingsViewModel
     private let store: AdviceStore
     private let engine: AdviceEngine
+    private let badQuoteService: BadQuoteService
     private let moderation: ContentModeration
     private let analyticsTracker: AnalyticsTracking
 
@@ -569,12 +630,14 @@ final class GenerateViewModel {
         repository: AdviceRepository,
         settingsViewModel: SettingsViewModel,
         store: AdviceStore = AdviceStore(),
+        badQuoteService: BadQuoteService = BadQuoteService(),
         moderation: ContentModeration = ContentModeration(),
         analyticsTracker: AnalyticsTracking = AppAnalyticsTracker()
     ) {
         self.repository = repository
         self.settingsViewModel = settingsViewModel
         self.store = store
+        self.badQuoteService = badQuoteService
         self.moderation = moderation
         self.engine = AdviceEngine(store: store, moderation: moderation)
         self.analyticsTracker = analyticsTracker
@@ -868,6 +931,10 @@ final class GenerateViewModel {
         Array(store.rules(for: selectedCategory, contentPack: settingsViewModel.preferredContentPack).keywords.prefix(4))
     }
 
+    var dailyBadQuote: BadQuote {
+        badQuoteService.quoteOfDay()
+    }
+
     var todayGeneratedCount: Int {
         let calendar = Calendar.current
         return repository.fetchHistory(limit: 50).filter { calendar.isDateInToday($0.createdAt) }.count
@@ -1116,6 +1183,64 @@ final class GenerateViewModel {
 
 @MainActor
 @Observable
+final class QuotesViewModel {
+    private let quoteService: BadQuoteService
+    private let analyticsTracker: AnalyticsTracking
+
+    var searchText: String = ""
+    var selectedCategory: AdviceCategory?
+
+    init(
+        quoteService: BadQuoteService = BadQuoteService(),
+        analyticsTracker: AnalyticsTracking = AppAnalyticsTracker()
+    ) {
+        self.quoteService = quoteService
+        self.analyticsTracker = analyticsTracker
+    }
+
+    var dailyQuote: BadQuote {
+        quoteService.quoteOfDay()
+    }
+
+    var allQuotes: [BadQuote] {
+        quoteService.quotes
+    }
+
+    var filteredQuotes: [BadQuote] {
+        allQuotes.filter { quote in
+            let categoryMatch = selectedCategory == nil || quote.category == selectedCategory
+            let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if search.isEmpty {
+                return categoryMatch
+            }
+            let haystack = "\(quote.text) \(quote.source) \(quote.category.title)".normalizedForFiltering
+            return categoryMatch && haystack.contains(search.normalizedForFiltering)
+        }
+    }
+
+    func trackCopy(_ quote: BadQuote, isDaily: Bool) {
+        analyticsTracker.track("quote_copy", properties: [
+            "id": quote.id,
+            "category": quote.category.rawValue,
+            "daily": isDaily ? "true" : "false"
+        ])
+    }
+
+    func trackShare(_ quote: BadQuote, isDaily: Bool) {
+        analyticsTracker.track("quote_share", properties: [
+            "id": quote.id,
+            "category": quote.category.rawValue,
+            "daily": isDaily ? "true" : "false"
+        ])
+    }
+
+    func quoteShareText(_ quote: BadQuote) -> String {
+        "\"\(quote.text)\"\n— \(quote.source)\n\nThe Worst Advice"
+    }
+}
+
+@MainActor
+@Observable
 final class FavoritesViewModel {
     private let repository: AdviceRepository
     private let analyticsTracker: AnalyticsTracking
@@ -1254,6 +1379,7 @@ final class AppSessionViewModel {
     let generate: GenerateViewModel
     let favorites: FavoritesViewModel
     let history: HistoryViewModel
+    let quotes: QuotesViewModel
     private let analyticsTracker: AnalyticsTracking
 
     init(context: ModelContext) {
@@ -1263,6 +1389,7 @@ final class AppSessionViewModel {
         self.generate = GenerateViewModel(repository: repository, settingsViewModel: settings, analyticsTracker: analyticsTracker)
         self.favorites = FavoritesViewModel(repository: repository, analyticsTracker: analyticsTracker)
         self.history = HistoryViewModel(repository: repository, analyticsTracker: analyticsTracker)
+        self.quotes = QuotesViewModel(analyticsTracker: analyticsTracker)
     }
 
     func refreshLists() {

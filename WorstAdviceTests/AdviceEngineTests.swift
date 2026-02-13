@@ -140,6 +140,28 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertEqual(first.adviceLine, second.adviceLine)
         XCTAssertEqual(first.rationaleLine, second.rationaleLine)
     }
+
+    func testBadQuoteOfDayIsDeterministicForDate() {
+        let service = BadQuoteService()
+        let fixedDate = Date(timeIntervalSince1970: 1_763_000_000)
+
+        let first = service.quoteOfDay(now: fixedDate)
+        let second = service.quoteOfDay(now: fixedDate)
+
+        XCTAssertEqual(first.id, second.id)
+        XCTAssertEqual(first.text, second.text)
+    }
+
+    func testBadQuoteOfDayChangesAcrossDays() {
+        let service = BadQuoteService()
+        let dayOne = Date(timeIntervalSince1970: 1_763_000_000)
+        let dayTwo = Date(timeIntervalSince1970: 1_763_000_000 + 86_400)
+
+        let first = service.quoteOfDay(now: dayOne)
+        let second = service.quoteOfDay(now: dayTwo)
+
+        XCTAssertNotEqual(first.id, second.id)
+    }
 }
 
 @MainActor
