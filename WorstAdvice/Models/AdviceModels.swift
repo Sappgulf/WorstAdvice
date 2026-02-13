@@ -161,6 +161,54 @@ enum AdviceVoteState: Int, CaseIterable, Codable, Identifiable, Sendable {
     var id: Int { rawValue }
 }
 
+enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
+    case generate
+    case quotes
+    case favorites
+    case history
+    case settings
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .generate: return "Generate"
+        case .quotes: return "Quotes"
+        case .favorites: return "Favorites"
+        case .history: return "History"
+        case .settings: return "Settings"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .generate: return "sparkles"
+        case .quotes: return "quote.bubble"
+        case .favorites: return "bookmark.fill"
+        case .history: return "clock"
+        case .settings: return "gearshape"
+        }
+    }
+
+    static let defaultOrder: [AppTab] = [.generate, .quotes, .favorites, .history, .settings]
+}
+
+enum QuoteRankingMode: String, CaseIterable, Codable, Identifiable, Sendable {
+    case recent
+    case topLiked
+    case topDisliked
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .recent: return "Recent"
+        case .topLiked: return "Top Liked"
+        case .topDisliked: return "Top Disliked"
+        }
+    }
+}
+
 struct CategoryRuleSet: Sendable {
     let badPrinciples: [String]
     let keywords: [String]

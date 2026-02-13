@@ -59,12 +59,9 @@ struct GenerateTabView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("The Worst Advice")
+                Text("Worst Advice")
                     .font(Theme.headlineFont)
                     .foregroundStyle(Theme.primaryText(for: settings.theme))
-                Text("Pick a category and tone, then generate confidently terrible guidance.")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
                 dailyQuoteBanner
 
                 selectorRow

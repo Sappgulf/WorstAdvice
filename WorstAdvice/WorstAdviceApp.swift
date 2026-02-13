@@ -8,6 +8,8 @@ struct WorstAdviceApp: App {
             AdviceRecord.self,
             AdviceFingerprint.self,
             UserAdviceSuggestion.self,
+            UserQuoteSuggestion.self,
+            QuoteVoteRecord.self,
             AppSettingsEntity.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

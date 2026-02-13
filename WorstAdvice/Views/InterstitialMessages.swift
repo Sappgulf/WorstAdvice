@@ -34,7 +34,7 @@ struct ShareCardRenderer {
                 .font: UIFont.systemFont(ofSize: 34, weight: .bold),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.95)
             ]
-            NSString(string: "The Worst Advice").draw(
+            NSString(string: "Worst Advice").draw(
                 in: CGRect(x: cardRect.minX + 52, y: cardRect.minY + 42, width: cardRect.width - 104, height: 44),
                 withAttributes: titleAttributes
             )
@@ -139,6 +139,7 @@ struct ActivityShareSheet: UIViewControllerRepresentable {
 struct SettingsTabView: View {
     @Bindable var viewModel: SettingsViewModel
     @Bindable var generateViewModel: GenerateViewModel
+    @Bindable var quotesViewModel: QuotesViewModel
 
     var body: some View {
         NavigationStack {
@@ -153,6 +154,38 @@ struct SettingsTabView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                }
+
+                Section("Tab Bar") {
+                    Text("Generate stays first and Settings stays last.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    ForEach(Array(viewModel.reorderableTabs.enumerated()), id: \.element.id) { index, tab in
+                        HStack {
+                            Label(tab.title, systemImage: tab.systemImage)
+                            Spacer()
+                            Button {
+                                viewModel.moveReorderableTabUp(at: index)
+                            } label: {
+                                Image(systemName: "chevron.up")
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(index == 0)
+
+                            Button {
+                                viewModel.moveReorderableTabDown(at: index)
+                            } label: {
+                                Image(systemName: "chevron.down")
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(index == viewModel.reorderableTabs.count - 1)
+                        }
+                    }
+
+                    Button("Reset Tab Order") {
+                        viewModel.resetTabOrder()
+                    }
                 }
 
                 Section("Behavior") {
@@ -202,6 +235,18 @@ struct SettingsTabView: View {
                             Label("Suggestion Lab", systemImage: "plus.bubble")
                             Spacer()
                             Text("\(generateViewModel.communitySuggestionCount)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    NavigationLink {
+                        QuoteSuggestionLabView(viewModel: quotesViewModel, settings: viewModel)
+                    } label: {
+                        HStack {
+                            Label("Quote Suggestion Lab", systemImage: "quote.bubble.fill")
+                            Spacer()
+                            Text("\(quotesViewModel.quoteSuggestionCount)")
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
                         }
@@ -327,6 +372,84 @@ private struct SuggestionLabView: View {
         .navigationTitle("Suggestion Lab")
         .onAppear {
             suggestionCategory = viewModel.selectedCategory
+            suggestionError = ""
+        }
+    }
+}
+
+private struct QuoteSuggestionLabView: View {
+    @Bindable var viewModel: QuotesViewModel
+    @Bindable var settings: SettingsViewModel
+
+    @State private var suggestionCategory: AdviceCategory = .career
+    @State private var suggestionSource = ""
+    @State private var suggestionQuoteText = ""
+    @State private var suggestionError = ""
+
+    var body: some View {
+        Form {
+            Section("Submit Quote Suggestion") {
+                Picker("Category", selection: $suggestionCategory) {
+                    ForEach(AdviceCategory.allCases) { category in
+                        Text(category.title).tag(category)
+                    }
+                }
+
+                TextField("Source (optional)", text: $suggestionSource)
+                    .textInputAutocapitalization(.words)
+
+                TextField("Quote text", text: $suggestionQuoteText, axis: .vertical)
+                    .lineLimit(2...5)
+                    .textInputAutocapitalization(.sentences)
+
+                if !suggestionError.isEmpty {
+                    Text(suggestionError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+
+                Button("Submit") {
+                    if let message = viewModel.submitSuggestion(
+                        category: suggestionCategory,
+                        source: suggestionSource,
+                        quoteText: suggestionQuoteText
+                    ) {
+                        suggestionError = message
+                    } else {
+                        suggestionError = ""
+                        suggestionSource = ""
+                        suggestionQuoteText = ""
+                    }
+                }
+                .disabled(suggestionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+
+            Section("Recent Quote Suggestions") {
+                if viewModel.recentQuoteSuggestions.isEmpty {
+                    Text("No quote suggestions yet.")
+                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                } else {
+                    ForEach(viewModel.recentQuoteSuggestions, id: \.id) { suggestion in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(suggestion.category.title) • \(suggestion.source)")
+                                .font(.caption)
+                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                            Text("“\(suggestion.quoteText)”")
+                                .font(.body)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                viewModel.deleteSuggestion(suggestion)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Quote Suggestion Lab")
+        .onAppear {
             suggestionError = ""
         }
     }

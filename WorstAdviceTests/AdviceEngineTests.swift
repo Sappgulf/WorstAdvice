@@ -171,6 +171,8 @@ final class PersistenceTests: XCTestCase {
             AdviceRecord.self,
             AdviceFingerprint.self,
             UserAdviceSuggestion.self,
+            UserQuoteSuggestion.self,
+            QuoteVoteRecord.self,
             AppSettingsEntity.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
@@ -331,5 +333,40 @@ final class PersistenceTests: XCTestCase {
         history.rankingMode = .topDisliked
         XCTAssertEqual(history.filteredHistory.count, 1)
         XCTAssertEqual(history.filteredHistory.first?.id, disliked.id)
+    }
+
+    func testQuoteVotePersistsAndCanBeCleared() throws {
+        let repository = try makeRepository()
+
+        repository.setQuoteVote(quoteID: "career-1", vote: .like)
+        XCTAssertEqual(repository.quoteVote(for: "career-1"), .like)
+
+        repository.setQuoteVote(quoteID: "career-1", vote: .none)
+        XCTAssertEqual(repository.quoteVote(for: "career-1"), .none)
+    }
+
+    func testQuoteSuggestionsPersistAndDelete() throws {
+        let repository = try makeRepository()
+        let suggestion = repository.addQuoteSuggestion(
+            category: .career,
+            source: "Office Oracle",
+            quoteText: "If the roadmap drifts, rename the destination."
+        )
+
+        XCTAssertEqual(repository.fetchQuoteSuggestions(limit: 20).count, 1)
+        repository.deleteQuoteSuggestion(suggestion)
+        XCTAssertEqual(repository.fetchQuoteSuggestions(limit: 20).count, 0)
+    }
+
+    func testTabOrderSettingPersistsAndKeepsSettingsLast() throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+
+        settings.tabOrder = [.settings, .history, .quotes, .favorites, .generate]
+        let reloaded = SettingsViewModel(repository: repository)
+
+        XCTAssertEqual(reloaded.tabOrder.first, .generate)
+        XCTAssertEqual(reloaded.tabOrder.last, .settings)
+        XCTAssertEqual(reloaded.tabOrder, [.generate, .history, .quotes, .favorites, .settings])
     }
 }

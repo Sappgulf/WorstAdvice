@@ -105,6 +105,55 @@ final class UserAdviceSuggestion {
 }
 
 @Model
+final class UserQuoteSuggestion {
+    @Attribute(.unique) var id: UUID
+    var createdAt: Date
+    var categoryRaw: String
+    var source: String
+    var quoteText: String
+
+    init(
+        id: UUID = UUID(),
+        createdAt: Date = Date(),
+        category: AdviceCategory,
+        source: String,
+        quoteText: String
+    ) {
+        self.id = id
+        self.createdAt = createdAt
+        self.categoryRaw = category.rawValue
+        self.source = source
+        self.quoteText = quoteText
+    }
+
+    var category: AdviceCategory {
+        AdviceCategory(rawValue: categoryRaw) ?? .productivity
+    }
+}
+
+@Model
+final class QuoteVoteRecord {
+    @Attribute(.unique) var quoteID: String
+    var voteRaw: Int
+    var updatedAt: Date
+
+    init(
+        quoteID: String,
+        vote: AdviceVoteState = .none,
+        updatedAt: Date = Date()
+    ) {
+        self.quoteID = quoteID
+        self.voteRaw = vote.rawValue
+        self.updatedAt = updatedAt
+    }
+
+    var vote: AdviceVoteState {
+        get { AdviceVoteState(rawValue: voteRaw) ?? .none }
+        set { voteRaw = newValue.rawValue }
+    }
+}
+
+@Model
 final class AppSettingsEntity {
     @Attribute(.unique) var id: UUID
     var themeRaw: String
@@ -118,6 +167,7 @@ final class AppSettingsEntity {
     var preferredContentPackRaw: String?
     var strictNoRepeatsRaw: Bool?
     var communityOnlyModeRaw: Bool?
+    var tabOrderRaw: String?
 
     init(
         id: UUID = UUID(),
@@ -131,7 +181,8 @@ final class AppSettingsEntity {
         preferredSharePreset: ShareCaptionPreset = .deadpan,
         preferredContentPack: ContentPack = .classic,
         strictNoRepeats: Bool = true,
-        communityOnlyMode: Bool = false
+        communityOnlyMode: Bool = false,
+        tabOrder: [AppTab] = AppTab.defaultOrder
     ) {
         self.id = id
         self.themeRaw = theme.rawValue
@@ -145,6 +196,7 @@ final class AppSettingsEntity {
         self.preferredContentPackRaw = preferredContentPack.rawValue
         self.strictNoRepeatsRaw = strictNoRepeats
         self.communityOnlyModeRaw = communityOnlyMode
+        self.tabOrderRaw = tabOrder.map(\.rawValue).joined(separator: ",")
     }
 
     var theme: ThemeMode {
@@ -180,6 +232,31 @@ final class AppSettingsEntity {
     var communityOnlyMode: Bool {
         get { communityOnlyModeRaw ?? false }
         set { communityOnlyModeRaw = newValue }
+    }
+
+    var tabOrder: [AppTab] {
+        get {
+            let parts = (tabOrderRaw ?? "")
+                .split(separator: ",")
+                .compactMap { AppTab(rawValue: String($0)) }
+            return Self.sanitizedTabOrder(parts)
+        }
+        set {
+            tabOrderRaw = Self.sanitizedTabOrder(newValue).map(\.rawValue).joined(separator: ",")
+        }
+    }
+
+    private static func sanitizedTabOrder(_ candidate: [AppTab]) -> [AppTab] {
+        var ordered: [AppTab] = []
+        var seen = Set<AppTab>()
+        for tab in candidate where seen.insert(tab).inserted {
+            ordered.append(tab)
+        }
+        for tab in AppTab.defaultOrder where seen.insert(tab).inserted {
+            ordered.append(tab)
+        }
+        let middle = ordered.filter { $0 != .generate && $0 != .settings }
+        return [.generate] + middle + [.settings]
     }
 }
 
@@ -375,9 +452,34 @@ final class AdviceRepository {
         return suggestion
     }
 
+    @discardableResult
+    func addQuoteSuggestion(
+        category: AdviceCategory,
+        source: String,
+        quoteText: String
+    ) -> UserQuoteSuggestion {
+        let suggestion = UserQuoteSuggestion(
+            category: category,
+            source: source,
+            quoteText: quoteText
+        )
+        context.insert(suggestion)
+        save()
+        pruneQuoteSuggestions(maxCount: 250)
+        return suggestion
+    }
+
     func fetchSuggestions(limit: Int = 40) -> [UserAdviceSuggestion] {
         var descriptor = FetchDescriptor<UserAdviceSuggestion>(
             sortBy: [SortDescriptor(\UserAdviceSuggestion.createdAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+        return (try? context.fetch(descriptor)) ?? []
+    }
+
+    func fetchQuoteSuggestions(limit: Int = 60) -> [UserQuoteSuggestion] {
+        var descriptor = FetchDescriptor<UserQuoteSuggestion>(
+            sortBy: [SortDescriptor(\UserQuoteSuggestion.createdAt, order: .reverse)]
         )
         descriptor.fetchLimit = limit
         return (try? context.fetch(descriptor)) ?? []
@@ -388,15 +490,66 @@ final class AdviceRepository {
         return (try? context.fetchCount(descriptor)) ?? 0
     }
 
+    func quoteSuggestionCount() -> Int {
+        let descriptor = FetchDescriptor<UserQuoteSuggestion>()
+        return (try? context.fetchCount(descriptor)) ?? 0
+    }
+
     func deleteSuggestion(_ suggestion: UserAdviceSuggestion) {
         context.delete(suggestion)
         save()
+    }
+
+    func deleteQuoteSuggestion(_ suggestion: UserQuoteSuggestion) {
+        context.delete(suggestion)
+        save()
+    }
+
+    func setQuoteVote(quoteID: String, vote: AdviceVoteState) {
+        let existing = quoteVoteRecord(for: quoteID)
+        if vote == .none {
+            if let existing {
+                context.delete(existing)
+                save()
+            }
+            return
+        }
+        if let existing {
+            existing.vote = vote
+            existing.updatedAt = Date()
+        } else {
+            context.insert(QuoteVoteRecord(quoteID: quoteID, vote: vote, updatedAt: Date()))
+        }
+        save()
+    }
+
+    func quoteVote(for quoteID: String) -> AdviceVoteState {
+        quoteVoteRecord(for: quoteID)?.vote ?? .none
+    }
+
+    func quoteVoteMap() -> [String: AdviceVoteState] {
+        let descriptor = FetchDescriptor<QuoteVoteRecord>(
+            sortBy: [SortDescriptor(\QuoteVoteRecord.updatedAt, order: .reverse)]
+        )
+        let all = (try? context.fetch(descriptor)) ?? []
+        return Dictionary(uniqueKeysWithValues: all.map { ($0.quoteID, $0.vote) })
     }
 
     func pruneSuggestions(maxCount: Int) {
         guard maxCount > 0 else { return }
         let descriptor = FetchDescriptor<UserAdviceSuggestion>(
             sortBy: [SortDescriptor(\UserAdviceSuggestion.createdAt, order: .reverse)]
+        )
+        let all = (try? context.fetch(descriptor)) ?? []
+        guard all.count > maxCount else { return }
+        all.suffix(from: maxCount).forEach { context.delete($0) }
+        save()
+    }
+
+    func pruneQuoteSuggestions(maxCount: Int) {
+        guard maxCount > 0 else { return }
+        let descriptor = FetchDescriptor<UserQuoteSuggestion>(
+            sortBy: [SortDescriptor(\UserQuoteSuggestion.createdAt, order: .reverse)]
         )
         let all = (try? context.fetch(descriptor)) ?? []
         guard all.count > maxCount else { return }
@@ -424,6 +577,16 @@ final class AdviceRepository {
         let normalized = normalizedAdviceLine.normalizedForFiltering
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return "\(Self.poolFingerprintPrefix)\(category.rawValue)|\(tone.rawValue)|\(normalized)"
+    }
+
+    private func quoteVoteRecord(for quoteID: String) -> QuoteVoteRecord? {
+        let predicate = #Predicate<QuoteVoteRecord> { $0.quoteID == quoteID }
+        var descriptor = FetchDescriptor<QuoteVoteRecord>(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\QuoteVoteRecord.updatedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return (try? context.fetch(descriptor))?.first
     }
 }
 
@@ -524,6 +687,47 @@ final class SettingsViewModel {
             settings.communityOnlyMode = newValue
             repository.save()
         }
+    }
+
+    var tabOrder: [AppTab] {
+        get { settings.tabOrder }
+        set {
+            settings.tabOrder = newValue
+            repository.save()
+        }
+    }
+
+    var reorderableTabs: [AppTab] {
+        tabOrder.filter { $0 != .generate && $0 != .settings }
+    }
+
+    func moveReorderableTabs(from source: IndexSet, to destination: Int) {
+        var items = reorderableTabs
+        let moving = source.sorted().map { items[$0] }
+        for index in source.sorted(by: >) {
+            items.remove(at: index)
+        }
+        let insertion = max(0, min(destination, items.count))
+        items.insert(contentsOf: moving, at: insertion)
+        tabOrder = [.generate] + items + [.settings]
+    }
+
+    func moveReorderableTabUp(at index: Int) {
+        var items = reorderableTabs
+        guard index > 0, index < items.count else { return }
+        items.swapAt(index, index - 1)
+        tabOrder = [.generate] + items + [.settings]
+    }
+
+    func moveReorderableTabDown(at index: Int) {
+        var items = reorderableTabs
+        guard index >= 0, index < items.count - 1 else { return }
+        items.swapAt(index, index + 1)
+        tabOrder = [.generate] + items + [.settings]
+    }
+
+    func resetTabOrder() {
+        tabOrder = AppTab.defaultOrder
     }
 }
 
@@ -909,9 +1113,9 @@ final class GenerateViewModel {
         guard let current else { return "" }
         let caption = shareCaption(for: current)
         if let rationale = current.rationaleLine, !rationale.isEmpty {
-            return "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nThe Worst Advice"
+            return "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nWorst Advice"
         }
-        return "\(caption)\n\n\(current.adviceLine)\n\nThe Worst Advice"
+        return "\(caption)\n\n\(current.adviceLine)\n\nWorst Advice"
     }
 
     var currentSharePayload: ShareCardContent? {
@@ -1184,17 +1388,28 @@ final class GenerateViewModel {
 @MainActor
 @Observable
 final class QuotesViewModel {
+    private let repository: AdviceRepository
     private let quoteService: BadQuoteService
+    private let moderation: ContentModeration
+    private let store: AdviceStore
     private let analyticsTracker: AnalyticsTracking
 
     var searchText: String = ""
     var selectedCategory: AdviceCategory?
+    var rankingMode: QuoteRankingMode = .recent
+    private var dataVersion: Int = 0
 
     init(
+        repository: AdviceRepository,
         quoteService: BadQuoteService = BadQuoteService(),
+        moderation: ContentModeration = ContentModeration(),
+        store: AdviceStore = AdviceStore(),
         analyticsTracker: AnalyticsTracking = AppAnalyticsTracker()
     ) {
+        self.repository = repository
         self.quoteService = quoteService
+        self.moderation = moderation
+        self.store = store
         self.analyticsTracker = analyticsTracker
     }
 
@@ -1203,11 +1418,28 @@ final class QuotesViewModel {
     }
 
     var allQuotes: [BadQuote] {
-        quoteService.quotes
+        let base = quoteService.quotes
+        let fromCommunity = recentQuoteSuggestions.map { suggestion in
+            BadQuote(
+                id: "community-\(suggestion.id.uuidString)",
+                text: suggestion.quoteText,
+                source: suggestion.source,
+                category: suggestion.category
+            )
+        }
+        var seen = Set<String>()
+        var merged: [BadQuote] = []
+        for quote in base + fromCommunity {
+            let normalized = quote.text.normalizedForFiltering
+            if seen.insert(normalized).inserted {
+                merged.append(quote)
+            }
+        }
+        return merged
     }
 
     var filteredQuotes: [BadQuote] {
-        allQuotes.filter { quote in
+        let filtered = allQuotes.filter { quote in
             let categoryMatch = selectedCategory == nil || quote.category == selectedCategory
             let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
             if search.isEmpty {
@@ -1216,6 +1448,97 @@ final class QuotesViewModel {
             let haystack = "\(quote.text) \(quote.source) \(quote.category.title)".normalizedForFiltering
             return categoryMatch && haystack.contains(search.normalizedForFiltering)
         }
+        let votes = quoteVoteMap
+        switch rankingMode {
+        case .recent:
+            return filtered
+        case .topLiked:
+            return filtered.filter { votes[$0.id] == .like }
+        case .topDisliked:
+            return filtered.filter { votes[$0.id] == .dislike }
+        }
+    }
+
+    var recentQuoteSuggestions: [UserQuoteSuggestion] {
+        _ = dataVersion
+        return repository.fetchQuoteSuggestions(limit: 30)
+    }
+
+    var quoteSuggestionCount: Int {
+        _ = dataVersion
+        return repository.quoteSuggestionCount()
+    }
+
+    var quoteVoteMap: [String: AdviceVoteState] {
+        _ = dataVersion
+        return repository.quoteVoteMap()
+    }
+
+    var likedCount: Int {
+        quoteVoteMap.values.filter { $0 == .like }.count
+    }
+
+    var dislikedCount: Int {
+        quoteVoteMap.values.filter { $0 == .dislike }.count
+    }
+
+    func vote(for quote: BadQuote) -> AdviceVoteState {
+        quoteVoteMap[quote.id] ?? .none
+    }
+
+    func toggleVote(_ vote: AdviceVoteState, for quote: BadQuote) {
+        let currentVote = repository.quoteVote(for: quote.id)
+        let nextVote: AdviceVoteState = currentVote == vote ? .none : vote
+        repository.setQuoteVote(quoteID: quote.id, vote: nextVote)
+        dataVersion += 1
+        analyticsTracker.track("quote_vote", properties: [
+            "id": quote.id,
+            "category": quote.category.rawValue,
+            "vote": "\(nextVote.rawValue)"
+        ])
+    }
+
+    func submitSuggestion(
+        category: AdviceCategory,
+        source: String,
+        quoteText: String
+    ) -> String? {
+        let trimmedText = quoteText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedSource = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        let safeSource = trimmedSource.isEmpty ? "Community Submission" : String(trimmedSource.prefix(44))
+
+        guard trimmedText.count >= 8 else { return "Quote text is too short." }
+        guard trimmedText.count <= 160 else { return "Quote text is too long." }
+
+        let combined = "\(safeSource) \(trimmedText)"
+        guard moderation.isSafe(text: combined) else {
+            return "Quote suggestion blocked by safety checks."
+        }
+
+        let forbidden = store.rules(for: category, contentPack: .classic).forbiddenPatterns
+        let normalized = trimmedText.normalizedForFiltering
+        guard !forbidden.contains(where: { normalized.contains($0.normalizedForFiltering) }) else {
+            return "Quote suggestion conflicts with category safety constraints."
+        }
+
+        _ = repository.addQuoteSuggestion(
+            category: category,
+            source: safeSource,
+            quoteText: String(trimmedText.prefix(160))
+        )
+        dataVersion += 1
+        analyticsTracker.track("quote_suggestion_submit", properties: [
+            "category": category.rawValue
+        ])
+        return nil
+    }
+
+    func deleteSuggestion(_ suggestion: UserQuoteSuggestion) {
+        repository.deleteQuoteSuggestion(suggestion)
+        dataVersion += 1
+        analyticsTracker.track("quote_suggestion_delete", properties: [
+            "category": suggestion.category.rawValue
+        ])
     }
 
     func trackCopy(_ quote: BadQuote, isDaily: Bool) {
@@ -1235,7 +1558,7 @@ final class QuotesViewModel {
     }
 
     func quoteShareText(_ quote: BadQuote) -> String {
-        "\"\(quote.text)\"\n— \(quote.source)\n\nThe Worst Advice"
+        "\"\(quote.text)\"\n— \(quote.source)\n\nWorst Advice"
     }
 }
 
@@ -1389,7 +1712,7 @@ final class AppSessionViewModel {
         self.generate = GenerateViewModel(repository: repository, settingsViewModel: settings, analyticsTracker: analyticsTracker)
         self.favorites = FavoritesViewModel(repository: repository, analyticsTracker: analyticsTracker)
         self.history = HistoryViewModel(repository: repository, analyticsTracker: analyticsTracker)
-        self.quotes = QuotesViewModel(analyticsTracker: analyticsTracker)
+        self.quotes = QuotesViewModel(repository: repository, analyticsTracker: analyticsTracker)
     }
 
     func refreshLists() {

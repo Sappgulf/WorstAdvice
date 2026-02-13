@@ -208,6 +208,23 @@ struct QuotesTabView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("Browse") {
+                    Picker("Sort", selection: $viewModel.rankingMode) {
+                        ForEach(QuoteRankingMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    HStack {
+                        Text("Liked: \(viewModel.likedCount)")
+                        Spacer()
+                        Text("Disliked: \(viewModel.dislikedCount)")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                }
+
                 Section("Daily Bad Quote") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("“\(viewModel.dailyQuote.text)”")
@@ -219,20 +236,28 @@ struct QuotesTabView: View {
                             .foregroundStyle(Theme.secondaryText(for: settings.theme))
 
                         HStack(spacing: 10) {
+                            voteButtons(for: viewModel.dailyQuote)
+
+                            Spacer(minLength: 8)
+
                             Button {
                                 copyQuote(viewModel.dailyQuote, isDaily: true)
                             } label: {
-                                Label("Copy", systemImage: "doc.on.doc")
+                                Image(systemName: "doc.on.doc")
+                                    .frame(width: 34, height: 34)
                             }
                             .buttonStyle(.bordered)
+                            .accessibilityLabel("Copy daily quote")
 
                             Button {
                                 shareQuote(viewModel.dailyQuote, isDaily: true)
                             } label: {
-                                Label("Share", systemImage: "square.and.arrow.up")
+                                Image(systemName: "square.and.arrow.up")
+                                    .frame(width: 34, height: 34)
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(Theme.accent(for: settings.theme))
+                            .accessibilityLabel("Share daily quote")
                         }
                     }
                     .padding(.vertical, 4)
@@ -244,37 +269,25 @@ struct QuotesTabView: View {
                             .foregroundStyle(Theme.secondaryText(for: settings.theme))
                     } else {
                         ForEach(viewModel.filteredQuotes) { quote in
-                            HStack(alignment: .top, spacing: 10) {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("“\(quote.text)”")
-                                        .font(.body)
-                                        .foregroundStyle(Theme.primaryText(for: settings.theme))
-                                        .fixedSize(horizontal: false, vertical: true)
+                            VStack(alignment: .leading, spacing: 0) {
+                                HStack(alignment: .top, spacing: 10) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("“\(quote.text)”")
+                                            .font(.body)
+                                            .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                            .fixedSize(horizontal: false, vertical: true)
 
-                                    Text("\(quote.source) • \(quote.category.title)")
-                                        .font(.caption)
-                                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                                }
-                                Spacer(minLength: 8)
-                                Menu {
-                                    Button {
-                                        copyQuote(quote, isDaily: false)
-                                    } label: {
-                                        Label("Copy", systemImage: "doc.on.doc")
+                                        Text("\(quote.source) • \(quote.category.title)")
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
                                     }
-                                    Button {
-                                        shareQuote(quote, isDaily: false)
-                                    } label: {
-                                        Label("Share", systemImage: "square.and.arrow.up")
-                                    }
-                                } label: {
-                                    Image(systemName: "ellipsis.circle")
-                                        .font(.title3)
-                                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                                        .frame(width: 32, height: 32)
                                 }
-                                .accessibilityLabel("Quote actions")
-                                .accessibilityHint("Copy or share this quote")
+                                HStack(spacing: 10) {
+                                    voteButtons(for: quote)
+                                    Spacer(minLength: 8)
+                                    quoteActionsMenu(for: quote)
+                                }
+                                .padding(.top, 6)
                             }
                             .padding(.vertical, 2)
                         }
@@ -329,6 +342,52 @@ struct QuotesTabView: View {
         shareItems = [viewModel.quoteShareText(quote)]
         viewModel.trackShare(quote, isDaily: isDaily)
         showingShareSheet = true
+    }
+
+    private func voteButtons(for quote: BadQuote) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                viewModel.toggleVote(.like, for: quote)
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            } label: {
+                Image(systemName: viewModel.vote(for: quote) == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel("Like quote")
+
+            Button {
+                viewModel.toggleVote(.dislike, for: quote)
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            } label: {
+                Image(systemName: viewModel.vote(for: quote) == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel("Dislike quote")
+        }
+    }
+
+    private func quoteActionsMenu(for quote: BadQuote) -> some View {
+        Menu {
+            Button {
+                copyQuote(quote, isDaily: false)
+            } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+            }
+            Button {
+                shareQuote(quote, isDaily: false)
+            } label: {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.title3)
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .frame(width: 32, height: 32)
+        }
+        .accessibilityLabel("Quote actions")
+        .accessibilityHint("Copy or share this quote")
     }
 }
 
