@@ -39,21 +39,29 @@ jobs:
               -scheme "WorstAdvice" \
             | tr -d '\r' \
             | awk '
-              /platform:iOS Simulator/ && /id:/ && $0 !~ /placeholder/ {
-                for (i = 1; i <= NF; i++) {
-                  if ($i ~ /^id:/) {
-                    gsub(/^id:/, "", $i)
-                    gsub(/,/, "", $i)
-                    print $i
-                    exit
-                  }
-                }
+              /platform:[[:space:]]*iOS Simulator/ && /id:/ && $0 !~ /placeholder/ {
+                line = $0
+                sub(/^.*id:[[:space:]]*/, "", line)
+                sub(/[,}].*$/, "", line)
+                print line
+                exit
               }
             '
           )
 
           if [ -z "${DESTINATION_ID:-}" ]; then
+            DESTINATION_ID=$(
+              xcrun simctl list devices available \
+              | awk -F '[()]' '/iPhone/ { print $2; exit }'
+            )
+          fi
+
+          if [ -z "${DESTINATION_ID:-}" ]; then
             echo "No iOS Simulator destination could be resolved."
+            echo "xcodebuild -showdestinations output:"
+            xcodebuild -showdestinations -project "WorstAdvice.xcodeproj" -scheme "WorstAdvice" || true
+            echo "xcrun simctl list devices available output:"
+            xcrun simctl list devices available || true
             exit 1
           fi
 

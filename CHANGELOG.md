@@ -42,6 +42,9 @@ All notable changes to this project are documented in this file.
 - Generate actions flattened to one dominant `Generate` CTA with a compact secondary icon rail.
 - Strict no-repeat now enforces both global fingerprints and category+tone fingerprint pools.
 
+### Fixed
+- Hardened GitHub Actions simulator destination resolution to handle Xcode output format changes and fallback to `simctl`-listed iPhone devices.
+
 ## [1.0.0] - 2026-02-13
 ### Added
 - New SwiftUI MVVM app shell with tabs: Generate, Favorites, History, Settings.
