@@ -62,8 +62,10 @@ struct GenerateTabView: View {
                     .font(Theme.headlineFont)
                     .foregroundStyle(Theme.primaryText(for: settings.theme))
 
+                statStrip
                 categoryScroll
                 toneMenu
+                scenarioComposer
 
                 Group {
                     if let record = viewModel.current {
@@ -75,6 +77,7 @@ struct GenerateTabView: View {
                 }
                 .animation(settings.reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: viewModel.current?.id)
 
+                whyThisFailsCard
                 actionButtons
             }
             .padding(.horizontal, Theme.horizontalPadding)
@@ -84,6 +87,31 @@ struct GenerateTabView: View {
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
+    }
+
+    private var statStrip: some View {
+        HStack(spacing: 8) {
+            statChip(title: "Today", value: "\(viewModel.todayGeneratedCount)")
+            statChip(title: "Total", value: "\(viewModel.totalGeneratedCount)")
+            statChip(title: "Saved", value: "\(viewModel.favoriteCount)")
+        }
+    }
+
+    private func statChip(title: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.headline.monospacedDigit())
+            Text(title)
+                .font(.caption2)
+        }
+        .foregroundStyle(Theme.primaryText(for: settings.theme))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
+        )
     }
 
     private var categoryScroll: some View {
@@ -139,6 +167,55 @@ struct GenerateTabView: View {
         .accessibilityValue(viewModel.selectedTone.title)
     }
 
+    private var scenarioComposer: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Situation (optional)")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+
+            TextField("Example: awkward first date", text: $viewModel.scenarioText, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(Theme.bodyFont)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .frame(minHeight: 46)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Theme.cardColor(for: settings.theme))
+                )
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(viewModel.keywordSuggestions, id: \.self) { suggestion in
+                        Button(suggestion) {
+                            viewModel.applySuggestion(suggestion)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Theme.accent(for: settings.theme))
+                    }
+                }
+            }
+        }
+    }
+
+    private var whyThisFailsCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Why this is terrible")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+            Text(viewModel.lastWhyTerrible)
+                .font(.footnote)
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
+        )
+    }
+
     private var actionButtons: some View {
         VStack(spacing: 10) {
             Button {
@@ -171,6 +248,22 @@ struct GenerateTabView: View {
                 Button("Copy") {
                     UIPasteboard.general.string = viewModel.currentShareText
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .buttonStyle(.bordered)
+            }
+
+            HStack(spacing: 10) {
+                Button("Surprise Me") {
+                    viewModel.surpriseMeAndGenerate()
+                    onDataChanged()
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .buttonStyle(.bordered)
+
+                Button("Daily Drop") {
+                    viewModel.generateDailyDrop()
+                    onDataChanged()
                 }
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .buttonStyle(.bordered)

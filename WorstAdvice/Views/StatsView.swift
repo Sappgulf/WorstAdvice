@@ -26,6 +26,8 @@ struct FavoritesTabView: View {
 
                 if viewModel.favorites.isEmpty {
                     emptyState
+                } else if viewModel.filteredFavorites.isEmpty {
+                    noResultsState
                 } else if layout == .list {
                     listView
                 } else {
@@ -34,13 +36,19 @@ struct FavoritesTabView: View {
             }
             .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
             .navigationTitle("Favorites")
+            .searchable(text: $viewModel.searchText, prompt: "Search saved advice")
+            .safeAreaInset(edge: .top) {
+                categoryFilterStrip
+                    .padding(.horizontal, Theme.horizontalPadding)
+                    .padding(.top, 8)
+            }
             .onAppear { viewModel.reload() }
         }
     }
 
     private var listView: some View {
         List {
-            ForEach(viewModel.favorites, id: \.id) { record in
+            ForEach(viewModel.filteredFavorites, id: \.id) { record in
                 NavigationLink {
                     FavoriteDetailView(record: record, settings: settings)
                 } label: {
@@ -78,7 +86,7 @@ struct FavoritesTabView: View {
     private var gridView: some View {
         ScrollView {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(viewModel.favorites, id: \.id) { record in
+                ForEach(viewModel.filteredFavorites, id: \.id) { record in
                     NavigationLink {
                         FavoriteDetailView(record: record, settings: settings)
                     } label: {
@@ -114,6 +122,33 @@ struct FavoritesTabView: View {
         }
     }
 
+    private var categoryFilterStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                categoryChip(label: "All", category: nil)
+                ForEach(AdviceCategory.allCases) { category in
+                    categoryChip(label: category.title, category: category)
+                }
+            }
+        }
+    }
+
+    private func categoryChip(label: String, category: AdviceCategory?) -> some View {
+        let isSelected = viewModel.selectedCategory == category
+        return Button(label) {
+            viewModel.selectedCategory = category
+        }
+        .buttonStyle(.plain)
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(isSelected ? Theme.buttonText(for: settings.theme) : Theme.primaryText(for: settings.theme))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            Capsule()
+                .fill(isSelected ? Theme.accent(for: settings.theme) : Theme.cardColor(for: settings.theme))
+        )
+    }
+
     private var emptyState: some View {
         VStack(spacing: 8) {
             Image(systemName: "bookmark")
@@ -127,6 +162,21 @@ struct FavoritesTabView: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
                 .padding(.horizontal, 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var noResultsState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+            Text("No matches")
+                .font(.headline)
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+            Text("Try a different search or category.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

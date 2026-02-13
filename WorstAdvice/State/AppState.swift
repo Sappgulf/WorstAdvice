@@ -252,37 +252,77 @@ final class SettingsViewModel {
 final class GenerateViewModel {
     private let repository: AdviceRepository
     private let settingsViewModel: SettingsViewModel
+    private let store: AdviceStore
     private let engine: AdviceEngine
 
     var selectedCategory: AdviceCategory = .dating
     var selectedTone: ToneMode = .corporateConsultant
+    var scenarioText: String = ""
     var current: AdviceRecord?
+    var lastWhyTerrible: String = "Why this is awful: confidence is replacing good judgment."
+
+    private var recentAdviceFingerprints: [String] = []
 
     init(
         repository: AdviceRepository,
         settingsViewModel: SettingsViewModel,
-        engine: AdviceEngine = AdviceEngine()
+        store: AdviceStore = AdviceStore(),
+        moderation: ContentModeration = ContentModeration()
     ) {
         self.repository = repository
         self.settingsViewModel = settingsViewModel
-        self.engine = engine
+        self.store = store
+        self.engine = AdviceEngine(store: store, moderation: moderation)
         self.current = repository.fetchHistory(limit: 1).first
     }
 
     func generate(seed: Int? = nil) {
-        let output = engine.generate(
-            category: selectedCategory,
-            tone: selectedTone,
-            includeRationale: settingsViewModel.includeRationale,
-            seed: seed
-        )
+        let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
+        var picked: GeneratedAdvice?
 
+        for attempt in 0..<8 {
+            let candidate = engine.generate(
+                category: selectedCategory,
+                tone: selectedTone,
+                includeRationale: settingsViewModel.includeRationale,
+                situation: scenarioText,
+                seed: baseSeed + (attempt * 7919)
+            )
+
+            picked = candidate
+            if !recentAdviceFingerprints.contains(fingerprint(for: candidate)) {
+                break
+            }
+        }
+
+        guard let output = picked else { return }
+        rememberFingerprint(for: output)
+        lastWhyTerrible = "Why this is awful: \(store.rules(for: output.category).badPrinciples.randomElement() ?? "certainty without evidence")."
         current = repository.insert(output)
         playHaptic()
     }
 
     func reroll() {
         generate()
+    }
+
+    func surpriseMeAndGenerate() {
+        selectedCategory = AdviceCategory.allCases.randomElement() ?? .dating
+        selectedTone = ToneMode.allCases.randomElement() ?? .corporateConsultant
+        generate()
+    }
+
+    func generateDailyDrop() {
+        let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
+        let categories = AdviceCategory.allCases
+        let tones = ToneMode.allCases
+        selectedCategory = categories[day % categories.count]
+        selectedTone = tones[(day * 3) % tones.count]
+        generate(seed: day * 1013)
+    }
+
+    func applySuggestion(_ suggestion: String) {
+        scenarioText = suggestion
     }
 
     func toggleFavorite() {
@@ -322,8 +362,37 @@ final class GenerateViewModel {
         )
     }
 
+    var keywordSuggestions: [String] {
+        Array(store.rules(for: selectedCategory).keywords.prefix(4))
+    }
+
+    var todayGeneratedCount: Int {
+        let calendar = Calendar.current
+        return repository.fetchHistory(limit: 50).filter { calendar.isDateInToday($0.createdAt) }.count
+    }
+
+    var totalGeneratedCount: Int {
+        repository.fetchAllHistory().count
+    }
+
+    var favoriteCount: Int {
+        repository.fetchFavorites().count
+    }
+
     private func playHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
         HapticsManager.play(style: style, isEnabled: settingsViewModel.hapticsEnabled)
+    }
+
+    private func fingerprint(for generated: GeneratedAdvice) -> String {
+        generated.adviceLine.normalizedForFiltering
+    }
+
+    private func rememberFingerprint(for generated: GeneratedAdvice) {
+        recentAdviceFingerprints.append(fingerprint(for: generated))
+        let overflow = recentAdviceFingerprints.count - 24
+        if overflow > 0 {
+            recentAdviceFingerprints.removeFirst(overflow)
+        }
     }
 }
 
@@ -332,6 +401,8 @@ final class GenerateViewModel {
 final class FavoritesViewModel {
     private let repository: AdviceRepository
     var favorites: [AdviceRecord] = []
+    var searchText: String = ""
+    var selectedCategory: AdviceCategory?
 
     init(repository: AdviceRepository) {
         self.repository = repository
@@ -356,6 +427,20 @@ final class FavoritesViewModel {
         repository.toggleFavorite(record)
         reload()
     }
+
+    var filteredFavorites: [AdviceRecord] {
+        favorites.filter { record in
+            let matchesCategory = selectedCategory == nil || record.category == selectedCategory
+            let matchesSearch: Bool
+            if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                matchesSearch = true
+            } else {
+                let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
+                matchesSearch = haystack.contains(searchText.normalizedForFiltering)
+            }
+            return matchesCategory && matchesSearch
+        }
+    }
 }
 
 @MainActor
@@ -363,6 +448,8 @@ final class FavoritesViewModel {
 final class HistoryViewModel {
     private let repository: AdviceRepository
     var history: [AdviceRecord] = []
+    var searchText: String = ""
+    var selectedCategory: AdviceCategory?
 
     init(repository: AdviceRepository) {
         self.repository = repository
@@ -381,6 +468,20 @@ final class HistoryViewModel {
     func clearHistory() {
         repository.purgeAllHistory()
         reload()
+    }
+
+    var filteredHistory: [AdviceRecord] {
+        history.filter { record in
+            let matchesCategory = selectedCategory == nil || record.category == selectedCategory
+            let matchesSearch: Bool
+            if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                matchesSearch = true
+            } else {
+                let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
+                matchesSearch = haystack.contains(searchText.normalizedForFiltering)
+            }
+            return matchesCategory && matchesSearch
+        }
     }
 }
 

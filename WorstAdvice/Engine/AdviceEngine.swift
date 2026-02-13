@@ -16,6 +16,7 @@ struct AdviceEngine {
         category: AdviceCategory,
         tone: ToneMode,
         includeRationale: Bool,
+        situation: String? = nil,
         seed: Int? = nil,
         now: Date = Date()
     ) -> GeneratedAdvice {
@@ -33,7 +34,9 @@ struct AdviceEngine {
         let tick = rng.pick(voice.rhetoricalTick)
         let slang = rng.pick(voice.slang)
 
-        let filledAction = String(format: actionTemplate, keyword)
+        let scenario = sanitizedSituation(situation)
+        let selectedTopic = scenario ?? keyword
+        let filledAction = String(format: actionTemplate, selectedTopic)
         var advice = "\(opener), \(filledAction) \(confidence) Keep the \(tick) high and the \(slang) higher. \(ending)"
 
         if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
@@ -73,6 +76,20 @@ struct AdviceEngine {
     private func defaultSeed(from date: Date) -> Int {
         Int(date.timeIntervalSince1970 * 1_000)
     }
+
+    private func sanitizedSituation(_ situation: String?) -> String? {
+        guard var situation else { return nil }
+        situation = situation.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !situation.isEmpty else { return nil }
+        guard moderation.isSafe(text: situation) else { return nil }
+
+        let collapsed = situation.replacingOccurrences(
+            of: "\\s+",
+            with: " ",
+            options: .regularExpression
+        )
+        return String(collapsed.prefix(72))
+    }
 }
 
 struct ContentModeration {
@@ -80,10 +97,10 @@ struct ContentModeration {
         "racial slur", "nazi", "hate group", "ethnic cleansing", "supremacist"
     ]
     private let selfHarmTerms = [
-        "self-harm", "suicide", "hurt yourself", "end your life", "overdose"
+        "self-harm", "suicide", "hurt yourself", "end your life", "kill myself", "overdose"
     ]
     private let wrongdoingTerms = [
-        "steal", "fraud", "hack", "weapon", "arson", "poison", "assault"
+        "steal", "fraud", "hack", "weapon", "arson", "poison", "assault", "bomb", "murder", "shoot", "kill"
     ]
 
     func apply(to advice: String, rationale: String?) -> (advice: String, rationale: String?) {

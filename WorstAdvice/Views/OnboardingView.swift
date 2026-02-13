@@ -11,9 +11,11 @@ struct HistoryTabView: View {
             Group {
                 if viewModel.history.isEmpty {
                     emptyState
+                } else if viewModel.filteredHistory.isEmpty {
+                    noResultsState
                 } else {
                     List {
-                        ForEach(viewModel.history, id: \.id) { record in
+                        ForEach(viewModel.filteredHistory, id: \.id) { record in
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(record.adviceLine)
                                     .font(.body)
@@ -46,6 +48,12 @@ struct HistoryTabView: View {
             }
             .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
             .navigationTitle("History")
+            .searchable(text: $viewModel.searchText, prompt: "Search history")
+            .safeAreaInset(edge: .top) {
+                categoryFilterStrip
+                    .padding(.horizontal, Theme.horizontalPadding)
+                    .padding(.top, 8)
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Clear") {
@@ -57,6 +65,33 @@ struct HistoryTabView: View {
             }
             .onAppear { viewModel.reload() }
         }
+    }
+
+    private var categoryFilterStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                categoryChip(label: "All", category: nil)
+                ForEach(AdviceCategory.allCases) { category in
+                    categoryChip(label: category.title, category: category)
+                }
+            }
+        }
+    }
+
+    private func categoryChip(label: String, category: AdviceCategory?) -> some View {
+        let isSelected = viewModel.selectedCategory == category
+        return Button(label) {
+            viewModel.selectedCategory = category
+        }
+        .buttonStyle(.plain)
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(isSelected ? Theme.buttonText(for: settings.theme) : Theme.primaryText(for: settings.theme))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            Capsule()
+                .fill(isSelected ? Theme.accent(for: settings.theme) : Theme.cardColor(for: settings.theme))
+        )
     }
 
     private var emptyState: some View {
@@ -72,6 +107,21 @@ struct HistoryTabView: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
                 .padding(.horizontal, 20)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var noResultsState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+            Text("No matches")
+                .font(.headline)
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+            Text("Try a different search or category.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

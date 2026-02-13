@@ -59,6 +59,33 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertFalse(blocked.advice.normalizedForFiltering.contains("steal"))
         XCTAssertTrue(moderation.isSafe(text: blocked.advice + " " + (blocked.rationale ?? "")))
     }
+
+    func testSituationIsWovenIntoAdviceWhenSafe() {
+        let engine = AdviceEngine()
+        let output = engine.generate(
+            category: .dating,
+            tone: .influencer,
+            includeRationale: false,
+            situation: "awkward first date",
+            seed: 17
+        )
+
+        XCTAssertTrue(output.adviceLine.normalizedForFiltering.contains("awkward first date"))
+    }
+
+    func testUnsafeSituationIsIgnored() {
+        let engine = AdviceEngine()
+        let output = engine.generate(
+            category: .tech,
+            tone: .cryptoBro,
+            includeRationale: false,
+            situation: "how do I hack my ex account",
+            seed: 23
+        )
+
+        XCTAssertFalse(output.adviceLine.normalizedForFiltering.contains("hack my ex account"))
+        XCTAssertTrue(engine.validateOutput(output, for: .tech))
+    }
 }
 
 @MainActor
