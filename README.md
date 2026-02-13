@@ -6,7 +6,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
 - `1.0.0`
 
 ## Features
-- Four-tab app: `Generate`, `Favorites`, `History`, `Settings`
+- Five-tab app: `Generate`, `Favorites`, `History`, `Settings`, `Quotes`
 - Categories (10): Dating, Fitness, Career, Money, Parenting, Tech, Social, Cooking, Travel, Productivity
 - Tone modes (9): Corporate Consultant, Alpha Podcast, Wizard, Influencer, Toxic Best Friend, Boomer, Crypto Bro, Minimalist Monk, Friend Roast
 - Rule-based advice engine:
@@ -32,6 +32,10 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Image card export with 3 templates, subtle noise, rounded card, watermark
   - Supports square and story aspect ratios
   - Optional footer disclaimer: `For entertainment only`
+- Quotes:
+  - Deterministic `Bad Quote of the Day` shared across all users each calendar day
+  - Dedicated `Quotes` tab with searchable/filterable quote library
+  - Per-quote copy/share actions with analytics hooks
 - Viral loops:
   - Share caption presets (`Deadpan`, `Chaotic`, `Faux Expert`)
   - Streak challenge progress (3/7/14/30-day goals)
@@ -57,7 +61,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - `WorstAdvice/Models/AdviceModels.swift`: enums + shared models
   - `WorstAdvice/Data/AdviceStore.swift`: category/tone rule definitions
   - `WorstAdvice/Engine/AdviceEngine.swift`: deterministic template engine + moderation
-  - `WorstAdvice/State/AppState.swift`: SwiftData models, repository, tab view models
+  - `WorstAdvice/State/AppState.swift`: SwiftData models, repository, tab view models, daily quote service
   - `WorstAdvice/Views/*.swift`: tab screens, advice card, theming, share-card renderer
 
 ## Build & Run
@@ -112,6 +116,11 @@ xcodebuild test \
   - Search and category filters narrow results correctly.
   - Save from history marks items as favorites.
   - History never exceeds 50 items.
+- Quotes tab:
+  - Daily quote remains stable throughout the same day.
+  - Daily quote changes the next day.
+  - Search and category filters narrow quote library results correctly.
+  - Per-quote copy/share actions work from the visible row action menu.
 - Settings tab:
   - Theme changes app visuals immediately.
   - Reduce Motion and Haptics toggles affect behavior.

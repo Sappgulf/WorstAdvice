@@ -4,6 +4,9 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 ### Added
+- New `Quotes` tab with searchable/filterable bad-quote library.
+- Deterministic `Bad Quote of the Day` service (same quote for everyone each day).
+- Daily quote banner on Generate for quick daily humor.
 - Situation-aware generation: optional user prompt text is safely incorporated into generated advice.
 - New Generate controls: `Surprise Me` (random category + tone) and deterministic `Daily Drop`.
 - Generate metrics strip for Today/Total/Saved counts.
@@ -30,6 +33,7 @@ All notable changes to this project are documented in this file.
 - Persistence test for category+tone fingerprint no-repeat pools.
 
 ### Changed
+- Quote-library row actions moved to a visible per-row menu (`Copy`/`Share`) for clearer, less crowded interaction.
 - Generation now avoids near-term repeated advice lines by retrying with alternate seeds.
 - Generator now uses multiple composition shapes and category-specific spice lines to expand safe content variety.
 - Moderation term list expanded for stronger self-harm and wrongdoing blocking.
