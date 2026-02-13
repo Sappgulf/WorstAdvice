@@ -5,6 +5,9 @@ struct AdviceCardView: View {
     let record: AdviceRecord
     let theme: ThemeMode
 
+    @State private var shimmerOffset: CGFloat = -1.0
+    @State private var lastRecordID: UUID = UUID()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -43,6 +46,35 @@ struct AdviceCardView: View {
                         .stroke(Theme.primaryText(for: theme).opacity(0.08), lineWidth: 1)
                 )
         )
+        .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [.white.opacity(0.0), .white.opacity(0.25), .white.opacity(0.0)],
+                        startPoint: UnitPoint(x: shimmerOffset - 0.3, y: 0.5),
+                        endPoint: UnitPoint(x: shimmerOffset + 0.3, y: 0.5)
+                    )
+                )
+                .allowsHitTesting(false)
+                .opacity(shimmerOffset >= 0 && shimmerOffset <= 1.0 ? 1 : 0)
+        }
+        .shadow(
+            color: Theme.cardShadow(for: theme).color,
+            radius: Theme.cardShadow(for: theme).radius,
+            y: Theme.cardShadow(for: theme).y
+        )
+        .onChange(of: record.id) { _, newID in
+            guard newID != lastRecordID else { return }
+            lastRecordID = newID
+            shimmerOffset = -0.3
+            withAnimation(.easeInOut(duration: 0.6)) {
+                shimmerOffset = 1.3
+            }
+        }
+        .onAppear {
+            lastRecordID = record.id
+        }
         .accessibilityElement(children: .contain)
     }
 }

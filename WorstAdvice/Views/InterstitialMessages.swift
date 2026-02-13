@@ -291,6 +291,15 @@ struct SettingsTabView: View {
                         }
                     }
                 }
+                Section {
+                    let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–"
+                    let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–"
+                    Text("Worst Advice v\(version) (\(build))")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
+                }
             }
             .scrollContentBackground(.hidden)
             .background(ThemeBackgroundView(mode: viewModel.theme).ignoresSafeArea())

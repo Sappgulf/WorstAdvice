@@ -14,10 +14,8 @@ struct ContentView: View {
                     ThemeBackgroundView(mode: session.settings.theme)
                         .ignoresSafeArea()
 
-                    if session.settings.theme == .neon {
-                        FloatingParticlesView(theme: session.settings.theme, reduceMotion: session.settings.reduceMotion)
-                            .ignoresSafeArea()
-                    }
+                    FloatingParticlesView(theme: session.settings.theme, reduceMotion: session.settings.reduceMotion)
+                        .ignoresSafeArea()
 
                     TabView(selection: $selectedTab) {
                         ForEach(session.settings.tabOrder) { tab in

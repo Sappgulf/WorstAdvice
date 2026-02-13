@@ -11,6 +11,23 @@ enum Theme {
     static let bodyFont: Font = .system(.body, design: .rounded, weight: .regular)
     static let chipFont: Font = .system(.subheadline, design: .rounded, weight: .medium)
 
+    static func cardShadow(for theme: ThemeMode) -> (color: Color, radius: CGFloat, y: CGFloat) {
+        switch theme {
+        case .neon:
+            return (Color.cyan.opacity(0.4), 18, 4)
+        case .dark:
+            return (Color.purple.opacity(0.3), 14, 3)
+        case .warm:
+            return (Color.orange.opacity(0.2), 10, 3)
+        case .sepia:
+            return (Color.brown.opacity(0.15), 8, 2)
+        case .evergreen:
+            return (Color.green.opacity(0.2), 10, 3)
+        case .sunrise:
+            return (Color.pink.opacity(0.25), 12, 3)
+        }
+    }
+
     static func backgroundGradient(for mode: ThemeMode) -> LinearGradient {
         switch mode {
         case .warm:
@@ -117,6 +134,17 @@ enum Theme {
         case .sunrise: return Color(hex: "F0DDD4")
         }
     }
+
+    static func particleColor(for mode: ThemeMode) -> Color {
+        switch mode {
+        case .warm: return Color(hex: "FFE7D1")
+        case .dark: return Color(hex: "FFD1A9")
+        case .neon: return Color(hex: "38F0FF")
+        case .sepia: return Color(hex: "C6A87C")
+        case .evergreen: return Color(hex: "6BA98A")
+        case .sunrise: return Color(hex: "E8A58E")
+        }
+    }
 }
 
 struct ThemeBackgroundView: View {
@@ -142,29 +170,32 @@ struct ThemeBackgroundView: View {
 }
 
 private struct PaperGrainView: View {
-    var body: some View {
-        Canvas { context, size in
-            var path = Path()
-            let step: CGFloat = 12
-            let dotSize: CGFloat = 0.8
 
+    private static func grainPath(size: CGSize) -> Path {
+        var path = Path()
+        let step: CGFloat = 4
+        var x: CGFloat = 0
+        while x < size.width {
             var y: CGFloat = 0
             while y < size.height {
-                var x: CGFloat = 0
-                while x < size.width {
-                    let xi = Int(x / step)
-                    let yi = Int(y / step)
-                    let value = (xi * 13 + yi * 29 + 7) % 17
-                    if value < 4 {
-                        path.addRect(CGRect(x: x + 0.5, y: y + 0.5, width: dotSize, height: dotSize))
-                    }
-                    x += step
+                let hash = (x * 374761 + y * 668265).truncatingRemainder(dividingBy: 100)
+                if hash < 30 {
+                    let dotSize: CGFloat = hash < 10 ? 1.0 : 0.6
+                    path.addEllipse(in: CGRect(x: x, y: y, width: dotSize, height: dotSize))
                 }
                 y += step
             }
-
-            context.fill(path, with: .color(Color(hex: "7C6D56").opacity(0.28)))
+            x += step
         }
+        return path
+    }
+
+    var body: some View {
+        Canvas(rendersAsynchronously: true) { context, size in
+            let path = Self.grainPath(size: size)
+            context.fill(path, with: .color(.primary.opacity(0.04)))
+        }
+        .drawingGroup()
         .allowsHitTesting(false)
     }
 }
