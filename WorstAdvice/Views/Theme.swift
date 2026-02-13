@@ -1,105 +1,100 @@
 import SwiftUI
 
-// MARK: - Theme
-
-/// Centralized design tokens for the app.
 enum Theme {
+    static let cardCornerRadius: CGFloat = 28
+    static let cardPadding: CGFloat = 24
+    static let horizontalPadding: CGFloat = 20
+    static let largeTapTargetHeight: CGFloat = 52
 
-    // MARK: Colors (adaptive light/dark)
+    static let headlineFont: Font = .system(.largeTitle, design: .rounded, weight: .bold)
+    static let cardFont: Font = .system(.title2, design: .rounded, weight: .semibold)
+    static let bodyFont: Font = .system(.body, design: .rounded, weight: .regular)
+    static let chipFont: Font = .system(.subheadline, design: .rounded, weight: .medium)
 
-    static let backgroundTop = Color("BackgroundTop")
-    static let backgroundBottom = Color("BackgroundBottom")
-
-    // Fallback computed gradients when asset catalog colors are absent
-    static var backgroundGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                Color(light: .init(white: 0.97), dark: .init(white: 0.07)),
-                Color(light: .init(white: 0.93), dark: .init(white: 0.04))
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
-
-    static var cardFill: some ShapeStyle {
-        Color(light: .white.opacity(0.85), dark: .white.opacity(0.06))
-    }
-
-    static var cardBorder: some ShapeStyle {
-        Color(light: .black.opacity(0.04), dark: .white.opacity(0.08))
-    }
-
-    static let accentTint = Color(light: .init(red: 0.15, green: 0.15, blue: 0.15),
-                                  dark: .init(white: 0.92))
-
-    static let subtleGlow = Color(light: .black.opacity(0.03), dark: .white.opacity(0.03))
-
-    // MARK: Tier colors (subtle, neutral tones that darken with tier)
-
-    static func tierAccent(_ tier: AdviceTier) -> Color {
-        switch tier {
-        case .tier1: return Color(light: .init(white: 0.55), dark: .init(white: 0.50))
-        case .tier2: return Color(light: .init(white: 0.40), dark: .init(white: 0.62))
-        case .tier3: return Color(light: .init(white: 0.25), dark: .init(white: 0.75))
-        case .tier4: return Color(light: .init(white: 0.10), dark: .init(white: 0.92))
+    static func backgroundGradient(for mode: ThemeMode) -> LinearGradient {
+        switch mode {
+        case .warm:
+            return LinearGradient(
+                colors: [Color(hex: "FFF4E3"), Color(hex: "F7D8BC"), Color(hex: "EFB38A")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .dark:
+            return LinearGradient(
+                colors: [Color(hex: "1C1B24"), Color(hex: "2D2A3A"), Color(hex: "3A334B")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .neon:
+            return LinearGradient(
+                colors: [Color(hex: "10172A"), Color(hex: "052F5F"), Color(hex: "005377")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
     }
 
-    // MARK: Typography
+    static func accent(for mode: ThemeMode) -> Color {
+        switch mode {
+        case .warm: return Color(hex: "A9491C")
+        case .dark: return Color(hex: "F39A5B")
+        case .neon: return Color(hex: "00E5FF")
+        }
+    }
 
-    static let headlineFont: Font = .system(.largeTitle, design: .serif, weight: .bold)
-    static let subheadlineFont: Font = .system(.subheadline, design: .serif, weight: .regular)
-    static let cardFont: Font = .system(.title3, design: .serif, weight: .medium)
-    static let buttonFont: Font = .system(.headline, design: .serif, weight: .semibold)
-    static let captionFont: Font = .system(.caption, design: .serif, weight: .regular)
+    static func cardColor(for mode: ThemeMode) -> Color {
+        switch mode {
+        case .warm: return Color.white.opacity(0.85)
+        case .dark: return Color.white.opacity(0.13)
+        case .neon: return Color.white.opacity(0.14)
+        }
+    }
 
-    // MARK: Dimensions
+    static func primaryText(for mode: ThemeMode) -> Color {
+        switch mode {
+        case .warm: return Color(hex: "322319")
+        case .dark: return Color(hex: "F7EADA")
+        case .neon: return Color(hex: "E5F9FF")
+        }
+    }
 
-    static let cardCornerRadius: CGFloat = 24
-    static let buttonCornerRadius: CGFloat = 16
-    static let cardPadding: CGFloat = 32
-    static let screenPadding: CGFloat = 24
+    static func secondaryText(for mode: ThemeMode) -> Color {
+        switch mode {
+        case .warm: return Color(hex: "5A4231")
+        case .dark: return Color(hex: "CFBCA9")
+        case .neon: return Color(hex: "A7E8F7")
+        }
+    }
+
+    static func buttonText(for mode: ThemeMode) -> Color {
+        switch mode {
+        case .warm: return .white
+        case .dark: return Color(hex: "161219")
+        case .neon: return Color(hex: "001D29")
+        }
+    }
 }
-
-// MARK: - Adaptive Color Helper
 
 extension Color {
-    init(light: Color, dark: Color) {
-        self.init(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(dark)
-                : UIColor(light)
-        })
-    }
-}
+    init(hex: String) {
+        let cleaned = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: cleaned).scanHexInt64(&int)
 
-// MARK: - Shimmer modifier
+        let r, g, b: UInt64
+        switch cleaned.count {
+        case 6:
+            (r, g, b) = (int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (r, g, b) = (255, 255, 255)
+        }
 
-struct ShimmerModifier: ViewModifier {
-    @State private var phase: CGFloat = 0
-
-    func body(content: Content) -> some View {
-        content
-            .overlay {
-                LinearGradient(
-                    colors: [.clear, .white.opacity(0.05), .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .offset(x: phase)
-                .mask(content)
-            }
-            .onAppear {
-                withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
-                    phase = 40
-                }
-            }
-    }
-}
-
-extension View {
-    func shimmer() -> some View {
-        modifier(ShimmerModifier())
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: 1
+        )
     }
 }

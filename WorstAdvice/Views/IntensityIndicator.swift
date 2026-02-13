@@ -1,48 +1,32 @@
 import SwiftUI
 
-// MARK: - IntensityIndicator
-
-/// Four ascending bars. Filled bars use tier-aware color. Unfilled are ghosted.
 struct IntensityIndicator: View {
+    let tone: ToneMode
+    let theme: ThemeMode
 
-    let tier: AdviceTier
-    var showLabel: Bool = false
+    private var level: Int {
+        switch tone {
+        case .corporateConsultant: return 3
+        case .alphaPodcast: return 5
+        case .wizard: return 4
+        case .influencer: return 4
+        case .toxicBestFriend: return 5
+        case .boomer: return 3
+        case .cryptoBro: return 5
+        case .minimalistMonk: return 2
+        }
+    }
 
     var body: some View {
-        HStack(spacing: 5) {
-            HStack(spacing: 3) {
-                ForEach(1...4, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 2.5)
-                        .fill(index <= tier.rawValue
-                              ? Theme.tierAccent(tier)
-                              : Color.primary.opacity(0.10))
-                        .frame(width: 16, height: barHeight(for: index))
-                }
-            }
-            .frame(height: 18, alignment: .bottom)
-
-            if showLabel {
-                Text(tier.label)
-                    .font(.system(.caption2, design: .serif, weight: .medium))
-                    .foregroundStyle(.tertiary)
+        HStack(spacing: 4) {
+            ForEach(1...5, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(index <= level ? Theme.accent(for: theme) : Theme.secondaryText(for: theme).opacity(0.25))
+                    .frame(width: 16, height: CGFloat(6 + index * 3))
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: tier)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Tone intensity")
+        .accessibilityValue("\(level) out of 5")
     }
-
-    private func barHeight(for index: Int) -> CGFloat {
-        let base: CGFloat = 5
-        let step: CGFloat = 3.5
-        return base + step * CGFloat(index - 1)
-    }
-}
-
-#Preview {
-    VStack(spacing: 20) {
-        IntensityIndicator(tier: .tier1, showLabel: true)
-        IntensityIndicator(tier: .tier2, showLabel: true)
-        IntensityIndicator(tier: .tier3, showLabel: true)
-        IntensityIndicator(tier: .tier4, showLabel: true)
-    }
-    .padding()
 }

@@ -1,230 +1,173 @@
 import SwiftUI
 
-// MARK: - StatsView
+struct FavoritesTabView: View {
+    @Bindable var viewModel: FavoritesViewModel
+    @Bindable var settings: SettingsViewModel
 
-struct StatsView: View {
+    @State private var layout: FavoritesLayout = .list
 
-    let appState: AppState
-    @Environment(\.dismiss) private var dismiss
-    private static let memberSinceFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        return formatter
-    }()
+    enum FavoritesLayout: String, CaseIterable, Identifiable {
+        case list
+        case grid
+
+        var id: String { rawValue }
+    }
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Theme.backgroundGradient.ignoresSafeArea()
+            VStack(spacing: 12) {
+                Picker("Layout", selection: $layout) {
+                    Text("List").tag(FavoritesLayout.list)
+                    Text("Grid").tag(FavoritesLayout.grid)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, Theme.horizontalPadding)
+                .padding(.top, 12)
 
-                ScrollView {
-                    VStack(spacing: 28) {
-                        // Hero stat
-                        VStack(spacing: 6) {
-                            Text("\(appState.totalLifetimeAsks)")
-                                .font(.system(size: 64, weight: .bold, design: .serif))
-                                .monospacedDigit()
-                                .foregroundStyle(.primary)
-                            Text("pieces of guidance delivered")
-                                .font(Theme.captionFont)
-                                .foregroundStyle(.secondary)
+                if viewModel.favorites.isEmpty {
+                    emptyState
+                } else if layout == .list {
+                    listView
+                } else {
+                    gridView
+                }
+            }
+            .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
+            .navigationTitle("Favorites")
+            .onAppear { viewModel.reload() }
+        }
+    }
+
+    private var listView: some View {
+        List {
+            ForEach(viewModel.favorites, id: \.id) { record in
+                NavigationLink {
+                    FavoriteDetailView(record: record, settings: settings)
+                } label: {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(record.adviceLine)
+                            .font(.body)
+                            .foregroundStyle(Theme.primaryText(for: settings.theme))
+                            .lineLimit(3)
+
+                        Text("\(record.category.title) • \(record.tone.title)")
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    }
+                    .padding(.vertical, 6)
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        viewModel.delete(record)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+
+                    Button {
+                        viewModel.remove(record)
+                    } label: {
+                        Label("Unsave", systemImage: "bookmark.slash")
+                    }
+                    .tint(.orange)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+    }
+
+    private var gridView: some View {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                ForEach(viewModel.favorites, id: \.id) { record in
+                    NavigationLink {
+                        FavoriteDetailView(record: record, settings: settings)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(record.adviceLine)
+                                .font(.footnote)
+                                .lineLimit(5)
+                                .multilineTextAlignment(.leading)
+                                .foregroundStyle(Theme.primaryText(for: settings.theme))
+
+                            Spacer(minLength: 4)
+
+                            Text(record.category.title)
+                                .font(.caption2)
+                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
                         }
-                        .padding(.top, 20)
-
-                        Divider().padding(.horizontal, 40)
-
-                        // Grid of stats
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 20) {
-                            StatCard(
-                                label: "Highest Tier",
-                                value: appState.highestTierReached.label,
-                                detail: "Tier \(appState.highestTierReached.rawValue) of 4"
-                            )
-
-                            StatCard(
-                                label: "Top Category",
-                                value: appState.topCategory?.rawValue.capitalized ?? "--",
-                                detail: topCategoryDetail
-                            )
-
-                            StatCard(
-                                label: "Session Asks",
-                                value: "\(appState.askCount)",
-                                detail: "this session"
-                            )
-
-                            StatCard(
-                                label: "Member Since",
-                                value: memberSince,
-                                detail: "first ask"
-                            )
-
-                            StatCard(
-                                label: "Current Streak",
-                                value: streakLabel,
-                                detail: streakDetail
-                            )
-
-                            StatCard(
-                                label: "Saved Advice",
-                                value: "\(appState.favoriteIDs.count)",
-                                detail: "bookmarked cards"
-                            )
-                        }
-                        .padding(.horizontal, Theme.screenPadding)
-
-                        // Category breakdown
-                        if !appState.categoryHits.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Category Breakdown")
-                                    .font(.subheadline)
-                                    .fontDesign(.serif)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, Theme.screenPadding)
-
-                                ForEach(sortedCategories, id: \.0) { cat, count in
-                                    CategoryBar(
-                                        name: cat.capitalized,
-                                        count: count,
-                                        max: maxCategoryCount
-                                    )
-                                }
-                                .padding(.horizontal, Theme.screenPadding)
-                            }
-                        }
-
-                        Spacer(minLength: 40)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Theme.cardColor(for: settings.theme))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Unsave") { viewModel.remove(record) }
+                        Button("Delete", role: .destructive) { viewModel.delete(record) }
                     }
                 }
             }
-            .navigationTitle("Your Record")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .fontDesign(.serif)
-                }
-            }
+            .padding(.horizontal, Theme.horizontalPadding)
+            .padding(.bottom, 18)
         }
     }
 
-    // MARK: - Helpers
-
-    private var topCategoryDetail: String {
-        guard let top = appState.topCategory,
-              let count = appState.categoryHits[top.rawValue] else { return "no data yet" }
-        return "\(count) entries"
-    }
-
-    private var memberSince: String {
-        guard let date = appState.firstAskDate else { return "--" }
-        return Self.memberSinceFormatter.string(from: date)
-    }
-
-    private var streakLabel: String {
-        if appState.streakCount <= 0 { return "--" }
-        return "\(appState.streakCount) day\(appState.streakCount == 1 ? "" : "s")"
-    }
-
-    private var streakDetail: String {
-        guard let last = appState.lastActiveDate else { return "start your streak" }
-        if Calendar.current.isDateInToday(last) {
-            return "active today"
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "bookmark")
+                .font(.system(size: 30, weight: .medium))
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+            Text("No favorites yet")
+                .font(.headline)
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+            Text("Save advice from Generate or History to pin it here.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .padding(.horizontal, 24)
         }
-        return "last active \(Self.memberSinceFormatter.string(from: last))"
-    }
-
-    private var sortedCategories: [(String, Int)] {
-        appState.categoryHits.sorted { $0.value > $1.value }
-    }
-
-    private var maxCategoryCount: Int {
-        appState.categoryHits.values.max() ?? 1
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-// MARK: - StatCard
+private struct FavoriteDetailView: View {
+    let record: AdviceRecord
+    @Bindable var settings: SettingsViewModel
 
-private struct StatCard: View {
-    let label: String
-    let value: String
-    let detail: String
-
-    var body: some View {
-        VStack(spacing: 6) {
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-                .fontDesign(.serif)
-                .foregroundStyle(.primary)
-            Text(label)
-                .font(.caption)
-                .fontDesign(.serif)
-                .fontWeight(.medium)
-                .foregroundStyle(.secondary)
-            Text(detail)
-                .font(.caption2)
-                .fontDesign(.serif)
-                .foregroundStyle(.tertiary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 18)
-        .background {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-        }
-    }
-}
-
-// MARK: - CategoryBar
-
-private struct CategoryBar: View {
-    let name: String
-    let count: Int
-    let max: Int
-
-    @State private var animatedFraction: CGFloat = 0
-
-    private var fraction: CGFloat {
-        guard max > 0 else { return 0 }
-        return CGFloat(count) / CGFloat(max)
-    }
+    @State private var shareItems: [Any] = []
+    @State private var showingShareSheet = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(name)
-                    .font(.caption)
-                    .fontDesign(.serif)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text("\(count)")
-                    .font(.caption)
-                    .fontDesign(.serif)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
-            }
+        ScrollView {
+            AdviceCardView(record: record, theme: settings.theme)
+                .padding(Theme.horizontalPadding)
 
-            GeometryReader { geo in
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.primary.opacity(0.12))
-                    .frame(height: 6)
-                    .overlay(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.primary.opacity(0.5))
-                            .frame(width: geo.size.width * animatedFraction, height: 6)
-                    }
+            Button("Share Card") {
+                let content = ShareCardContent(
+                    category: record.category,
+                    tone: record.tone,
+                    adviceLine: record.adviceLine,
+                    rationaleLine: record.rationaleLine,
+                    includeDisclaimer: settings.includeDisclaimerOnShare,
+                    template: settings.preferredTemplate,
+                    aspectRatio: settings.preferredAspect
+                )
+                let image = ShareCardRenderer.render(content: content)
+                shareItems = [image, record.adviceLine]
+                showingShareSheet = true
             }
-            .frame(height: 6)
-            .onAppear {
-                withAnimation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.1)) {
-                    animatedFraction = fraction
-                }
-            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.accent(for: settings.theme))
+            .padding(.horizontal, Theme.horizontalPadding)
+            .padding(.top, 8)
+        }
+        .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
+        .navigationTitle("Favorite")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingShareSheet) {
+            ActivityShareSheet(items: shareItems)
         }
     }
 }

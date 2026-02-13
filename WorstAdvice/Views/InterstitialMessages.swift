@@ -1,53 +1,201 @@
-import Foundation
+import SwiftUI
+import UIKit
 
-// MARK: - InterstitialMessages
+struct ShareCardRenderer {
+    static func render(content: ShareCardContent) -> UIImage {
+        let size = content.aspectRatio == .story ? CGSize(width: 1080, height: 1920) : CGSize(width: 1080, height: 1080)
+        let renderer = UIGraphicsImageRenderer(size: size)
 
-/// In-character rate-limit and cool-off messages. The app never breaks character.
-/// These appear when the user is tapping too fast or has used too many in a session.
-enum InterstitialMessages {
+        return renderer.image { context in
+            let cg = context.cgContext
+            let rect = CGRect(origin: .zero, size: size)
 
-    // Shown after 5+ asks in rapid succession (session burst)
-    static let burstMessages = [
-        "That is enough wisdom for now. Decisions made in bulk lose their power.",
-        "You have more than you need. Go act on what you already know.",
-        "Pause. Absorb. The best advice requires no second opinion.",
-        "Information without implementation is decoration. You have plenty.",
-        "Even the most decisive leaders stop to breathe between decisions.",
-        "Overloading on guidance is itself a form of avoidance. You know what to do.",
-        "The oracle requires a moment. Even wisdom needs to recharge.",
-        "Too many questions dilute the answers. Pick one. Execute it.",
-        "You are collecting advice the way some people collect gym memberships.",
-        "Slow down. The problem is not that you lack guidance. The problem is action.",
-        "Every great mistake requires only one bad idea. You now have several.",
-    ]
+            drawGradient(in: cg, rect: rect, template: content.template)
+            drawNoise(in: cg, rect: rect)
 
-    // Shown on 3rd+ app open in a single day (30% chance)
-    static let frequentReturnMessages = [
-        "You already have everything you need. Go act on it.",
-        "Returning this often suggests you already know the answer. Trust that.",
-        "The best move now is the one you have been avoiding.",
-        "This app is not a replacement for a decision. It is a supplement.",
-        "Checking back again? Bold. Let us see if the advice got worse.",
-    ]
+            let inset: CGFloat = content.aspectRatio == .story ? 82 : 74
+            let cardRect = rect.insetBy(dx: inset, dy: inset)
 
-    // Shown when user taps after a cool-off period ended
-    static let coolOffReturnMessages = [
-        "Welcome back. Time away builds perspective. Let us continue.",
-        "You have rested. The world has not improved. Let us fix that.",
-        "Distance creates clarity. You are ready for the next step.",
-        "A break was wise. The advice was waiting patiently.",
-        "The hiatus is over. Your recklessness is back on schedule.",
-    ]
+            let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 44)
+            cg.saveGState()
+            UIColor.white.withAlphaComponent(0.22).setFill()
+            path.fill()
+            cg.restoreGState()
 
-    static func randomBurst() -> String {
-        burstMessages.randomElement() ?? burstMessages[0]
+            UIColor.white.withAlphaComponent(0.28).setStroke()
+            path.lineWidth = 2
+            path.stroke()
+
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .left
+            paragraph.lineBreakMode = .byWordWrapping
+
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 34, weight: .bold),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.95)
+            ]
+            NSString(string: "The Worst Advice").draw(
+                in: CGRect(x: cardRect.minX + 52, y: cardRect.minY + 42, width: cardRect.width - 104, height: 44),
+                withAttributes: titleAttributes
+            )
+
+            let adviceAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 48, weight: .semibold),
+                .paragraphStyle: paragraph,
+                .foregroundColor: UIColor.white
+            ]
+            NSString(string: content.adviceLine).draw(
+                in: CGRect(x: cardRect.minX + 52, y: cardRect.minY + 118, width: cardRect.width - 104, height: cardRect.height * 0.48),
+                withAttributes: adviceAttributes
+            )
+
+            if let rationale = content.rationaleLine, !rationale.isEmpty {
+                let rationaleAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 28, weight: .regular),
+                    .paragraphStyle: paragraph,
+                    .foregroundColor: UIColor.white.withAlphaComponent(0.9)
+                ]
+                NSString(string: rationale).draw(
+                    in: CGRect(x: cardRect.minX + 52, y: cardRect.midY + 120, width: cardRect.width - 104, height: 220),
+                    withAttributes: rationaleAttributes
+                )
+            }
+
+            let metaAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.monospacedSystemFont(ofSize: 24, weight: .medium),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.85)
+            ]
+            NSString(string: "\(content.category.title) • \(content.tone.title)").draw(
+                in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 150, width: cardRect.width - 104, height: 30),
+                withAttributes: metaAttributes
+            )
+
+            NSString(string: "@TheWorstAdvice").draw(
+                in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 104, width: cardRect.width - 104, height: 30),
+                withAttributes: [
+                    .font: UIFont.monospacedSystemFont(ofSize: 22, weight: .regular),
+                    .foregroundColor: UIColor.white.withAlphaComponent(0.8)
+                ]
+            )
+
+            if content.includeDisclaimer {
+                NSString(string: "For entertainment only").draw(
+                    in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 62, width: cardRect.width - 104, height: 28),
+                    withAttributes: [
+                        .font: UIFont.systemFont(ofSize: 21, weight: .semibold),
+                        .foregroundColor: UIColor.white.withAlphaComponent(0.86)
+                    ]
+                )
+            }
+        }
     }
 
-    static func randomFrequentReturn() -> String {
-        frequentReturnMessages.randomElement() ?? frequentReturnMessages[0]
+    private static func drawGradient(in cg: CGContext, rect: CGRect, template: ShareCardTemplate) {
+        let colors: [CGColor]
+        switch template {
+        case .ember:
+            colors = [UIColor(red: 0.85, green: 0.35, blue: 0.17, alpha: 1).cgColor,
+                      UIColor(red: 0.64, green: 0.2, blue: 0.14, alpha: 1).cgColor,
+                      UIColor(red: 0.37, green: 0.12, blue: 0.12, alpha: 1).cgColor]
+        case .cocoa:
+            colors = [UIColor(red: 0.35, green: 0.23, blue: 0.18, alpha: 1).cgColor,
+                      UIColor(red: 0.26, green: 0.17, blue: 0.15, alpha: 1).cgColor,
+                      UIColor(red: 0.18, green: 0.12, blue: 0.11, alpha: 1).cgColor]
+        case .dawn:
+            colors = [UIColor(red: 0.97, green: 0.56, blue: 0.32, alpha: 1).cgColor,
+                      UIColor(red: 0.92, green: 0.36, blue: 0.45, alpha: 1).cgColor,
+                      UIColor(red: 0.49, green: 0.2, blue: 0.48, alpha: 1).cgColor]
+        }
+
+        let locations: [CGFloat] = [0, 0.45, 1]
+        let space = CGColorSpaceCreateDeviceRGB()
+        guard let gradient = CGGradient(colorsSpace: space, colors: colors as CFArray, locations: locations) else { return }
+        cg.drawLinearGradient(gradient, start: CGPoint(x: rect.minX, y: rect.minY), end: CGPoint(x: rect.maxX, y: rect.maxY), options: [])
     }
 
-    static func randomCoolOffReturn() -> String {
-        coolOffReturnMessages.randomElement() ?? coolOffReturnMessages[0]
+    private static func drawNoise(in cg: CGContext, rect: CGRect) {
+        cg.saveGState()
+        for index in stride(from: 0, to: 2_600, by: 1) {
+            let x = CGFloat((index * 73) % Int(rect.width))
+            let y = CGFloat((index * 91) % Int(rect.height))
+            let alpha = CGFloat((index % 7) + 1) / 260
+            UIColor.white.withAlphaComponent(alpha).setFill()
+            cg.fill(CGRect(x: x, y: y, width: 2, height: 2))
+        }
+        cg.restoreGState()
+    }
+}
+
+struct ActivityShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+struct SettingsTabView: View {
+    @Bindable var viewModel: SettingsViewModel
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Theme") {
+                    Picker("Theme", selection: Binding(
+                        get: { viewModel.theme },
+                        set: { viewModel.theme = $0 }
+                    )) {
+                        ForEach(ThemeMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Section("Behavior") {
+                    Toggle("Show disclaimer on share", isOn: Binding(
+                        get: { viewModel.includeDisclaimerOnShare },
+                        set: { viewModel.includeDisclaimerOnShare = $0 }
+                    ))
+                    Toggle("Include fake rationale", isOn: Binding(
+                        get: { viewModel.includeRationale },
+                        set: { viewModel.includeRationale = $0 }
+                    ))
+                    Toggle("Reduce motion", isOn: Binding(
+                        get: { viewModel.reduceMotion },
+                        set: { viewModel.reduceMotion = $0 }
+                    ))
+                    Toggle("Haptics", isOn: Binding(
+                        get: { viewModel.hapticsEnabled },
+                        set: { viewModel.hapticsEnabled = $0 }
+                    ))
+                }
+
+                Section("Share Defaults") {
+                    Picker("Template", selection: Binding(
+                        get: { viewModel.preferredTemplate },
+                        set: { viewModel.preferredTemplate = $0 }
+                    )) {
+                        ForEach(ShareCardTemplate.allCases) { template in
+                            Text(template.title).tag(template)
+                        }
+                    }
+
+                    Picker("Aspect Ratio", selection: Binding(
+                        get: { viewModel.preferredAspect },
+                        set: { viewModel.preferredAspect = $0 }
+                    )) {
+                        ForEach(ShareAspectRatio.allCases) { ratio in
+                            Text(ratio.title).tag(ratio)
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.backgroundGradient(for: viewModel.theme).ignoresSafeArea())
+            .navigationTitle("Settings")
+        }
     }
 }

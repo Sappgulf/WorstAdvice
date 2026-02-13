@@ -1,103 +1,78 @@
 import SwiftUI
 
-// MARK: - OnboardingView
-
-struct OnboardingView: View {
-
-    @Binding var isPresented: Bool
-
-    @State private var currentPage = 0
-
-    private let pages: [(title: String, body: String, icon: String)] = [
-        (
-            "Welcome.",
-            "You have questions. We have answers. The quality of those answers is not guaranteed, but the confidence is absolute.",
-            "sparkles"
-        ),
-        (
-            "How it works.",
-            "Tap. Receive guidance. The more you ask, the bolder the advice becomes. This is by design.",
-            "arrow.up.right.circle"
-        ),
-        (
-            "A note on trust.",
-            "This app believes in you. It believes you can handle anything. Whether or not that belief is warranted is not our concern.",
-            "hand.raised"
-        ),
-    ]
+struct HistoryTabView: View {
+    @Bindable var viewModel: HistoryViewModel
+    @Bindable var settings: SettingsViewModel
+    let onUseRecord: (AdviceRecord) -> Void
+    let onDataChanged: () -> Void
 
     var body: some View {
-        ZStack {
-            Theme.backgroundGradient.ignoresSafeArea()
+        NavigationStack {
+            Group {
+                if viewModel.history.isEmpty {
+                    emptyState
+                } else {
+                    List {
+                        ForEach(viewModel.history, id: \.id) { record in
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(record.adviceLine)
+                                    .font(.body)
+                                    .foregroundStyle(Theme.primaryText(for: settings.theme))
 
-            VStack(spacing: 0) {
-                Spacer()
+                                Text("\(record.category.title) • \(record.tone.title)")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
 
-                // Page content
-                VStack(spacing: 28) {
-                    Image(systemName: pages[currentPage].icon)
-                        .font(.system(size: 44, weight: .ultraLight))
-                        .foregroundStyle(.primary.opacity(0.5))
-                        .id("icon_\(currentPage)")
-                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                                HStack(spacing: 10) {
+                                    Button("Use") {
+                                        onUseRecord(record)
+                                    }
+                                    .buttonStyle(.bordered)
 
-                    VStack(spacing: 16) {
-                        Text(pages[currentPage].title)
-                            .font(Theme.headlineFont)
-                            .foregroundStyle(.primary)
-                            .id("title_\(currentPage)")
-                            .transition(.opacity.combined(with: .move(edge: .trailing)))
-
-                        Text(pages[currentPage].body)
-                            .font(.body)
-                            .fontDesign(.serif)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(6)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 32)
-                            .id("body_\(currentPage)")
-                            .transition(.opacity.combined(with: .move(edge: .trailing)))
+                                    Button(record.isFavorite ? "Saved" : "Save") {
+                                        viewModel.saveFromHistory(record)
+                                        onDataChanged()
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(Theme.accent(for: settings.theme))
+                                }
+                                .padding(.top, 2)
+                            }
+                            .padding(.vertical, 6)
+                        }
                     }
+                    .scrollContentBackground(.hidden)
                 }
-                .animation(.easeInOut(duration: 0.4), value: currentPage)
-
-                Spacer()
-
-                // Page dots
-                HStack(spacing: 8) {
-                    ForEach(0..<pages.count, id: \.self) { i in
-                        Circle()
-                            .fill(i == currentPage ? Color.primary : Color.primary.opacity(0.2))
-                            .frame(width: 8, height: 8)
-                            .animation(.easeInOut(duration: 0.25), value: currentPage)
-                    }
-                }
-                .padding(.bottom, 32)
-
-                // Action button
-                Button(action: advance) {
-                    Text(currentPage == pages.count - 1 ? "Begin" : "Continue")
-                        .font(Theme.buttonFont)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accentTint)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.buttonCornerRadius, style: .continuous))
-                .padding(.horizontal, Theme.screenPadding)
-                .padding(.bottom, 50)
             }
+            .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
+            .navigationTitle("History")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Clear") {
+                        viewModel.clearHistory()
+                        onDataChanged()
+                    }
+                    .disabled(viewModel.history.isEmpty)
+                }
+            }
+            .onAppear { viewModel.reload() }
         }
     }
 
-    private func advance() {
-        HapticsManager.playButton()
-        if currentPage < pages.count - 1 {
-            withAnimation { currentPage += 1 }
-        } else {
-            withAnimation(.easeOut(duration: 0.3)) {
-                isPresented = false
-            }
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.system(size: 30, weight: .medium))
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+            Text("History is empty")
+                .font(.headline)
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+            Text("Generated advice appears here (last 50 items).")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .padding(.horizontal, 20)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

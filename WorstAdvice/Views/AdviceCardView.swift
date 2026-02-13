@@ -1,79 +1,233 @@
 import SwiftUI
-
-// MARK: - AdviceCardView
+import UIKit
 
 struct AdviceCardView: View {
-
-    let text: String
-    let tier: AdviceTier
-    let category: AdviceCategory?
-    let animationID: UUID
-
-    @State private var appeared = false
+    let record: AdviceRecord
+    let theme: ThemeMode
 
     var body: some View {
-        VStack(spacing: 20) {
-            // Category tag
-            if let cat = category {
-                Text(cat.rawValue.uppercased())
-                    .font(.system(.caption2, design: .serif, weight: .semibold))
-                    .tracking(1.5)
-                    .foregroundStyle(.tertiary)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Label(record.category.title, systemImage: record.category.icon)
+                Spacer()
+                Text(record.tone.title)
+            }
+            .font(Theme.chipFont)
+            .foregroundStyle(Theme.secondaryText(for: theme))
+
+            Text(record.adviceLine)
+                .font(Theme.cardFont)
+                .foregroundStyle(Theme.primaryText(for: theme))
+                .lineSpacing(5)
+                .minimumScaleFactor(0.8)
+                .accessibilityLabel("Advice")
+                .accessibilityValue(record.adviceLine)
+
+            if let rationale = record.rationaleLine, !rationale.isEmpty {
+                Text(rationale)
+                    .font(Theme.bodyFont)
+                    .foregroundStyle(Theme.secondaryText(for: theme))
+                    .accessibilityLabel("Fake rationale")
+                    .accessibilityValue(rationale)
             }
 
-            // Advice text
-            Text(text)
-                .font(Theme.cardFont)
-                .multilineTextAlignment(.center)
-                .lineSpacing(7)
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 4)
-                .id(animationID)
-                .transition(
-                    .asymmetric(
-                        insertion: .opacity
-                            .combined(with: .scale(scale: 0.95))
-                            .combined(with: .offset(y: 8)),
-                        removal: .opacity
-                            .combined(with: .scale(scale: 1.02))
-                            .combined(with: .offset(y: -4))
-                    )
-                )
-
-            // Intensity bar
-            IntensityIndicator(tier: tier, showLabel: true)
+            IntensityIndicator(tone: record.tone, theme: theme)
         }
         .padding(Theme.cardPadding)
-        .frame(maxWidth: .infinity)
-        .background {
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay {
+                .fill(Theme.cardColor(for: theme))
+                .overlay(
                     RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
-                }
-                .shadow(color: .black.opacity(0.05), radius: 20, y: 10)
-                .shadow(color: .black.opacity(0.02), radius: 4, y: 2)
-        }
-        .padding(.horizontal, Theme.screenPadding)
-        .scaleEffect(appeared ? 1 : 0.96)
-        .opacity(appeared ? 1 : 0)
-        .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                appeared = true
-            }
-        }
+                        .stroke(Theme.primaryText(for: theme).opacity(0.08), lineWidth: 1)
+                )
+        )
+        .accessibilityElement(children: .contain)
     }
 }
 
-#Preview {
-    ZStack {
-        Theme.backgroundGradient.ignoresSafeArea()
-        AdviceCardView(
-            text: "Salt your food before tasting it. You already know what it needs. Trust yourself.",
-            tier: .tier2,
-            category: .daily,
-            animationID: UUID()
+struct GenerateTabView: View {
+    @Bindable var viewModel: GenerateViewModel
+    @Bindable var settings: SettingsViewModel
+    var onDataChanged: () -> Void
+
+    @State private var shareItems: [Any] = []
+    @State private var showingShareSheet = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("The Worst Advice")
+                    .font(Theme.headlineFont)
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+
+                categoryScroll
+                toneMenu
+
+                Group {
+                    if let record = viewModel.current {
+                        AdviceCardView(record: record, theme: settings.theme)
+                            .transition(settings.reduceMotion ? .identity : .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
+                    } else {
+                        emptyState
+                    }
+                }
+                .animation(settings.reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: viewModel.current?.id)
+
+                actionButtons
+            }
+            .padding(.horizontal, Theme.horizontalPadding)
+            .padding(.top, 16)
+            .padding(.bottom, 28)
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            ActivityShareSheet(items: shareItems)
+        }
+    }
+
+    private var categoryScroll: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(AdviceCategory.allCases) { category in
+                    Button {
+                        viewModel.selectedCategory = category
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    } label: {
+                        Label(category.title, systemImage: category.icon)
+                            .font(Theme.chipFont)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .frame(minHeight: 44)
+                            .background(
+                                Capsule()
+                                    .fill(viewModel.selectedCategory == category ? Theme.accent(for: settings.theme) : Theme.cardColor(for: settings.theme))
+                            )
+                            .foregroundStyle(viewModel.selectedCategory == category ? Theme.buttonText(for: settings.theme) : Theme.primaryText(for: settings.theme))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Category \(category.title)")
+                }
+            }
+        }
+    }
+
+    private var toneMenu: some View {
+        Menu {
+            Picker("Tone", selection: $viewModel.selectedTone) {
+                ForEach(ToneMode.allCases) { tone in
+                    Text(tone.title).tag(tone)
+                }
+            }
+        } label: {
+            HStack {
+                Text("Tone: \(viewModel.selectedTone.title)")
+                Spacer()
+                Image(systemName: "chevron.down")
+            }
+            .font(Theme.bodyFont.weight(.semibold))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 46)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Theme.cardColor(for: settings.theme))
+            )
+            .foregroundStyle(Theme.primaryText(for: settings.theme))
+        }
+        .accessibilityLabel("Tone mode")
+        .accessibilityValue(viewModel.selectedTone.title)
+    }
+
+    private var actionButtons: some View {
+        VStack(spacing: 10) {
+            Button {
+                viewModel.generate()
+                onDataChanged()
+            } label: {
+                Text(viewModel.current == nil ? "Generate" : "Generate New")
+                    .font(Theme.bodyFont.weight(.bold))
+                    .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.accent(for: settings.theme))
+            .foregroundStyle(Theme.buttonText(for: settings.theme))
+
+            HStack(spacing: 10) {
+                Button("Reroll") {
+                    viewModel.reroll()
+                    onDataChanged()
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .buttonStyle(.bordered)
+
+                Button(viewModel.isCurrentFavorite ? "Saved" : "Save") {
+                    viewModel.toggleFavorite()
+                    onDataChanged()
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .buttonStyle(.bordered)
+
+                Button("Copy") {
+                    UIPasteboard.general.string = viewModel.currentShareText
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .buttonStyle(.bordered)
+            }
+
+            HStack(spacing: 10) {
+                Button("Share") {
+                    guard let payload = viewModel.currentSharePayload else { return }
+                    let image = ShareCardRenderer.render(content: payload)
+                    shareItems = [image, viewModel.currentShareText]
+                    showingShareSheet = true
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.accent(for: settings.theme).opacity(0.9))
+
+                Picker("Template", selection: Binding(
+                    get: { settings.preferredTemplate },
+                    set: { settings.preferredTemplate = $0 }
+                )) {
+                    ForEach(ShareCardTemplate.allCases) { template in
+                        Text(template.title).tag(template)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity, minHeight: 44)
+
+                Picker("Ratio", selection: Binding(
+                    get: { settings.preferredAspect },
+                    set: { settings.preferredAspect = $0 }
+                )) {
+                    ForEach(ShareAspectRatio.allCases) { ratio in
+                        Text(ratio.title).tag(ratio)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity, minHeight: 44)
+            }
+        }
+        .tint(Theme.accent(for: settings.theme))
+        .foregroundStyle(Theme.primaryText(for: settings.theme))
+    }
+
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("No advice yet")
+                .font(Theme.cardFont)
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+            Text("Tap Generate for plausibly wrong life guidance.")
+                .font(Theme.bodyFont)
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Theme.cardPadding)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
         )
     }
 }
