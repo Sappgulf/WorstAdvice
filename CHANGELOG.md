@@ -7,6 +7,11 @@ All notable changes to this project are documented in this file.
 - New `Quotes` tab with searchable/filterable bad-quote library.
 - Deterministic `Bad Quote of the Day` service (same quote for everyone each day).
 - Daily quote banner on Generate for quick daily humor.
+- Quote-library voting (`like` / `dislike`) with ranking modes: `Recent`, `Top Liked`, `Top Disliked`.
+- Quote Suggestion Lab in Settings for moderated user-submitted quote lines.
+- Persistent quote vote and quote suggestion storage (`QuoteVoteRecord`, `UserQuoteSuggestion`).
+- User-customizable tab order controls in Settings (Generate pinned first, Settings pinned last).
+- New `WorstAdviceWidget` WidgetKit extension for daily bad quote homescreen cards.
 - Situation-aware generation: optional user prompt text is safely incorporated into generated advice.
 - New Generate controls: `Surprise Me` (random category + tone) and deterministic `Daily Drop`.
 - Generate metrics strip for Today/Total/Saved counts.
@@ -31,9 +36,12 @@ All notable changes to this project are documented in this file.
 - Persistence tests for community-only setting and history vote-ranking filters.
 - Community Pulse leaderboard in Settings (top suggested topics + top liked/disliked advice).
 - Persistence test for category+tone fingerprint no-repeat pools.
+- Persistence tests for quote vote persistence, quote suggestion lifecycle, and tab-order persistence.
 
 ### Changed
 - Quote-library row actions moved to a visible per-row menu (`Copy`/`Share`) for clearer, less crowded interaction.
+- Generate header copy simplified by removing the explanatory subtitle and using the shorter title `Worst Advice`.
+- Default tab order is now `Generate`, `Quotes`, `Favorites`, `History`, `Settings`.
 - Generation now avoids near-term repeated advice lines by retrying with alternate seeds.
 - Generator now uses multiple composition shapes and category-specific spice lines to expand safe content variety.
 - Moderation term list expanded for stronger self-harm and wrongdoing blocking.

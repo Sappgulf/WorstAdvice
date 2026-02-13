@@ -1,4 +1,4 @@
-# The Worst Advice (iOS)
+# Worst Advice (iOS)
 
 A SwiftUI satire app that generates confidently wrong advice that still sounds plausible.
 
@@ -6,7 +6,8 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
 - `1.0.0`
 
 ## Features
-- Five-tab app: `Generate`, `Favorites`, `History`, `Settings`, `Quotes`
+- Five-tab app with default order: `Generate`, `Quotes`, `Favorites`, `History`, `Settings`
+- User-customizable tab bar order (Generate pinned first, Settings pinned last)
 - Categories (10): Dating, Fitness, Career, Money, Parenting, Tech, Social, Cooking, Travel, Productivity
 - Tone modes (9): Corporate Consultant, Alpha Podcast, Wizard, Influencer, Toxic Best Friend, Boomer, Crypto Bro, Minimalist Monk, Friend Roast
 - Rule-based advice engine:
@@ -24,6 +25,8 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Category+tone no-repeat fingerprint pools for stricter repeat blocking
   - Per-advice local vote state (`like` / `dislike`)
   - User suggestion queue for recommended advice lines by topic/category
+  - Quote suggestion queue for user-submitted bad quotes
+  - Per-quote local vote state (`like` / `dislike`)
   - Optional community-only generation mode backed by local suggestions
   - Persisted settings
 - Share-first workflow:
@@ -35,7 +38,11 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
 - Quotes:
   - Deterministic `Bad Quote of the Day` shared across all users each calendar day
   - Dedicated `Quotes` tab with searchable/filterable quote library
-  - Per-quote copy/share actions with analytics hooks
+  - Ranking modes: `Recent`, `Top Liked`, `Top Disliked`
+  - Per-quote like/dislike + copy/share actions with analytics hooks
+  - Quote Suggestion Lab for community quote submissions (moderated)
+- Homescreen:
+  - WidgetKit extension (`WorstAdviceWidget`) with a daily bad quote card (small/medium)
 - Viral loops:
   - Share caption presets (`Deadpan`, `Chaotic`, `Faux Expert`)
   - Streak challenge progress (3/7/14/30-day goals)
@@ -56,7 +63,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
 ## Architecture
 - UI: SwiftUI
 - Pattern: MVVM
-- Persistence: SwiftData (`AdviceRecord`, `AdviceFingerprint`, `UserAdviceSuggestion`, `AppSettingsEntity`)
+- Persistence: SwiftData (`AdviceRecord`, `AdviceFingerprint`, `UserAdviceSuggestion`, `UserQuoteSuggestion`, `QuoteVoteRecord`, `AppSettingsEntity`)
 - Core modules:
   - `WorstAdvice/Models/AdviceModels.swift`: enums + shared models
   - `WorstAdvice/Data/AdviceStore.swift`: category/tone rule definitions
@@ -120,6 +127,8 @@ xcodebuild test \
   - Daily quote remains stable throughout the same day.
   - Daily quote changes the next day.
   - Search and category filters narrow quote library results correctly.
+  - Sort modes (`Recent`, `Top Liked`, `Top Disliked`) filter as expected.
+  - Per-quote like/dislike toggles persist.
   - Per-quote copy/share actions work from the visible row action menu.
 - Settings tab:
   - Theme changes app visuals immediately.
@@ -129,7 +138,12 @@ xcodebuild test \
   - Community-only toggle forces generation to use moderated user suggestions only.
   - Suggestion Lab navigation opens submit/list/delete flow for community suggestions.
   - Community Pulse view shows top suggested topics and local like/dislike leaders.
+  - Quote Suggestion Lab navigation opens submit/list/delete flow for community quotes.
   - Share caption style picker affects copied/shared text captions.
   - Strict no-repeat toggle enforces global uniqueness across generated advice lines.
+  - Tab bar customization reorders middle tabs while keeping Generate first and Settings last.
+- Widget:
+  - `Daily Bad Quote` widget appears in widget gallery.
+  - Widget quote updates daily and matches app daily quote cycle.
 - Safety:
   - Outputs remain satirical and avoid hateful/self-harm/wrongdoing content.
