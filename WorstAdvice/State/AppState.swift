@@ -1152,9 +1152,9 @@ final class GenerateViewModel {
         guard let current else { return "" }
         let caption = shareCaption(for: current)
         if let rationale = current.rationaleLine, !rationale.isEmpty {
-            return "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nWorst Advice"
+            return "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nBadvice"
         }
-        return "\(caption)\n\n\(current.adviceLine)\n\nWorst Advice"
+        return "\(caption)\n\n\(current.adviceLine)\n\nBadvice"
     }
 
     var currentSharePayload: ShareCardContent? {
@@ -1611,7 +1611,7 @@ final class QuotesViewModel {
     }
 
     func quoteShareText(_ quote: BadQuote) -> String {
-        "\"\(quote.text)\"\n— \(quote.source)\n\nWorst Advice"
+        "\"\(quote.text)\"\n— \(quote.source)\n\nBadvice"
     }
 
     private func reloadCachedData() {

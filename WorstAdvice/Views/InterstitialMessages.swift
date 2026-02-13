@@ -34,7 +34,7 @@ struct ShareCardRenderer {
                 .font: UIFont.systemFont(ofSize: 34, weight: .bold),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.95)
             ]
-            NSString(string: "Worst Advice").draw(
+            NSString(string: "Badvice").draw(
                 in: CGRect(x: cardRect.minX + 52, y: cardRect.minY + 42, width: cardRect.width - 104, height: 44),
                 withAttributes: titleAttributes
             )
@@ -70,7 +70,7 @@ struct ShareCardRenderer {
                 withAttributes: metaAttributes
             )
 
-            NSString(string: "@TheWorstAdvice").draw(
+            NSString(string: "@Badvice").draw(
                 in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 104, width: cardRect.width - 104, height: 30),
                 withAttributes: [
                     .font: UIFont.monospacedSystemFont(ofSize: 22, weight: .regular),
@@ -294,7 +294,7 @@ struct SettingsTabView: View {
                 Section {
                     let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–"
                     let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–"
-                    Text("Worst Advice v\(version) (\(build))")
+                    Text("Badvice v\(version) (\(build))")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity)
