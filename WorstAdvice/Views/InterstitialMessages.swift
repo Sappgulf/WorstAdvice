@@ -153,7 +153,11 @@ struct SettingsTabView: View {
                             Text(mode.title).tag(mode)
                         }
                     }
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.menu)
+
+                    Text("Current: \(viewModel.theme.title)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Tab Bar") {

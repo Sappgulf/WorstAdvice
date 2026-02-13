@@ -45,8 +45,12 @@ All notable changes to this project are documented in this file.
 - Generate header copy simplified by removing the explanatory subtitle and using the shorter title `Worst Advice`.
 - Default tab order is now `Advice`, `Quotes`, `Favorites`, `History`, `Settings`.
 - Warm theme visual polish: paper-like textured background, softer warm palette, and calmer tab bar surface for long-read comfort.
+- Theme system expanded with `Sepia`, `Evergreen`, and `Sunrise` options, and Settings now uses a scalable menu picker for theme selection.
+- Neon readability improved with higher-contrast background/card/text token tuning.
 - Generation now avoids near-term repeated advice lines by retrying with alternate seeds.
 - Generator now uses multiple composition shapes and category-specific spice lines to expand safe content variety.
+- Category rule banks expanded (keywords, action templates, rationale templates) and generator phrase pools widened for more unique satirical outputs.
+- Quote library expanded with 20 additional built-in bad quotes across all categories.
 - Moderation term list expanded for stronger self-harm and wrongdoing blocking.
 - Simplified tab UX for clarity and density: compact Generate controls, collapsed advanced tools, menu-based list filters, and calmer non-neon backgrounds.
 - Removed duplicate generation action (`Reroll`) and kept a single primary `Generate` flow.

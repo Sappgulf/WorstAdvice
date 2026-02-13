@@ -10,6 +10,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
 - User-customizable tab bar order (Advice pinned first, Settings pinned last)
 - Categories (10): Dating, Fitness, Career, Money, Parenting, Tech, Social, Cooking, Travel, Productivity
 - Tone modes (9): Corporate Consultant, Alpha Podcast, Wizard, Influencer, Toxic Best Friend, Boomer, Crypto Bro, Minimalist Monk, Friend Roast
+- Themes (6): Warm, Dark, Neon, Sepia, Evergreen, Sunrise
 - Rule-based advice engine:
   - Category rules define bad principles, keywords, forbidden patterns, and templates
   - Content packs (`Classic`, `Office Meltdown`, `Weekend Chaos`, `Chronically Online`) expand phrase banks without changing app flow
@@ -40,6 +41,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Deterministic `Bad Quote of the Day` shared across all users each calendar day
   - Dedicated `Quotes` tab with searchable/filterable quote library
   - Ranking modes: `Recent`, `Top Liked`, `Top Disliked`
+  - Expanded built-in quote bank for broader daily rotation and fewer repeats
   - Per-quote like/dislike + copy/share actions with analytics hooks
   - Quote Suggestion Lab for community quote submissions (moderated)
 - Homescreen:
@@ -56,7 +58,8 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Favorites supports list/grid plus search and category filters
   - History supports search, category filters, and ranking modes (`Recent`, `Top Liked`, `Top Disliked`)
 - Accessibility/perf:
-  - Warm theme now uses a paper-like textured background and softer tab bar for reduced eye strain in long sessions
+  - Warm/Sepia themes use paper-like textured backgrounds and soft contrast for long sessions
+  - Neon contrast tuned with darker cards/text pairing for better readability
   - Dynamic Type-friendly layout
   - VoiceOver labels for key controls
   - Large tap targets and high-contrast theme tokens
@@ -114,6 +117,9 @@ xcodebuild test \
   - All 3 templates render correctly.
   - Both square/story aspect ratios render correctly.
   - Disclaimer appears only when enabled in settings.
+- Settings:
+  - Theme picker shows all 6 themes and applies instantly.
+  - Neon remains readable across Advice card, chips, and controls.
 - Favorites tab:
   - List and grid modes both render correctly.
   - Search and category filters narrow results correctly.

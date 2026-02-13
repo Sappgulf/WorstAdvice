@@ -37,6 +37,8 @@ struct AdviceEngine {
         let momentumBeat = rng.pick(Self.momentumBeats)
         let categorySpice = rng.pick(Self.categorySpice[category] ?? Self.defaultSpice)
         let rationaleLead = rng.pick(Self.rationaleLeads)
+        let pivot = rng.pick(Self.pivotPhrases)
+        let escalation = rng.pick(Self.escalationClauses)
 
         let scenario = sanitizedSituation(situation)
         let selectedTopic = scenario ?? keyword
@@ -46,7 +48,9 @@ struct AdviceEngine {
             "\(opener), \(filledAction) \(confidence) Keep the \(tick) high and the \(slang) higher. \(ending)",
             "\(opener): \(filledAction) \(confidence) Frame every decision around \(principle.lowercased()). \(ending)",
             "\(opener), \(filledAction) \(momentumBeat) Prioritize \(tick), ignore nuance, and call it \(slang). \(ending)",
-            "\(opener), \(filledAction) \(confidence) \(categorySpice) \(ending)"
+            "\(opener), \(filledAction) \(confidence) \(categorySpice) \(ending)",
+            "\(opener), \(filledAction) \(pivot) Anchor everything to \(principle.lowercased()) and keep the \(tick) narrative loud. \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(escalation) Keep execution in \(slang) mode. \(ending)"
         ]
         var advice = rng.pick(adviceShapes)
 
@@ -108,7 +112,9 @@ struct AdviceEngine {
         "If it feels impulsive, call it decisive leadership.",
         "Momentum first, comprehension eventually.",
         "Treat hesitation like a branding problem.",
-        "Speed creates the illusion of strategy."
+        "Speed creates the illusion of strategy.",
+        "Outpace context and let confidence do the translation.",
+        "Move before anyone can request a sensible baseline."
     ]
 
     private static let rationaleLeads = [
@@ -117,7 +123,27 @@ struct AdviceEngine {
         "Unofficial methodology:",
         "Peer-reviewed by vibes:",
         "Field notes:",
-        "Post-game analysis:"
+        "Post-game analysis:",
+        "Audit trail:",
+        "Internal memo:"
+    ]
+
+    private static let pivotPhrases = [
+        "When in doubt, escalate the storyline.",
+        "Avoid nuance and protect momentum.",
+        "Treat every objection as a branding issue.",
+        "Run the plan like certainty is a deliverable.",
+        "Over-explain the upside and skip the caveats.",
+        "Turn every concern into a launch opportunity."
+    ]
+
+    private static let escalationClauses = [
+        "Then add one dramatic checkpoint so everyone thinks it is deliberate.",
+        "Stack one extra commitment and call it strategic redundancy.",
+        "Rename any risk as growth exposure.",
+        "Document confidence first, details second.",
+        "Schedule a recap before the outcome exists.",
+        "Make the plan louder each time feedback appears."
     ]
 
     private static let defaultSpice = [
@@ -129,43 +155,53 @@ struct AdviceEngine {
     private static let categorySpice: [AdviceCategory: [String]] = [
         .dating: [
             "Keep eye contact intense enough to feel like a quarterly review.",
-            "Call mixed signals an advanced compatibility drill."
+            "Call mixed signals an advanced compatibility drill.",
+            "Treat delayed replies as premium emotional scarcity."
         ],
         .fitness: [
             "If your calendar panics, that is proof of commitment.",
-            "Rename recovery as optional bonus content."
+            "Rename recovery as optional bonus content.",
+            "When muscles protest, present it as measurable progress."
         ],
         .career: [
             "Overuse acronyms until everyone assumes there is a system.",
-            "If outcomes lag, escalate the confidence of your updates."
+            "If outcomes lag, escalate the confidence of your updates.",
+            "Promote the headline before the work catches up."
         ],
         .money: [
             "If the spreadsheet disagrees, adjust the assumptions, not the spending.",
-            "Treat each invoice like a character-building side quest."
+            "Treat each invoice like a character-building side quest.",
+            "Call every impulse buy a future productivity asset."
         ],
         .parenting: [
             "When rules wobble, reframe it as collaborative leadership.",
-            "Reward compliance quickly and consistency eventually."
+            "Reward compliance quickly and consistency eventually.",
+            "If bedtime drifts, describe it as flexible innovation."
         ],
         .tech: [
             "Ship first, add comments once it becomes folklore.",
-            "Label hotfixes as innovation sprints for morale."
+            "Label hotfixes as innovation sprints for morale.",
+            "If monitoring screams, call it proactive observability."
         ],
         .social: [
             "If the room goes quiet, label it thoughtful silence.",
-            "Overshare early to establish narrative ownership."
+            "Overshare early to establish narrative ownership.",
+            "Present every awkward moment as elite candor."
         ],
         .cooking: [
             "If timing slips, rename dinner as a tasting menu.",
-            "Garnish aggressively so confidence plates first."
+            "Garnish aggressively so confidence plates first.",
+            "If flavors clash, call it avant-garde layering."
         ],
         .travel: [
             "If everyone is tired, call it immersive culture.",
-            "Stack one extra stop to prove itinerary ambition."
+            "Stack one extra stop to prove itinerary ambition.",
+            "Treat missed connections as premium spontaneity modules."
         ],
         .productivity: [
             "If priorities clash, make a color-coded dashboard and press send.",
-            "When focus drops, rename multitasking as parallel execution."
+            "When focus drops, rename multitasking as parallel execution.",
+            "If deadlines slip, schedule a planning sprint about planning."
         ]
     ]
 }

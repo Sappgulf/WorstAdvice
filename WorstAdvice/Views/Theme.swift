@@ -27,9 +27,27 @@ enum Theme {
             )
         case .neon:
             return LinearGradient(
-                colors: [Color(hex: "10172A"), Color(hex: "052F5F"), Color(hex: "005377")],
+                colors: [Color(hex: "0A1422"), Color(hex: "0C2A45"), Color(hex: "0F4158")],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
+            )
+        case .sepia:
+            return LinearGradient(
+                colors: [Color(hex: "F3EBDC"), Color(hex: "E8DDC7"), Color(hex: "DCCDAD")],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        case .evergreen:
+            return LinearGradient(
+                colors: [Color(hex: "E8F1EB"), Color(hex: "D9E7DE"), Color(hex: "C6D7CB")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .sunrise:
+            return LinearGradient(
+                colors: [Color(hex: "F8EEE8"), Color(hex: "F2E0D9"), Color(hex: "E9CCC1")],
+                startPoint: .top,
+                endPoint: .bottom
             )
         }
     }
@@ -38,7 +56,10 @@ enum Theme {
         switch mode {
         case .warm: return Color(hex: "8F4A22")
         case .dark: return Color(hex: "F39A5B")
-        case .neon: return Color(hex: "00E5FF")
+        case .neon: return Color(hex: "00BCD4")
+        case .sepia: return Color(hex: "7A5B3A")
+        case .evergreen: return Color(hex: "2F684D")
+        case .sunrise: return Color(hex: "A3543D")
         }
     }
 
@@ -46,7 +67,10 @@ enum Theme {
         switch mode {
         case .warm: return Color(hex: "FBF7EE")
         case .dark: return Color.white.opacity(0.13)
-        case .neon: return Color.white.opacity(0.14)
+        case .neon: return Color(hex: "0E2637").opacity(0.92)
+        case .sepia: return Color(hex: "F8F1E4")
+        case .evergreen: return Color(hex: "F2F8F4")
+        case .sunrise: return Color(hex: "FBF2EE")
         }
     }
 
@@ -54,7 +78,10 @@ enum Theme {
         switch mode {
         case .warm: return Color(hex: "2F281F")
         case .dark: return Color(hex: "F7EADA")
-        case .neon: return Color(hex: "E5F9FF")
+        case .neon: return Color(hex: "D3E9F4")
+        case .sepia: return Color(hex: "352A1E")
+        case .evergreen: return Color(hex: "203229")
+        case .sunrise: return Color(hex: "372823")
         }
     }
 
@@ -62,7 +89,10 @@ enum Theme {
         switch mode {
         case .warm: return Color(hex: "665746")
         case .dark: return Color(hex: "CFBCA9")
-        case .neon: return Color(hex: "A7E8F7")
+        case .neon: return Color(hex: "96B7C7")
+        case .sepia: return Color(hex: "6A5A47")
+        case .evergreen: return Color(hex: "4D6258")
+        case .sunrise: return Color(hex: "6A544F")
         }
     }
 
@@ -70,7 +100,10 @@ enum Theme {
         switch mode {
         case .warm: return .white
         case .dark: return Color(hex: "161219")
-        case .neon: return Color(hex: "001D29")
+        case .neon: return Color(hex: "062333")
+        case .sepia: return .white
+        case .evergreen: return .white
+        case .sunrise: return .white
         }
     }
 
@@ -79,6 +112,9 @@ enum Theme {
         case .warm: return Color(hex: "F2E9D9")
         case .dark: return Color(hex: "252230")
         case .neon: return Color(hex: "083145")
+        case .sepia: return Color(hex: "EBDDCA")
+        case .evergreen: return Color(hex: "D4E1D7")
+        case .sunrise: return Color(hex: "F0DDD4")
         }
     }
 }
@@ -89,7 +125,7 @@ struct ThemeBackgroundView: View {
     var body: some View {
         ZStack {
             Theme.backgroundGradient(for: mode)
-            if mode == .warm {
+            if mode == .warm || mode == .sepia {
                 LinearGradient(
                     colors: [Color.white.opacity(0.26), Color.clear, Color(hex: "D5C3A8").opacity(0.12)],
                     startPoint: .top,
@@ -99,7 +135,7 @@ struct ThemeBackgroundView: View {
 
                 PaperGrainView()
                     .blendMode(.multiply)
-                    .opacity(0.35)
+                    .opacity(mode == .warm ? 0.35 : 0.28)
             }
         }
     }

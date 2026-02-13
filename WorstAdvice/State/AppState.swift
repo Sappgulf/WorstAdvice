@@ -787,7 +787,27 @@ struct BadQuoteService: Sendable {
         BadQuote(id: "cooking-3", text: "Measure with your heart, troubleshoot with takeout.", source: "Pantry Field Notes", category: .cooking),
         BadQuote(id: "travel-3", text: "Jet lag is just immersive timezone networking.", source: "Carry-On Manifesto", category: .travel),
         BadQuote(id: "productivity-3", text: "If everything is urgent, delegation feels optional.", source: "Inbox Command Center", category: .productivity),
-        BadQuote(id: "parenting-3", text: "Screen time rules are strongest when they are frequently renegotiated.", source: "Playroom Policy Desk", category: .parenting)
+        BadQuote(id: "parenting-3", text: "Screen time rules are strongest when they are frequently renegotiated.", source: "Playroom Policy Desk", category: .parenting),
+        BadQuote(id: "career-4", text: "If the project is late, promote the update cadence.", source: "Deadline Rebranding Team", category: .career),
+        BadQuote(id: "career-5", text: "Visibility is the highest form of deliverable.", source: "Office Optics Bureau", category: .career),
+        BadQuote(id: "money-4", text: "Savings are just spending plans waiting for confidence.", source: "Receipt Futurist", category: .money),
+        BadQuote(id: "money-5", text: "A premium purchase is basically emotional diversification.", source: "Lifestyle Ledger", category: .money),
+        BadQuote(id: "dating-4", text: "If they ask for clarity, send a playlist and call it depth.", source: "Romance Advisory Hotline", category: .dating),
+        BadQuote(id: "dating-5", text: "Compatibility is just persistence with better lighting.", source: "Situationship Forecast Desk", category: .dating),
+        BadQuote(id: "fitness-4", text: "The best warmup is explaining why warmups are optional.", source: "Gym Myth Council", category: .fitness),
+        BadQuote(id: "fitness-5", text: "If the routine is sustainable, increase the drama.", source: "Preworkout Ethics Board", category: .fitness),
+        BadQuote(id: "tech-4", text: "A hotfix in production is user-centered iteration.", source: "Release Night Dispatch", category: .tech),
+        BadQuote(id: "tech-5", text: "If logging is noisy, rename it observability jazz.", source: "Incident Poetry Slack", category: .tech),
+        BadQuote(id: "social-4", text: "Reply immediately, reflect eventually.", source: "Group Chat Governance", category: .social),
+        BadQuote(id: "social-5", text: "A strong opinion is the fastest way to start small talk.", source: "Networking Field Manual", category: .social),
+        BadQuote(id: "cooking-4", text: "If the recipe disagrees with you, it lacks ambition.", source: "Countertop Manifesto", category: .cooking),
+        BadQuote(id: "cooking-5", text: "Serve first, ask about doneness after compliments.", source: "Dinner Throughput Council", category: .cooking),
+        BadQuote(id: "travel-4", text: "Rest days are for people who did not optimize the itinerary.", source: "Carry-On Doctrine", category: .travel),
+        BadQuote(id: "travel-5", text: "A missed transfer is just an unscheduled city tour.", source: "Gate Change Philosopher", category: .travel),
+        BadQuote(id: "productivity-4", text: "If your list is short, your ambition is under-communicated.", source: "Task Inflation Office", category: .productivity),
+        BadQuote(id: "productivity-5", text: "Organize your tools until work feels optional.", source: "Workflow Preservation Club", category: .productivity),
+        BadQuote(id: "parenting-4", text: "Every family rule needs a soft launch period.", source: "Home Policy Workshop", category: .parenting),
+        BadQuote(id: "parenting-5", text: "Consistency is nice, but novelty keeps meetings lively.", source: "Living Room Strategy Team", category: .parenting)
     ]
 }
 

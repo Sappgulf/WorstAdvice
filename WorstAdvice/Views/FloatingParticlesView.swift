@@ -28,6 +28,9 @@ struct FloatingParticlesView: View {
         case .warm: return Color(hex: "FFE7D1")
         case .dark: return Color(hex: "FFD1A9")
         case .neon: return Color(hex: "38F0FF")
+        case .sepia: return Color(hex: "C6A87C")
+        case .evergreen: return Color(hex: "6BA98A")
+        case .sunrise: return Color(hex: "E8A58E")
         }
     }
 }

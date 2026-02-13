@@ -77,6 +77,9 @@ enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case warm
     case dark
     case neon
+    case sepia
+    case evergreen
+    case sunrise
 
     var id: String { rawValue }
 
@@ -85,6 +88,9 @@ enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .warm: return "Warm"
         case .dark: return "Dark"
         case .neon: return "Neon"
+        case .sepia: return "Sepia"
+        case .evergreen: return "Evergreen"
+        case .sunrise: return "Sunrise"
         }
     }
 }
