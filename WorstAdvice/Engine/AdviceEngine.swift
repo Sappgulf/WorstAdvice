@@ -1,115 +1,134 @@
 import Foundation
 
-// MARK: - AdviceEngine
-
-/// Pure logic: given current state + store, computes the next tier and selects
-/// a non-repeating advice entry.  All inputs are explicit so this is trivially testable.
 struct AdviceEngine {
-
     let store: AdviceStore
+    let moderation: ContentModeration
 
-    // MARK: - Tier calculation
-
-    /// Determine the effective tier for the NEXT ask.
-    ///
-    /// - Parameters:
-    ///   - askCount: total asks this session lifetime (already incremented for this ask)
-    ///   - lastAskDate: timestamp of the previous ask (nil if first ever)
-    ///   - now: current date (injectable for tests)
-    ///   - isMoreLikeThis: when true, skip rapid-tap and cool-off; just return `lockedTier`
-    ///   - lockedTier: the tier to return when `isMoreLikeThis` is true
-    func effectiveTier(
-        askCount: Int,
-        lastAskDate: Date?,
-        now: Date = Date(),
-        isMoreLikeThis: Bool = false,
-        lockedTier: AdviceTier? = nil
-    ) -> AdviceTier {
-
-        // "More like this" bypasses all escalation logic.
-        if isMoreLikeThis, let locked = lockedTier {
-            return locked
-        }
-
-        // 1. Base tier from ask count
-        var tier: AdviceTier
-        switch askCount {
-        case 1...3:  tier = .tier1
-        case 4...6:  tier = .tier2
-        case 7...9:  tier = .tier3
-        default:     tier = .tier4
-        }
-
-        // 2. Cool-off: no asks for >= 30 minutes => drop 1
-        if let last = lastAskDate {
-            let gap = now.timeIntervalSince(last)
-            if gap >= 30 * 60 {
-                tier = tier.cooled()
-            }
-        }
-
-        // 3. Rapid tap: ask within 10 seconds => bump 1
-        if let last = lastAskDate {
-            let gap = now.timeIntervalSince(last)
-            if gap < 10 && gap >= 0 {
-                tier = tier.bumped()
-            }
-        }
-
-        // 4. Late night bump (23:00–03:59 local)
-        if Self.isLateNight(now) {
-            tier = tier.bumped()
-        }
-
-        return tier
+    init(
+        store: AdviceStore = AdviceStore(),
+        moderation: ContentModeration = ContentModeration()
+    ) {
+        self.store = store
+        self.moderation = moderation
     }
 
-    // MARK: - Late night check
+    func generate(
+        category: AdviceCategory,
+        tone: ToneMode,
+        includeRationale: Bool,
+        seed: Int? = nil,
+        now: Date = Date()
+    ) -> GeneratedAdvice {
+        var rng = SeededGenerator(seed: UInt64(seed ?? defaultSeed(from: now)))
 
-    static func isLateNight(_ date: Date) -> Bool {
-        let hour = Calendar.current.component(.hour, from: date)
-        return hour >= 23 || hour < 4
-    }
+        let rules = store.rules(for: category)
+        let voice = store.profile(for: tone)
 
-    // MARK: - Entry selection with anti-repetition
+        let principle = rng.pick(rules.badPrinciples)
+        let keyword = rng.pick(rules.keywords)
+        let actionTemplate = rng.pick(rules.actionTemplates)
+        let opener = rng.pick(voice.opener)
+        let confidence = rng.pick(voice.confidenceTag)
+        let ending = rng.pick(voice.ending)
+        let tick = rng.pick(voice.rhetoricalTick)
+        let slang = rng.pick(voice.slang)
 
-    /// Pick a random entry from `tier` that is not in `recentIDs`.
-    /// If the tier pool minus recentIDs is empty, relax to last-3 window.
-    /// Returns nil only if the tier is completely empty in the store (should not happen).
-    func pickEntry(
-        tier: AdviceTier,
-        recentIDs: [String]
-    ) -> AdviceEntry? {
-        pickEntry(tier: tier, category: nil, recentIDs: recentIDs)
-    }
+        let filledAction = String(format: actionTemplate, keyword)
+        var advice = "\(opener), \(filledAction) \(confidence) Keep the \(tick) high and the \(slang) higher. \(ending)"
 
-    func pickEntry(
-        tier: AdviceTier,
-        category: AdviceCategory?,
-        recentIDs: [String]
-    ) -> AdviceEntry? {
-
-        let scopedPool = store.entries(for: tier, category: category)
-        let pool = scopedPool.isEmpty ? store.entries(for: tier) : scopedPool
-        guard !pool.isEmpty else { return nil }
-
-        // Primary filter: exclude last 8
-        let last8 = Set(recentIDs.suffix(8))
-        let candidates = pool.filter { !last8.contains($0.id) }
-
-        if let pick = candidates.randomElement() {
-            return pick
+        if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
+            advice = "\(opener), treat the \(keyword) like a stage performance and commit to the loudest overconfident plan. \(confidence)"
         }
 
-        // Relaxed filter: exclude last 3 only
-        let last3 = Set(recentIDs.suffix(3))
-        let relaxed = pool.filter { !last3.contains($0.id) }
-
-        if let pick = relaxed.randomElement() {
-            return pick
+        var rationale: String?
+        if includeRationale {
+            let rationaleTemplate = rng.pick(rules.rationaleTemplates)
+            rationale = "Bad principle: \(principle). \(rationaleTemplate)"
         }
 
-        // Absolute fallback: anything in the tier
-        return pool.randomElement()
+        let moderated = moderation.apply(to: advice, rationale: rationale)
+
+        return GeneratedAdvice(
+            category: category,
+            tone: tone,
+            adviceLine: moderated.advice,
+            rationaleLine: moderated.rationale,
+            createdAt: now
+        )
+    }
+
+    func validateOutput(_ output: GeneratedAdvice, for category: AdviceCategory) -> Bool {
+        let forbidden = store.rules(for: category).forbiddenPatterns
+        if containsForbidden(output.adviceLine, forbidden: forbidden) {
+            return false
+        }
+        return moderation.isSafe(text: output.adviceLine + " " + (output.rationaleLine ?? ""))
+    }
+
+    private func containsForbidden(_ text: String, forbidden: [String]) -> Bool {
+        let normalized = text.normalizedForFiltering
+        return forbidden.contains { normalized.contains($0.normalizedForFiltering) }
+    }
+
+    private func defaultSeed(from date: Date) -> Int {
+        Int(date.timeIntervalSince1970 * 1_000)
+    }
+}
+
+struct ContentModeration {
+    private let hateTerms = [
+        "racial slur", "nazi", "hate group", "ethnic cleansing", "supremacist"
+    ]
+    private let selfHarmTerms = [
+        "self-harm", "suicide", "hurt yourself", "end your life", "overdose"
+    ]
+    private let wrongdoingTerms = [
+        "steal", "fraud", "hack", "weapon", "arson", "poison", "assault"
+    ]
+
+    func apply(to advice: String, rationale: String?) -> (advice: String, rationale: String?) {
+        guard !isBlocked(text: advice + " " + (rationale ?? "")) else {
+            return (
+                "Public service satire only: boldly pick the least practical legal option, then over-explain it like a productivity trick.",
+                rationale == nil ? nil : "Bad principle: confidence without caution."
+            )
+        }
+        return (advice, rationale)
+    }
+
+    func isSafe(text: String) -> Bool {
+        !isBlocked(text: text)
+    }
+
+    private func isBlocked(text: String) -> Bool {
+        let normalized = text.normalizedForFiltering
+        let blocked = hateTerms + selfHarmTerms + wrongdoingTerms
+        return blocked.contains { normalized.contains($0.normalizedForFiltering) }
+    }
+}
+
+private struct SeededGenerator {
+    private var state: UInt64
+
+    init(seed: UInt64) {
+        self.state = seed == 0 ? 0x9E3779B97F4A7C15 : seed
+    }
+
+    mutating func next() -> UInt64 {
+        state &+= 0x9E3779B97F4A7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
+        z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
+        return z ^ (z >> 31)
+    }
+
+    mutating func nextInt(upperBound: Int) -> Int {
+        guard upperBound > 0 else { return 0 }
+        return Int(next() % UInt64(upperBound))
+    }
+
+    mutating func pick(_ values: [String]) -> String {
+        guard !values.isEmpty else { return "" }
+        return values[nextInt(upperBound: values.count)]
     }
 }
