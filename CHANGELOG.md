@@ -44,6 +44,7 @@ All notable changes to this project are documented in this file.
 - Tab label renamed from `Generate` to `Advice`.
 - Generate header copy simplified by removing the explanatory subtitle and using the shorter title `Worst Advice`.
 - Default tab order is now `Advice`, `Quotes`, `Favorites`, `History`, `Settings`.
+- Warm theme visual polish: paper-like textured background, softer warm palette, and calmer tab bar surface for long-read comfort.
 - Generation now avoids near-term repeated advice lines by retrying with alternate seeds.
 - Generator now uses multiple composition shapes and category-specific spice lines to expand safe content variety.
 - Moderation term list expanded for stronger self-harm and wrongdoing blocking.

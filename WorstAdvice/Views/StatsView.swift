@@ -26,7 +26,7 @@ struct FavoritesTabView: View {
                     gridView
                 }
             }
-            .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
+            .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
             .navigationTitle("Favorites")
             .searchable(text: $viewModel.searchText, prompt: "Search saved advice")
             .toolbar { toolbarContent }
@@ -295,7 +295,7 @@ struct QuotesTabView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
+            .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
             .navigationTitle("Quotes")
             .searchable(text: $viewModel.searchText, prompt: "Search bad quotes")
             .toolbar {
@@ -422,7 +422,7 @@ private struct FavoriteDetailView: View {
             .padding(.horizontal, Theme.horizontalPadding)
             .padding(.top, 8)
         }
-        .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
+        .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
         .navigationTitle("Favorite")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingShareSheet) {

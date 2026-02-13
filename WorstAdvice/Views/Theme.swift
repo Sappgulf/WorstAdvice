@@ -15,9 +15,9 @@ enum Theme {
         switch mode {
         case .warm:
             return LinearGradient(
-                colors: [Color(hex: "FFF4E3"), Color(hex: "F7D8BC"), Color(hex: "EFB38A")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                colors: [Color(hex: "F7F2E8"), Color(hex: "F2EBDD"), Color(hex: "ECE2D1")],
+                startPoint: .top,
+                endPoint: .bottom
             )
         case .dark:
             return LinearGradient(
@@ -36,7 +36,7 @@ enum Theme {
 
     static func accent(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return Color(hex: "A9491C")
+        case .warm: return Color(hex: "8F4A22")
         case .dark: return Color(hex: "F39A5B")
         case .neon: return Color(hex: "00E5FF")
         }
@@ -44,7 +44,7 @@ enum Theme {
 
     static func cardColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return Color.white.opacity(0.85)
+        case .warm: return Color(hex: "FBF7EE")
         case .dark: return Color.white.opacity(0.13)
         case .neon: return Color.white.opacity(0.14)
         }
@@ -52,7 +52,7 @@ enum Theme {
 
     static func primaryText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return Color(hex: "322319")
+        case .warm: return Color(hex: "2F281F")
         case .dark: return Color(hex: "F7EADA")
         case .neon: return Color(hex: "E5F9FF")
         }
@@ -60,7 +60,7 @@ enum Theme {
 
     static func secondaryText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return Color(hex: "5A4231")
+        case .warm: return Color(hex: "665746")
         case .dark: return Color(hex: "CFBCA9")
         case .neon: return Color(hex: "A7E8F7")
         }
@@ -72,6 +72,64 @@ enum Theme {
         case .dark: return Color(hex: "161219")
         case .neon: return Color(hex: "001D29")
         }
+    }
+
+    static func tabBarBackground(for mode: ThemeMode) -> Color {
+        switch mode {
+        case .warm: return Color(hex: "F2E9D9")
+        case .dark: return Color(hex: "252230")
+        case .neon: return Color(hex: "083145")
+        }
+    }
+}
+
+struct ThemeBackgroundView: View {
+    let mode: ThemeMode
+
+    var body: some View {
+        ZStack {
+            Theme.backgroundGradient(for: mode)
+            if mode == .warm {
+                LinearGradient(
+                    colors: [Color.white.opacity(0.26), Color.clear, Color(hex: "D5C3A8").opacity(0.12)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .blendMode(.overlay)
+
+                PaperGrainView()
+                    .blendMode(.multiply)
+                    .opacity(0.35)
+            }
+        }
+    }
+}
+
+private struct PaperGrainView: View {
+    var body: some View {
+        Canvas { context, size in
+            var path = Path()
+            let step: CGFloat = 12
+            let dotSize: CGFloat = 0.8
+
+            var y: CGFloat = 0
+            while y < size.height {
+                var x: CGFloat = 0
+                while x < size.width {
+                    let xi = Int(x / step)
+                    let yi = Int(y / step)
+                    let value = (xi * 13 + yi * 29 + 7) % 17
+                    if value < 4 {
+                        path.addRect(CGRect(x: x + 0.5, y: y + 0.5, width: dotSize, height: dotSize))
+                    }
+                    x += step
+                }
+                y += step
+            }
+
+            context.fill(path, with: .color(Color(hex: "7C6D56").opacity(0.28)))
+        }
+        .allowsHitTesting(false)
     }
 }
 

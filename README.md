@@ -56,6 +56,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Favorites supports list/grid plus search and category filters
   - History supports search, category filters, and ranking modes (`Recent`, `Top Liked`, `Top Disliked`)
 - Accessibility/perf:
+  - Warm theme now uses a paper-like textured background and softer tab bar for reduced eye strain in long sessions
   - Dynamic Type-friendly layout
   - VoiceOver labels for key controls
   - Large tap targets and high-contrast theme tokens
@@ -143,6 +144,8 @@ xcodebuild test \
   - Share caption style picker affects copied/shared text captions.
   - Strict no-repeat toggle enforces global uniqueness across generated advice lines.
   - Tab bar customization reorders middle tabs while keeping Advice first and Settings last.
+- Visual comfort:
+  - Warm theme shows soft paper-like background texture and comfortable contrast for extended reading.
 - Widget:
   - `Daily Bad Quote` widget appears in widget gallery.
   - Widget quote updates daily and matches app daily quote cycle.

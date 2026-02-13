@@ -289,7 +289,7 @@ struct SettingsTabView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Theme.backgroundGradient(for: viewModel.theme).ignoresSafeArea())
+            .background(ThemeBackgroundView(mode: viewModel.theme).ignoresSafeArea())
             .navigationTitle("Settings")
         }
     }
@@ -524,7 +524,7 @@ private struct CommunityPulseView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
+        .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
         .navigationTitle("Community Pulse")
     }
 }

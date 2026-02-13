@@ -24,7 +24,7 @@ struct HistoryTabView: View {
                     }
                 }
             }
-            .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
+            .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
             .navigationTitle("History")
             .searchable(text: $viewModel.searchText, prompt: "Search history")
             .toolbar {

@@ -11,7 +11,7 @@ struct ContentView: View {
         Group {
             if let session {
                 ZStack {
-                    Theme.backgroundGradient(for: session.settings.theme)
+                    ThemeBackgroundView(mode: session.settings.theme)
                         .ignoresSafeArea()
 
                     if session.settings.theme == .neon {
@@ -29,6 +29,8 @@ struct ContentView: View {
                         }
                     }
                     .tint(Theme.accent(for: session.settings.theme))
+                    .toolbarBackground(Theme.tabBarBackground(for: session.settings.theme), for: .tabBar)
+                    .toolbarBackground(.visible, for: .tabBar)
                 }
             } else {
                 ProgressView("Loading")
