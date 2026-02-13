@@ -1,25 +1,57 @@
-# Worst Advice
+# The Worst Advice (iOS)
 
-Worst Advice is an iOS SwiftUI app that delivers intentionally terrible guidance with escalating intensity, while keeping interaction smooth and playful.
+A SwiftUI satire app that generates confidently wrong advice that still sounds plausible.
 
-## Highlights
-- Tiered advice engine with escalation and anti-repetition logic
-- Large structured corpus with category support
-- Favorites and saved-advice recall
-- Category filters and streak tracking
-- Session and lifetime stats dashboard
-- Unit test coverage for engine and app-state behavior
+## Version
+- `1.0.0`
 
-## Tech Stack
-- Swift 5
-- SwiftUI
-- XCTest
-- Xcode project (`WorstAdvice.xcodeproj`)
+## Features
+- Four-tab app: `Generate`, `Favorites`, `History`, `Settings`
+- Categories (10): Dating, Fitness, Career, Money, Parenting, Tech, Social, Cooking, Travel, Productivity
+- Tone modes (8): Corporate Consultant, Alpha Podcast, Wizard, Influencer, Toxic Best Friend, Boomer, Crypto Bro, Minimalist Monk
+- Rule-based advice engine:
+  - Category rules define bad principles, keywords, forbidden patterns, and templates
+  - Tone profiles define phrasing/rhetorical style
+  - Output includes advice line plus optional fake rationale line
+- Safety layer blocks hateful, self-harm, and wrongdoing-oriented outputs
+- SwiftData persistence:
+  - Favorites storage
+  - History capped to last 50 generated items
+  - Persisted settings
+- Share-first workflow:
+  - One-tap copy/share
+  - Image card export with 3 templates, subtle noise, rounded card, watermark
+  - Supports square and story aspect ratios
+  - Optional footer disclaimer: `For entertainment only`
+- Accessibility/perf:
+  - Dynamic Type-friendly layout
+  - VoiceOver labels for key controls
+  - Large tap targets and high-contrast theme tokens
+  - Instant local generation and rendering
 
-## Run
-1. Open `WorstAdvice.xcodeproj` in Xcode.
+## Architecture
+- UI: SwiftUI
+- Pattern: MVVM
+- Persistence: SwiftData (`AdviceRecord`, `AppSettingsEntity`)
+- Core modules:
+  - `WorstAdvice/Models/AdviceModels.swift`: enums + shared models
+  - `WorstAdvice/Data/AdviceStore.swift`: category/tone rule definitions
+  - `WorstAdvice/Engine/AdviceEngine.swift`: deterministic template engine + moderation
+  - `WorstAdvice/State/AppState.swift`: SwiftData models, repository, tab view models
+  - `WorstAdvice/Views/*.swift`: tab screens, advice card, theming, share-card renderer
+
+## Build & Run
+1. Open `/Users/austinbeatty/Downloads/untitled folder/WorstAdvice/WorstAdvice.xcodeproj` in Xcode.
 2. Select the `WorstAdvice` scheme.
-3. Run on an iOS Simulator (iOS 17+ target).
+3. Run on simulator (for example iPhone 17).
+
+CLI build:
+```bash
+xcodebuild build \
+  -project "WorstAdvice.xcodeproj" \
+  -scheme "WorstAdvice" \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
+```
 
 ## Test
 ```bash
@@ -29,23 +61,28 @@ xcodebuild test \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
-## CI
-- GitHub Actions workflow: `.github/workflows/ios-tests.yml`
-- Runs unit tests on `push` and `pull_request` to `main`
-- Uploads `.xcresult` artifacts for failures/debugging
-
-## Collaboration
-- PR template: `.github/PULL_REQUEST_TEMPLATE.md`
-- Code ownership: `.github/CODEOWNERS`
-- Branch protection checklist: `.github/BRANCH_PROTECTION.md`
-
-## Project Structure
-- `WorstAdvice/Engine` — core advice selection logic
-- `WorstAdvice/Data` — corpus loading/indexing
-- `WorstAdvice/State` — persisted app/session state
-- `WorstAdvice/Views` — SwiftUI presentation layer
-- `WorstAdvice/Resources` — advice corpus JSON
-- `WorstAdviceTests` — engine/state tests
-
-## Notes
-- This app is comedic and fictional. Advice is intentionally bad.
+## QA Checklist
+- Generate tab:
+  - Generate creates instant advice with selected category + tone.
+  - Reroll replaces current advice.
+  - Save toggles favorite state.
+  - Copy writes text to clipboard.
+  - Share opens share sheet with exported image card.
+- Share export:
+  - All 3 templates render correctly.
+  - Both square/story aspect ratios render correctly.
+  - Disclaimer appears only when enabled in settings.
+- Favorites tab:
+  - List and grid modes both render correctly.
+  - Detail view opens and can share.
+  - Delete and unsave actions work.
+- History tab:
+  - New generations appear at top.
+  - Save from history marks items as favorites.
+  - History never exceeds 50 items.
+- Settings tab:
+  - Theme changes app visuals immediately.
+  - Reduce Motion and Haptics toggles affect behavior.
+  - Include fake rationale toggle affects newly generated advice.
+- Safety:
+  - Outputs remain satirical and avoid hateful/self-harm/wrongdoing content.
