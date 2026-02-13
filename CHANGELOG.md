@@ -26,6 +26,8 @@ All notable changes to this project are documented in this file.
 - Dedicated Settings navigation route for Suggestion Lab with submit/list/delete workflow.
 - History ranking modes: `Recent`, `Top Liked`, and `Top Disliked`.
 - Persistence tests for community-only setting and history vote-ranking filters.
+- Community Pulse leaderboard in Settings (top suggested topics + top liked/disliked advice).
+- Persistence test for category+tone fingerprint no-repeat pools.
 
 ### Changed
 - Generation now avoids near-term repeated advice lines by retrying with alternate seeds.
@@ -37,6 +39,8 @@ All notable changes to this project are documented in this file.
 - Generate tab action hierarchy tightened: clearer top guidance, denser primary actions, and explicit rate-this-advice controls.
 - Generation can source from moderated user suggestions for matching categories/topics while preserving no-repeat checks.
 - Generate tab decluttered by removing in-tab Suggestion Lab controls in favor of Settings-based entry.
+- Generate actions flattened to one dominant `Generate` CTA with a compact secondary icon rail.
+- Strict no-repeat now enforces both global fingerprints and category+tone fingerprint pools.
 
 ## [1.0.0] - 2026-02-13
 ### Added

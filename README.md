@@ -21,6 +21,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Favorites storage
   - History capped to last 50 generated items
   - Persistent no-repeat advice fingerprint memory
+  - Category+tone no-repeat fingerprint pools for stricter repeat blocking
   - Per-advice local vote state (`like` / `dislike`)
   - User suggestion queue for recommended advice lines by topic/category
   - Optional community-only generation mode backed by local suggestions
@@ -38,6 +39,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Lightweight analytics event logging hooks for key actions
   - Local voting feedback on generated advice (`like` / `dislike`)
   - Suggestion Lab for user-submitted bad advice ideas
+  - Community Pulse leaderboard for top suggested topics and top liked/disliked lines
 - Discovery workflows:
   - Favorites supports list/grid plus search and category filters
   - History supports search, category filters, and ranking modes (`Recent`, `Top Liked`, `Top Disliked`)
@@ -82,6 +84,7 @@ xcodebuild test \
 ## QA Checklist
 - Generate tab:
   - Generate creates instant advice with selected category + tone.
+  - Primary action flow is one dominant Generate CTA plus compact secondary icon rail.
   - Situation prompt influences output when safe.
   - Friend Roast mode uses optional friend name.
   - Suggestion chips fill the prompt quickly.
@@ -116,6 +119,7 @@ xcodebuild test \
   - Content pack picker changes generation style immediately.
   - Community-only toggle forces generation to use moderated user suggestions only.
   - Suggestion Lab navigation opens submit/list/delete flow for community suggestions.
+  - Community Pulse view shows top suggested topics and local like/dislike leaders.
   - Share caption style picker affects copied/shared text captions.
   - Strict no-repeat toggle enforces global uniqueness across generated advice lines.
 - Safety:
