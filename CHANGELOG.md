@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+### Added
+- Situation-aware generation: optional user prompt text is safely incorporated into generated advice.
+- New Generate controls: `Surprise Me` (random category + tone) and deterministic `Daily Drop`.
+- Generate metrics strip for Today/Total/Saved counts.
+- Context suggestion chips based on selected category keywords.
+- Favorites search + category filter controls.
+- History search + category filter controls.
+- Additional engine tests for safe situation injection behavior.
+
+### Changed
+- Generation now avoids near-term repeated advice lines by retrying with alternate seeds.
+- Moderation term list expanded for stronger self-harm and wrongdoing blocking.
+
 ## [1.0.0] - 2026-02-13
 ### Added
 - New SwiftUI MVVM app shell with tabs: Generate, Favorites, History, Settings.

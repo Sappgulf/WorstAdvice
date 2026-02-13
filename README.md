@@ -13,6 +13,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Category rules define bad principles, keywords, forbidden patterns, and templates
   - Tone profiles define phrasing/rhetorical style
   - Output includes advice line plus optional fake rationale line
+  - Optional user situation prompt is woven into output when safe
 - Safety layer blocks hateful, self-harm, and wrongdoing-oriented outputs
 - SwiftData persistence:
   - Favorites storage
@@ -20,9 +21,13 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Persisted settings
 - Share-first workflow:
   - One-tap copy/share
+  - `Surprise Me` and deterministic `Daily Drop` quick generation actions
   - Image card export with 3 templates, subtle noise, rounded card, watermark
   - Supports square and story aspect ratios
   - Optional footer disclaimer: `For entertainment only`
+- Discovery workflows:
+  - Favorites supports list/grid plus search and category filters
+  - History supports search and category filters
 - Accessibility/perf:
   - Dynamic Type-friendly layout
   - VoiceOver labels for key controls
@@ -64,7 +69,11 @@ xcodebuild test \
 ## QA Checklist
 - Generate tab:
   - Generate creates instant advice with selected category + tone.
+  - Situation prompt influences output when safe.
+  - Suggestion chips fill the prompt quickly.
   - Reroll replaces current advice.
+  - Surprise Me randomizes category + tone and generates.
+  - Daily Drop produces deterministic daily advice.
   - Save toggles favorite state.
   - Copy writes text to clipboard.
   - Share opens share sheet with exported image card.
@@ -74,10 +83,12 @@ xcodebuild test \
   - Disclaimer appears only when enabled in settings.
 - Favorites tab:
   - List and grid modes both render correctly.
+  - Search and category filters narrow results correctly.
   - Detail view opens and can share.
   - Delete and unsave actions work.
 - History tab:
   - New generations appear at top.
+  - Search and category filters narrow results correctly.
   - Save from history marks items as favorites.
   - History never exceeds 50 items.
 - Settings tab:
