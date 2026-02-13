@@ -289,44 +289,67 @@ struct GenerateTabView: View {
             .tint(Theme.accent(for: settings.theme))
             .foregroundStyle(Theme.buttonText(for: settings.theme))
 
-            HStack(spacing: 10) {
-                Button {
+            HStack(spacing: 14) {
+                railButton(
+                    title: viewModel.isCurrentFavorite ? "Saved" : "Save",
+                    systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
+                    isEnabled: hasCurrent
+                ) {
                     viewModel.toggleFavorite()
                     onDataChanged()
-                } label: {
-                    Label(viewModel.isCurrentFavorite ? "Saved" : "Save", systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark")
                 }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .buttonStyle(.bordered)
-                .disabled(!hasCurrent)
-                Button {
+
+                railButton(
+                    title: "Copy",
+                    systemImage: "doc.on.doc",
+                    isEnabled: hasCurrent
+                ) {
                     UIPasteboard.general.string = viewModel.currentShareText
                     viewModel.trackCopy()
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
                 }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .buttonStyle(.bordered)
-                .disabled(!hasCurrent)
 
-                Button {
+                railButton(
+                    title: "Share",
+                    systemImage: "square.and.arrow.up",
+                    isEnabled: hasCurrent
+                ) {
                     guard let payload = viewModel.currentSharePayload else { return }
                     let image = ShareCardRenderer.render(content: payload)
                     shareItems = [image, viewModel.currentShareText]
                     viewModel.trackShare(template: payload.template, ratio: payload.aspectRatio)
                     showingShareSheet = true
-                } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
                 }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.accent(for: settings.theme).opacity(0.9))
-                .disabled(!hasCurrent)
             }
+            .frame(maxWidth: .infinity)
         }
         .tint(Theme.accent(for: settings.theme))
         .foregroundStyle(Theme.primaryText(for: settings.theme))
+    }
+
+    private func railButton(
+        title: String,
+        systemImage: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Circle()
+                            .fill(Theme.cardColor(for: settings.theme))
+                    )
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(title)
     }
 
     @ViewBuilder

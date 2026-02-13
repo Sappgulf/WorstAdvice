@@ -206,6 +206,12 @@ struct SettingsTabView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+
+                    NavigationLink {
+                        CommunityPulseView(viewModel: generateViewModel, settings: viewModel)
+                    } label: {
+                        Label("Community Pulse", systemImage: "chart.bar.xaxis")
+                    }
                 }
 
                 Section("Share Defaults") {
@@ -323,5 +329,79 @@ private struct SuggestionLabView: View {
             suggestionCategory = viewModel.selectedCategory
             suggestionError = ""
         }
+    }
+}
+
+private struct CommunityPulseView: View {
+    @Bindable var viewModel: GenerateViewModel
+    @Bindable var settings: SettingsViewModel
+
+    var body: some View {
+        List {
+            Section("Top Suggested Topics") {
+                if viewModel.topCommunityTopics.isEmpty {
+                    Text("No community suggestions yet.")
+                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                } else {
+                    ForEach(viewModel.topCommunityTopics) { item in
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(item.topic)
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                Text(item.category.title)
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                            }
+                            Spacer()
+                            Text("\(item.submissions)x")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        }
+                    }
+                }
+            }
+
+            Section("Most Liked Advice") {
+                if viewModel.topLikedAdvice.isEmpty {
+                    Text("No liked items yet.")
+                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                } else {
+                    ForEach(viewModel.topLikedAdvice) { item in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(item.adviceLine)
+                                .font(.body)
+                                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                .lineLimit(3)
+                            Text("\(item.category.title) • \(item.tone.title) • \(item.votes)x likes")
+                                .font(.caption)
+                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        }
+                    }
+                }
+            }
+
+            Section("Most Disliked Advice") {
+                if viewModel.topDislikedAdvice.isEmpty {
+                    Text("No disliked items yet.")
+                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                } else {
+                    ForEach(viewModel.topDislikedAdvice) { item in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(item.adviceLine)
+                                .font(.body)
+                                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                .lineLimit(3)
+                            Text("\(item.category.title) • \(item.tone.title) • \(item.votes)x dislikes")
+                                .font(.caption)
+                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        }
+                    }
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
+        .navigationTitle("Community Pulse")
     }
 }

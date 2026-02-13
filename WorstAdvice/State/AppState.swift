@@ -185,6 +185,8 @@ final class AppSettingsEntity {
 
 @MainActor
 final class AdviceRepository {
+    private static let poolFingerprintPrefix = "pool::"
+
     let context: ModelContext
 
     init(context: ModelContext) {
@@ -204,6 +206,13 @@ final class AdviceRepository {
         context.insert(record)
         rememberAdviceFingerprint(
             generated.adviceLine.normalizedForFiltering,
+            createdAt: generated.createdAt,
+            saveChanges: false
+        )
+        rememberAdviceFingerprintInPool(
+            generated.adviceLine.normalizedForFiltering,
+            category: generated.category,
+            tone: generated.tone,
             createdAt: generated.createdAt,
             saveChanges: false
         )
@@ -298,20 +307,52 @@ final class AdviceRepository {
         }
     }
 
+    func hasSeenAdviceInPool(
+        _ normalizedAdviceLine: String,
+        category: AdviceCategory,
+        tone: ToneMode
+    ) -> Bool {
+        hasSeenAdvice(poolFingerprint(for: normalizedAdviceLine, category: category, tone: tone))
+    }
+
+    func rememberAdviceFingerprintInPool(
+        _ normalizedAdviceLine: String,
+        category: AdviceCategory,
+        tone: ToneMode,
+        createdAt: Date = Date(),
+        saveChanges: Bool = true
+    ) {
+        rememberAdviceFingerprint(
+            poolFingerprint(for: normalizedAdviceLine, category: category, tone: tone),
+            createdAt: createdAt,
+            saveChanges: saveChanges
+        )
+    }
+
     func seenAdviceCount() -> Int {
         let descriptor = FetchDescriptor<AdviceFingerprint>()
-        return (try? context.fetchCount(descriptor)) ?? 0
+        let all = (try? context.fetch(descriptor)) ?? []
+        return all.filter { !$0.normalizedText.hasPrefix(Self.poolFingerprintPrefix) }.count
     }
 
     func seedAdviceMemoryFromHistoryIfNeeded() {
         guard seenAdviceCount() == 0 else { return }
         let history = fetchAllHistory()
         guard !history.isEmpty else { return }
-        var seenInBatch = Set<String>()
+        var seenGlobal = Set<String>()
+        var seenPool = Set<String>()
         for record in history {
-            let normalized = record.adviceLine.normalizedForFiltering
-            if seenInBatch.insert(normalized).inserted {
-                context.insert(AdviceFingerprint(normalizedText: normalized, createdAt: record.createdAt))
+            let normalizedGlobal = record.adviceLine.normalizedForFiltering
+            if seenGlobal.insert(normalizedGlobal).inserted {
+                context.insert(AdviceFingerprint(normalizedText: normalizedGlobal, createdAt: record.createdAt))
+            }
+            let normalizedPool = poolFingerprint(
+                for: record.adviceLine.normalizedForFiltering,
+                category: record.category,
+                tone: record.tone
+            )
+            if seenPool.insert(normalizedPool).inserted {
+                context.insert(AdviceFingerprint(normalizedText: normalizedPool, createdAt: record.createdAt))
             }
         }
         save()
@@ -373,6 +414,16 @@ final class AdviceRepository {
 
     func save() {
         try? context.save()
+    }
+
+    private func poolFingerprint(
+        for normalizedAdviceLine: String,
+        category: AdviceCategory,
+        tone: ToneMode
+    ) -> String {
+        let normalized = normalizedAdviceLine.normalizedForFiltering
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return "\(Self.poolFingerprintPrefix)\(category.rawValue)|\(tone.rawValue)|\(normalized)"
     }
 }
 
@@ -479,6 +530,21 @@ final class SettingsViewModel {
 @MainActor
 @Observable
 final class GenerateViewModel {
+    struct TopicLeaderboardItem: Identifiable {
+        let id: String
+        let category: AdviceCategory
+        let topic: String
+        let submissions: Int
+    }
+
+    struct AdviceLeaderboardItem: Identifiable {
+        let id: String
+        let category: AdviceCategory
+        let tone: ToneMode
+        let adviceLine: String
+        let votes: Int
+    }
+
     private let repository: AdviceRepository
     private let settingsViewModel: SettingsViewModel
     private let store: AdviceStore
@@ -495,7 +561,9 @@ final class GenerateViewModel {
     var generationNotice: String?
 
     private var recentAdviceFingerprints: [String] = []
+    private var recentAdviceFingerprintsByPool: [String: [String]] = [:]
     private var suggestionsVersion: Int = 0
+    private var leaderboardVersion: Int = 0
 
     init(
         repository: AdviceRepository,
@@ -561,9 +629,16 @@ final class GenerateViewModel {
 
             picked = candidate
             let candidateFingerprint = fingerprint(for: candidate)
+            let candidatePoolKey = poolKey(category: candidate.category, tone: candidate.tone)
             let alreadySeen = recentAdviceFingerprints.contains(candidateFingerprint)
+                || (recentAdviceFingerprintsByPool[candidatePoolKey] ?? []).contains(candidateFingerprint)
                 || triedFingerprints.contains(candidateFingerprint)
                 || (shouldEnforceGlobalUniqueness && repository.hasSeenAdvice(candidateFingerprint))
+                || (shouldEnforceGlobalUniqueness && repository.hasSeenAdviceInPool(
+                    candidateFingerprint,
+                    category: candidate.category,
+                    tone: candidate.tone
+                ))
             triedFingerprints.insert(candidateFingerprint)
             if !alreadySeen {
                 break
@@ -583,8 +658,10 @@ final class GenerateViewModel {
         }
 
         rememberFingerprint(for: output)
+        rememberPoolFingerprint(for: output)
         lastWhyTerrible = "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
         current = repository.insert(output)
+        leaderboardVersion += 1
         analyticsTracker.track("generate", properties: [
             "category": output.category.rawValue,
             "tone": output.tone.rawValue,
@@ -641,6 +718,7 @@ final class GenerateViewModel {
         guard let current else { return }
         let next: AdviceVoteState = current.vote == vote ? .none : vote
         repository.setVote(current, vote: next)
+        leaderboardVersion += 1
         analyticsTracker.track("advice_vote", properties: [
             "vote": "\(next.rawValue)"
         ])
@@ -682,6 +760,7 @@ final class GenerateViewModel {
             adviceLine: String(trimmedAdvice.prefix(220))
         )
         suggestionsVersion += 1
+        leaderboardVersion += 1
         analyticsTracker.track("suggestion_submit", properties: [
             "category": category.rawValue
         ])
@@ -691,6 +770,7 @@ final class GenerateViewModel {
     func deleteSuggestion(_ suggestion: UserAdviceSuggestion) {
         repository.deleteSuggestion(suggestion)
         suggestionsVersion += 1
+        leaderboardVersion += 1
         analyticsTracker.track("suggestion_delete", properties: [:])
     }
 
@@ -717,6 +797,49 @@ final class GenerateViewModel {
     var communitySuggestionCount: Int {
         _ = suggestionsVersion
         return repository.suggestionCount()
+    }
+
+    var topCommunityTopics: [TopicLeaderboardItem] {
+        _ = leaderboardVersion
+        let suggestions = repository.fetchSuggestions(limit: 250)
+        var grouped: [String: (category: AdviceCategory, topic: String, count: Int)] = [:]
+        for suggestion in suggestions {
+            let normalizedTopic = suggestion.topic.normalizedForFiltering
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !normalizedTopic.isEmpty else { continue }
+            let key = "\(suggestion.category.rawValue)|\(normalizedTopic)"
+            if var existing = grouped[key] {
+                existing.count += 1
+                grouped[key] = existing
+            } else {
+                grouped[key] = (suggestion.category, suggestion.topic, 1)
+            }
+        }
+        return grouped
+            .map { key, value in
+                TopicLeaderboardItem(
+                    id: key,
+                    category: value.category,
+                    topic: value.topic,
+                    submissions: value.count
+                )
+            }
+            .sorted {
+                if $0.submissions == $1.submissions {
+                    return $0.topic.localizedCaseInsensitiveCompare($1.topic) == .orderedAscending
+                }
+                return $0.submissions > $1.submissions
+            }
+            .prefix(8)
+            .map { $0 }
+    }
+
+    var topLikedAdvice: [AdviceLeaderboardItem] {
+        voteLeaderboard(for: .like)
+    }
+
+    var topDislikedAdvice: [AdviceLeaderboardItem] {
+        voteLeaderboard(for: .dislike)
     }
 
     var currentShareText: String {
@@ -785,7 +908,7 @@ final class GenerateViewModel {
     var uniquenessStatusText: String {
         let mode = settingsViewModel.strictNoRepeats ? "On" : "Off"
         let pack = settingsViewModel.preferredContentPack.title
-        return "No-repeat mode: \(mode) • Pack: \(pack) • \(repository.seenAdviceCount()) unique lines served"
+        return "No-repeat mode: \(mode) • Global + category/tone pools • Pack: \(pack) • \(repository.seenAdviceCount()) unique lines served"
     }
 
     func trackShare(template: ShareCardTemplate, ratio: ShareAspectRatio) {
@@ -864,6 +987,17 @@ final class GenerateViewModel {
         }
     }
 
+    private func rememberPoolFingerprint(for generated: GeneratedAdvice) {
+        let key = poolKey(category: generated.category, tone: generated.tone)
+        var fingerprints = recentAdviceFingerprintsByPool[key] ?? []
+        fingerprints.append(fingerprint(for: generated))
+        let overflow = fingerprints.count - 24
+        if overflow > 0 {
+            fingerprints.removeFirst(overflow)
+        }
+        recentAdviceFingerprintsByPool[key] = fingerprints
+    }
+
     private func forceUniqueVariant(from base: GeneratedAdvice) -> GeneratedAdvice {
         var serial = max(repository.seenAdviceCount() + 1, 1)
         while true {
@@ -877,11 +1011,56 @@ final class GenerateViewModel {
                 createdAt: base.createdAt
             )
             let updatedFingerprint = fingerprint(for: updated)
-            if !recentAdviceFingerprints.contains(updatedFingerprint) && !repository.hasSeenAdvice(updatedFingerprint) {
+            let key = poolKey(category: updated.category, tone: updated.tone)
+            if !recentAdviceFingerprints.contains(updatedFingerprint)
+                && !(recentAdviceFingerprintsByPool[key] ?? []).contains(updatedFingerprint)
+                && !repository.hasSeenAdvice(updatedFingerprint)
+                && !repository.hasSeenAdviceInPool(
+                    updatedFingerprint,
+                    category: updated.category,
+                    tone: updated.tone
+                ) {
                 return updated
             }
             serial += 1
         }
+    }
+
+    private func voteLeaderboard(for state: AdviceVoteState) -> [AdviceLeaderboardItem] {
+        _ = leaderboardVersion
+        let records = repository.fetchHistory(limit: 50).filter { $0.vote == state }
+        var grouped: [String: (category: AdviceCategory, tone: ToneMode, adviceLine: String, count: Int)] = [:]
+        for record in records {
+            let normalizedAdvice = record.adviceLine.normalizedForFiltering
+            if var existing = grouped[normalizedAdvice] {
+                existing.count += 1
+                grouped[normalizedAdvice] = existing
+            } else {
+                grouped[normalizedAdvice] = (record.category, record.tone, record.adviceLine, 1)
+            }
+        }
+        return grouped
+            .map { key, value in
+                AdviceLeaderboardItem(
+                    id: key,
+                    category: value.category,
+                    tone: value.tone,
+                    adviceLine: value.adviceLine,
+                    votes: value.count
+                )
+            }
+            .sorted {
+                if $0.votes == $1.votes {
+                    return $0.adviceLine.localizedCaseInsensitiveCompare($1.adviceLine) == .orderedAscending
+                }
+                return $0.votes > $1.votes
+            }
+            .prefix(8)
+            .map { $0 }
+    }
+
+    private func poolKey(category: AdviceCategory, tone: ToneMode) -> String {
+        "\(category.rawValue)|\(tone.rawValue)"
     }
 
     private func uniqueSuffix(for serial: Int) -> String {

@@ -210,6 +210,20 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(repository.seenAdviceCount(), 2)
     }
 
+    func testCategoryToneFingerprintPoolsAreTrackedSeparately() throws {
+        let repository = try makeRepository()
+
+        repository.rememberAdviceFingerprintInPool(
+            "same advice",
+            category: .career,
+            tone: .wizard
+        )
+
+        XCTAssertTrue(repository.hasSeenAdviceInPool("same advice", category: .career, tone: .wizard))
+        XCTAssertFalse(repository.hasSeenAdviceInPool("same advice", category: .career, tone: .boomer))
+        XCTAssertEqual(repository.seenAdviceCount(), 0)
+    }
+
     func testVotePersistsOnRecord() throws {
         let repository = try makeRepository()
         let record = repository.insert(
