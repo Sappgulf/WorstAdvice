@@ -303,7 +303,7 @@ struct GenerateTabView: View {
                 viewModel.generate()
                 onDataChanged()
             } label: {
-                Label("Generate", systemImage: "sparkles")
+                Label(viewModel.primaryActionTitle, systemImage: "sparkles")
                     .font(Theme.bodyFont.weight(.bold))
                     .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)
             }

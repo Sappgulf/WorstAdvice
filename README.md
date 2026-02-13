@@ -6,8 +6,8 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
 - `1.0.0`
 
 ## Features
-- Five-tab app with default order: `Generate`, `Quotes`, `Favorites`, `History`, `Settings`
-- User-customizable tab bar order (Generate pinned first, Settings pinned last)
+- Five-tab app with default order: `Advice`, `Quotes`, `Favorites`, `History`, `Settings`
+- User-customizable tab bar order (Advice pinned first, Settings pinned last)
 - Categories (10): Dating, Fitness, Career, Money, Parenting, Tech, Social, Cooking, Travel, Productivity
 - Tone modes (9): Corporate Consultant, Alpha Podcast, Wizard, Influencer, Toxic Best Friend, Boomer, Crypto Bro, Minimalist Monk, Friend Roast
 - Rule-based advice engine:
@@ -31,6 +31,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Persisted settings
 - Share-first workflow:
   - One-tap copy/share
+  - Dynamic primary CTA on Advice tab (`Advise Me` rotates to fresh prompts every few generations)
   - `Surprise Me` and deterministic `Daily Drop` quick generation actions
   - Image card export with 3 templates, subtle noise, rounded card, watermark
   - Supports square and story aspect ratios
@@ -93,9 +94,9 @@ xcodebuild test \
 ```
 
 ## QA Checklist
-- Generate tab:
+- Advice tab:
   - Generate creates instant advice with selected category + tone.
-  - Primary action flow is one dominant Generate CTA plus compact secondary icon rail.
+  - Primary action flow is one dominant Advice CTA plus compact secondary icon rail.
   - Situation prompt influences output when safe.
   - Friend Roast mode uses optional friend name.
   - Suggestion chips fill the prompt quickly.
@@ -141,7 +142,7 @@ xcodebuild test \
   - Quote Suggestion Lab navigation opens submit/list/delete flow for community quotes.
   - Share caption style picker affects copied/shared text captions.
   - Strict no-repeat toggle enforces global uniqueness across generated advice lines.
-  - Tab bar customization reorders middle tabs while keeping Generate first and Settings last.
+  - Tab bar customization reorders middle tabs while keeping Advice first and Settings last.
 - Widget:
   - `Daily Bad Quote` widget appears in widget gallery.
   - Widget quote updates daily and matches app daily quote cycle.

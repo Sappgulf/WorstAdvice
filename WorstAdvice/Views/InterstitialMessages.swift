@@ -157,7 +157,7 @@ struct SettingsTabView: View {
                 }
 
                 Section("Tab Bar") {
-                    Text("Generate stays first and Settings stays last.")
+                    Text("Advice stays first and Settings stays last.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

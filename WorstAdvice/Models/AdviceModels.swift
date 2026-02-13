@@ -172,7 +172,7 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .generate: return "Generate"
+        case .generate: return "Advice"
         case .quotes: return "Quotes"
         case .favorites: return "Favorites"
         case .history: return "History"

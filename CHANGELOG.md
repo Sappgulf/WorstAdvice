@@ -7,10 +7,11 @@ All notable changes to this project are documented in this file.
 - New `Quotes` tab with searchable/filterable bad-quote library.
 - Deterministic `Bad Quote of the Day` service (same quote for everyone each day).
 - Daily quote banner on Generate for quick daily humor.
+- Dynamic Advice-tab primary CTA text that rotates every few successful generations (for example, `Advise Me`).
 - Quote-library voting (`like` / `dislike`) with ranking modes: `Recent`, `Top Liked`, `Top Disliked`.
 - Quote Suggestion Lab in Settings for moderated user-submitted quote lines.
 - Persistent quote vote and quote suggestion storage (`QuoteVoteRecord`, `UserQuoteSuggestion`).
-- User-customizable tab order controls in Settings (Generate pinned first, Settings pinned last).
+- User-customizable tab order controls in Settings (Advice pinned first, Settings pinned last).
 - New `WorstAdviceWidget` WidgetKit extension for daily bad quote homescreen cards.
 - Situation-aware generation: optional user prompt text is safely incorporated into generated advice.
 - New Generate controls: `Surprise Me` (random category + tone) and deterministic `Daily Drop`.
@@ -40,8 +41,9 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 - Quote-library row actions moved to a visible per-row menu (`Copy`/`Share`) for clearer, less crowded interaction.
+- Tab label renamed from `Generate` to `Advice`.
 - Generate header copy simplified by removing the explanatory subtitle and using the shorter title `Worst Advice`.
-- Default tab order is now `Generate`, `Quotes`, `Favorites`, `History`, `Settings`.
+- Default tab order is now `Advice`, `Quotes`, `Favorites`, `History`, `Settings`.
 - Generation now avoids near-term repeated advice lines by retrying with alternate seeds.
 - Generator now uses multiple composition shapes and category-specific spice lines to expand safe content variety.
 - Moderation term list expanded for stronger self-harm and wrongdoing blocking.
@@ -53,6 +55,7 @@ All notable changes to this project are documented in this file.
 - Generate tab decluttered by removing in-tab Suggestion Lab controls in favor of Settings-based entry.
 - Generate actions flattened to one dominant `Generate` CTA with a compact secondary icon rail.
 - Strict no-repeat now enforces both global fingerprints and category+tone fingerprint pools.
+- Reduced repeated quote-tab persistence fetches by caching quote suggestions and vote maps in `QuotesViewModel` and refreshing only on mutation.
 
 ### Fixed
 - Hardened GitHub Actions simulator destination resolution to handle Xcode output format changes and fallback to `simctl`-listed iPhone devices.

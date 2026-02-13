@@ -824,11 +824,13 @@ final class GenerateViewModel {
     var current: AdviceRecord?
     var lastWhyTerrible: String = "Why this is awful: confidence is replacing good judgment."
     var generationNotice: String?
+    var primaryActionTitle: String = "Advise Me"
 
     private var recentAdviceFingerprints: [String] = []
     private var recentAdviceFingerprintsByPool: [String: [String]] = [:]
     private var suggestionsVersion: Int = 0
     private var leaderboardVersion: Int = 0
+    private var successfulGenerationCount: Int = 0
 
     init(
         repository: AdviceRepository,
@@ -847,6 +849,7 @@ final class GenerateViewModel {
         self.analyticsTracker = analyticsTracker
         repository.seedAdviceMemoryFromHistoryIfNeeded()
         self.current = repository.fetchHistory(limit: 1).first
+        self.primaryActionTitle = Self.primaryActionTitles.first ?? "Advise Me"
     }
 
     func generate(seed: Int? = nil) {
@@ -938,6 +941,7 @@ final class GenerateViewModel {
             "strict_no_repeats": shouldEnforceGlobalUniqueness ? "true" : "false",
             "community_only": communityOnlyMode ? "true" : "false"
         ])
+        rotatePrimaryActionTitleIfNeeded()
         playHaptic()
     }
 
@@ -1334,6 +1338,13 @@ final class GenerateViewModel {
         "\(category.rawValue)|\(tone.rawValue)"
     }
 
+    private func rotatePrimaryActionTitleIfNeeded() {
+        successfulGenerationCount += 1
+        guard successfulGenerationCount % 3 == 0 else { return }
+        let choices = Self.primaryActionTitles.filter { $0 != primaryActionTitle }
+        primaryActionTitle = choices.randomElement() ?? Self.primaryActionTitles.first ?? "Advise Me"
+    }
+
     private func uniqueSuffix(for serial: Int) -> String {
         let adjectives = ["chaos", "executive", "moonshot", "unhinged", "legacy", "side-quest", "founder", "main-character"]
         let nouns = ["protocol", "playbook", "framework", "operating system", "ritual", "policy", "method", "blueprint"]
@@ -1383,6 +1394,14 @@ final class GenerateViewModel {
             rationaleLine: rationale
         )
     }
+
+    private static let primaryActionTitles = [
+        "Advise Me",
+        "Need Bad Advice",
+        "Make It Worse",
+        "Hit Me With Chaos",
+        "Give Me A Terrible Plan"
+    ]
 }
 
 @MainActor
@@ -1397,7 +1416,8 @@ final class QuotesViewModel {
     var searchText: String = ""
     var selectedCategory: AdviceCategory?
     var rankingMode: QuoteRankingMode = .recent
-    private var dataVersion: Int = 0
+    private var quoteSuggestions: [UserQuoteSuggestion] = []
+    private var votesByQuoteID: [String: AdviceVoteState] = [:]
 
     init(
         repository: AdviceRepository,
@@ -1411,6 +1431,7 @@ final class QuotesViewModel {
         self.moderation = moderation
         self.store = store
         self.analyticsTracker = analyticsTracker
+        reloadCachedData()
     }
 
     var dailyQuote: BadQuote {
@@ -1419,7 +1440,7 @@ final class QuotesViewModel {
 
     var allQuotes: [BadQuote] {
         let base = quoteService.quotes
-        let fromCommunity = recentQuoteSuggestions.map { suggestion in
+        let fromCommunity = quoteSuggestions.map { suggestion in
             BadQuote(
                 id: "community-\(suggestion.id.uuidString)",
                 text: suggestion.quoteText,
@@ -1460,18 +1481,15 @@ final class QuotesViewModel {
     }
 
     var recentQuoteSuggestions: [UserQuoteSuggestion] {
-        _ = dataVersion
-        return repository.fetchQuoteSuggestions(limit: 30)
+        quoteSuggestions
     }
 
     var quoteSuggestionCount: Int {
-        _ = dataVersion
-        return repository.quoteSuggestionCount()
+        quoteSuggestions.count
     }
 
     var quoteVoteMap: [String: AdviceVoteState] {
-        _ = dataVersion
-        return repository.quoteVoteMap()
+        votesByQuoteID
     }
 
     var likedCount: Int {
@@ -1487,10 +1505,10 @@ final class QuotesViewModel {
     }
 
     func toggleVote(_ vote: AdviceVoteState, for quote: BadQuote) {
-        let currentVote = repository.quoteVote(for: quote.id)
+        let currentVote = votesByQuoteID[quote.id] ?? .none
         let nextVote: AdviceVoteState = currentVote == vote ? .none : vote
         repository.setQuoteVote(quoteID: quote.id, vote: nextVote)
-        dataVersion += 1
+        reloadCachedData()
         analyticsTracker.track("quote_vote", properties: [
             "id": quote.id,
             "category": quote.category.rawValue,
@@ -1526,7 +1544,7 @@ final class QuotesViewModel {
             source: safeSource,
             quoteText: String(trimmedText.prefix(160))
         )
-        dataVersion += 1
+        reloadCachedData()
         analyticsTracker.track("quote_suggestion_submit", properties: [
             "category": category.rawValue
         ])
@@ -1535,7 +1553,7 @@ final class QuotesViewModel {
 
     func deleteSuggestion(_ suggestion: UserQuoteSuggestion) {
         repository.deleteQuoteSuggestion(suggestion)
-        dataVersion += 1
+        reloadCachedData()
         analyticsTracker.track("quote_suggestion_delete", properties: [
             "category": suggestion.category.rawValue
         ])
@@ -1559,6 +1577,11 @@ final class QuotesViewModel {
 
     func quoteShareText(_ quote: BadQuote) -> String {
         "\"\(quote.text)\"\n— \(quote.source)\n\nWorst Advice"
+    }
+
+    private func reloadCachedData() {
+        quoteSuggestions = repository.fetchQuoteSuggestions(limit: 30)
+        votesByQuoteID = repository.quoteVoteMap()
     }
 }
 
