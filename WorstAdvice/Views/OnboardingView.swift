@@ -11,50 +11,49 @@ struct HistoryTabView: View {
             Group {
                 if viewModel.history.isEmpty {
                     emptyState
-                } else if viewModel.filteredHistory.isEmpty {
-                    noResultsState
                 } else {
-                    List {
-                        ForEach(viewModel.filteredHistory, id: \.id) { record in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(record.adviceLine)
-                                    .font(.body)
-                                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    VStack(spacing: 10) {
+                        rankingPicker
+                            .padding(.horizontal, Theme.horizontalPadding)
 
-                                Text("\(record.category.title) • \(record.tone.title)")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
-
-                                HStack(spacing: 10) {
-                                    Button("Use") {
-                                        onUseRecord(record)
-                                    }
-                                    .buttonStyle(.bordered)
-
-                                    Button(record.isFavorite ? "Saved" : "Save") {
-                                        viewModel.saveFromHistory(record)
-                                        onDataChanged()
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(Theme.accent(for: settings.theme))
-                                }
-                                .padding(.top, 2)
-                            }
-                            .padding(.vertical, 6)
+                        if viewModel.filteredHistory.isEmpty {
+                            noResultsState
+                        } else {
+                            historyList
                         }
                     }
-                    .scrollContentBackground(.hidden)
                 }
             }
             .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
             .navigationTitle("History")
             .searchable(text: $viewModel.searchText, prompt: "Search history")
-            .safeAreaInset(edge: .top) {
-                categoryFilterStrip
-                    .padding(.horizontal, Theme.horizontalPadding)
-                    .padding(.top, 8)
-            }
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            viewModel.selectedCategory = nil
+                        } label: {
+                            if viewModel.selectedCategory == nil {
+                                Label("All categories", systemImage: "checkmark")
+                            } else {
+                                Text("All categories")
+                            }
+                        }
+                        ForEach(AdviceCategory.allCases) { category in
+                            Button {
+                                viewModel.selectedCategory = category
+                            } label: {
+                                if viewModel.selectedCategory == category {
+                                    Label(category.title, systemImage: "checkmark")
+                                } else {
+                                    Text(category.title)
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Clear") {
                         viewModel.clearHistory()
@@ -67,31 +66,58 @@ struct HistoryTabView: View {
         }
     }
 
-    private var categoryFilterStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                categoryChip(label: "All", category: nil)
-                ForEach(AdviceCategory.allCases) { category in
-                    categoryChip(label: category.title, category: category)
-                }
+    private var rankingPicker: some View {
+        Picker("Ranking", selection: $viewModel.rankingMode) {
+            ForEach(HistoryViewModel.RankingMode.allCases) { mode in
+                Text(label(for: mode)).tag(mode)
             }
         }
+        .pickerStyle(.segmented)
+        .accessibilityLabel("History ranking mode")
     }
 
-    private func categoryChip(label: String, category: AdviceCategory?) -> some View {
-        let isSelected = viewModel.selectedCategory == category
-        return Button(label) {
-            viewModel.selectedCategory = category
+    private var historyList: some View {
+        List {
+            ForEach(viewModel.filteredHistory, id: \.id) { record in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(record.adviceLine)
+                        .font(.body)
+                        .foregroundStyle(Theme.primaryText(for: settings.theme))
+
+                    HStack(spacing: 6) {
+                        Text("\(record.category.title) • \(record.tone.title)")
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        if record.vote == .like {
+                            Image(systemName: "hand.thumbsup.fill")
+                                .font(.caption)
+                                .foregroundStyle(Theme.accent(for: settings.theme))
+                        } else if record.vote == .dislike {
+                            Image(systemName: "hand.thumbsdown.fill")
+                                .font(.caption)
+                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        }
+                    }
+
+                    HStack(spacing: 10) {
+                        Button("Use") {
+                            onUseRecord(record)
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button(record.isFavorite ? "Saved" : "Save") {
+                            viewModel.saveFromHistory(record)
+                            onDataChanged()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Theme.accent(for: settings.theme))
+                    }
+                    .padding(.top, 2)
+                }
+                .padding(.vertical, 6)
+            }
         }
-        .buttonStyle(.plain)
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(isSelected ? Theme.buttonText(for: settings.theme) : Theme.primaryText(for: settings.theme))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            Capsule()
-                .fill(isSelected ? Theme.accent(for: settings.theme) : Theme.cardColor(for: settings.theme))
-        )
+        .scrollContentBackground(.hidden)
     }
 
     private var emptyState: some View {
@@ -119,10 +145,32 @@ struct HistoryTabView: View {
             Text("No matches")
                 .font(.headline)
                 .foregroundStyle(Theme.primaryText(for: settings.theme))
-            Text("Try a different search or category.")
+            Text(noResultsMessage)
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func label(for mode: HistoryViewModel.RankingMode) -> String {
+        switch mode {
+        case .recent:
+            return mode.title
+        case .topLiked:
+            return "Liked \(viewModel.likedCount)"
+        case .topDisliked:
+            return "Disliked \(viewModel.dislikedCount)"
+        }
+    }
+
+    private var noResultsMessage: String {
+        switch viewModel.rankingMode {
+        case .recent:
+            return "Try a different search or category."
+        case .topLiked:
+            return "No liked entries match your filters yet."
+        case .topDisliked:
+            return "No disliked entries match your filters yet."
+        }
     }
 }

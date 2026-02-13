@@ -54,6 +54,7 @@ struct GenerateTabView: View {
 
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
+    @State private var showingAdvanced = false
 
     var body: some View {
         ScrollView {
@@ -61,11 +62,13 @@ struct GenerateTabView: View {
                 Text("The Worst Advice")
                     .font(Theme.headlineFont)
                     .foregroundStyle(Theme.primaryText(for: settings.theme))
+                Text("Pick a category and tone, then generate confidently terrible guidance.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
 
-                statStrip
-                categoryScroll
-                toneMenu
+                selectorRow
                 scenarioComposer
+                friendRoastComposer
 
                 Group {
                     if let record = viewModel.current {
@@ -77,8 +80,14 @@ struct GenerateTabView: View {
                 }
                 .animation(settings.reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: viewModel.current?.id)
 
-                whyThisFailsCard
-                actionButtons
+                votingRow
+                primaryActionButtons
+                if let notice = viewModel.generationNotice, !notice.isEmpty {
+                    Text(notice)
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                }
+                advancedSection
             }
             .padding(.horizontal, Theme.horizontalPadding)
             .padding(.top, 16)
@@ -89,12 +98,64 @@ struct GenerateTabView: View {
         }
     }
 
-    private var statStrip: some View {
-        HStack(spacing: 8) {
-            statChip(title: "Today", value: "\(viewModel.todayGeneratedCount)")
-            statChip(title: "Total", value: "\(viewModel.totalGeneratedCount)")
-            statChip(title: "Saved", value: "\(viewModel.favoriteCount)")
+    private var selectorRow: some View {
+        HStack(spacing: 10) {
+            categoryMenu
+            toneMenu
         }
+    }
+
+    private var categoryMenu: some View {
+        Menu {
+            Picker("Category", selection: $viewModel.selectedCategory) {
+                ForEach(AdviceCategory.allCases) { category in
+                    Text(category.title).tag(category)
+                }
+            }
+        } label: {
+            selectionLabel(title: "Category", value: viewModel.selectedCategory.title)
+        }
+        .accessibilityLabel("Category")
+        .accessibilityValue(viewModel.selectedCategory.title)
+    }
+
+    private var toneMenu: some View {
+        Menu {
+            Picker("Tone", selection: $viewModel.selectedTone) {
+                ForEach(ToneMode.allCases) { tone in
+                    Text(tone.title).tag(tone)
+                }
+            }
+        } label: {
+            selectionLabel(title: "Tone", value: viewModel.selectedTone.title)
+        }
+        .accessibilityLabel("Tone mode")
+        .accessibilityValue(viewModel.selectedTone.title)
+    }
+
+    private func selectionLabel(title: String, value: String) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                Text(value)
+                    .font(Theme.bodyFont.weight(.semibold))
+                    .lineLimit(1)
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.down")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
+        )
     }
 
     private func statChip(title: String, value: String) -> some View {
@@ -114,64 +175,20 @@ struct GenerateTabView: View {
         )
     }
 
-    private var categoryScroll: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                ForEach(AdviceCategory.allCases) { category in
-                    Button {
-                        viewModel.selectedCategory = category
-                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    } label: {
-                        Label(category.title, systemImage: category.icon)
-                            .font(Theme.chipFont)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .frame(minHeight: 44)
-                            .background(
-                                Capsule()
-                                    .fill(viewModel.selectedCategory == category ? Theme.accent(for: settings.theme) : Theme.cardColor(for: settings.theme))
-                            )
-                            .foregroundStyle(viewModel.selectedCategory == category ? Theme.buttonText(for: settings.theme) : Theme.primaryText(for: settings.theme))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Category \(category.title)")
-                }
-            }
-        }
-    }
-
-    private var toneMenu: some View {
-        Menu {
-            Picker("Tone", selection: $viewModel.selectedTone) {
-                ForEach(ToneMode.allCases) { tone in
-                    Text(tone.title).tag(tone)
-                }
-            }
-        } label: {
-            HStack {
-                Text("Tone: \(viewModel.selectedTone.title)")
-                Spacer()
-                Image(systemName: "chevron.down")
-            }
-            .font(Theme.bodyFont.weight(.semibold))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, minHeight: 46)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Theme.cardColor(for: settings.theme))
-            )
-            .foregroundStyle(Theme.primaryText(for: settings.theme))
-        }
-        .accessibilityLabel("Tone mode")
-        .accessibilityValue(viewModel.selectedTone.title)
-    }
-
     private var scenarioComposer: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Situation (optional)")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+            HStack {
+                Text("Situation (optional)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                Spacer()
+                if !viewModel.scenarioText.isEmpty {
+                    Button("Clear") {
+                        viewModel.scenarioText = ""
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+            }
 
             TextField("Example: awkward first date", text: $viewModel.scenarioText, axis: .vertical)
                 .textFieldStyle(.plain)
@@ -184,19 +201,60 @@ struct GenerateTabView: View {
                         .fill(Theme.cardColor(for: settings.theme))
                 )
                 .foregroundStyle(Theme.primaryText(for: settings.theme))
+        }
+    }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(viewModel.keywordSuggestions, id: \.self) { suggestion in
-                        Button(suggestion) {
-                            viewModel.applySuggestion(suggestion)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(Theme.accent(for: settings.theme))
-                    }
-                }
+    @ViewBuilder
+    private var friendRoastComposer: some View {
+        if viewModel.selectedTone == .friendRoast {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Friend Name (for roast mode)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+
+                TextField("Example: Alex", text: $viewModel.friendName)
+                    .textFieldStyle(.plain)
+                    .font(Theme.bodyFont)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .frame(minHeight: 46)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Theme.cardColor(for: settings.theme))
+                    )
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
             }
         }
+    }
+
+    private var challengeCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(viewModel.challengeTitle)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+            Text(viewModel.challengeProgressText)
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+
+            GeometryReader { geometry in
+                let denominator = max(viewModel.challengeGoalDays, 1)
+                let progress = min(CGFloat(viewModel.challengeStreakDays) / CGFloat(denominator), 1)
+                RoundedRectangle(cornerRadius: 999, style: .continuous)
+                    .fill(Theme.secondaryText(for: settings.theme).opacity(0.18))
+                    .overlay(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 999, style: .continuous)
+                            .fill(Theme.accent(for: settings.theme))
+                            .frame(width: geometry.size.width * progress)
+                    }
+            }
+            .frame(height: 8)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
+        )
     }
 
     private var whyThisFailsCard: some View {
@@ -216,13 +274,14 @@ struct GenerateTabView: View {
         )
     }
 
-    private var actionButtons: some View {
-        VStack(spacing: 10) {
+    private var primaryActionButtons: some View {
+        let hasCurrent = viewModel.current != nil
+        return VStack(spacing: 10) {
             Button {
                 viewModel.generate()
                 onDataChanged()
             } label: {
-                Text(viewModel.current == nil ? "Generate" : "Generate New")
+                Label("Generate", systemImage: "sparkles")
                     .font(Theme.bodyFont.weight(.bold))
                     .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)
             }
@@ -231,80 +290,146 @@ struct GenerateTabView: View {
             .foregroundStyle(Theme.buttonText(for: settings.theme))
 
             HStack(spacing: 10) {
-                Button("Reroll") {
-                    viewModel.reroll()
-                    onDataChanged()
-                }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .buttonStyle(.bordered)
-
-                Button(viewModel.isCurrentFavorite ? "Saved" : "Save") {
+                Button {
                     viewModel.toggleFavorite()
                     onDataChanged()
+                } label: {
+                    Label(viewModel.isCurrentFavorite ? "Saved" : "Save", systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark")
                 }
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .buttonStyle(.bordered)
-
-                Button("Copy") {
+                .disabled(!hasCurrent)
+                Button {
                     UIPasteboard.general.string = viewModel.currentShareText
+                    viewModel.trackCopy()
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
                 }
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .buttonStyle(.bordered)
-            }
+                .disabled(!hasCurrent)
 
-            HStack(spacing: 10) {
-                Button("Surprise Me") {
-                    viewModel.surpriseMeAndGenerate()
-                    onDataChanged()
-                }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .buttonStyle(.bordered)
-
-                Button("Daily Drop") {
-                    viewModel.generateDailyDrop()
-                    onDataChanged()
-                }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .buttonStyle(.bordered)
-            }
-
-            HStack(spacing: 10) {
-                Button("Share") {
+                Button {
                     guard let payload = viewModel.currentSharePayload else { return }
                     let image = ShareCardRenderer.render(content: payload)
                     shareItems = [image, viewModel.currentShareText]
+                    viewModel.trackShare(template: payload.template, ratio: payload.aspectRatio)
                     showingShareSheet = true
+                } label: {
+                    Label("Share", systemImage: "square.and.arrow.up")
                 }
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.accent(for: settings.theme).opacity(0.9))
-
-                Picker("Template", selection: Binding(
-                    get: { settings.preferredTemplate },
-                    set: { settings.preferredTemplate = $0 }
-                )) {
-                    ForEach(ShareCardTemplate.allCases) { template in
-                        Text(template.title).tag(template)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(maxWidth: .infinity, minHeight: 44)
-
-                Picker("Ratio", selection: Binding(
-                    get: { settings.preferredAspect },
-                    set: { settings.preferredAspect = $0 }
-                )) {
-                    ForEach(ShareAspectRatio.allCases) { ratio in
-                        Text(ratio.title).tag(ratio)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(maxWidth: .infinity, minHeight: 44)
+                .disabled(!hasCurrent)
             }
         }
         .tint(Theme.accent(for: settings.theme))
         .foregroundStyle(Theme.primaryText(for: settings.theme))
+    }
+
+    @ViewBuilder
+    private var votingRow: some View {
+        if viewModel.current != nil {
+            HStack(spacing: 10) {
+                Text("Rate this bad advice")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                Spacer()
+                Button {
+                    viewModel.toggleVote(.like)
+                    onDataChanged()
+                } label: {
+                    Image(systemName: viewModel.currentVote == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    viewModel.toggleVote(.dislike)
+                    onDataChanged()
+                } label: {
+                    Image(systemName: viewModel.currentVote == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.horizontal, 2)
+        }
+    }
+
+    private var advancedSection: some View {
+        DisclosureGroup(isExpanded: $showingAdvanced) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(viewModel.uniquenessStatusText)
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                statStrip
+                challengeCard
+                secondaryActionButtons
+                keywordSuggestionsRow
+                if viewModel.current != nil {
+                    whyThisFailsCard
+                }
+            }
+            .padding(.top, 8)
+        } label: {
+            HStack {
+                Text("Advanced")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text("Less-used tools")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+            }
+            .foregroundStyle(Theme.primaryText(for: settings.theme))
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
+        )
+    }
+
+    private var statStrip: some View {
+        HStack(spacing: 8) {
+            statChip(title: "Today", value: "\(viewModel.todayGeneratedCount)")
+            statChip(title: "Total", value: "\(viewModel.totalGeneratedCount)")
+            statChip(title: "Saved", value: "\(viewModel.favoriteCount)")
+        }
+    }
+
+    private var secondaryActionButtons: some View {
+        HStack(spacing: 10) {
+            Button("Surprise Me") {
+                viewModel.surpriseMeAndGenerate()
+                onDataChanged()
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .buttonStyle(.bordered)
+
+            Button("Daily Drop") {
+                viewModel.generateDailyDrop()
+                onDataChanged()
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .buttonStyle(.bordered)
+        }
+    }
+
+    private var keywordSuggestionsRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(viewModel.keywordSuggestions, id: \.self) { suggestion in
+                    Button(suggestion) {
+                        viewModel.applySuggestion(suggestion)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Theme.accent(for: settings.theme))
+                }
+            }
+        }
     }
 
     private var emptyState: some View {

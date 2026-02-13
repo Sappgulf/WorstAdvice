@@ -54,6 +54,7 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case boomer
     case cryptoBro
     case minimalistMonk
+    case friendRoast
 
     var id: String { rawValue }
 
@@ -67,6 +68,7 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .boomer: return "Boomer"
         case .cryptoBro: return "Crypto Bro"
         case .minimalistMonk: return "Minimalist Monk"
+        case .friendRoast: return "Friend Roast"
         }
     }
 }
@@ -117,10 +119,69 @@ enum ShareAspectRatio: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 }
 
+enum ShareCaptionPreset: String, CaseIterable, Codable, Identifiable, Sendable {
+    case deadpan
+    case chaotic
+    case fauxExpert
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .deadpan: return "Deadpan"
+        case .chaotic: return "Chaotic"
+        case .fauxExpert: return "Faux Expert"
+        }
+    }
+}
+
+enum ContentPack: String, CaseIterable, Codable, Identifiable, Sendable {
+    case classic
+    case officeMeltdown
+    case weekendChaos
+    case chronicallyOnline
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .classic: return "Classic"
+        case .officeMeltdown: return "Office Meltdown"
+        case .weekendChaos: return "Weekend Chaos"
+        case .chronicallyOnline: return "Chronically Online"
+        }
+    }
+}
+
+enum AdviceVoteState: Int, CaseIterable, Codable, Identifiable, Sendable {
+    case none = 0
+    case like = 1
+    case dislike = -1
+
+    var id: Int { rawValue }
+}
+
 struct CategoryRuleSet: Sendable {
     let badPrinciples: [String]
     let keywords: [String]
     let forbiddenPatterns: [String]
+    let actionTemplates: [String]
+    let rationaleTemplates: [String]
+
+    func merged(with augment: CategoryRuleAugment) -> CategoryRuleSet {
+        CategoryRuleSet(
+            badPrinciples: badPrinciples + augment.badPrinciples,
+            keywords: keywords + augment.keywords,
+            forbiddenPatterns: forbiddenPatterns,
+            actionTemplates: actionTemplates + augment.actionTemplates,
+            rationaleTemplates: rationaleTemplates + augment.rationaleTemplates
+        )
+    }
+}
+
+struct CategoryRuleAugment: Sendable {
+    let badPrinciples: [String]
+    let keywords: [String]
     let actionTemplates: [String]
     let rationaleTemplates: [String]
 }

@@ -138,6 +138,7 @@ struct ActivityShareSheet: UIViewControllerRepresentable {
 
 struct SettingsTabView: View {
     @Bindable var viewModel: SettingsViewModel
+    @Bindable var generateViewModel: GenerateViewModel
 
     var body: some View {
         NavigationStack {
@@ -171,6 +172,40 @@ struct SettingsTabView: View {
                         get: { viewModel.hapticsEnabled },
                         set: { viewModel.hapticsEnabled = $0 }
                     ))
+                    Toggle("Strict no repeats", isOn: Binding(
+                        get: { viewModel.strictNoRepeats },
+                        set: { viewModel.strictNoRepeats = $0 }
+                    ))
+                }
+
+                Section("Generation") {
+                    Picker("Content Pack", selection: Binding(
+                        get: { viewModel.preferredContentPack },
+                        set: { viewModel.preferredContentPack = $0 }
+                    )) {
+                        ForEach(ContentPack.allCases) { pack in
+                            Text(pack.title).tag(pack)
+                        }
+                    }
+
+                    Toggle("Use community suggestions only", isOn: Binding(
+                        get: { viewModel.communityOnlyMode },
+                        set: { viewModel.communityOnlyMode = $0 }
+                    ))
+                }
+
+                Section("Community") {
+                    NavigationLink {
+                        SuggestionLabView(viewModel: generateViewModel, settings: viewModel)
+                    } label: {
+                        HStack {
+                            Label("Suggestion Lab", systemImage: "plus.bubble")
+                            Spacer()
+                            Text("\(generateViewModel.communitySuggestionCount)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 Section("Share Defaults") {
@@ -191,11 +226,102 @@ struct SettingsTabView: View {
                             Text(ratio.title).tag(ratio)
                         }
                     }
+
+                    Picker("Caption Style", selection: Binding(
+                        get: { viewModel.preferredSharePreset },
+                        set: { viewModel.preferredSharePreset = $0 }
+                    )) {
+                        ForEach(ShareCaptionPreset.allCases) { preset in
+                            Text(preset.title).tag(preset)
+                        }
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Theme.backgroundGradient(for: viewModel.theme).ignoresSafeArea())
             .navigationTitle("Settings")
+        }
+    }
+}
+
+private struct SuggestionLabView: View {
+    @Bindable var viewModel: GenerateViewModel
+    @Bindable var settings: SettingsViewModel
+
+    @State private var suggestionCategory: AdviceCategory = .dating
+    @State private var suggestionTopic = ""
+    @State private var suggestionAdviceLine = ""
+    @State private var suggestionError = ""
+
+    var body: some View {
+        Form {
+            Section("Submit Suggestion") {
+                Picker("Category", selection: $suggestionCategory) {
+                    ForEach(AdviceCategory.allCases) { category in
+                        Text(category.title).tag(category)
+                    }
+                }
+
+                TextField("Topic", text: $suggestionTopic)
+                    .textInputAutocapitalization(.sentences)
+
+                TextField("Advice line", text: $suggestionAdviceLine, axis: .vertical)
+                    .lineLimit(3...6)
+                    .textInputAutocapitalization(.sentences)
+
+                if !suggestionError.isEmpty {
+                    Text(suggestionError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+
+                Button("Submit") {
+                    if let message = viewModel.submitSuggestion(
+                        category: suggestionCategory,
+                        topic: suggestionTopic,
+                        adviceLine: suggestionAdviceLine
+                    ) {
+                        suggestionError = message
+                    } else {
+                        suggestionError = ""
+                        suggestionTopic = ""
+                        suggestionAdviceLine = ""
+                    }
+                }
+                .disabled(
+                    suggestionTopic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    || suggestionAdviceLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
+            }
+
+            Section("Recent Suggestions") {
+                if viewModel.recentSuggestions.isEmpty {
+                    Text("No suggestions yet.")
+                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                } else {
+                    ForEach(viewModel.recentSuggestions, id: \.id) { suggestion in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(suggestion.category.title) • \(suggestion.topic)")
+                                .font(.caption)
+                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                            Text(suggestion.adviceLine)
+                                .font(.body)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                viewModel.deleteSuggestion(suggestion)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Suggestion Lab")
+        .onAppear {
+            suggestionCategory = viewModel.selectedCategory
+            suggestionError = ""
         }
     }
 }

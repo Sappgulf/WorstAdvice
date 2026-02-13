@@ -14,6 +14,7 @@ struct IntensityIndicator: View {
         case .boomer: return 3
         case .cryptoBro: return 5
         case .minimalistMonk: return 2
+        case .friendRoast: return 4
         }
     }
 

@@ -6,6 +6,8 @@ struct WorstAdviceApp: App {
     private let container: ModelContainer = {
         let schema = Schema([
             AdviceRecord.self,
+            AdviceFingerprint.self,
+            UserAdviceSuggestion.self,
             AppSettingsEntity.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

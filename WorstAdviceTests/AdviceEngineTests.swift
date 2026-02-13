@@ -86,6 +86,60 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertFalse(output.adviceLine.normalizedForFiltering.contains("hack my ex account"))
         XCTAssertTrue(engine.validateOutput(output, for: .tech))
     }
+
+    func testFriendRoastToneSupportsPersonalizedPrompt() {
+        let engine = AdviceEngine()
+        let output = engine.generate(
+            category: .social,
+            tone: .friendRoast,
+            includeRationale: false,
+            situation: "friend Alex",
+            seed: 77
+        )
+
+        XCTAssertTrue(output.adviceLine.normalizedForFiltering.contains("friend alex"))
+    }
+
+    func testContentPackChangesOutputForSameSeed() {
+        let engine = AdviceEngine()
+        let classic = engine.generate(
+            category: .career,
+            tone: .corporateConsultant,
+            includeRationale: true,
+            contentPack: .classic,
+            seed: 123
+        )
+        let packed = engine.generate(
+            category: .career,
+            tone: .corporateConsultant,
+            includeRationale: true,
+            contentPack: .officeMeltdown,
+            seed: 123
+        )
+
+        XCTAssertNotEqual(classic.adviceLine, packed.adviceLine)
+    }
+
+    func testContentPackIsDeterministicWithSeed() {
+        let engine = AdviceEngine()
+        let first = engine.generate(
+            category: .social,
+            tone: .influencer,
+            includeRationale: true,
+            contentPack: .chronicallyOnline,
+            seed: 9001
+        )
+        let second = engine.generate(
+            category: .social,
+            tone: .influencer,
+            includeRationale: true,
+            contentPack: .chronicallyOnline,
+            seed: 9001
+        )
+
+        XCTAssertEqual(first.adviceLine, second.adviceLine)
+        XCTAssertEqual(first.rationaleLine, second.rationaleLine)
+    }
 }
 
 @MainActor
@@ -93,6 +147,8 @@ final class PersistenceTests: XCTestCase {
     private func makeRepository() throws -> AdviceRepository {
         let schema = Schema([
             AdviceRecord.self,
+            AdviceFingerprint.self,
+            UserAdviceSuggestion.self,
             AppSettingsEntity.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
@@ -140,5 +196,104 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(favorites.count, 1)
         XCTAssertEqual(favorites.first?.id, record.id)
         XCTAssertTrue(favorites.first?.isFavorite ?? false)
+    }
+
+    func testAdviceFingerprintMemoryStoresUniqueValues() throws {
+        let repository = try makeRepository()
+
+        repository.rememberAdviceFingerprint("same line")
+        repository.rememberAdviceFingerprint("same line")
+        repository.rememberAdviceFingerprint("another line")
+
+        XCTAssertTrue(repository.hasSeenAdvice("same line"))
+        XCTAssertTrue(repository.hasSeenAdvice("another line"))
+        XCTAssertEqual(repository.seenAdviceCount(), 2)
+    }
+
+    func testVotePersistsOnRecord() throws {
+        let repository = try makeRepository()
+        let record = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .corporateConsultant,
+                adviceLine: "Present certainty as strategy.",
+                rationaleLine: nil
+            )
+        )
+
+        repository.setVote(record, vote: .like)
+
+        let fetched = repository.fetchHistory(limit: 1).first
+        XCTAssertEqual(fetched?.vote, .like)
+    }
+
+    func testSuggestionsPersistAndDelete() throws {
+        let repository = try makeRepository()
+
+        let suggestion = repository.addSuggestion(
+            category: .social,
+            topic: "group chat drama",
+            adviceLine: "Reply in memes only and call it emotional boundaries."
+        )
+        XCTAssertEqual(repository.fetchSuggestions(limit: 20).count, 1)
+
+        repository.deleteSuggestion(suggestion)
+        XCTAssertEqual(repository.fetchSuggestions(limit: 20).count, 0)
+    }
+
+    func testCommunityOnlyModeSettingPersists() throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        XCTAssertFalse(settings.communityOnlyMode)
+
+        settings.communityOnlyMode = true
+
+        let reloaded = SettingsViewModel(repository: repository)
+        XCTAssertTrue(reloaded.communityOnlyMode)
+    }
+
+    func testHistoryRankingModesFilterVotes() throws {
+        let repository = try makeRepository()
+
+        let liked = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .corporateConsultant,
+                adviceLine: "Tell your manager every bug is a feature launch.",
+                rationaleLine: nil,
+                createdAt: Date(timeIntervalSince1970: 100)
+            )
+        )
+        repository.setVote(liked, vote: .like)
+
+        let disliked = repository.insert(
+            GeneratedAdvice(
+                category: .money,
+                tone: .cryptoBro,
+                adviceLine: "Diversify by buying only coins with dog logos.",
+                rationaleLine: nil,
+                createdAt: Date(timeIntervalSince1970: 101)
+            )
+        )
+        repository.setVote(disliked, vote: .dislike)
+
+        _ = repository.insert(
+            GeneratedAdvice(
+                category: .social,
+                tone: .influencer,
+                adviceLine: "Reply to every text with a poll.",
+                rationaleLine: nil,
+                createdAt: Date(timeIntervalSince1970: 102)
+            )
+        )
+
+        let history = HistoryViewModel(repository: repository)
+        history.rankingMode = .topLiked
+        XCTAssertEqual(history.filteredHistory.count, 1)
+        XCTAssertEqual(history.filteredHistory.first?.id, liked.id)
+
+        history.rankingMode = .topDisliked
+        XCTAssertEqual(history.filteredHistory.count, 1)
+        XCTAssertEqual(history.filteredHistory.first?.id, disliked.id)
     }
 }

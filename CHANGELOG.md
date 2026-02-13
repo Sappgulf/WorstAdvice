@@ -11,10 +11,32 @@ All notable changes to this project are documented in this file.
 - Favorites search + category filter controls.
 - History search + category filter controls.
 - Additional engine tests for safe situation injection behavior.
+- New `Friend Roast` tone mode with optional friend-name personalization.
+- Share caption presets for viral posting styles: Deadpan, Chaotic, Faux Expert.
+- Streak challenge UI with 3/7/14/30 day progression targets.
+- Analytics-ready event tracker for generation, sharing, copy, favorites, and history actions.
+- Persistent advice fingerprint memory with strict no-repeat generation mode.
+- Settings control for strict no-repeat enforcement.
+- Content pack system with selectable modes: `Classic`, `Office Meltdown`, `Weekend Chaos`, `Chronically Online`.
+- Engine tests for content-pack determinism and output differentiation.
+- Advice voting system (`like` / `dislike`) persisted per generated record.
+- Suggestion Lab for user-submitted advice recommendations (category + topic + line) with moderation.
+- Persistence tests covering vote storage and suggestion create/delete lifecycle.
+- Community-only generation mode toggle in Settings to source advice strictly from moderated user suggestions.
+- Dedicated Settings navigation route for Suggestion Lab with submit/list/delete workflow.
+- History ranking modes: `Recent`, `Top Liked`, and `Top Disliked`.
+- Persistence tests for community-only setting and history vote-ranking filters.
 
 ### Changed
 - Generation now avoids near-term repeated advice lines by retrying with alternate seeds.
+- Generator now uses multiple composition shapes and category-specific spice lines to expand safe content variety.
 - Moderation term list expanded for stronger self-harm and wrongdoing blocking.
+- Simplified tab UX for clarity and density: compact Generate controls, collapsed advanced tools, menu-based list filters, and calmer non-neon backgrounds.
+- Removed duplicate generation action (`Reroll`) and kept a single primary `Generate` flow.
+- Removed duplicate share-style controls from Generate (settings is now the single source of truth).
+- Generate tab action hierarchy tightened: clearer top guidance, denser primary actions, and explicit rate-this-advice controls.
+- Generation can source from moderated user suggestions for matching categories/topics while preserving no-repeat checks.
+- Generate tab decluttered by removing in-tab Suggestion Lab controls in favor of Settings-based entry.
 
 ## [1.0.0] - 2026-02-13
 ### Added

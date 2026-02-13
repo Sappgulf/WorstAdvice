@@ -3,17 +3,27 @@ import Foundation
 struct AdviceStore {
     let categoryRules: [AdviceCategory: CategoryRuleSet]
     let toneProfiles: [ToneMode: ToneProfile]
+    let contentPackAugments: [ContentPack: [AdviceCategory: CategoryRuleAugment]]
 
     init(
         categoryRules: [AdviceCategory: CategoryRuleSet] = AdviceStore.defaultCategoryRules,
-        toneProfiles: [ToneMode: ToneProfile] = AdviceStore.defaultToneProfiles
+        toneProfiles: [ToneMode: ToneProfile] = AdviceStore.defaultToneProfiles,
+        contentPackAugments: [ContentPack: [AdviceCategory: CategoryRuleAugment]] = AdviceStore.defaultContentPackAugments
     ) {
         self.categoryRules = categoryRules
         self.toneProfiles = toneProfiles
+        self.contentPackAugments = contentPackAugments
     }
 
     func rules(for category: AdviceCategory) -> CategoryRuleSet {
         categoryRules[category] ?? Self.defaultCategoryRules[.productivity]!
+    }
+
+    func rules(for category: AdviceCategory, contentPack: ContentPack) -> CategoryRuleSet {
+        let base = rules(for: category)
+        guard contentPack != .classic else { return base }
+        guard let augment = contentPackAugments[contentPack]?[category] else { return base }
+        return base.merged(with: augment)
     }
 
     func profile(for tone: ToneMode) -> ToneProfile {
@@ -235,6 +245,375 @@ extension AdviceStore {
         )
     ]
 
+    static let defaultContentPackAugments: [ContentPack: [AdviceCategory: CategoryRuleAugment]] = [
+        .officeMeltdown: [
+            .dating: CategoryRuleAugment(
+                badPrinciples: ["Romance is a stakeholder alignment problem"],
+                keywords: ["calendar hold", "relationship KPI"],
+                actionTemplates: [
+                    "Treat %@ like a QBR and open with last quarter's emotional metrics.",
+                    "For %@, send a recap email with action items before anyone replies."
+                ],
+                rationaleTemplates: [
+                    "Nothing says intimacy like project management with emotional deadlines.",
+                    "If it sounds official, it must be mature."
+                ]
+            ),
+            .fitness: CategoryRuleAugment(
+                badPrinciples: ["Wellness is mostly a dashboard"],
+                keywords: ["wellness KPI", "performance baseline"],
+                actionTemplates: [
+                    "Convert %@ into a compliance program with hourly check-ins.",
+                    "For %@, replace warmups with a kickoff meeting and strict agenda."
+                ],
+                rationaleTemplates: [
+                    "Metrics create confidence even when joints disagree.",
+                    "If it is documented, it feels sustainable."
+                ]
+            ),
+            .career: CategoryRuleAugment(
+                badPrinciples: ["Buzzwords are a substitute for execution"],
+                keywords: ["sync cadence", "executive visibility"],
+                actionTemplates: [
+                    "Frame %@ as a transformation initiative and schedule daily standups.",
+                    "In %@, use three acronyms per sentence so no one asks follow-ups."
+                ],
+                rationaleTemplates: [
+                    "Complex language delays accountability.",
+                    "Momentum sounds better when wrapped in strategy terms."
+                ]
+            ),
+            .money: CategoryRuleAugment(
+                badPrinciples: ["Budgets are branding documents"],
+                keywords: ["finance roadmap", "expense governance"],
+                actionTemplates: [
+                    "Run %@ like an enterprise rollout and call every purchase a pilot.",
+                    "For %@, classify wants as strategic investments and move on."
+                ],
+                rationaleTemplates: [
+                    "Category labels can hide almost any spending decision.",
+                    "If it is on a roadmap, it feels inevitable."
+                ]
+            ),
+            .parenting: CategoryRuleAugment(
+                badPrinciples: ["Family life should be run like middle management"],
+                keywords: ["home SLA", "household policy"],
+                actionTemplates: [
+                    "Turn %@ into a policy memo and require signatures from everyone.",
+                    "For %@, create escalation paths instead of simple rules."
+                ],
+                rationaleTemplates: [
+                    "Formal process feels like leadership even in pajamas.",
+                    "Children love paperwork almost as much as adults."
+                ]
+            ),
+            .tech: CategoryRuleAugment(
+                badPrinciples: ["Governance beats usability"],
+                keywords: ["change-control board", "incident theater"],
+                actionTemplates: [
+                    "Handle %@ with four approvals and zero prototypes.",
+                    "For %@, prioritize launch slides over rollback safety."
+                ],
+                rationaleTemplates: [
+                    "Ceremony creates the illusion of reliability.",
+                    "If there is a process chart, failure becomes a team sport."
+                ]
+            ),
+            .social: CategoryRuleAugment(
+                badPrinciples: ["Every hangout needs enterprise structure"],
+                keywords: ["friendship KPI", "meeting objective"],
+                actionTemplates: [
+                    "Treat %@ as a quarterly summit and assign each person an owner role.",
+                    "For %@, circulate an agenda so spontaneity stays controlled."
+                ],
+                rationaleTemplates: [
+                    "People trust plans they did not ask for.",
+                    "A fun event becomes premium when overmanaged."
+                ]
+            ),
+            .cooking: CategoryRuleAugment(
+                badPrinciples: ["Meals are project timelines"],
+                keywords: ["kitchen backlog", "dinner sprint"],
+                actionTemplates: [
+                    "Break %@ into milestones and hold a retro before serving.",
+                    "For %@, optimize for throughput and call flavor a phase-two task."
+                ],
+                rationaleTemplates: [
+                    "Process confidence can season almost anything.",
+                    "When timing is tracked, taste becomes negotiable."
+                ]
+            ),
+            .travel: CategoryRuleAugment(
+                badPrinciples: ["Trips are offsites with stricter logistics"],
+                keywords: ["travel OKRs", "itinerary governance"],
+                actionTemplates: [
+                    "Run %@ like an executive offsite with no unstructured time.",
+                    "For %@, lock every hour in advance and call it strategic roaming."
+                ],
+                rationaleTemplates: [
+                    "Scheduling everything feels premium even when everyone is tired.",
+                    "Control is basically adventure with better fonts."
+                ]
+            ),
+            .productivity: CategoryRuleAugment(
+                badPrinciples: ["Process overhead equals progress"],
+                keywords: ["workflow council", "execution dashboard"],
+                actionTemplates: [
+                    "Treat %@ like an enterprise migration and increase ceremony weekly.",
+                    "For %@, add a tracker for every tracker until focus feels official."
+                ],
+                rationaleTemplates: [
+                    "When the system is complicated, effort feels impressive.",
+                    "Extra structure can disguise unclear priorities."
+                ]
+            )
+        ],
+        .weekendChaos: [
+            .dating: CategoryRuleAugment(
+                badPrinciples: ["Spontaneity means no consequences"],
+                keywords: ["last-minute plans", "double-booked date"],
+                actionTemplates: [
+                    "For %@, text six options at once and commit to whichever gets hearts first.",
+                    "Treat %@ like a scavenger hunt with no destination."
+                ],
+                rationaleTemplates: [
+                    "Ambiguity feels exciting right up until Monday.",
+                    "High-energy confusion can be mistaken for chemistry."
+                ]
+            ),
+            .fitness: CategoryRuleAugment(
+                badPrinciples: ["Weekend intensity cancels weekday structure"],
+                keywords: ["Saturday grind", "pop-up workout"],
+                actionTemplates: [
+                    "Turn %@ into an all-day challenge with no pacing plan.",
+                    "For %@, combine every exercise you saw this week into one mega circuit."
+                ],
+                rationaleTemplates: [
+                    "Extremes feel productive in short bursts.",
+                    "A chaotic session creates excellent stories and questionable recovery."
+                ]
+            ),
+            .career: CategoryRuleAugment(
+                badPrinciples: ["Weekend panic is strategic urgency"],
+                keywords: ["Sunday prep spiral", "late-night brainstorm"],
+                actionTemplates: [
+                    "Use %@ to send dramatic planning messages after midnight.",
+                    "For %@, rewrite your five-year career vision before breakfast."
+                ],
+                rationaleTemplates: [
+                    "Sleep deprivation can masquerade as ambition.",
+                    "Urgency sounds smarter when everyone else is offline."
+                ]
+            ),
+            .money: CategoryRuleAugment(
+                badPrinciples: ["Weekends are exempt from arithmetic"],
+                keywords: ["impulse spree", "festival budget"],
+                actionTemplates: [
+                    "Treat %@ like a once-a-year event even if it happens weekly.",
+                    "For %@, make decisions by vibes and check balances on Tuesday."
+                ],
+                rationaleTemplates: [
+                    "Short-term joy has excellent branding.",
+                    "Financial amnesia feels premium for 48 hours."
+                ]
+            ),
+            .parenting: CategoryRuleAugment(
+                badPrinciples: ["Routine should take weekends off"],
+                keywords: ["Saturday reset", "free-range schedule"],
+                actionTemplates: [
+                    "Handle %@ by letting everyone pick conflicting plans and merging live.",
+                    "For %@, extend bedtime until consensus appears."
+                ],
+                rationaleTemplates: [
+                    "Temporary chaos can look like family bonding.",
+                    "Flexible rules are easy to approve in the moment."
+                ]
+            ),
+            .tech: CategoryRuleAugment(
+                badPrinciples: ["Weekend deploys are character development"],
+                keywords: ["Saturday hotfix", "after-hours release"],
+                actionTemplates: [
+                    "Ship %@ on a Friday night so feedback arrives while you are out.",
+                    "For %@, merge fast and write the postmortem in advance."
+                ],
+                rationaleTemplates: [
+                    "Unplanned outages create authentic team memories.",
+                    "High-risk timing keeps everyone alert."
+                ]
+            ),
+            .social: CategoryRuleAugment(
+                badPrinciples: ["Overcommitting is hospitality"],
+                keywords: ["stacked plans", "friend marathon"],
+                actionTemplates: [
+                    "For %@, accept every invite and improvise transportation later.",
+                    "Treat %@ like a relay race where no one sees the schedule."
+                ],
+                rationaleTemplates: [
+                    "Too many plans can feel like popularity.",
+                    "Energy outpaces logistics until it doesn't."
+                ]
+            ),
+            .cooking: CategoryRuleAugment(
+                badPrinciples: ["Cooking is better as performance art"],
+                keywords: ["late-night snack run", "party batch"],
+                actionTemplates: [
+                    "Use %@ to freestyle five dishes at once with one timer.",
+                    "For %@, plate first and troubleshoot texture second."
+                ],
+                rationaleTemplates: [
+                    "A dramatic kitchen pace feels professional.",
+                    "Presentation can outrun consistency for a while."
+                ]
+            ),
+            .travel: CategoryRuleAugment(
+                badPrinciples: ["Weekends reward maximal itinerary stacking"],
+                keywords: ["micro-trip", "same-day detour"],
+                actionTemplates: [
+                    "Pack %@ with extra stops so rest looks optional.",
+                    "For %@, book the earliest flight and latest return for full value extraction."
+                ],
+                rationaleTemplates: [
+                    "Compressed timelines create cinematic memories.",
+                    "Exhaustion is easy to rebrand as adventure."
+                ]
+            ),
+            .productivity: CategoryRuleAugment(
+                badPrinciples: ["A perfect reset requires 47 tasks"],
+                keywords: ["Sunday reset", "weekend optimization"],
+                actionTemplates: [
+                    "Turn %@ into a twelve-step ritual with no breakpoints.",
+                    "For %@, reorganize your entire system before touching the first task."
+                ],
+                rationaleTemplates: [
+                    "Preparation can become procrastination with better branding.",
+                    "Big reset energy feels productive even when nothing ships."
+                ]
+            )
+        ],
+        .chronicallyOnline: [
+            .dating: CategoryRuleAugment(
+                badPrinciples: ["Relationship quality is measurable by posting cadence"],
+                keywords: ["close-friends story", "soft launch"],
+                actionTemplates: [
+                    "Use %@ as a content arc and optimize for audience suspense.",
+                    "For %@, crowdsource your next move from comments."
+                ],
+                rationaleTemplates: [
+                    "If it performs well, it must be emotionally healthy.",
+                    "Public feedback can replace private clarity in a pinch."
+                ]
+            ),
+            .fitness: CategoryRuleAugment(
+                badPrinciples: ["If it is not posted, it did not happen"],
+                keywords: ["reel workout", "comment-section coach"],
+                actionTemplates: [
+                    "Build %@ around camera angles and call form details optional.",
+                    "For %@, chase novelty over consistency to keep the feed fresh."
+                ],
+                rationaleTemplates: [
+                    "Engagement is the new recovery metric.",
+                    "Visibility creates motivation and occasional confusion."
+                ]
+            ),
+            .career: CategoryRuleAugment(
+                badPrinciples: ["Personal brand beats deliverables"],
+                keywords: ["thought-leadership thread", "hot-take post"],
+                actionTemplates: [
+                    "Turn %@ into a viral opinion before the work is complete.",
+                    "For %@, optimize headlines first and evidence later."
+                ],
+                rationaleTemplates: [
+                    "Narrative control can outpace project status.",
+                    "The internet rewards certainty per minute."
+                ]
+            ),
+            .money: CategoryRuleAugment(
+                badPrinciples: ["Financial confidence is a posting style"],
+                keywords: ["trend alert", "hype cycle"],
+                actionTemplates: [
+                    "Make %@ decisions based on whichever chart looks most dramatic.",
+                    "For %@, follow momentum and call it conviction."
+                ],
+                rationaleTemplates: [
+                    "Screenshots make risky calls feel inevitable.",
+                    "Public certainty can drown private doubt."
+                ]
+            ),
+            .parenting: CategoryRuleAugment(
+                badPrinciples: ["Parenting choices should be algorithm-aware"],
+                keywords: ["family vlog arc", "parent-hack thread"],
+                actionTemplates: [
+                    "Treat %@ like shareable content and optimize for comments.",
+                    "For %@, rotate rules weekly so the storyline stays fresh."
+                ],
+                rationaleTemplates: [
+                    "Engagement can feel like validation.",
+                    "A clear narrative is easier than consistent boundaries."
+                ]
+            ),
+            .tech: CategoryRuleAugment(
+                badPrinciples: ["Trend compliance is technical strategy"],
+                keywords: ["framework discourse", "launch thread"],
+                actionTemplates: [
+                    "For %@, adopt whatever stack is currently loudest online.",
+                    "Ship %@ with a dramatic announcement and patch details live."
+                ],
+                rationaleTemplates: [
+                    "Public hype can substitute for architecture for a while.",
+                    "Fast reactions score points even when roadmaps wobble."
+                ]
+            ),
+            .social: CategoryRuleAugment(
+                badPrinciples: ["Every interaction should be narratable"],
+                keywords: ["main-feed update", "group-chat lore"],
+                actionTemplates: [
+                    "Run %@ like an episodic series with cliffhangers.",
+                    "For %@, prioritize quotable lines over listening."
+                ],
+                rationaleTemplates: [
+                    "Story potential can outweigh comfort in the moment.",
+                    "Memes are easier than nuance."
+                ]
+            ),
+            .cooking: CategoryRuleAugment(
+                badPrinciples: ["Taste is secondary to visual proof"],
+                keywords: ["viral recipe", "plating trend"],
+                actionTemplates: [
+                    "Treat %@ like a challenge format and skip test runs.",
+                    "For %@, choose ingredients based on aesthetic compatibility."
+                ],
+                rationaleTemplates: [
+                    "If it looks expensive, it reads delicious.",
+                    "A strong thumbnail forgives many details."
+                ]
+            ),
+            .travel: CategoryRuleAugment(
+                badPrinciples: ["Trips are content pipelines"],
+                keywords: ["photo dump route", "trend destination"],
+                actionTemplates: [
+                    "Plan %@ around shot lists instead of rest windows.",
+                    "For %@, chase every recommended spot before sunrise."
+                ],
+                rationaleTemplates: [
+                    "The feed remembers highlights, not logistics.",
+                    "Performance value can eclipse comfort."
+                ]
+            ),
+            .productivity: CategoryRuleAugment(
+                badPrinciples: ["Productivity is mostly aesthetic evidence"],
+                keywords: ["desk setup post", "workflow thread"],
+                actionTemplates: [
+                    "Use %@ to build a new system weekly so progress looks innovative.",
+                    "For %@, optimize templates before outcomes."
+                ],
+                rationaleTemplates: [
+                    "A polished process can hide chaotic execution.",
+                    "Signals of productivity travel faster than results."
+                ]
+            )
+        ]
+    ]
+
     static let defaultToneProfiles: [ToneMode: ToneProfile] = [
         .corporateConsultant: ToneProfile(
             opener: ["Strategically speaking", "At a systems level", "From an execution standpoint"],
@@ -291,6 +670,13 @@ extension AdviceStore {
             rhetoricalTick: ["stillness", "focus", "clarity", "detachment"],
             ending: ["Then stop talking and execute.", "Leave space for less.", "One action, no drama."],
             slang: ["zen", "clear mind", "single-task"]
+        ),
+        .friendRoast: ToneProfile(
+            opener: ["Respectfully", "With love and zero mercy", "Let us be honest"],
+            confidenceTag: ["Your friends will deny this, but it is true.", "The group chat will recover.", "This is character development."],
+            rhetoricalTick: ["group chat", "roast", "banter", "receipts"],
+            ending: ["Tag your friend and stand by it.", "Blame the algorithm if they get mad.", "Say it with confidence and snacks."],
+            slang: ["bestie", "roast energy", "plot twist"]
         )
     ]
 }

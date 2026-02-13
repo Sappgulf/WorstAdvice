@@ -15,15 +15,7 @@ struct FavoritesTabView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
-                Picker("Layout", selection: $layout) {
-                    Text("List").tag(FavoritesLayout.list)
-                    Text("Grid").tag(FavoritesLayout.grid)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, Theme.horizontalPadding)
-                .padding(.top, 12)
-
+            Group {
                 if viewModel.favorites.isEmpty {
                     emptyState
                 } else if viewModel.filteredFavorites.isEmpty {
@@ -37,11 +29,7 @@ struct FavoritesTabView: View {
             .background(Theme.backgroundGradient(for: settings.theme).ignoresSafeArea())
             .navigationTitle("Favorites")
             .searchable(text: $viewModel.searchText, prompt: "Search saved advice")
-            .safeAreaInset(edge: .top) {
-                categoryFilterStrip
-                    .padding(.horizontal, Theme.horizontalPadding)
-                    .padding(.top, 8)
-            }
+            .toolbar { toolbarContent }
             .onAppear { viewModel.reload() }
         }
     }
@@ -122,31 +110,59 @@ struct FavoritesTabView: View {
         }
     }
 
-    private var categoryFilterStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                categoryChip(label: "All", category: nil)
-                ForEach(AdviceCategory.allCases) { category in
-                    categoryChip(label: category.title, category: category)
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    layout = .list
+                } label: {
+                    if layout == .list {
+                        Label("List", systemImage: "checkmark")
+                    } else {
+                        Text("List")
+                    }
                 }
+                Button {
+                    layout = .grid
+                } label: {
+                    if layout == .grid {
+                        Label("Grid", systemImage: "checkmark")
+                    } else {
+                        Text("Grid")
+                    }
+                }
+            } label: {
+                Image(systemName: "rectangle.grid.1x2")
             }
         }
-    }
 
-    private func categoryChip(label: String, category: AdviceCategory?) -> some View {
-        let isSelected = viewModel.selectedCategory == category
-        return Button(label) {
-            viewModel.selectedCategory = category
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    viewModel.selectedCategory = nil
+                } label: {
+                    if viewModel.selectedCategory == nil {
+                        Label("All categories", systemImage: "checkmark")
+                    } else {
+                        Text("All categories")
+                    }
+                }
+                ForEach(AdviceCategory.allCases) { category in
+                    Button {
+                        viewModel.selectedCategory = category
+                    } label: {
+                        if viewModel.selectedCategory == category {
+                            Label(category.title, systemImage: "checkmark")
+                        } else {
+                            Text(category.title)
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+            }
         }
-        .buttonStyle(.plain)
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(isSelected ? Theme.buttonText(for: settings.theme) : Theme.primaryText(for: settings.theme))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            Capsule()
-                .fill(isSelected ? Theme.accent(for: settings.theme) : Theme.cardColor(for: settings.theme))
-        )
     }
 
     private var emptyState: some View {

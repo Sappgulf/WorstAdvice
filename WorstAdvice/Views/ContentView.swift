@@ -14,8 +14,10 @@ struct ContentView: View {
                     Theme.backgroundGradient(for: session.settings.theme)
                         .ignoresSafeArea()
 
-                    FloatingParticlesView(theme: session.settings.theme, reduceMotion: session.settings.reduceMotion)
-                        .ignoresSafeArea()
+                    if session.settings.theme == .neon {
+                        FloatingParticlesView(theme: session.settings.theme, reduceMotion: session.settings.reduceMotion)
+                            .ignoresSafeArea()
+                    }
 
                     TabView(selection: $selectedTab) {
                         GenerateTabView(
@@ -48,7 +50,7 @@ struct ContentView: View {
                             Label("History", systemImage: "clock")
                         }
 
-                        SettingsTabView(viewModel: session.settings)
+                        SettingsTabView(viewModel: session.settings, generateViewModel: session.generate)
                             .tag(3)
                             .tabItem {
                                 Label("Settings", systemImage: "gearshape")
@@ -70,5 +72,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: [AdviceRecord.self, AppSettingsEntity.self], inMemory: true)
+        .modelContainer(for: [AdviceRecord.self, AdviceFingerprint.self, UserAdviceSuggestion.self, AppSettingsEntity.self], inMemory: true)
 }

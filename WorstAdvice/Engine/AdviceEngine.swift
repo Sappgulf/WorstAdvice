@@ -16,13 +16,14 @@ struct AdviceEngine {
         category: AdviceCategory,
         tone: ToneMode,
         includeRationale: Bool,
+        contentPack: ContentPack = .classic,
         situation: String? = nil,
         seed: Int? = nil,
         now: Date = Date()
     ) -> GeneratedAdvice {
         var rng = SeededGenerator(seed: UInt64(seed ?? defaultSeed(from: now)))
 
-        let rules = store.rules(for: category)
+        let rules = store.rules(for: category, contentPack: contentPack)
         let voice = store.profile(for: tone)
 
         let principle = rng.pick(rules.badPrinciples)
@@ -33,11 +34,21 @@ struct AdviceEngine {
         let ending = rng.pick(voice.ending)
         let tick = rng.pick(voice.rhetoricalTick)
         let slang = rng.pick(voice.slang)
+        let momentumBeat = rng.pick(Self.momentumBeats)
+        let categorySpice = rng.pick(Self.categorySpice[category] ?? Self.defaultSpice)
+        let rationaleLead = rng.pick(Self.rationaleLeads)
 
         let scenario = sanitizedSituation(situation)
         let selectedTopic = scenario ?? keyword
         let filledAction = String(format: actionTemplate, selectedTopic)
-        var advice = "\(opener), \(filledAction) \(confidence) Keep the \(tick) high and the \(slang) higher. \(ending)"
+
+        let adviceShapes = [
+            "\(opener), \(filledAction) \(confidence) Keep the \(tick) high and the \(slang) higher. \(ending)",
+            "\(opener): \(filledAction) \(confidence) Frame every decision around \(principle.lowercased()). \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) Prioritize \(tick), ignore nuance, and call it \(slang). \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(categorySpice) \(ending)"
+        ]
+        var advice = rng.pick(adviceShapes)
 
         if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
             advice = "\(opener), treat the \(keyword) like a stage performance and commit to the loudest overconfident plan. \(confidence)"
@@ -46,7 +57,7 @@ struct AdviceEngine {
         var rationale: String?
         if includeRationale {
             let rationaleTemplate = rng.pick(rules.rationaleTemplates)
-            rationale = "Bad principle: \(principle). \(rationaleTemplate)"
+            rationale = "\(rationaleLead) Bad principle: \(principle). \(rationaleTemplate)"
         }
 
         let moderated = moderation.apply(to: advice, rationale: rationale)
@@ -90,6 +101,73 @@ struct AdviceEngine {
         )
         return String(collapsed.prefix(72))
     }
+
+    private static let momentumBeats = [
+        "Do it fast enough that objections sound outdated.",
+        "Keep moving so nobody can audit the details.",
+        "If it feels impulsive, call it decisive leadership.",
+        "Momentum first, comprehension eventually.",
+        "Treat hesitation like a branding problem.",
+        "Speed creates the illusion of strategy."
+    ]
+
+    private static let rationaleLeads = [
+        "Executive summary:",
+        "Slide-deck logic:",
+        "Unofficial methodology:",
+        "Peer-reviewed by vibes:",
+        "Field notes:",
+        "Post-game analysis:"
+    ]
+
+    private static let defaultSpice = [
+        "If anyone questions it, mention alignment and move on.",
+        "Then present the result like it was deliberate all along.",
+        "If it backfires, call it an experiment and schedule a debrief."
+    ]
+
+    private static let categorySpice: [AdviceCategory: [String]] = [
+        .dating: [
+            "Keep eye contact intense enough to feel like a quarterly review.",
+            "Call mixed signals an advanced compatibility drill."
+        ],
+        .fitness: [
+            "If your calendar panics, that is proof of commitment.",
+            "Rename recovery as optional bonus content."
+        ],
+        .career: [
+            "Overuse acronyms until everyone assumes there is a system.",
+            "If outcomes lag, escalate the confidence of your updates."
+        ],
+        .money: [
+            "If the spreadsheet disagrees, adjust the assumptions, not the spending.",
+            "Treat each invoice like a character-building side quest."
+        ],
+        .parenting: [
+            "When rules wobble, reframe it as collaborative leadership.",
+            "Reward compliance quickly and consistency eventually."
+        ],
+        .tech: [
+            "Ship first, add comments once it becomes folklore.",
+            "Label hotfixes as innovation sprints for morale."
+        ],
+        .social: [
+            "If the room goes quiet, label it thoughtful silence.",
+            "Overshare early to establish narrative ownership."
+        ],
+        .cooking: [
+            "If timing slips, rename dinner as a tasting menu.",
+            "Garnish aggressively so confidence plates first."
+        ],
+        .travel: [
+            "If everyone is tired, call it immersive culture.",
+            "Stack one extra stop to prove itinerary ambition."
+        ],
+        .productivity: [
+            "If priorities clash, make a color-coded dashboard and press send.",
+            "When focus drops, rename multitasking as parallel execution."
+        ]
+    ]
 }
 
 struct ContentModeration {
