@@ -18,6 +18,11 @@ struct FloatingParticlesView: View {
         case .ember: return 0.15
         case .slate: return 0.12
         case .evergreen: return 0.14
+        case .neon: return 0.3
+        case .midnight: return 0.2
+        case .sunset: return 0.18
+        case .cosmic: return 0.35
+        case .retro: return 0.25
         }
     }
     

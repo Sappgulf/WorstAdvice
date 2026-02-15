@@ -23,6 +23,16 @@ enum Theme {
             return (Color.black.opacity(0.25), 10, 3)
         case .evergreen:
             return (Color.black.opacity(0.3), 14, 5)
+        case .neon:
+            return (Color(hex: "FF00FF").opacity(0.3), 20, 8)
+        case .midnight:
+            return (Color.black.opacity(0.5), 18, 8)
+        case .sunset:
+            return (Color(hex: "FF6B35").opacity(0.25), 16, 6)
+        case .cosmic:
+            return (Color(hex: "9D4EDD").opacity(0.4), 22, 8)
+        case .retro:
+            return (Color(hex: "00FF9F").opacity(0.2), 14, 5)
         }
     }
 
@@ -58,6 +68,36 @@ enum Theme {
                 startPoint: .top,
                 endPoint: .bottom
             )
+        case .neon:
+            return LinearGradient(
+                colors: [Color(hex: "0A0A0A"), Color(hex: "1A0033")],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        case .midnight:
+            return LinearGradient(
+                colors: [Color(hex: "000000"), Color(hex: "0D1B2A")],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        case .sunset:
+            return LinearGradient(
+                colors: [Color(hex: "FF512F"), Color(hex: "DD2476")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .cosmic:
+            return LinearGradient(
+                colors: [Color(hex: "0F0C29"), Color(hex: "302B63"), Color(hex: "24243E")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .retro:
+            return LinearGradient(
+                colors: [Color(hex: "2C1A3D"), Color(hex: "1A1A2E")],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         }
     }
 
@@ -68,6 +108,11 @@ enum Theme {
         case .ember: return Color(hex: "D65A31")
         case .slate: return Color(hex: "AAB7B8")
         case .evergreen: return Color(hex: "81C784") // Natural Sage Green
+        case .neon: return Color(hex: "FF00FF") // Hot Magenta
+        case .midnight: return Color(hex: "5E81AC") // Frost Blue
+        case .sunset: return Color(hex: "FFD700") // Gold
+        case .cosmic: return Color(hex: "C77DFF") // Purple
+        case .retro: return Color(hex: "00FF9F") // Matrix Green
         }
     }
 
@@ -78,6 +123,11 @@ enum Theme {
         case .ember: return Color(hex: "5E3030").opacity(0.4)
         case .slate: return Color(hex: "3E5062").opacity(0.7)
         case .evergreen: return Color(hex: "253D2E").opacity(0.6)
+        case .neon: return Color(hex: "1A1A2E").opacity(0.8)
+        case .midnight: return Color(hex: "16213E").opacity(0.7)
+        case .sunset: return Color(hex: "2D1B4E").opacity(0.5)
+        case .cosmic: return Color(hex: "1A1A2E").opacity(0.6)
+        case .retro: return Color(hex: "2D1B4E").opacity(0.7)
         }
     }
 
@@ -88,6 +138,11 @@ enum Theme {
         case .ember: return Color(hex: "FFF5E6") // High contrast white
         case .slate: return Color(hex: "ECF0F1")
         case .evergreen: return Color(hex: "FFFFFF")
+        case .neon: return Color(hex: "FFFFFF")
+        case .midnight: return Color(hex: "E5E9F0")
+        case .sunset: return Color(hex: "FFFFFF")
+        case .cosmic: return Color(hex: "F8F9FA")
+        case .retro: return Color(hex: "00FF9F")
         }
     }
 
@@ -98,6 +153,11 @@ enum Theme {
         case .ember: return Color(hex: "D0B0B0")
         case .slate: return Color(hex: "BDC3C7")
         case .evergreen: return Color(hex: "A5D6A7") // Lighter Green-Grey
+        case .neon: return Color(hex: "FF00FF").opacity(0.7)
+        case .midnight: return Color(hex: "81A1C1")
+        case .sunset: return Color(hex: "FFE4E1")
+        case .cosmic: return Color(hex: "E0AAFF")
+        case .retro: return Color(hex: "00FF9F").opacity(0.7)
         }
     }
 
@@ -108,6 +168,11 @@ enum Theme {
         case .ember: return .white
         case .slate: return Color(hex: "2C3E50")
         case .evergreen: return Color(hex: "142119")
+        case .neon: return .black
+        case .midnight: return .black
+        case .sunset: return .black
+        case .cosmic: return .black
+        case .retro: return .black
         }
     }
 
@@ -118,6 +183,11 @@ enum Theme {
         case .ember: return Color(hex: "261212")
         case .slate: return Color(hex: "233140")
         case .evergreen: return Color(hex: "142119")
+        case .neon: return Color(hex: "0A0A0A")
+        case .midnight: return Color(hex: "000000")
+        case .sunset: return Color(hex: "1A0A2E")
+        case .cosmic: return Color(hex: "0F0C29")
+        case .retro: return Color(hex: "1A1A2E")
         }
     }
 
@@ -128,16 +198,26 @@ enum Theme {
         case .ember: return Color(hex: "FF6B6B")
         case .slate: return Color(hex: "ECF0F1")
         case .evergreen: return Color(hex: "66BB6A") // Slightly darker sage for particles
+        case .neon: return Color(hex: "00FFFF")
+        case .midnight: return Color(hex: "88C0D0")
+        case .sunset: return Color(hex: "FFD700")
+        case .cosmic: return Color(hex: "9D4EDD")
+        case .retro: return Color(hex: "00FF9F")
         }
     }
 
     static func headerColor(for mode: ThemeMode) -> Color {
-        return Color(hex: "1C1C1E") // Iconic Black
+        switch mode {
+        case .retro: return Color(hex: "00FF9F")
+        default: return Color(hex: "1C1C1E") // Iconic Black
+        }
     }
 
     static func headerShadowColor(for mode: ThemeMode) -> Color {
         switch mode {
         case .minimal: return .clear
+        case .neon: return Color(hex: "FF00FF").opacity(0.8)
+        case .retro: return Color(hex: "00FF9F").opacity(0.8)
         default: return .white.opacity(0.85) // Strong glow for visibility on dark backgrounds
         }
     }
@@ -156,7 +236,7 @@ struct ThemeBackgroundView: View {
                     .blendMode(.screen)
             }
 
-            if mode == .badvice || mode == .ember || mode == .evergreen {
+            if mode == .badvice || mode == .ember || mode == .evergreen || mode == .midnight {
                 LinearGradient(
                     colors: [Color.white.opacity(0.08), Color.clear, Color.black.opacity(0.12)],
                     startPoint: .top,
@@ -167,6 +247,26 @@ struct ThemeBackgroundView: View {
                 PaperGrainView()
                     .blendMode(.multiply)
                     .opacity(mode == .badvice ? 0.3 : 0.25)
+            }
+            
+            // Neon glow effect for neon theme
+            if mode == .neon {
+                NeonGridView()
+                    .opacity(0.15)
+                    .blendMode(.screen)
+            }
+            
+            // Star field for cosmic theme
+            if mode == .cosmic {
+                StarFieldView()
+                    .opacity(0.6)
+            }
+            
+            // Scanlines for retro theme
+            if mode == .retro {
+                ScanlineView()
+                    .opacity(0.1)
+                    .blendMode(.overlay)
             }
         }
     }
@@ -279,5 +379,89 @@ extension Color {
             blue: Double(b) / 255,
             opacity: 1
         )
+    }
+}
+
+// MARK: - Special Theme Effects
+
+private struct NeonGridView: View {
+    @State private var phase: Double = 0
+    
+    var body: some View {
+        TimelineView(.animation) { _ in
+            Canvas { context, size in
+                let gridSize: CGFloat = 40
+                let lineOpacity = 0.3 + 0.2 * sin(phase)
+                
+                // Draw vertical lines
+                for x in stride(from: 0, to: size.width, by: gridSize) {
+                    var path = Path()
+                    path.move(to: CGPoint(x: x, y: 0))
+                    path.addLine(to: CGPoint(x: x, y: size.height))
+                    context.stroke(path, with: .color(Color(hex: "FF00FF").opacity(lineOpacity)), lineWidth: 1)
+                }
+                
+                // Draw horizontal lines
+                for y in stride(from: 0, to: size.height, by: gridSize) {
+                    var path = Path()
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: size.width, y: y))
+                    context.stroke(path, with: .color(Color(hex: "00FFFF").opacity(lineOpacity)), lineWidth: 1)
+                }
+            }
+        }
+        .onAppear {
+            withAnimation(.linear(duration: 2).repeatForever(autoreverses: true)) {
+                phase = .pi * 2
+            }
+        }
+    }
+}
+
+private struct StarFieldView: View {
+    @State private var start = Date()
+    
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                let time = timeline.date.timeIntervalSince(start)
+                
+                for i in 0..<50 {
+                    let seed = Double(i)
+                    let x = size.width * CGFloat((seed * 73).truncatingRemainder(dividingBy: 100) / 100)
+                    let y = size.height * CGFloat((seed * 37).truncatingRemainder(dividingBy: 100) / 100)
+                    let twinkle = 0.3 + 0.7 * sin(time * 2 + seed)
+                    let radius = CGFloat(1 + (seed.truncatingRemainder(dividingBy: 3)))
+                    
+                    let rect = CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)
+                    context.fill(Path(ellipseIn: rect), with: .color(.white.opacity(twinkle)))
+                }
+            }
+        }
+    }
+}
+
+private struct ScanlineView: View {
+    @State private var offset: CGFloat = 0
+    
+    var body: some View {
+        TimelineView(.animation) { _ in
+            Canvas { context, size in
+                let lineHeight: CGFloat = 2
+                let gapHeight: CGFloat = 4
+                
+                for y in stride(from: -offset, to: size.height, by: lineHeight + gapHeight) {
+                    var path = Path()
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: size.width, y: y))
+                    context.stroke(path, with: .color(Color(hex: "00FF9F").opacity(0.3)), lineWidth: lineHeight)
+                }
+            }
+        }
+        .onAppear {
+            withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
+                offset = 6
+            }
+        }
     }
 }

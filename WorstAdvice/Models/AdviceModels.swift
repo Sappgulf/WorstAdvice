@@ -83,6 +83,11 @@ enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case ember
     case slate
     case evergreen
+    case neon
+    case midnight
+    case sunset
+    case cosmic
+    case retro
 
     var id: String { rawValue }
 
@@ -93,6 +98,11 @@ enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .ember: return "Ember"
         case .slate: return "Slate"
         case .evergreen: return "Evergreen"
+        case .neon: return "Neon Nights"
+        case .midnight: return "Midnight Oil"
+        case .sunset: return "Golden Hour"
+        case .cosmic: return "Cosmic Chaos"
+        case .retro: return "Retro Wave"
         }
     }
 }
@@ -295,5 +305,168 @@ struct BadQuote: Identifiable, Hashable, Sendable {
 extension String {
     var normalizedForFiltering: String {
         lowercased().folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+    }
+}
+
+// MARK: - Achievements System
+
+enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
+    case firstAdvice = "first_advice"
+    case tenAdvice = "ten_advice"
+    case hundredAdvice = "hundred_advice"
+    case firstSave = "first_save"
+    case collector = "collector"
+    case hoarder = "hoarder"
+    case sharer = "sharer"
+    case viral = "viral"
+    case dailyStreak3 = "streak_3"
+    case dailyStreak7 = "streak_7"
+    case dailyStreak14 = "streak_14"
+    case dailyStreak30 = "streak_30"
+    case toneExplorer = "tone_explorer"
+    case categoryMaster = "category_master"
+    case nightOwl = "night_owl"
+    case earlyBird = "early_bird"
+    case shakeItOff = "shake_it_off"
+    case suggestionAccepted = "suggestion_accepted"
+    
+    var id: String { rawValue }
+    
+    var title: String {
+        switch self {
+        case .firstAdvice: return "First Mistake"
+        case .tenAdvice: return "Serial Offender"
+        case .hundredAdvice: return "Chaos Connoisseur"
+        case .firstSave: return "Bookmarked Badness"
+        case .collector: return "Curator of Catastrophe"
+        case .hoarder: return "Advice Archivist"
+        case .sharer: return "Spread the Badness"
+        case .viral: return "Going Viral"
+        case .dailyStreak3: return "3-Day Bender"
+        case .dailyStreak7: return "Weekly Chaos"
+        case .dailyStreak14: return "Two Weeks of Trouble"
+        case .dailyStreak30: return "Monthly Madness"
+        case .toneExplorer: return "Voice Actor"
+        case .categoryMaster: return "Jack of All Trades"
+        case .nightOwl: return "Midnight Badvice"
+        case .earlyBird: return "Early Bird Gets the Burn"
+        case .shakeItOff: return "Shake It Off"
+        case .suggestionAccepted: return "Community Contributor"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .firstAdvice: return "Generate your first bad advice"
+        case .tenAdvice: return "Generate 10 pieces of bad advice"
+        case .hundredAdvice: return "Generate 100 pieces of bad advice"
+        case .firstSave: return "Save your first bad advice"
+        case .collector: return "Save 10 pieces of bad advice"
+        case .hoarder: return "Save 50 pieces of bad advice"
+        case .sharer: return "Share bad advice 5 times"
+        case .viral: return "Share bad advice 25 times"
+        case .dailyStreak3: return "Use Badvice for 3 days in a row"
+        case .dailyStreak7: return "Use Badvice for 7 days in a row"
+        case .dailyStreak14: return "Use Badvice for 14 days in a row"
+        case .dailyStreak30: return "Use Badvice for 30 days in a row"
+        case .toneExplorer: return "Try all 11 different tones"
+        case .categoryMaster: return "Generate advice in all 10 categories"
+        case .nightOwl: return "Generate advice after midnight"
+        case .earlyBird: return "Generate advice before 6 AM"
+        case .shakeItOff: return "Use shake to generate advice"
+        case .suggestionAccepted: return "Submit a community suggestion"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .firstAdvice: return "sparkles"
+        case .tenAdvice: return "10.circle.fill"
+        case .hundredAdvice: return "100.circle.fill"
+        case .firstSave: return "bookmark.fill"
+        case .collector: return "folder.fill"
+        case .hoarder: return "archivebox.fill"
+        case .sharer: return "square.and.arrow.up.fill"
+        case .viral: return "flame.fill"
+        case .dailyStreak3: return "3.circle.fill"
+        case .dailyStreak7: return "7.circle.fill"
+        case .dailyStreak14: return "14.circle.fill"
+        case .dailyStreak30: return "30.circle.fill"
+        case .toneExplorer: return "theatermasks.fill"
+        case .categoryMaster: return "checkmark.circle.fill"
+        case .nightOwl: return "moon.fill"
+        case .earlyBird: return "sunrise.fill"
+        case .shakeItOff: return "iphone.gen3.radiowaves.left.and.right"
+        case .suggestionAccepted: return "person.2.fill"
+        }
+    }
+    
+    var unlocksTheme: ThemeMode? {
+        switch self {
+        case .dailyStreak7: return .neon
+        case .hundredAdvice: return .midnight
+        case .categoryMaster: return .sunset
+        default: return nil
+        }
+    }
+    
+    var isSecret: Bool {
+        // Secret achievements that aren't revealed until unlocked
+        self == .nightOwl || self == .earlyBird
+    }
+}
+
+struct Achievement: Identifiable, Codable, Sendable {
+    let type: AchievementType
+    var unlockedAt: Date?
+    var progress: Int
+    let target: Int
+    
+    var id: String { type.rawValue }
+    var isUnlocked: Bool { unlockedAt != nil }
+    var progressPercent: Double {
+        Double(progress) / Double(target)
+    }
+}
+
+// MARK: - Unlockable Themes
+
+enum UnlockableTheme: String, CaseIterable, Codable, Identifiable, Sendable {
+    case neon
+    case midnight
+    case sunset
+    case cosmic
+    case retro
+    
+    var id: String { rawValue }
+    
+    var requiredAchievement: AchievementType? {
+        switch self {
+        case .neon: return .dailyStreak7
+        case .midnight: return .hundredAdvice
+        case .sunset: return .categoryMaster
+        case .cosmic: return nil // Purchase or special event
+        case .retro: return nil // Special code
+        }
+    }
+    
+    var displayName: String {
+        switch self {
+        case .neon: return "Neon Nights"
+        case .midnight: return "Midnight Oil"
+        case .sunset: return "Golden Hour"
+        case .cosmic: return "Cosmic Chaos"
+        case .retro: return "Retro Wave"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .neon: return "7-day streak unlock"
+        case .midnight: return "100 advice generations unlock"
+        case .sunset: return "All categories unlock"
+        case .cosmic: return "Limited edition"
+        case .retro: return "Secret unlock"
+        }
     }
 }

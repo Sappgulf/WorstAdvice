@@ -1,4 +1,5 @@
 import UIKit
+import CoreHaptics
 
 enum HapticsManager {
     static func play(style: UIImpactFeedbackGenerator.FeedbackStyle, isEnabled: Bool) {
@@ -13,5 +14,102 @@ enum HapticsManager {
         let generator = UISelectionFeedbackGenerator()
         generator.prepare()
         generator.selectionChanged()
+    }
+    
+    // MARK: - Tone-Specific Haptic Patterns
+    
+    static func playToneHaptic(tone: ToneMode, isEnabled: Bool) {
+        guard isEnabled else { return }
+        
+        switch tone {
+        case .alphaPodcast, .cryptoBro:
+            // Aggressive double-tap
+            play(style: .heavy, isEnabled: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                play(style: .rigid, isEnabled: true)
+            }
+            
+        case .corporateConsultant, .lifeCoach:
+            // Professional single medium
+            play(style: .medium, isEnabled: true)
+            
+        case .toxicBestFriend, .conspiracyTheorist:
+            // Chaotic triple
+            play(style: .light, isEnabled: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                play(style: .medium, isEnabled: true)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                play(style: .light, isEnabled: true)
+            }
+            
+        case .wizard:
+            // Mysterious slow double
+            play(style: .soft, isEnabled: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                play(style: .soft, isEnabled: true)
+            }
+            
+        case .boomer:
+            // Old-school single heavy
+            play(style: .heavy, isEnabled: true)
+            
+        case .minimalistMonk:
+            // Zen soft single
+            play(style: .soft, isEnabled: true)
+            
+        case .friendRoast:
+            // Playful bounce
+            play(style: .light, isEnabled: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                play(style: .rigid, isEnabled: true)
+            }
+            
+        case .influencer:
+            // Pop style
+            play(style: .rigid, isEnabled: true)
+        }
+    }
+    
+    // MARK: - Achievement Celebration
+    
+    static func playAchievementCelebration(isEnabled: Bool) {
+        guard isEnabled else { return }
+        
+        // Success pattern: light -> medium -> heavy with increasing intensity
+        play(style: .light, isEnabled: true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            play(style: .medium, isEnabled: true)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            play(style: .heavy, isEnabled: true)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            play(style: .rigid, isEnabled: true)
+        }
+    }
+    
+    // MARK: - Shake Detection Haptic
+    
+    static func playShakeDetected(isEnabled: Bool) {
+        guard isEnabled else { return }
+        play(style: .medium, isEnabled: true)
+    }
+    
+    // MARK: - Streak Milestone
+    
+    static func playStreakMilestone(days: Int, isEnabled: Bool) {
+        guard isEnabled else { return }
+        
+        // Rhythmic pattern based on streak days
+        let intensity = min(Double(days) / 30.0, 1.0)
+        let baseDelay = 0.08
+        
+        for i in 0..<min(days / 3, 5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * baseDelay) {
+                let style: UIImpactFeedbackGenerator.FeedbackStyle = intensity > 0.7 ? .heavy : (intensity > 0.4 ? .medium : .light)
+                play(style: style, isEnabled: true)
+            }
+        }
     }
 }
