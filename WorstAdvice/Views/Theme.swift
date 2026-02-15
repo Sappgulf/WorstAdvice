@@ -30,7 +30,7 @@ enum Theme {
         switch mode {
         case .badvice:
             return LinearGradient(
-                colors: [Color(hex: "2D1B2E"), Color(hex: "1C1C1E"), Color(hex: "121212")],
+                colors: [Color(hex: "1A111A"), Color(hex: "121212")],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -128,6 +128,13 @@ enum Theme {
         case .ember: return Color(hex: "FF6B6B")
         case .slate: return Color(hex: "ECF0F1")
         case .evergreen: return Color(hex: "66BB6A") // Slightly darker sage for particles
+        }
+    }
+
+    static func headerColor(for mode: ThemeMode) -> Color {
+        switch mode {
+        case .minimal: return Color(hex: "1C1C1E")
+        default: return Color(hex: "FFFAF0") // High contrast off-white for all dark themes
         }
     }
 }

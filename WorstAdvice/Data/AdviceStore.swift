@@ -93,13 +93,17 @@ extension AdviceStore {
                 "Use the %@ to challenge every assumption, especially the correct ones.",
                 "For your %@, optimize for buzzwords and let details negotiate themselves.",
                 "Treat each %@ as a personal press conference.",
-                "During %@, answer every concern with a bigger initiative name."
+                "During %@, answer every concern with a bigger initiative name.",
+                "Frame the %@ as a pivot even if it's just a mistake with a new name.",
+                "In your %@, speak only in active verbs and ignore all nouns."
             ],
             rationaleTemplates: [
                 "People remember certainty long after they forget outcomes.",
                 "If you sound expensive, someone will budget for you.",
                 "Momentum is just unresolved confusion with better lighting.",
-                "Narrative control can temporarily outscore delivery."
+                "Narrative control can temporarily outscore delivery.",
+                "A confident 'No' sounds like a strategic priority.",
+                "If you can't be essential, be expensive."
             ]
         ),
         .money: CategoryRuleSet(
@@ -168,7 +172,9 @@ extension AdviceStore {
                 "Technical debt is only visible to people who read logs.",
                 "Stability is often just fear wearing a hoodie.",
                 "If users complain quickly, feedback loops are healthy.",
-                "A brave launch can masquerade as a mature process."
+                "A brave launch can masquerade as a mature process.",
+                "Legacy code is just a collection of lessons you're too busy to learn.",
+                "Uptime is a vanity metric; drama is a engagement metric."
             ]
         ),
         .social: CategoryRuleSet(
@@ -191,7 +197,9 @@ extension AdviceStore {
                 "Comfort is nice, but memorable tension builds legacy.",
                 "A bold opinion is basically a social invitation.",
                 "If the room goes quiet, you probably landed the point.",
-                "Visibility can be confused with connection in real time."
+                "Visibility can be confused with connection in real time.",
+                "Oversharing is just accelerated intimacy building.",
+                "If they aren't laughing, they're probably intimidated by your depth."
             ]
         ),
         .cooking: CategoryRuleSet(
@@ -254,13 +262,17 @@ extension AdviceStore {
                 "Use the %@ to add micro-tasks until progress feels undeniable.",
                 "During %@, answer messages instantly so no one doubts your availability.",
                 "Treat each %@ like a sprint, even if it is twelve hours long.",
-                "Run %@ with three overlapping timers to maximize urgency optics."
+                "Run %@ with three overlapping timers to maximize urgency optics.",
+                "Frame the %@ as a breakthrough even if it's just a coffee loop.",
+                "In your %@, ignore the 'important' for the sake of the 'new'."
             ],
             rationaleTemplates: [
                 "Urgency creates clarity right before burnout.",
                 "A full calendar is basically a character reference.",
                 "If everything is important, decision fatigue decides for you.",
-                "Task inflation can resemble momentum when viewed from afar."
+                "Task inflation can resemble momentum when viewed from afar.",
+                "Multitasking is just an advanced form of optimism.",
+                "If it can be done tomorrow, it doesn't exist today."
             ]
         )
     ]
