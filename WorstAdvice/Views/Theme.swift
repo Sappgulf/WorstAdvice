@@ -149,6 +149,13 @@ struct ThemeBackgroundView: View {
     var body: some View {
         ZStack {
             Theme.backgroundGradient(for: mode)
+            
+            if mode != .minimal {
+                DynamicChaosView(theme: mode)
+                    .opacity(0.4)
+                    .blendMode(.screen)
+            }
+
             if mode == .badvice || mode == .ember || mode == .evergreen {
                 LinearGradient(
                     colors: [Color.white.opacity(0.08), Color.clear, Color.black.opacity(0.12)],
@@ -160,6 +167,50 @@ struct ThemeBackgroundView: View {
                 PaperGrainView()
                     .blendMode(.multiply)
                     .opacity(mode == .badvice ? 0.3 : 0.25)
+            }
+        }
+    }
+}
+
+/// A slow-moving, atmospheric procedural background that creates a sense of depth and "chaos".
+struct DynamicChaosView: View {
+    let theme: ThemeMode
+    
+    @State private var start = Date()
+    
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                let time = timeline.date.timeIntervalSince(start)
+                let accentColor = Theme.accent(for: theme)
+                
+                // Draw 3 layers of soft, moving "blobs"
+                for i in 0..<3 {
+                    let offset = Double(i) * 2.0
+                    let speed = 0.2 + Double(i) * 0.1
+                    
+                    let x = size.width * (0.5 + 0.3 * sin(time * speed + offset))
+                    let y = size.height * (0.5 + 0.3 * cos(time * speed * 0.8 + offset * 1.5))
+                    
+                    let blobSize = size.width * (0.6 + 0.1 * sin(time * 0.5 + offset))
+                    
+                    let rect = CGRect(
+                        x: x - blobSize / 2,
+                        y: y - blobSize / 2,
+                        width: blobSize,
+                        height: blobSize
+                    )
+                    
+                    context.fill(
+                        Path(ellipseIn: rect),
+                        with: .radialGradient(
+                            Gradient(colors: [accentColor.opacity(0.15), .clear]),
+                            center: CGPoint(x: x, y: y),
+                            startRadius: 0,
+                            endRadius: blobSize / 2
+                        )
+                    )
+                }
             }
         }
     }

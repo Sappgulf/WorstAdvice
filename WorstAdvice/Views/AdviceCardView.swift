@@ -7,6 +7,11 @@ struct AdviceCardView: View {
 
     @State private var shimmerOffset: CGFloat = -1.0
     @State private var lastRecordID: UUID = UUID()
+    
+    // Triple-A Polish: Tilt & Parallax State
+    @State private var rotationX: Double = 0
+    @State private var rotationY: Double = 0
+    @State private var isDragging: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -83,16 +88,37 @@ struct AdviceCardView: View {
         }
         .padding(Theme.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(Theme.cardColor(for: theme))
-                .overlay(
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                    .fill(Theme.cardColor(for: theme))
+                
+                // Add Glassmorphism depth
+                if theme != .minimal {
                     RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .stroke(Theme.accent(for: theme).opacity(0.1), lineWidth: 1)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.5)
+                }
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Theme.accent(for: theme).opacity(0.4),
+                            Theme.accent(for: theme).opacity(0.1),
+                            Theme.accent(for: theme).opacity(0.3)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
                 )
         )
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
         .overlay {
+            // Shimmer effect
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
@@ -109,12 +135,46 @@ struct AdviceCardView: View {
             radius: Theme.cardShadow(for: theme).radius,
             y: Theme.cardShadow(for: theme).y
         )
+        // Apply 3D rotation based on drag position
+        .rotation3DEffect(.degrees(rotationX), axis: (x: 1, y: 0, z: 0))
+        .rotation3DEffect(.degrees(rotationY), axis: (x: 0, y: 1, z: 0))
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    isDragging = true
+                    let maxRotation: Double = 8
+                    let width = UIScreen.main.bounds.width
+                    let height = UIScreen.main.bounds.height
+                    
+                    rotationY = Double((value.location.x - width/2) / (width/2)) * maxRotation
+                    rotationX = Double((value.location.y - height/2) / (height/2)) * -maxRotation
+                }
+                .onEnded { _ in
+                    isDragging = false
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                        rotationX = 0
+                        rotationY = 0
+                    }
+                }
+        )
         .onChange(of: record.id) { _, newID in
             guard newID != lastRecordID else { return }
             lastRecordID = newID
+            
+            // "Deal" Animation: Quick scale and shimmer
             shimmerOffset = -0.3
             withAnimation(.easeInOut(duration: 0.6)) {
                 shimmerOffset = 1.3
+            }
+            
+            // Subtle pop out effect
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                rotationX = -5 // Slight tilt back like it's being "slapped" onto the table
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    rotationX = 0
+                }
             }
         }
         .onAppear {
