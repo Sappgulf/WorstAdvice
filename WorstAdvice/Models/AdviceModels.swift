@@ -55,6 +55,8 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case cryptoBro
     case minimalistMonk
     case friendRoast
+    case lifeCoach
+    case conspiracyTheorist
 
     var id: String { rawValue }
 
@@ -69,6 +71,8 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .cryptoBro: return "Crypto Bro"
         case .minimalistMonk: return "Minimalist Monk"
         case .friendRoast: return "Friend Roast"
+        case .lifeCoach: return "Life Coach"
+        case .conspiracyTheorist: return "Conspiracy Theorist"
         }
     }
 }

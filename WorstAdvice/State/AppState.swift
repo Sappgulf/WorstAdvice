@@ -858,6 +858,7 @@ final class GenerateViewModel {
     var lastWhyTerrible: String = "Why this is awful: confidence is replacing good judgment."
     var generationNotice: String?
     var primaryActionTitle: String = "Advise Me"
+    var hapticTrigger: Int = 0
 
     private var recentAdviceFingerprints: [String] = []
     private var recentAdviceFingerprintsByPool: [String: [String]] = [:]
@@ -977,7 +978,7 @@ final class GenerateViewModel {
         ])
         logger.info("Generated advice id=\(output.id) source=\(source) category=\(output.category.rawValue)")
         rotatePrimaryActionTitleIfNeeded()
-        playHaptic()
+        hapticTrigger += 1
     }
 
     func surpriseMeAndGenerate() {

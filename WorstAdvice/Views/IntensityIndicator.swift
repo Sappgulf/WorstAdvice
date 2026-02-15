@@ -11,10 +11,12 @@ struct IntensityIndicator: View {
         case .wizard: return 4
         case .influencer: return 4
         case .toxicBestFriend: return 5
-        case .boomer: return 3
+        case .boomer: return 4
         case .cryptoBro: return 5
         case .minimalistMonk: return 2
         case .friendRoast: return 4
+        case .lifeCoach: return 3
+        case .conspiracyTheorist: return 5
         }
     }
 

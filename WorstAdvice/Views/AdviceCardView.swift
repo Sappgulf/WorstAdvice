@@ -140,6 +140,8 @@ struct GenerateTabView: View {
                 }
                 .foregroundStyle(Theme.headerColor(for: settings.theme))
                 .shadow(color: settings.theme == .minimal ? .clear : .black.opacity(0.35), radius: 2, x: 0, y: 1)
+                .hueRotation(.degrees(Double(viewModel.hapticTrigger % 3) * 15))
+                .animation(.easeInOut(duration: 0.3), value: viewModel.hapticTrigger)
                 dailyQuoteBanner
 
                 selectorRow
@@ -623,31 +625,36 @@ struct GenerateTabView: View {
     }
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 34, weight: .medium))
-                .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.65))
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Ready when you are.")
+        VStack(spacing: 32) {
+            Spacer()
+            ZStack {
+                Circle()
+                    .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                    .frame(width: 140, height: 140)
+                
+                Image(systemName: "sparkles")
+                    .font(.system(size: 60, weight: .light))
+                    .foregroundStyle(Theme.accent(for: settings.theme))
+                    .shadow(color: Theme.accent(for: settings.theme).opacity(0.3), radius: 10)
+            }
+            .scaleEffect(viewModel.current == nil ? 1.0 : 0.8)
+            .animation(.spring(response: 0.6, dampingFraction: 0.7).repeatForever(autoreverses: true), value: viewModel.current == nil)
+            
+            VStack(spacing: 12) {
+                Text("Your first bad idea is just a tap away.")
                     .font(Theme.cardFont)
                     .foregroundStyle(Theme.primaryText(for: settings.theme))
-                Text("Tap the button below for guidance that is\nconfidently, spectacularly wrong.")
+                
+                Text("Pick a category and let chaos reign.")
                     .font(Theme.bodyFont)
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .opacity(0.8)
             }
+            .multilineTextAlignment(.center)
+            
+            Spacer()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Theme.cardPadding)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(Theme.cardColor(for: settings.theme))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .stroke(Theme.accent(for: settings.theme).opacity(0.08), lineWidth: 1)
-                )
-        )
+        .frame(minHeight: 320)
+        .frame(maxWidth: .infinity)
     }
 }

@@ -751,6 +751,20 @@ extension AdviceStore {
             rhetoricalTick: ["group chat", "roast", "banter", "receipts"],
             ending: ["Tag your friend and stand by it.", "Blame the algorithm if they get mad.", "Say it with confidence and snacks."],
             slang: ["bestie", "roast energy", "plot twist"]
+        ),
+        .lifeCoach: ToneProfile(
+            opener: ["Speak it into existence", "I am sensing a block in your field", "Unlock your highest self"],
+            confidenceTag: ["The universe is literally screaming this.", "Manifestation doesn't wait for logic.", "This is your abundance era."],
+            rhetoricalTick: ["alignment", "frequency", "quantum", "shadow work", "limiting beliefs"],
+            ending: ["Visualize the outcome until it's uncomfortable.", "Release the 'how' and embrace the 'wow'.", "Your future self is already applauding."],
+            slang: ["high-vibe", "main character energy", "intentional"]
+        ),
+        .conspiracyTheorist: ToneProfile(
+            opener: ["They don't want you to know this", "Connect the dots", "Look at the pattern"],
+            confidenceTag: ["It's all hidden in plain sight.", "The mainstream media will call this 'bad advice'.", "Follow the money, find the truth."],
+            rhetoricalTick: ["secret", "surveillance", "agenda", "simulation", "glitch"],
+            ending: ["Stay vigilant and offline.", "Don't let them track your response.", "The truth is out there, but so is the surveillance."],
+            slang: ["sheeple", "red-pilled", "encoded", "psyop"]
         )
     ]
 }
