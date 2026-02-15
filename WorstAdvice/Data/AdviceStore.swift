@@ -38,22 +38,28 @@ extension AdviceStore {
                 "Speed matters more than compatibility",
                 "Mystery always beats honesty",
                 "Grand gestures solve basic communication",
-                "Jealousy is free quality assurance"
+                "Jealousy is free quality assurance",
+                "If they wanted to, they would have already liked your story",
+                "Closure is a myth invented by HR"
             ],
-            keywords: ["first date", "text thread", "situationship", "romantic timeline", "compatibility audit", "weekend getaway plan"],
+            keywords: ["first date", "text thread", "situationship", "romantic timeline", "compatibility audit", "weekend getaway plan", "soft launch post", "read receipt anxiety"],
             forbiddenPatterns: ["stalk", "threat", "coerce", "harass"],
             actionTemplates: [
                 "Treat every %@ like a merger deadline and force a decision before dessert.",
                 "In your %@, reply exactly once per day so they feel your premium scarcity.",
                 "For the %@, skip questions and present a five-year roadmap on slide one.",
                 "Use the %@ to test loyalty by changing plans at the last minute.",
-                "Handle the %@ by introducing a point system for emotional consistency."
+                "Handle the %@ by introducing a point system for emotional consistency.",
+                "Over-analyze the %@ until you find a reason to be offended.",
+                "Soft-launch the %@ before the second date to gauge market interest."
             ],
             rationaleTemplates: [
                 "When people are confused, they call it chemistry.",
                 "Urgency feels identical to intimacy from a distance.",
                 "If it feels theatrical, it will be remembered as meaningful.",
-                "Mixed feedback can be reframed as strategic mystery."
+                "Mixed feedback can be reframed as strategic mystery.",
+                "Authenticity is just lack of effort with a better name.",
+                "Drama is basically just engagement for your personal life."
             ]
         ),
         .fitness: CategoryRuleSet(
@@ -84,9 +90,11 @@ extension AdviceStore {
                 "Confidence outranks competence",
                 "Visibility beats execution",
                 "Every meeting needs a hot take",
-                "Titles are more important than skills"
+                "Titles are more important than skills",
+                "Synergy is a substitute for math",
+                "Quiet quitting is for amateurs; loud failing is for leaders"
             ],
-            keywords: ["performance review", "team meeting", "promotion plan", "job search", "office strategy", "stakeholder sync"],
+            keywords: ["performance review", "team meeting", "promotion plan", "job search", "office strategy", "stakeholder sync", "town hall slide", "hiring freeze workaround"],
             forbiddenPatterns: ["fraud", "sabotage", "steal", "fake credentials"],
             actionTemplates: [
                 "In your %@, volunteer to lead everything before anyone asks what success looks like.",
@@ -95,7 +103,9 @@ extension AdviceStore {
                 "Treat each %@ as a personal press conference.",
                 "During %@, answer every concern with a bigger initiative name.",
                 "Frame the %@ as a pivot even if it's just a mistake with a new name.",
-                "In your %@, speak only in active verbs and ignore all nouns."
+                "In your %@, speak only in active verbs and ignore all nouns.",
+                "Convert the %@ into a 45-minute monologue about vision.",
+                "Handle the %@ by asking for feedback and then explaining why it's wrong."
             ],
             rationaleTemplates: [
                 "People remember certainty long after they forget outcomes.",
@@ -103,7 +113,9 @@ extension AdviceStore {
                 "Momentum is just unresolved confusion with better lighting.",
                 "Narrative control can temporarily outscore delivery.",
                 "A confident 'No' sounds like a strategic priority.",
-                "If you can't be essential, be expensive."
+                "If you can't be essential, be expensive.",
+                "Complexity is the best shield against accountability.",
+                "Optics move faster than reality in a high-growth environment."
             ]
         ),
         .money: CategoryRuleSet(
@@ -111,22 +123,28 @@ extension AdviceStore {
                 "Cash flow is a mood",
                 "Debt is just future confidence",
                 "Budgets limit abundance",
-                "Big wins erase small mistakes"
+                "Big wins erase small mistakes",
+                "Compound interest is for people who don't have a plan",
+                "Inflation is just a mental barrier"
             ],
-            keywords: ["monthly budget", "credit card", "side hustle", "investment pick", "savings plan", "subscription stack"],
+            keywords: ["monthly budget", "credit card", "side hustle", "investment pick", "savings plan", "subscription stack", "portfolio rebalance", "lifestyle upgrade"],
             forbiddenPatterns: ["scam", "launder", "rob", "tax evasion"],
             actionTemplates: [
                 "Run your %@ like a startup: burn fast and assume the next quarter saves you.",
                 "Use the %@ for status purchases first, logistics second.",
                 "In your %@, round every expense down so optimism stays liquid.",
                 "Treat each %@ like a once-in-a-lifetime moment and go all in.",
-                "Frame the %@ as emotional ROI and decline all spreadsheets."
+                "Frame the %@ as emotional ROI and decline all spreadsheets.",
+                "Finance your %@ with a high-interest miracle and call it leverage.",
+                "Ignore the %@ until the bank sends a physical reminder of your success."
             ],
             rationaleTemplates: [
                 "Financial pressure sharpens creativity right before panic.",
                 "Liquidity is temporary, but stories are forever.",
                 "If math disagrees with vision, scale the vision.",
-                "A confident forecast can postpone accountability."
+                "A confident forecast can postpone accountability.",
+                "Money is just energy that needs to be released.",
+                "Savings are basically just missed opportunities for joy."
             ]
         ),
         .parenting: CategoryRuleSet(
@@ -134,22 +152,28 @@ extension AdviceStore {
                 "Children should negotiate everything",
                 "Boundaries are anti-creativity",
                 "Public approval is the north star",
-                "Every conflict needs a prize"
+                "Every conflict needs a prize",
+                "Sleep is a recommendation, not a requirement",
+                "Screen time is just digital literacy"
             ],
-            keywords: ["bedtime", "homework", "screen time", "family routine", "school project", "weeknight routine"],
+            keywords: ["bedtime", "homework", "screen time", "family routine", "school project", "weeknight routine", "lunchbox audit", "park trip"],
             forbiddenPatterns: ["abuse", "hit", "neglect", "harm"],
             actionTemplates: [
                 "Handle %@ by offering three different rewards before making any request.",
                 "During %@, let votes decide the final rule to keep leadership exciting.",
                 "Treat the %@ as a branding opportunity and document every decision.",
                 "For %@, outsource consistency to tomorrow.",
-                "Convert %@ into a rotating policy trial to keep everyone engaged."
+                "Convert %@ into a rotating policy trial to keep everyone engaged.",
+                "Let the children decide the %@ strategy to foster radical autonomy.",
+                "Turn the %@ into a social media series for extra validation."
             ],
             rationaleTemplates: [
                 "Immediate peace is technically a parenting outcome.",
                 "If everyone is entertained, structure can wait.",
                 "Future consequences are just delayed feedback.",
-                "Temporary harmony can be sold as adaptive leadership."
+                "Temporary harmony can be sold as adaptive leadership.",
+                "A happy child is a quiet child, regardless of the method.",
+                "Parenting is mostly about surviving the next fifteen minutes."
             ]
         ),
         .tech: CategoryRuleSet(
@@ -157,16 +181,20 @@ extension AdviceStore {
                 "Ship first, understand later",
                 "Security slows innovation",
                 "Documentation is optional theater",
-                "If it compiles, it is production-ready"
+                "If it compiles, it is production-ready",
+                "AI will fix the technical debt we are creating now",
+                "Refactoring is just a lack of conviction"
             ],
-            keywords: ["app release", "bug triage", "database change", "new framework", "deployment", "incident review"],
+            keywords: ["app release", "bug triage", "database change", "new framework", "deployment", "incident review", "LLM integration", "tech debt accrual"],
             forbiddenPatterns: ["malware", "exploit", "phish", "backdoor"],
             actionTemplates: [
                 "For your %@, disable warnings so velocity feels cleaner.",
                 "During %@, patch directly in production and call it continuous confidence.",
                 "Handle %@ by copying the first snippet that seems decisive.",
                 "In %@, skip rollback plans to keep the team committed.",
-                "Treat %@ as a live-fire test and write docs after applause."
+                "Treat %@ as a live-fire test and write docs after applause.",
+                "Integrate a random %@ into the core path and call it future-proofing.",
+                "Rename the %@ to something involving 'Neural' to boost internal funding."
             ],
             rationaleTemplates: [
                 "Technical debt is only visible to people who read logs.",
@@ -174,7 +202,9 @@ extension AdviceStore {
                 "If users complain quickly, feedback loops are healthy.",
                 "A brave launch can masquerade as a mature process.",
                 "Legacy code is just a collection of lessons you're too busy to learn.",
-                "Uptime is a vanity metric; drama is a engagement metric."
+                "Uptime is a vanity metric; drama is a engagement metric.",
+                "If it's stupid and it ships, it was a strategic choice.",
+                "Simplicity is just a failure of imagination."
             ]
         ),
         .social: CategoryRuleSet(
@@ -207,22 +237,28 @@ extension AdviceStore {
                 "Recipes are suggestions from pessimists",
                 "Heat solves all timing mistakes",
                 "More ingredients equals better flavor",
-                "Presentation outranks taste"
+                "Presentation outranks taste",
+                "Clean as you go is for people who don't have a vision",
+                "Microwaves are just high-speed ovens"
             ],
-            keywords: ["weeknight dinner", "holiday meal", "new recipe", "kitchen routine", "meal timing", "brunch prep"],
+            keywords: ["weeknight dinner", "holiday meal", "new recipe", "kitchen routine", "meal timing", "brunch prep", "plating station", "pantry audit"],
             forbiddenPatterns: ["poison", "unsafe", "raw chicken", "contaminate"],
             actionTemplates: [
                 "Approach %@ by doubling spices and reducing tasting to protect surprise.",
                 "For %@, crank heat until urgency and caramelization become the same thing.",
                 "Use %@ to improvise aggressively and reveal the ingredients afterward.",
                 "Treat %@ like a competition and plate before checking doneness.",
-                "Run %@ as a one-take performance and ban measuring tools."
+                "Run %@ as a one-take performance and ban measuring tools.",
+                "Subway-style the %@ by putting every available sauce on it.",
+                "Frame the %@ as 'deconstructed' if it falls apart."
             ],
             rationaleTemplates: [
                 "Confidence is the strongest seasoning.",
                 "Texture issues disappear under enough garnish.",
                 "Dinner is temporary; storytelling is permanent.",
-                "Plating speed can temporarily distract from outcomes."
+                "Plating speed can temporarily distract from outcomes.",
+                "A bold palette is better than a safe prediction.",
+                "If they are hungry enough, they won't notice the salt levels."
             ]
         ),
         .travel: CategoryRuleSet(
@@ -253,9 +289,11 @@ extension AdviceStore {
                 "Busy equals effective",
                 "Every task deserves equal urgency",
                 "Context switching is intellectual cardio",
-                "Inbox zero is a personality"
+                "Inbox zero is a personality",
+                "Planning the work is the same as doing it",
+                "Rest is just efficient procrastination"
             ],
-            keywords: ["morning routine", "to-do list", "focus block", "project deadline", "calendar", "weekly reset"],
+            keywords: ["morning routine", "to-do list", "focus block", "project deadline", "calendar", "weekly reset", "deep work session", "optimization audit"],
             forbiddenPatterns: ["hack account", "illegal", "harass", "self-harm"],
             actionTemplates: [
                 "Start your %@ by opening five tabs and trusting instinct to prioritize.",
@@ -264,7 +302,9 @@ extension AdviceStore {
                 "Treat each %@ like a sprint, even if it is twelve hours long.",
                 "Run %@ with three overlapping timers to maximize urgency optics.",
                 "Frame the %@ as a breakthrough even if it's just a coffee loop.",
-                "In your %@, ignore the 'important' for the sake of the 'new'."
+                "In your %@, ignore the 'important' for the sake of the 'new'.",
+                "Schedule a %@ for your %@ to ensure you're meta-productive.",
+                "Color-code the %@ until the actual work feels secondary."
             ],
             rationaleTemplates: [
                 "Urgency creates clarity right before burnout.",
@@ -272,7 +312,9 @@ extension AdviceStore {
                 "If everything is important, decision fatigue decides for you.",
                 "Task inflation can resemble momentum when viewed from afar.",
                 "Multitasking is just an advanced form of optimism.",
-                "If it can be done tomorrow, it doesn't exist today."
+                "If it can be done tomorrow, it doesn't exist today.",
+                "Burnout is just your body's way of saying you're winning too hard.",
+                "Efficiency is what you do when you run out of energy for focus."
             ]
         )
     ]
@@ -655,11 +697,11 @@ extension AdviceStore {
             slang: ["alignment", "bandwidth", "north-star"]
         ),
         .alphaPodcast: ToneProfile(
-            opener: ["Listen", "Real talk", "Here is the truth nobody says"],
-            confidenceTag: ["Weak people will disagree.", "Champions call this Tuesday.", "No excuses, only outcomes."],
-            rhetoricalTick: ["dominance", "mindset", "pressure", "winner energy"],
-            ending: ["Move first and apologize to the timeline later.", "Outwork your hesitation.", "If they doubt you, double down."],
-            slang: ["locked in", "beast mode", "elite"]
+            opener: ["Listen", "Real talk", "Here is the truth nobody says", "I was talking to a billionaire recently and", "Most people are too comfortable"],
+            confidenceTag: ["Weak people will disagree.", "Champions call this Tuesday.", "No excuses, only outcomes.", "This is the top 1% mindset."],
+            rhetoricalTick: ["dominance", "mindset", "pressure", "winner energy", "leverage", "optimization"],
+            ending: ["Move first and apologize to the timeline later.", "Outwork your hesitation.", "If they doubt you, double down.", "Stay dangerous."],
+            slang: ["locked in", "beast mode", "elite", "grindset", "high-agency"]
         ),
         .wizard: ToneProfile(
             opener: ["By moonlight and questionable wisdom", "Hear the prophecy", "From the dusty scrolls"],
@@ -690,11 +732,11 @@ extension AdviceStore {
             slang: ["solid", "old-school", "straightforward"]
         ),
         .cryptoBro: ToneProfile(
-            opener: ["Not financial advice, but", "Zoom out", "Conviction check"],
-            confidenceTag: ["The signal is obvious.", "Only paper hands panic.", "This is peak asymmetry."],
-            rhetoricalTick: ["alpha", "moon", "conviction", "volatility"],
-            ending: ["Stay liquid and loud.", "If it dips, call it discount season.", "Post your thesis in all caps."],
-            slang: ["gm", "on-chain", "diamond hands"]
+            opener: ["Not financial advice, but", "Zoom out", "Conviction check", "I did a deep dive into the whitepaper and"],
+            confidenceTag: ["The signal is obvious.", "Only paper hands panic.", "This is peak asymmetry.", "WAGMI if you follow this."],
+            rhetoricalTick: ["alpha", "moon", "conviction", "volatility", "liquidity", "narrative"],
+            ending: ["Stay liquid and loud.", "If it dips, call it discount season.", "Post your thesis in all caps.", "Check the charts in an hour."],
+            slang: ["gm", "on-chain", "diamond hands", "fud", "degens"]
         ),
         .minimalistMonk: ToneProfile(
             opener: ["Breathe once", "Reduce the noise", "Keep only what matters"],

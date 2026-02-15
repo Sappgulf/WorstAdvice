@@ -184,8 +184,19 @@ private struct PaperGrainView: View {
 
     var body: some View {
         Canvas(rendersAsynchronously: true) { context, size in
-            let path = Self.grainPath(size: size)
-            context.fill(path, with: .color(.primary.opacity(0.04)))
+            let step: CGFloat = 4
+            let dotOpacity: Double = 0.04
+            
+            for x in stride(from: 0, to: size.width, by: step) {
+                for y in stride(from: 0, to: size.height, by: step) {
+                    let hash = (x * 374761 + y * 668265).truncatingRemainder(dividingBy: 100)
+                    if hash < 30 {
+                        let dotSize: CGFloat = hash < 10 ? 1.0 : 0.6
+                        let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
+                        context.fill(Path(ellipseIn: rect), with: .color(.primary.opacity(dotOpacity)))
+                    }
+                }
+            }
         }
         .drawingGroup()
         .allowsHitTesting(false)
