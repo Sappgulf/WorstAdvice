@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct FloatingParticlesView: View {
     let theme: ThemeMode
@@ -21,12 +20,17 @@ struct FloatingParticlesView: View {
         case .evergreen: return 0.14
         }
     }
+    
+    private var generationParticleCount: Int { count * 3 }
 
     var body: some View {
-        let interval: TimeInterval = reduceMotion ? 5 : (1.0 / 24.0)
+        let interval: TimeInterval = reduceMotion ? 5 : (1.0 / 30.0)
         TimelineView(.animation(minimumInterval: interval)) { timeline in
             Canvas(rendersAsynchronously: true) { context, size in
                 drawParticles(context: context, size: size, date: timeline.date)
+                if isGenerating {
+                    drawChaosParticles(context: context, size: size, date: timeline.date)
+                }
             }
         }
         .drawingGroup()
@@ -35,10 +39,10 @@ struct FloatingParticlesView: View {
     }
 
     private func drawParticles(context: GraphicsContext, size: CGSize, date: Date) {
-        let speedMultiplier: Double = isGenerating ? 3.5 : 1.0
+        let speedMultiplier: Double = isGenerating ? 2.5 : 1.0
         let t: Double = date.timeIntervalSinceReferenceDate * speedMultiplier
         let baseColor: Color = Theme.particleColor(for: theme)
-        let baseOpacity: Double = particleOpacity
+        let baseOpacity: Double = isGenerating ? particleOpacity * 1.5 : particleOpacity
 
         for index in 0..<count {
             let seed: Double = Double(index + 1)
@@ -59,6 +63,44 @@ struct FloatingParticlesView: View {
 
             let color: Color = baseColor.opacity(alpha)
             let rect = CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)
+            context.fill(Path(ellipseIn: rect), with: .color(color))
+        }
+    }
+    
+    private func drawChaosParticles(context: GraphicsContext, size: CGSize, date: Date) {
+        let t: Double = date.timeIntervalSinceReferenceDate * 4.0
+        let chaosColor: Color = Theme.accent(for: theme)
+        
+        for index in 0..<generationParticleCount {
+            let seed: Double = Double(index + 1)
+            let phase: Double = seed * 0.5
+            
+            // Chaotic spiral movement
+            let angle: Double = t * 0.5 + phase * 2.0
+            let radiusNorm: Double = 0.1 + 0.4 * abs(sin(t * 0.3 + phase))
+            
+            let centerX: CGFloat = size.width * 0.5
+            let centerY: CGFloat = size.height * 0.5
+            
+            let x: CGFloat = centerX + CGFloat(radiusNorm * cos(angle) * size.width * 0.4)
+            let y: CGFloat = centerY + CGFloat(radiusNorm * sin(angle) * size.height * 0.4)
+            
+            // Varying particle sizes with pulse
+            let sizePulse: Double = 0.5 + 0.5 * sin(t * 2.0 + phase * 3.0)
+            let radius: CGFloat = CGFloat(1.0 + 3.0 * sizePulse)
+            
+            // Fade in/out based on distance from center
+            let distFromCenter: Double = sqrt(pow((x - centerX) / size.width * 2, 2) + pow((y - centerY) / size.height * 2, 2))
+            let alpha: Double = max(0, 1.0 - distFromCenter) * 0.4 * sizePulse
+            
+            let color: Color = chaosColor.opacity(alpha)
+            let rect = CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)
+            
+            // Draw glow
+            context.fill(
+                Path(ellipseIn: rect.insetBy(dx: -2, dy: -2)),
+                with: .color(chaosColor.opacity(alpha * 0.3))
+            )
             context.fill(Path(ellipseIn: rect), with: .color(color))
         }
     }

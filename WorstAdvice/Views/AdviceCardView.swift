@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct AdviceCardView: View {
     let record: AdviceRecord
@@ -222,17 +221,7 @@ struct GenerateTabView: View {
                 }
                 .overlay {
                     if viewModel.isGenerating {
-                        VStack(spacing: 12) {
-                            ProgressView()
-                                .tint(Theme.accent(for: settings.theme))
-                            Text("Consulting the chaos...")
-                                .font(.system(.subheadline, design: .rounded, weight: .bold))
-                                .foregroundStyle(Theme.primaryText(for: settings.theme))
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Theme.cardColor(for: settings.theme).opacity(0.8))
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        GeneratingOverlay(theme: settings.theme)
                     }
                 }
                 .animation(settings.reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: viewModel.current?.id)
@@ -736,5 +725,125 @@ struct GenerateTabView: View {
         }
         .frame(minHeight: 320)
         .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Generating Overlay
+
+private struct GeneratingOverlay: View {
+    let theme: ThemeMode
+    
+    @State private var rotation: Double = 0
+    @State private var pulseScale: CGFloat = 1.0
+    @State private var orbitingDots: [OrbitingDot] = []
+    
+    struct OrbitingDot: Identifiable {
+        let id = UUID()
+        let angle: Double
+        let radius: CGFloat
+        let speed: Double
+        let size: CGFloat
+    }
+    
+    var body: some View {
+        ZStack {
+            // Blurred background
+            Theme.cardColor(for: theme)
+                .opacity(0.85)
+                .blur(radius: 1)
+            
+            VStack(spacing: 20) {
+                ZStack {
+                    // Central pulsing orb
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    Theme.accent(for: theme).opacity(0.8),
+                                    Theme.accent(for: theme).opacity(0.4),
+                                    Theme.accent(for: theme).opacity(0.0)
+                                ],
+                                center: .center,
+                                startRadius: 10,
+                                endRadius: 40
+                            )
+                        )
+                        .frame(width: 60, height: 60)
+                        .scaleEffect(pulseScale)
+                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseScale)
+                    
+                    // Spinning ring
+                    Circle()
+                        .stroke(
+                            AngularGradient(
+                                colors: [
+                                    Theme.accent(for: theme).opacity(0.0),
+                                    Theme.accent(for: theme),
+                                    Theme.accent(for: theme).opacity(0.0)
+                                ],
+                                center: .center
+                            ),
+                            lineWidth: 3
+                        )
+                        .frame(width: 80, height: 80)
+                        .rotationEffect(.degrees(rotation))
+                        .animation(.linear(duration: 1.5).repeatForever(autoreverses: false), value: rotation)
+                    
+                    // Orbiting particles
+                    ForEach(orbitingDots) { dot in
+                        Circle()
+                            .fill(Theme.accent(for: theme))
+                            .frame(width: dot.size, height: dot.size)
+                            .offset(
+                                x: cos(dot.angle + rotation * dot.speed) * dot.radius,
+                                y: sin(dot.angle + rotation * dot.speed) * dot.radius
+                            )
+                    }
+                }
+                .frame(width: 100, height: 100)
+                
+                VStack(spacing: 8) {
+                    Text("Consulting the chaos...")
+                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .foregroundStyle(Theme.primaryText(for: theme))
+                    
+                    // Animated ellipsis
+                    HStack(spacing: 4) {
+                        ForEach(0..<3) { i in
+                            Circle()
+                                .fill(Theme.accent(for: theme))
+                                .frame(width: 6, height: 6)
+                                .opacity(pulseScale > 1.1 - Double(i) * 0.15 ? 1.0 : 0.3)
+                                .animation(
+                                    .easeInOut(duration: 0.5)
+                                    .repeatForever(autoreverses: true)
+                                    .delay(Double(i) * 0.15),
+                                    value: pulseScale
+                                )
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+        .transition(.asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.9)),
+            removal: .opacity.combined(with: .scale(scale: 1.05))
+        ))
+        .onAppear {
+            rotation = 360
+            pulseScale = 1.2
+            
+            // Initialize orbiting dots
+            orbitingDots = [
+                OrbitingDot(angle: 0, radius: 45, speed: 1.0, size: 8),
+                OrbitingDot(angle: 2.09, radius: 45, speed: 1.0, size: 6),
+                OrbitingDot(angle: 4.19, radius: 45, speed: 1.0, size: 8),
+                OrbitingDot(angle: 1.05, radius: 35, speed: -1.5, size: 5),
+                OrbitingDot(angle: 3.14, radius: 35, speed: -1.5, size: 5),
+                OrbitingDot(angle: 5.24, radius: 35, speed: -1.5, size: 5)
+            ]
+        }
     }
 }

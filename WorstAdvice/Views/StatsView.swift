@@ -197,44 +197,95 @@ struct FavoritesTabView: View {
         }
     }
 
+    @State private var emptyStateAppeared = false
+    @State private var floatingOffset: CGFloat = 0
+
     private var emptyState: some View {
         VStack(spacing: 20) {
             ZStack {
+                // Animated background circles
                 Circle()
-                    .fill(Theme.accent(for: settings.theme).opacity(0.10))
+                    .fill(Theme.accent(for: settings.theme).opacity(0.08))
+                    .frame(width: 120, height: 120)
+                    .scaleEffect(emptyStateAppeared ? 1.0 : 0.8)
+                    .opacity(emptyStateAppeared ? 1.0 : 0)
+                
+                Circle()
+                    .fill(Theme.accent(for: settings.theme).opacity(0.12))
                     .frame(width: 96, height: 96)
+                    .offset(y: floatingOffset)
+                
                 Image(systemName: "bookmark")
                     .font(.system(size: 40, weight: .medium))
                     .foregroundStyle(Theme.accent(for: settings.theme))
+                    .offset(y: floatingOffset)
+                    .symbolEffect(.bounce, options: .repeating, value: emptyStateAppeared)
             }
+            .onAppear {
+                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                    floatingOffset = -8
+                }
+            }
+            
             VStack(spacing: 6) {
                 Text("Nothing saved yet.")
                     .font(.system(.title3, design: .rounded, weight: .bold))
                     .foregroundStyle(Theme.primaryText(for: settings.theme))
-                Text("Bold of you. Save a piece of advice\nand pretend you\u{2019}ll follow it.")
+                    .offset(y: emptyStateAppeared ? 0 : 20)
+                    .opacity(emptyStateAppeared ? 1 : 0)
+                
+                Text("Bold of you. Save a piece of advice\nand pretend you'll follow it.")
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
                     .lineSpacing(3)
+                    .offset(y: emptyStateAppeared ? 0 : 15)
+                    .opacity(emptyStateAppeared ? 1 : 0)
             }
         }
         .padding(.horizontal, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                emptyStateAppeared = true
+            }
+        }
+        .onDisappear {
+            emptyStateAppeared = false
+        }
     }
 
+    @State private var noResultsAppeared = false
+
     private var noResultsState: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 28, weight: .medium))
+                .font(.system(size: 32, weight: .medium))
                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .scaleEffect(noResultsAppeared ? 1.0 : 0.5)
+                .rotationEffect(.degrees(noResultsAppeared ? 0 : -30))
+            
             Text("No matches")
                 .font(.headline)
                 .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .opacity(noResultsAppeared ? 1 : 0)
+                .offset(y: noResultsAppeared ? 0 : 10)
+            
             Text("Try a different search or category.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .opacity(noResultsAppeared ? 1 : 0)
+                .offset(y: noResultsAppeared ? 0 : 10)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                noResultsAppeared = true
+            }
+        }
+        .onDisappear {
+            noResultsAppeared = false
+        }
     }
 }
 
@@ -284,18 +335,7 @@ struct QuotesTabView: View {
                 // Quote rows
                 if viewModel.filteredQuotes.isEmpty {
                     Section {
-                        VStack(spacing: 12) {
-                            Image(systemName: "quote.bubble")
-                                .font(.system(size: 36, weight: .medium))
-                                .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.5))
-                            Text("No quotes in this category.")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 32)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                        QuotesEmptyState(theme: settings.theme)
                     }
                 } else {
                     Section {
@@ -585,6 +625,54 @@ private struct FavoriteDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
+        }
+    }
+}
+
+// MARK: - Empty State Views
+
+private struct QuotesEmptyState: View {
+    let theme: ThemeMode
+    
+    @State private var appeared = false
+    @State private var floatOffset: CGFloat = 0
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                // Pulsing background
+                Circle()
+                    .fill(Theme.accent(for: theme).opacity(0.1))
+                    .frame(width: 80, height: 80)
+                    .scaleEffect(appeared ? 1.0 : 0.8)
+                    .opacity(appeared ? 1.0 : 0.0)
+                
+                Image(systemName: "quote.bubble")
+                    .font(.system(size: 36, weight: .medium))
+                    .foregroundStyle(Theme.accent(for: theme).opacity(0.7))
+                    .offset(y: floatOffset)
+            }
+            
+            Text("No quotes in this category.")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.secondaryText(for: theme))
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 15)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                appeared = true
+            }
+            withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
+                floatOffset = -6
+            }
+        }
+        .onDisappear {
+            appeared = false
         }
     }
 }
