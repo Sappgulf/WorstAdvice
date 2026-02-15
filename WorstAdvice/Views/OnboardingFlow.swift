@@ -13,7 +13,7 @@ struct OnboardingFlow: View {
     private let pages: [Page] = [
         Page(
             icon: "sparkles",
-            title: "Bad advice.\nConfidently delivered.",
+            title: "Badvice.\nConfidently delivered.",
             subtitle: "Hilariously wrong guidance for every situation — dating, money, fitness, and more."
         ),
         Page(

@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import UserNotifications
 
 @main
 struct WorstAdviceApp: App {
@@ -23,6 +24,9 @@ struct WorstAdviceApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    NotificationManager.requestPermissionAndScheduleDaily()
+                }
         }
         .modelContainer(container)
     }

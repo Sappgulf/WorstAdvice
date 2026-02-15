@@ -1,18 +1,31 @@
+import StoreKit
 import SwiftData
 import SwiftUI
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.requestReview) private var requestReview
 
     @State private var selectedTab: AppTab = .generate
     @State private var session: AppSessionViewModel?
     @State private var showConfetti = false
+    @State private var showSplash = true
 
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @AppStorage("favoritesCountAtLastReview") private var favoritesCountAtLastReview = 0
 
     var body: some View {
         Group {
-            if let session {
+            if showSplash {
+                SplashView(isShowing: $showSplash)
+                    .transition(.opacity)
+                    .task {
+                        // Pre-warm session during splash so it's ready immediately after
+                        if session == nil {
+                            session = AppSessionViewModel(context: modelContext)
+                        }
+                    }
+            } else if let session {
                 ZStack {
                     ThemeBackgroundView(mode: session.settings.theme)
                         .ignoresSafeArea()
@@ -50,6 +63,16 @@ struct ContentView: View {
                 .onChange(of: session.generate.challengeStreakDays) { _, days in
                     if [3, 7, 14, 30].contains(days) {
                         showConfetti = true
+                    }
+                }
+                .onChange(of: session.favorites.favorites.count) { _, newCount in
+                    // Ask for review after the 3rd, 10th, and 25th favorite — once per threshold
+                    let thresholds = [3, 10, 25]
+                    if thresholds.contains(newCount) && newCount > favoritesCountAtLastReview {
+                        favoritesCountAtLastReview = newCount
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                            requestReview()
+                        }
                     }
                 }
             } else {
