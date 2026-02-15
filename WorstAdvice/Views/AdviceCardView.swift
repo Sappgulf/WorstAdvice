@@ -174,17 +174,6 @@ struct GenerateTabView: View {
         }
     }
 
-    private var appHeader: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text("Worst Advice")
-                .font(Theme.headlineFont)
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
-            Text("Confidently wrong since day one.")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
-        }
-    }
-
     private var dailyQuoteBanner: some View {
         HStack(spacing: 0) {
             // Left accent bar
@@ -566,7 +555,7 @@ struct GenerateTabView: View {
                     .padding(.horizontal, viewModel.currentVote == .dislike ? 12 : 0)
                 }
                 .buttonStyle(.bordered)
-                .tint(viewModel.currentVote == .dislike ? Theme.secondaryText(for: settings.theme) : Theme.secondaryText(for: settings.theme))
+                .tint(viewModel.currentVote == .dislike ? Color(red: 0.78, green: 0.28, blue: 0.22) : Theme.secondaryText(for: settings.theme))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)

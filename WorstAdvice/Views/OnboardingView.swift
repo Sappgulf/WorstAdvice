@@ -6,6 +6,8 @@ struct HistoryTabView: View {
     let onUseRecord: (AdviceRecord) -> Void
     let onDataChanged: () -> Void
 
+    @State private var showClearConfirmation = false
+
     var body: some View {
         NavigationStack {
             Group {
@@ -55,14 +57,26 @@ struct HistoryTabView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Clear") {
-                        viewModel.clearHistory()
-                        onDataChanged()
+                    Button("Clear", role: .destructive) {
+                        showClearConfirmation = true
                     }
                     .disabled(viewModel.history.isEmpty)
                 }
             }
             .onAppear { viewModel.reload() }
+            .confirmationDialog(
+                "Clear History",
+                isPresented: $showClearConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Clear All \(viewModel.history.count) Items", role: .destructive) {
+                    viewModel.clearHistory()
+                    onDataChanged()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete your entire advice history. This can\u{2019}t be undone.")
+            }
         }
     }
 
@@ -134,25 +148,34 @@ struct HistoryTabView: View {
                     .padding(.top, 2)
                 }
                 .padding(.vertical, 6)
+                .listRowBackground(Theme.cardColor(for: settings.theme))
             }
         }
         .scrollContentBackground(.hidden)
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "clock.arrow.circlepath")
-                .font(.system(size: 30, weight: .medium))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
-            Text("History is empty")
-                .font(.headline)
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
-            Text("Generated advice appears here (last 50 items).")
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                .padding(.horizontal, 20)
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(Theme.accent(for: settings.theme).opacity(0.10))
+                    .frame(width: 96, height: 96)
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 40, weight: .medium))
+                    .foregroundStyle(Theme.accent(for: settings.theme))
+            }
+            VStack(spacing: 6) {
+                Text("A clean slate.")
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                Text("Your past bad decisions will appear here.\nGo generate some.")
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .lineSpacing(3)
+            }
         }
+        .padding(.horizontal, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

@@ -65,6 +65,7 @@ struct FavoritesTabView: View {
                     }
                     .padding(.vertical, 6)
                 }
+                .listRowBackground(Theme.cardColor(for: settings.theme))
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         viewModel.delete(record)
@@ -197,19 +198,27 @@ struct FavoritesTabView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "bookmark")
-                .font(.system(size: 30, weight: .medium))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
-            Text("No favorites yet")
-                .font(.headline)
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
-            Text("Save advice from Generate or History to pin it here.")
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                .padding(.horizontal, 24)
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(Theme.accent(for: settings.theme).opacity(0.10))
+                    .frame(width: 96, height: 96)
+                Image(systemName: "bookmark")
+                    .font(.system(size: 40, weight: .medium))
+                    .foregroundStyle(Theme.accent(for: settings.theme))
+            }
+            VStack(spacing: 6) {
+                Text("Nothing saved yet.")
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                Text("Bold of you. Save a piece of advice\nand pretend you\u{2019}ll follow it.")
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .lineSpacing(3)
+            }
         }
+        .padding(.horizontal, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -255,6 +264,7 @@ struct QuotesTabView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                    .listRowBackground(Theme.cardColor(for: settings.theme))
 
                     HStack {
                         Label("\(viewModel.likedCount) liked", systemImage: "hand.thumbsup")
@@ -263,6 +273,7 @@ struct QuotesTabView: View {
                     }
                     .font(.caption.weight(.medium))
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .listRowBackground(Theme.cardColor(for: settings.theme))
                 } header: {
                     Text("Quote Library")
                         .font(.subheadline.weight(.semibold))
@@ -273,10 +284,18 @@ struct QuotesTabView: View {
                 // Quote rows
                 if viewModel.filteredQuotes.isEmpty {
                     Section {
-                        Text("No quotes match your filters.")
-                            .font(.body)
-                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                            .listRowBackground(Color.clear)
+                        VStack(spacing: 12) {
+                            Image(systemName: "quote.bubble")
+                                .font(.system(size: 36, weight: .medium))
+                                .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.5))
+                            Text("No quotes in this category.")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 32)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
                 } else {
                     Section {
@@ -311,6 +330,7 @@ struct QuotesTabView: View {
                                 }
                             }
                             .padding(.vertical, 4)
+                            .listRowBackground(Theme.cardColor(for: settings.theme))
                         }
                     }
                 }
