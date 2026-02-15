@@ -144,9 +144,9 @@ struct GenerateTabView: View {
                         .font(Theme.headlineFont.weight(.semibold))
                 }
                 .foregroundStyle(Theme.headerColor(for: settings.theme))
-                .shadow(color: settings.theme == .minimal ? .clear : .black.opacity(0.35), radius: 2, x: 0, y: 1)
-                .hueRotation(.degrees(Double(viewModel.hapticTrigger % 3) * 15))
-                .animation(.easeInOut(duration: 0.3), value: viewModel.hapticTrigger)
+                .shadow(color: Theme.headerShadowColor(for: settings.theme), radius: 6, x: 0, y: 0)
+                .hueRotation(.degrees(Double(viewModel.hapticTrigger % 3) * 30))
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.hapticTrigger)
 
                 selectorRow
                 scenarioComposer
@@ -156,6 +156,8 @@ struct GenerateTabView: View {
                     if let record = viewModel.current {
                         AdviceCardView(record: record, theme: settings.theme)
                             .transition(settings.reduceMotion ? .identity : .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
+                            .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
+                            .animation(.spring(response: 0.2, dampingFraction: 0.5), value: viewModel.hapticTrigger)
                     } else {
                         emptyState
                     }

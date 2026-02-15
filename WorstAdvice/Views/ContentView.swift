@@ -49,7 +49,12 @@ struct ContentView: View {
                     // Confetti overlay — fires on streak milestones
                     ConfettiView(isActive: $showConfetti)
                 }
-                .sensoryFeedback(.impact(weight: .heavy), trigger: session.generate.hapticTrigger)
+                .sensoryFeedback(trigger: session.generate.hapticTrigger) { _, _ in
+                    let weight = session.generate.hapticWeight
+                    if weight > 0.8 { return .impact(weight: .heavy) }
+                    if weight > 0.4 { return .impact(weight: .medium) }
+                    return .impact(weight: .light)
+                }
                 .fullScreenCover(isPresented: .init(
                     get: { !hasSeenOnboarding },
                     set: { if !$0 { hasSeenOnboarding = true } }

@@ -132,9 +132,13 @@ enum Theme {
     }
 
     static func headerColor(for mode: ThemeMode) -> Color {
+        return Color(hex: "1C1C1E") // Iconic Black
+    }
+
+    static func headerShadowColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .minimal: return Color(hex: "000000")
-        default: return Color(hex: "FFFFFF")
+        case .minimal: return .clear
+        default: return .white.opacity(0.35) // Glow for visibility on dark backgrounds
         }
     }
 }

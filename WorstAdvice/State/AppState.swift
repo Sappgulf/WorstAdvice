@@ -859,6 +859,7 @@ final class GenerateViewModel {
     var generationNotice: String?
     var primaryActionTitle: String = "Advise Me"
     var hapticTrigger: Int = 0
+    var hapticWeight: Double = 0.5 // 0.0 to 1.0 mapping to intensity
 
     private var recentAdviceFingerprints: [String] = []
     private var recentAdviceFingerprintsByPool: [String: [String]] = [:]
@@ -976,8 +977,11 @@ final class GenerateViewModel {
             "strict_no_repeats": shouldEnforceGlobalUniqueness ? "true" : "false",
             "community_only": communityOnlyMode ? "true" : "false"
         ])
-        logger.info("Generated advice id=\(output.id) source=\(source) category=\(output.category.rawValue)")
         rotatePrimaryActionTitleIfNeeded()
+        
+        // Nuanced Haptics: Alpha Podcast/Crypto/Toxic get heavy kicks. Minimal/Monk get light taps.
+        let intensity = store.toneProfile(for: output.tone).rhetoricalTick.count
+        hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
         hapticTrigger += 1
     }
 
