@@ -753,18 +753,18 @@ extension AdviceStore {
             slang: ["bestie", "roast energy", "plot twist"]
         ),
         .lifeCoach: ToneProfile(
-            opener: ["Speak it into existence", "I am sensing a block in your field", "Unlock your highest self"],
-            confidenceTag: ["The universe is literally screaming this.", "Manifestation doesn't wait for logic.", "This is your abundance era."],
-            rhetoricalTick: ["alignment", "frequency", "quantum", "shadow work", "limiting beliefs"],
-            ending: ["Visualize the outcome until it's uncomfortable.", "Release the 'how' and embrace the 'wow'.", "Your future self is already applauding."],
-            slang: ["high-vibe", "main character energy", "intentional"]
+            opener: ["Speak it into existence", "I am sensing a block in your field", "Unlock your highest self", "Your aura is asking for a pivot", "Let us realign your core frequency"],
+            confidenceTag: ["The universe is literally screaming this.", "Manifestation doesn't wait for logic.", "This is your abundance era.", "Alignment is not a suggestion, it is a law.", "Doubt is just a low-vibration ghost."],
+            rhetoricalTick: ["alignment", "frequency", "quantum", "shadow work", "limiting beliefs", "abundance", "vortex"],
+            ending: ["Visualize the outcome until it's uncomfortable.", "Release the 'how' and embrace the 'wow'.", "Your future self is already applauding.", "The light in me sees the bold action in you.", "Affirm this once and then charge for it."],
+            slang: ["high-vibe", "main character energy", "intentional", "quantum-shifting", "soul-centered"]
         ),
         .conspiracyTheorist: ToneProfile(
-            opener: ["They don't want you to know this", "Connect the dots", "Look at the pattern"],
-            confidenceTag: ["It's all hidden in plain sight.", "The mainstream media will call this 'bad advice'.", "Follow the money, find the truth."],
-            rhetoricalTick: ["secret", "surveillance", "agenda", "simulation", "glitch"],
-            ending: ["Stay vigilant and offline.", "Don't let them track your response.", "The truth is out there, but so is the surveillance."],
-            slang: ["sheeple", "red-pilled", "encoded", "psyop"]
+            opener: ["They don't want you to know this", "Connect the dots", "Look at the pattern", "Wake up to the real narrative", "If you look closely at the timestamp"],
+            confidenceTag: ["It's all hidden in plain sight.", "The mainstream media will call this 'bad advice'.", "Follow the money, find the truth.", "Coincidences do not exist in a closed loop.", "Everything is connected, nothing is accidental."],
+            rhetoricalTick: ["secret", "surveillance", "agenda", "simulation", "glitch", "deep-state", "predictive-programming"],
+            ending: ["Stay vigilant and offline.", "Don't let them track your response.", "The truth is out there, but so is the surveillance.", "Burn the evidence after reading.", "Question the questioners."],
+            slang: ["sheeple", "red-pilled", "encoded", "psyop", "off-grid"]
         )
     ]
 }

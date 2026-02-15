@@ -34,7 +34,12 @@ struct AdviceCardView: View {
 
                 Spacer()
 
-                IntensityIndicator(tone: record.tone, theme: theme)
+                HStack(spacing: 4) {
+                    Text("Chaos Level")
+                        .font(.system(size: 8, weight: .bold).uppercaseSmallCaps())
+                        .foregroundStyle(Theme.secondaryText(for: theme).opacity(0.6))
+                    IntensityIndicator(tone: record.tone, theme: theme)
+                }
             }
 
             // Decorative quote mark
@@ -142,7 +147,6 @@ struct GenerateTabView: View {
                 .shadow(color: settings.theme == .minimal ? .clear : .black.opacity(0.35), radius: 2, x: 0, y: 1)
                 .hueRotation(.degrees(Double(viewModel.hapticTrigger % 3) * 15))
                 .animation(.easeInOut(duration: 0.3), value: viewModel.hapticTrigger)
-                dailyQuoteBanner
 
                 selectorRow
                 scenarioComposer
