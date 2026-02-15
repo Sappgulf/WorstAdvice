@@ -13,12 +13,10 @@ struct FloatingParticlesView: View {
 
     private var particleOpacity: Double {
         switch theme {
-        case .neon: return 0.25
-        case .dark: return 0.15
-        case .warm: return 0.13
-        case .sepia: return 0.10
-        case .evergreen: return 0.12
-        case .sunrise: return 0.13
+        case .badvice: return 0.25
+        case .minimal: return 0.08
+        case .ember: return 0.15
+        case .slate: return 0.12
         }
     }
 

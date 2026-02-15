@@ -93,15 +93,15 @@ struct ShareCardRenderer {
     private static func drawGradient(in cg: CGContext, rect: CGRect, template: ShareCardTemplate) {
         let colors: [CGColor]
         switch template {
-        case .ember:
+        case .bold:
             colors = [UIColor(red: 0.85, green: 0.35, blue: 0.17, alpha: 1).cgColor,
                       UIColor(red: 0.64, green: 0.2, blue: 0.14, alpha: 1).cgColor,
                       UIColor(red: 0.37, green: 0.12, blue: 0.12, alpha: 1).cgColor]
-        case .cocoa:
+        case .minimal:
             colors = [UIColor(red: 0.35, green: 0.23, blue: 0.18, alpha: 1).cgColor,
                       UIColor(red: 0.26, green: 0.17, blue: 0.15, alpha: 1).cgColor,
                       UIColor(red: 0.18, green: 0.12, blue: 0.11, alpha: 1).cgColor]
-        case .dawn:
+        case .gradient:
             colors = [UIColor(red: 0.97, green: 0.56, blue: 0.32, alpha: 1).cgColor,
                       UIColor(red: 0.92, green: 0.36, blue: 0.45, alpha: 1).cgColor,
                       UIColor(red: 0.49, green: 0.2, blue: 0.48, alpha: 1).cgColor]
