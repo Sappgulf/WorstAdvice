@@ -6,6 +6,9 @@ struct ContentView: View {
 
     @State private var selectedTab: AppTab = .generate
     @State private var session: AppSessionViewModel?
+    @State private var showConfetti = false
+
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
 
     var body: some View {
         Group {
@@ -31,14 +34,40 @@ struct ContentView: View {
                     .tint(Theme.accent(for: session.settings.theme))
                     .toolbarBackground(Theme.tabBarBackground(for: session.settings.theme), for: .tabBar)
                     .toolbarBackground(.visible, for: .tabBar)
+
+                    // Confetti overlay — fires on streak milestones
+                    ConfettiView(isActive: $showConfetti)
+                }
+                .fullScreenCover(isPresented: .init(
+                    get: { !hasSeenOnboarding },
+                    set: { if !$0 { hasSeenOnboarding = true } }
+                )) {
+                    OnboardingFlow(isPresented: .init(
+                        get: { !hasSeenOnboarding },
+                        set: { if !$0 { hasSeenOnboarding = true } }
+                    ))
+                }
+                .onChange(of: session.generate.challengeStreakDays) { _, days in
+                    if [3, 7, 14, 30].contains(days) {
+                        showConfetti = true
+                    }
                 }
             } else {
-                ProgressView("Loading")
-                    .task {
-                        if session == nil {
-                            session = AppSessionViewModel(context: modelContext)
-                        }
+                ZStack {
+                    Color(hex: "F7F2E8").ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 38, weight: .semibold))
+                            .foregroundStyle(Color(hex: "8F4A22").opacity(0.7))
+                        ProgressView()
+                            .tint(Color(hex: "8F4A22"))
                     }
+                }
+                .task {
+                    if session == nil {
+                        session = AppSessionViewModel(context: modelContext)
+                    }
+                }
             }
         }
     }

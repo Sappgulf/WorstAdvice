@@ -6,32 +6,72 @@ struct AdviceCardView: View {
     let theme: ThemeMode
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
+        VStack(alignment: .leading, spacing: 0) {
+            // Category + tone chips row
+            HStack(spacing: 8) {
                 Label(record.category.title, systemImage: record.category.icon)
-                Spacer()
-                Text(record.tone.title)
-            }
-            .font(Theme.chipFont)
-            .foregroundStyle(Theme.secondaryText(for: theme))
+                    .font(Theme.chipFont)
+                    .foregroundStyle(Theme.accent(for: theme))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Theme.accent(for: theme).opacity(0.13))
+                    )
 
+                Text(record.tone.title)
+                    .font(Theme.chipFont)
+                    .foregroundStyle(Theme.secondaryText(for: theme))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Theme.secondaryText(for: theme).opacity(0.1))
+                    )
+
+                Spacer()
+
+                IntensityIndicator(tone: record.tone, theme: theme)
+            }
+
+            // Decorative quote mark
+            Text("\u{201C}")
+                .font(.system(size: 56, weight: .heavy, design: .serif))
+                .foregroundStyle(Theme.accent(for: theme).opacity(0.22))
+                .frame(height: 24)
+                .padding(.top, 10)
+                .offset(y: 4)
+
+            // Advice text
             Text(record.adviceLine)
                 .font(Theme.cardFont)
                 .foregroundStyle(Theme.primaryText(for: theme))
                 .lineSpacing(5)
                 .minimumScaleFactor(0.8)
+                .padding(.top, 6)
                 .accessibilityLabel("Advice")
                 .accessibilityValue(record.adviceLine)
 
             if let rationale = record.rationaleLine, !rationale.isEmpty {
-                Text(rationale)
-                    .font(Theme.bodyFont)
-                    .foregroundStyle(Theme.secondaryText(for: theme))
-                    .accessibilityLabel("Fake rationale")
-                    .accessibilityValue(rationale)
-            }
+                Rectangle()
+                    .fill(Theme.secondaryText(for: theme).opacity(0.15))
+                    .frame(height: 1)
+                    .padding(.vertical, 14)
 
-            IntensityIndicator(tone: record.tone, theme: theme)
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.accent(for: theme).opacity(0.65))
+                        .padding(.top, 2)
+                    Text(rationale)
+                        .font(Theme.bodyFont)
+                        .foregroundStyle(Theme.secondaryText(for: theme))
+                        .accessibilityLabel("Fake rationale")
+                        .accessibilityValue(rationale)
+                }
+            } else {
+                Spacer().frame(height: 12)
+            }
         }
         .padding(Theme.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -40,7 +80,7 @@ struct AdviceCardView: View {
                 .fill(Theme.cardColor(for: theme))
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .stroke(Theme.primaryText(for: theme).opacity(0.08), lineWidth: 1)
+                        .stroke(Theme.accent(for: theme).opacity(0.1), lineWidth: 1)
                 )
         )
         .accessibilityElement(children: .contain)
@@ -55,13 +95,12 @@ struct GenerateTabView: View {
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
     @State private var showingAdvanced = false
+    @State private var generateButtonPulsing = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Worst Advice")
-                    .font(Theme.headlineFont)
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                appHeader
                 dailyQuoteBanner
 
                 selectorRow
@@ -96,25 +135,48 @@ struct GenerateTabView: View {
         }
     }
 
-    private var dailyQuoteBanner: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Bad Quote of the Day")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
-            Text("“\(viewModel.dailyBadQuote.text)”")
-                .font(.footnote)
+    private var appHeader: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("Worst Advice")
+                .font(Theme.headlineFont)
                 .foregroundStyle(Theme.primaryText(for: settings.theme))
-                .lineLimit(3)
-            Text(viewModel.dailyBadQuote.source)
-                .font(.caption2)
+            Text("Confidently wrong since day one.")
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
         }
-        .padding(10)
+    }
+
+    private var dailyQuoteBanner: some View {
+        HStack(spacing: 0) {
+            // Left accent bar
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(Theme.accent(for: settings.theme))
+                .frame(width: 3)
+                .padding(.vertical, 2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Bad Quote of the Day")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                Text("\u{201C}\(viewModel.dailyBadQuote.text)\u{201D}")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .lineLimit(3)
+                Text("— \(viewModel.dailyBadQuote.source)")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+
+            Spacer(minLength: 0)
+        }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Theme.cardColor(for: settings.theme))
         )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Bad quote of the day")
         .accessibilityValue(viewModel.dailyBadQuote.text)
@@ -158,25 +220,29 @@ struct GenerateTabView: View {
     private func selectionLabel(title: String, value: String) -> some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(title.uppercased())
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
                 Text(value)
                     .font(Theme.bodyFont.weight(.semibold))
                     .lineLimit(1)
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .foregroundStyle(Theme.accent(for: settings.theme))
             }
             Spacer(minLength: 8)
             Image(systemName: "chevron.down")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.secondaryText(for: settings.theme).opacity(0.6))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, minHeight: 48)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, minHeight: 52)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Theme.cardColor(for: settings.theme))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Theme.accent(for: settings.theme).opacity(0.12), lineWidth: 1)
+                )
         )
     }
 
@@ -299,9 +365,12 @@ struct GenerateTabView: View {
     private var primaryActionButtons: some View {
         let hasCurrent = viewModel.current != nil
         return VStack(spacing: 10) {
+            // Primary generate button — pulses when idle (no advice yet)
             Button {
+                generateButtonPulsing = false
                 viewModel.generate()
                 onDataChanged()
+                HapticsManager.play(style: .medium, isEnabled: settings.hapticsEnabled)
             } label: {
                 Label(viewModel.primaryActionTitle, systemImage: "sparkles")
                     .font(Theme.bodyFont.weight(.bold))
@@ -310,7 +379,47 @@ struct GenerateTabView: View {
             .buttonStyle(.borderedProminent)
             .tint(Theme.accent(for: settings.theme))
             .foregroundStyle(Theme.buttonText(for: settings.theme))
+            .scaleEffect(generateButtonPulsing ? 1.03 : 1.0)
+            .animation(
+                generateButtonPulsing
+                    ? .easeInOut(duration: 1.1).repeatForever(autoreverses: true)
+                    : .easeOut(duration: 0.2),
+                value: generateButtonPulsing
+            )
+            .onAppear {
+                if viewModel.current == nil {
+                    generateButtonPulsing = true
+                }
+            }
+            .onChange(of: viewModel.current == nil) { _, isNil in
+                generateButtonPulsing = isNil
+            }
 
+            // Quick-fire secondary row — always visible
+            HStack(spacing: 10) {
+                Button {
+                    viewModel.surpriseMeAndGenerate()
+                    onDataChanged()
+                } label: {
+                    Label("Surprise Me", systemImage: "dice")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    viewModel.generateDailyDrop()
+                    onDataChanged()
+                } label: {
+                    Label("Daily Drop", systemImage: "calendar.badge.clock")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+            }
+            .tint(Theme.accent(for: settings.theme))
+
+            // Save / Copy / Share rail
             HStack(spacing: 14) {
                 railButton(
                     title: viewModel.isCurrentFavorite ? "Saved" : "Save",
@@ -377,30 +486,55 @@ struct GenerateTabView: View {
     @ViewBuilder
     private var votingRow: some View {
         if viewModel.current != nil {
-            HStack(spacing: 10) {
-                Text("Rate this bad advice")
-                    .font(.caption.weight(.semibold))
+            HStack(spacing: 12) {
+                Text("Rate this advice")
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
+
                 Spacer()
+
                 Button {
                     viewModel.toggleVote(.like)
                     onDataChanged()
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 } label: {
-                    Image(systemName: viewModel.currentVote == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
-                        .frame(width: 44, height: 44)
+                    HStack(spacing: 5) {
+                        Image(systemName: viewModel.currentVote == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
+                        if viewModel.currentVote == .like {
+                            Text("Liked")
+                                .font(.caption.weight(.semibold))
+                        }
+                    }
+                    .frame(height: 36)
+                    .padding(.horizontal, viewModel.currentVote == .like ? 12 : 0)
                 }
                 .buttonStyle(.bordered)
+                .tint(viewModel.currentVote == .like ? Theme.accent(for: settings.theme) : Theme.secondaryText(for: settings.theme))
 
                 Button {
                     viewModel.toggleVote(.dislike)
                     onDataChanged()
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 } label: {
-                    Image(systemName: viewModel.currentVote == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                        .frame(width: 44, height: 44)
+                    HStack(spacing: 5) {
+                        Image(systemName: viewModel.currentVote == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                        if viewModel.currentVote == .dislike {
+                            Text("Noted")
+                                .font(.caption.weight(.semibold))
+                        }
+                    }
+                    .frame(height: 36)
+                    .padding(.horizontal, viewModel.currentVote == .dislike ? 12 : 0)
                 }
                 .buttonStyle(.bordered)
+                .tint(viewModel.currentVote == .dislike ? Theme.secondaryText(for: settings.theme) : Theme.secondaryText(for: settings.theme))
             }
-            .padding(.horizontal, 2)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Theme.cardColor(for: settings.theme))
+            )
         }
     }
 
@@ -412,7 +546,6 @@ struct GenerateTabView: View {
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
                 statStrip
                 challengeCard
-                secondaryActionButtons
                 keywordSuggestionsRow
                 if viewModel.current != nil {
                     whyThisFailsCard
@@ -421,10 +554,12 @@ struct GenerateTabView: View {
             .padding(.top, 8)
         } label: {
             HStack {
-                Text("Advanced")
+                Image(systemName: "slider.horizontal.3")
+                    .font(.subheadline.weight(.semibold))
+                Text("Stats & Tools")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                Text("Less-used tools")
+                Text("Streaks, keywords, and more")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
             }
@@ -445,24 +580,6 @@ struct GenerateTabView: View {
         }
     }
 
-    private var secondaryActionButtons: some View {
-        HStack(spacing: 10) {
-            Button("Surprise Me") {
-                viewModel.surpriseMeAndGenerate()
-                onDataChanged()
-            }
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .buttonStyle(.bordered)
-
-            Button("Daily Drop") {
-                viewModel.generateDailyDrop()
-                onDataChanged()
-            }
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .buttonStyle(.bordered)
-        }
-    }
-
     private var keywordSuggestionsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -478,19 +595,31 @@ struct GenerateTabView: View {
     }
 
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("No advice yet")
-                .font(Theme.cardFont)
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
-            Text("Tap Generate for plausibly wrong life guidance.")
-                .font(Theme.bodyFont)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+        VStack(alignment: .leading, spacing: 14) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 34, weight: .medium))
+                .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.65))
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Ready when you are.")
+                    .font(Theme.cardFont)
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                Text("Tap the button below for guidance that is\nconfidently, spectacularly wrong.")
+                    .font(Theme.bodyFont)
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Theme.cardPadding)
         .background(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .fill(Theme.cardColor(for: settings.theme))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .stroke(Theme.accent(for: settings.theme).opacity(0.08), lineWidth: 1)
+                )
         )
     }
 }

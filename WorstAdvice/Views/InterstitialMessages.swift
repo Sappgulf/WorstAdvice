@@ -143,159 +143,336 @@ struct SettingsTabView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Theme") {
-                    Picker("Theme", selection: Binding(
-                        get: { viewModel.theme },
-                        set: { viewModel.theme = $0 }
-                    )) {
-                        ForEach(ThemeMode.allCases) { mode in
-                            Text(mode.title).tag(mode)
+            ScrollView {
+                VStack(spacing: 20) {
+                    themeSection
+                    behaviorSection
+                    generationSection
+                    communitySection
+                    shareSection
+                    tabBarSection
+                }
+                .padding(.horizontal, Theme.horizontalPadding)
+                .padding(.top, 8)
+                .padding(.bottom, 36)
+            }
+            .background(ThemeBackgroundView(mode: viewModel.theme).ignoresSafeArea())
+            .navigationTitle("Settings")
+        }
+    }
+
+    // MARK: - Section Cards
+
+    private var themeSection: some View {
+        settingsCard(title: "Theme", icon: "paintpalette") {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+                ForEach(ThemeMode.allCases) { mode in
+                    Button {
+                        viewModel.theme = mode
+                    } label: {
+                        VStack(spacing: 6) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Theme.backgroundGradient(for: mode))
+                                    .frame(height: 52)
+
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Theme.cardColor(for: mode))
+                                    .frame(width: 32, height: 28)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .stroke(Theme.accent(for: mode).opacity(0.3), lineWidth: 1)
+                                    )
+                            }
+                            .overlay(alignment: .topTrailing) {
+                                if viewModel.theme == mode {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(Theme.accent(for: mode))
+                                        .background(Circle().fill(.white).padding(2))
+                                        .padding(6)
+                                }
+                            }
+
+                            Text(mode.title)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(viewModel.theme == mode ? Theme.accent(for: viewModel.theme) : Theme.secondaryText(for: viewModel.theme))
                         }
                     }
-                    .pickerStyle(.menu)
-
-                    Text("Current: \(viewModel.theme.title)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    .buttonStyle(.plain)
                 }
+            }
+        }
+    }
 
-                Section("Tab Bar") {
-                    Text("Advice stays first and Settings stays last.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+    private var behaviorSection: some View {
+        settingsCard(title: "Behavior", icon: "slider.horizontal.3") {
+            VStack(spacing: 0) {
+                settingsToggle("Show disclaimer on share", systemImage: "info.circle",
+                    isOn: Binding(get: { viewModel.includeDisclaimerOnShare }, set: { viewModel.includeDisclaimerOnShare = $0 }))
+                settingsDivider
+                settingsToggle("Fake rationale", systemImage: "text.bubble",
+                    isOn: Binding(get: { viewModel.includeRationale }, set: { viewModel.includeRationale = $0 }))
+                settingsDivider
+                settingsToggle("Reduce motion", systemImage: "waveform.path",
+                    isOn: Binding(get: { viewModel.reduceMotion }, set: { viewModel.reduceMotion = $0 }))
+                settingsDivider
+                settingsToggle("Haptics", systemImage: "hand.tap",
+                    isOn: Binding(get: { viewModel.hapticsEnabled }, set: { viewModel.hapticsEnabled = $0 }))
+                settingsDivider
+                settingsToggle("Strict no repeats", systemImage: "arrow.triangle.2.circlepath",
+                    isOn: Binding(get: { viewModel.strictNoRepeats }, set: { viewModel.strictNoRepeats = $0 }))
+            }
+        }
+    }
 
-                    ForEach(Array(viewModel.reorderableTabs.enumerated()), id: \.element.id) { index, tab in
-                        HStack {
-                            Label(tab.title, systemImage: tab.systemImage)
-                            Spacer()
+    private var generationSection: some View {
+        settingsCard(title: "Generation", icon: "sparkles") {
+            VStack(spacing: 0) {
+                settingsPicker(
+                    "Content Pack",
+                    systemImage: "square.grid.2x2",
+                    selection: Binding(get: { viewModel.preferredContentPack }, set: { viewModel.preferredContentPack = $0 })
+                ) {
+                    ForEach(ContentPack.allCases) { pack in
+                        Text(pack.title).tag(pack)
+                    }
+                }
+                settingsDivider
+                settingsToggle("Community suggestions only", systemImage: "person.2",
+                    isOn: Binding(get: { viewModel.communityOnlyMode }, set: { viewModel.communityOnlyMode = $0 }))
+            }
+        }
+    }
+
+    private var shareSection: some View {
+        settingsCard(title: "Share Defaults", icon: "square.and.arrow.up") {
+            VStack(spacing: 0) {
+                settingsPicker(
+                    "Template",
+                    systemImage: "photo",
+                    selection: Binding(get: { viewModel.preferredTemplate }, set: { viewModel.preferredTemplate = $0 })
+                ) {
+                    ForEach(ShareCardTemplate.allCases) { t in
+                        Text(t.title).tag(t)
+                    }
+                }
+                settingsDivider
+                settingsPicker(
+                    "Aspect Ratio",
+                    systemImage: "aspectratio",
+                    selection: Binding(get: { viewModel.preferredAspect }, set: { viewModel.preferredAspect = $0 })
+                ) {
+                    ForEach(ShareAspectRatio.allCases) { r in
+                        Text(r.title).tag(r)
+                    }
+                }
+                settingsDivider
+                settingsPicker(
+                    "Caption Style",
+                    systemImage: "text.quote",
+                    selection: Binding(get: { viewModel.preferredSharePreset }, set: { viewModel.preferredSharePreset = $0 })
+                ) {
+                    ForEach(ShareCaptionPreset.allCases) { p in
+                        Text(p.title).tag(p)
+                    }
+                }
+            }
+        }
+    }
+
+    private var communitySection: some View {
+        settingsCard(title: "Community", icon: "person.2.wave.2") {
+            VStack(spacing: 0) {
+                NavigationLink {
+                    SuggestionLabView(viewModel: generateViewModel, settings: viewModel)
+                } label: {
+                    settingsNavRow("Suggestion Lab", systemImage: "plus.bubble",
+                                   badge: generateViewModel.communitySuggestionCount > 0 ? "\(generateViewModel.communitySuggestionCount)" : nil)
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                NavigationLink {
+                    QuoteSuggestionLabView(viewModel: quotesViewModel, settings: viewModel)
+                } label: {
+                    settingsNavRow("Quote Lab", systemImage: "quote.bubble.fill",
+                                   badge: quotesViewModel.quoteSuggestionCount > 0 ? "\(quotesViewModel.quoteSuggestionCount)" : nil)
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                NavigationLink {
+                    CommunityPulseView(viewModel: generateViewModel, settings: viewModel)
+                } label: {
+                    settingsNavRow("Community Pulse", systemImage: "chart.bar.xaxis", badge: nil)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var tabBarSection: some View {
+        settingsCard(title: "Tab Order", icon: "square.3.layers.3d") {
+            VStack(spacing: 0) {
+                Text("Advice is always first. Settings is always last.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 10)
+
+                ForEach(Array(viewModel.reorderableTabs.enumerated()), id: \.element.id) { index, tab in
+                    if index > 0 { settingsDivider }
+                    HStack(spacing: 12) {
+                        Image(systemName: tab.systemImage)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Theme.accent(for: viewModel.theme))
+                            .frame(width: 24)
+                        Text(tab.title)
+                            .font(Theme.bodyFont)
+                            .foregroundStyle(Theme.primaryText(for: viewModel.theme))
+                        Spacer()
+                        HStack(spacing: 4) {
                             Button {
                                 viewModel.moveReorderableTabUp(at: index)
                             } label: {
                                 Image(systemName: "chevron.up")
+                                    .font(.caption.weight(.bold))
+                                    .frame(width: 32, height: 32)
+                                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(Theme.secondaryText(for: viewModel.theme).opacity(0.1)))
                             }
-                            .buttonStyle(.borderless)
+                            .buttonStyle(.plain)
                             .disabled(index == 0)
+                            .opacity(index == 0 ? 0.35 : 1)
 
                             Button {
                                 viewModel.moveReorderableTabDown(at: index)
                             } label: {
                                 Image(systemName: "chevron.down")
+                                    .font(.caption.weight(.bold))
+                                    .frame(width: 32, height: 32)
+                                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(Theme.secondaryText(for: viewModel.theme).opacity(0.1)))
                             }
-                            .buttonStyle(.borderless)
+                            .buttonStyle(.plain)
                             .disabled(index == viewModel.reorderableTabs.count - 1)
+                            .opacity(index == viewModel.reorderableTabs.count - 1 ? 0.35 : 1)
                         }
                     }
-
-                    Button("Reset Tab Order") {
-                        viewModel.resetTabOrder()
-                    }
+                    .padding(.vertical, 6)
                 }
 
-                Section("Behavior") {
-                    Toggle("Show disclaimer on share", isOn: Binding(
-                        get: { viewModel.includeDisclaimerOnShare },
-                        set: { viewModel.includeDisclaimerOnShare = $0 }
-                    ))
-                    Toggle("Include fake rationale", isOn: Binding(
-                        get: { viewModel.includeRationale },
-                        set: { viewModel.includeRationale = $0 }
-                    ))
-                    Toggle("Reduce motion", isOn: Binding(
-                        get: { viewModel.reduceMotion },
-                        set: { viewModel.reduceMotion = $0 }
-                    ))
-                    Toggle("Haptics", isOn: Binding(
-                        get: { viewModel.hapticsEnabled },
-                        set: { viewModel.hapticsEnabled = $0 }
-                    ))
-                    Toggle("Strict no repeats", isOn: Binding(
-                        get: { viewModel.strictNoRepeats },
-                        set: { viewModel.strictNoRepeats = $0 }
-                    ))
+                settingsDivider
+                Button {
+                    viewModel.resetTabOrder()
+                } label: {
+                    Text("Reset Order")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.accent(for: viewModel.theme))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
                 }
-
-                Section("Generation") {
-                    Picker("Content Pack", selection: Binding(
-                        get: { viewModel.preferredContentPack },
-                        set: { viewModel.preferredContentPack = $0 }
-                    )) {
-                        ForEach(ContentPack.allCases) { pack in
-                            Text(pack.title).tag(pack)
-                        }
-                    }
-
-                    Toggle("Use community suggestions only", isOn: Binding(
-                        get: { viewModel.communityOnlyMode },
-                        set: { viewModel.communityOnlyMode = $0 }
-                    ))
-                }
-
-                Section("Community") {
-                    NavigationLink {
-                        SuggestionLabView(viewModel: generateViewModel, settings: viewModel)
-                    } label: {
-                        HStack {
-                            Label("Suggestion Lab", systemImage: "plus.bubble")
-                            Spacer()
-                            Text("\(generateViewModel.communitySuggestionCount)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    NavigationLink {
-                        QuoteSuggestionLabView(viewModel: quotesViewModel, settings: viewModel)
-                    } label: {
-                        HStack {
-                            Label("Quote Suggestion Lab", systemImage: "quote.bubble.fill")
-                            Spacer()
-                            Text("\(quotesViewModel.quoteSuggestionCount)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    NavigationLink {
-                        CommunityPulseView(viewModel: generateViewModel, settings: viewModel)
-                    } label: {
-                        Label("Community Pulse", systemImage: "chart.bar.xaxis")
-                    }
-                }
-
-                Section("Share Defaults") {
-                    Picker("Template", selection: Binding(
-                        get: { viewModel.preferredTemplate },
-                        set: { viewModel.preferredTemplate = $0 }
-                    )) {
-                        ForEach(ShareCardTemplate.allCases) { template in
-                            Text(template.title).tag(template)
-                        }
-                    }
-
-                    Picker("Aspect Ratio", selection: Binding(
-                        get: { viewModel.preferredAspect },
-                        set: { viewModel.preferredAspect = $0 }
-                    )) {
-                        ForEach(ShareAspectRatio.allCases) { ratio in
-                            Text(ratio.title).tag(ratio)
-                        }
-                    }
-
-                    Picker("Caption Style", selection: Binding(
-                        get: { viewModel.preferredSharePreset },
-                        set: { viewModel.preferredSharePreset = $0 }
-                    )) {
-                        ForEach(ShareCaptionPreset.allCases) { preset in
-                            Text(preset.title).tag(preset)
-                        }
-                    }
-                }
+                .buttonStyle(.plain)
             }
-            .scrollContentBackground(.hidden)
-            .background(ThemeBackgroundView(mode: viewModel.theme).ignoresSafeArea())
-            .navigationTitle("Settings")
         }
+    }
+
+    // MARK: - Reusable rows
+
+    @ViewBuilder
+    private var settingsDivider: some View {
+        Rectangle()
+            .fill(Theme.secondaryText(for: viewModel.theme).opacity(0.12))
+            .frame(height: 1)
+    }
+
+    private func settingsToggle(_ label: String, systemImage: String, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.medium))
+                .foregroundStyle(Theme.accent(for: viewModel.theme))
+                .frame(width: 24)
+            Text(label)
+                .font(Theme.bodyFont)
+                .foregroundStyle(Theme.primaryText(for: viewModel.theme))
+            Spacer()
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .tint(Theme.accent(for: viewModel.theme))
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func settingsPicker<V: Hashable, Content: View>(
+        _ label: String,
+        systemImage: String,
+        selection: Binding<V>,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.medium))
+                .foregroundStyle(Theme.accent(for: viewModel.theme))
+                .frame(width: 24)
+            Picker(label, selection: selection) {
+                content()
+            }
+            .pickerStyle(.menu)
+            .tint(Theme.primaryText(for: viewModel.theme))
+            .font(Theme.bodyFont)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func settingsNavRow(_ label: String, systemImage: String, badge: String?) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.medium))
+                .foregroundStyle(Theme.accent(for: viewModel.theme))
+                .frame(width: 24)
+            Text(label)
+                .font(Theme.bodyFont)
+                .foregroundStyle(Theme.primaryText(for: viewModel.theme))
+            Spacer()
+            if let badge {
+                Text(badge)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+            }
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText(for: viewModel.theme).opacity(0.5))
+        }
+        .padding(.vertical, 10)
+    }
+
+    // MARK: - Card container
+
+    @ViewBuilder
+    private func settingsCard<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.accent(for: viewModel.theme))
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.primaryText(for: viewModel.theme))
+            }
+            content()
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Theme.cardColor(for: viewModel.theme))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(Theme.accent(for: viewModel.theme).opacity(0.08), lineWidth: 1)
+                )
+        )
     }
 }
 

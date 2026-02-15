@@ -42,13 +42,26 @@ struct FavoritesTabView: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(record.adviceLine)
-                            .font(.body)
+                            .font(.body.weight(.medium))
                             .foregroundStyle(Theme.primaryText(for: settings.theme))
                             .lineLimit(3)
+                            .lineSpacing(2)
 
-                        Text("\(record.category.title) • \(record.tone.title)")
-                            .font(.caption)
-                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        HStack(spacing: 6) {
+                            Label(record.category.title, systemImage: record.category.icon)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.accent(for: settings.theme))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                                )
+
+                            Text(record.tone.title)
+                                .font(.caption)
+                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        }
                     }
                     .padding(.vertical, 6)
                 }
@@ -78,24 +91,42 @@ struct FavoritesTabView: View {
                     NavigationLink {
                         FavoriteDetailView(record: record, settings: settings)
                     } label: {
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            // Category chip
+                            Label(record.category.title, systemImage: record.category.icon)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(Theme.accent(for: settings.theme))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                                )
+
+                            Spacer(minLength: 8)
+
                             Text(record.adviceLine)
-                                .font(.footnote)
+                                .font(.footnote.weight(.medium))
                                 .lineLimit(5)
                                 .multilineTextAlignment(.leading)
                                 .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                .lineSpacing(2)
 
-                            Spacer(minLength: 4)
+                            Spacer(minLength: 10)
 
-                            Text(record.category.title)
+                            Text(record.tone.title)
                                 .font(.caption2)
                                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
                         }
-                        .padding(12)
+                        .padding(14)
                         .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
                         .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .fill(Theme.cardColor(for: settings.theme))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                        .stroke(Theme.accent(for: settings.theme).opacity(0.08), lineWidth: 1)
+                                )
                         )
                     }
                     .buttonStyle(.plain)
@@ -208,7 +239,16 @@ struct QuotesTabView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Browse") {
+                // Hero daily quote — full-bleed card
+                Section {
+                    dailyQuoteHero
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 12, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+
+                // Sort + stats controls
+                Section {
                     Picker("Sort", selection: $viewModel.rankingMode) {
                         ForEach(QuoteRankingMode.allCases) { mode in
                             Text(mode.title).tag(mode)
@@ -217,79 +257,60 @@ struct QuotesTabView: View {
                     .pickerStyle(.segmented)
 
                     HStack {
-                        Text("Liked: \(viewModel.likedCount)")
+                        Label("\(viewModel.likedCount) liked", systemImage: "hand.thumbsup")
                         Spacer()
-                        Text("Disliked: \(viewModel.dislikedCount)")
+                        Label("\(viewModel.dislikedCount) disliked", systemImage: "hand.thumbsdown")
                     }
-                    .font(.caption)
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                } header: {
+                    Text("Quote Library")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText(for: settings.theme))
+                        .textCase(nil)
                 }
 
-                Section("Daily Bad Quote") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("“\(viewModel.dailyQuote.text)”")
-                            .font(.headline)
-                            .foregroundStyle(Theme.primaryText(for: settings.theme))
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(viewModel.dailyQuote.source)
-                            .font(.caption)
-                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
-
-                        HStack(spacing: 10) {
-                            voteButtons(for: viewModel.dailyQuote)
-
-                            Spacer(minLength: 8)
-
-                            Button {
-                                copyQuote(viewModel.dailyQuote, isDaily: true)
-                            } label: {
-                                Image(systemName: "doc.on.doc")
-                                    .frame(width: 34, height: 34)
-                            }
-                            .buttonStyle(.bordered)
-                            .accessibilityLabel("Copy daily quote")
-
-                            Button {
-                                shareQuote(viewModel.dailyQuote, isDaily: true)
-                            } label: {
-                                Image(systemName: "square.and.arrow.up")
-                                    .frame(width: 34, height: 34)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Theme.accent(for: settings.theme))
-                            .accessibilityLabel("Share daily quote")
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                Section("Quote Library") {
-                    if viewModel.filteredQuotes.isEmpty {
+                // Quote rows
+                if viewModel.filteredQuotes.isEmpty {
+                    Section {
                         Text("No quotes match your filters.")
+                            .font(.body)
                             .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                    } else {
+                            .listRowBackground(Color.clear)
+                    }
+                } else {
+                    Section {
                         ForEach(viewModel.filteredQuotes) { quote in
-                            VStack(alignment: .leading, spacing: 0) {
-                                HStack(alignment: .top, spacing: 10) {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text("“\(quote.text)”")
-                                            .font(.body)
-                                            .foregroundStyle(Theme.primaryText(for: settings.theme))
-                                            .fixedSize(horizontal: false, vertical: true)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("\u{201C}\(quote.text)\u{201D}")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .lineSpacing(2)
 
-                                        Text("\(quote.source) • \(quote.category.title)")
-                                            .font(.caption)
-                                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                                    }
+                                HStack(spacing: 6) {
+                                    Label(quote.category.title, systemImage: quote.category.icon)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Theme.accent(for: settings.theme))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(
+                                            Capsule(style: .continuous)
+                                                .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                                        )
+
+                                    Text(quote.source)
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
                                 }
+
                                 HStack(spacing: 10) {
                                     voteButtons(for: quote)
                                     Spacer(minLength: 8)
                                     quoteActionsMenu(for: quote)
                                 }
-                                .padding(.top, 6)
                             }
-                            .padding(.vertical, 2)
+                            .padding(.vertical, 4)
                         }
                     }
                 }
@@ -330,6 +351,98 @@ struct QuotesTabView: View {
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
+    }
+
+    private var dailyQuoteHero: some View {
+        ZStack(alignment: .topLeading) {
+            // Gradient background
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Theme.accent(for: settings.theme),
+                            Theme.accent(for: settings.theme).opacity(0.75)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            // Decorative large quote mark
+            Text("\u{201C}")
+                .font(.system(size: 96, weight: .heavy, design: .serif))
+                .foregroundStyle(.white.opacity(0.18))
+                .offset(x: 16, y: -8)
+                .allowsHitTesting(false)
+
+            // Content
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Bad Quote of the Day")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.bottom, 10)
+
+                Text("\u{201C}\(viewModel.dailyQuote.text)\u{201D}")
+                    .font(.system(.title3, design: .rounded, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("— \(viewModel.dailyQuote.source)")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.75))
+                    .padding(.top, 10)
+
+                HStack(spacing: 10) {
+                    // Like/dislike with white tint
+                    HStack(spacing: 8) {
+                        Button {
+                            viewModel.toggleVote(.like, for: viewModel.dailyQuote)
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        } label: {
+                            Image(systemName: viewModel.vote(for: viewModel.dailyQuote) == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
+                                .frame(width: 34, height: 34)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+
+                        Button {
+                            viewModel.toggleVote(.dislike, for: viewModel.dailyQuote)
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        } label: {
+                            Image(systemName: viewModel.vote(for: viewModel.dailyQuote) == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                                .frame(width: 34, height: 34)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.white)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        copyQuote(viewModel.dailyQuote, isDaily: true)
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+
+                    Button {
+                        shareQuote(viewModel.dailyQuote, isDaily: true)
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.white.opacity(0.25))
+                }
+                .padding(.top, 16)
+            }
+            .padding(22)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Bad quote of the day: \(viewModel.dailyQuote.text) by \(viewModel.dailyQuote.source)")
     }
 
     private func copyQuote(_ quote: BadQuote, isDaily: Bool) {
@@ -397,33 +510,58 @@ private struct FavoriteDetailView: View {
 
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
+    @State private var copied = false
 
     var body: some View {
         ScrollView {
-            AdviceCardView(record: record, theme: settings.theme)
-                .padding(Theme.horizontalPadding)
+            VStack(spacing: 16) {
+                AdviceCardView(record: record, theme: settings.theme)
+                    .padding(.horizontal, Theme.horizontalPadding)
 
-            Button("Share Card") {
-                let content = ShareCardContent(
-                    category: record.category,
-                    tone: record.tone,
-                    adviceLine: record.adviceLine,
-                    rationaleLine: record.rationaleLine,
-                    includeDisclaimer: settings.includeDisclaimerOnShare,
-                    template: settings.preferredTemplate,
-                    aspectRatio: settings.preferredAspect
-                )
-                let image = ShareCardRenderer.render(content: content)
-                shareItems = [image, record.adviceLine]
-                showingShareSheet = true
+                HStack(spacing: 10) {
+                    Button {
+                        UIPasteboard.general.string = record.adviceLine
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        withAnimation { copied = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                            withAnimation { copied = false }
+                        }
+                    } label: {
+                        Label(copied ? "Copied!" : "Copy Text", systemImage: copied ? "checkmark" : "doc.on.doc")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(copied ? Theme.accent(for: settings.theme) : nil)
+
+                    Button {
+                        let content = ShareCardContent(
+                            category: record.category,
+                            tone: record.tone,
+                            adviceLine: record.adviceLine,
+                            rationaleLine: record.rationaleLine,
+                            includeDisclaimer: settings.includeDisclaimerOnShare,
+                            template: settings.preferredTemplate,
+                            aspectRatio: settings.preferredAspect
+                        )
+                        let image = ShareCardRenderer.render(content: content)
+                        shareItems = [image, record.adviceLine]
+                        showingShareSheet = true
+                    } label: {
+                        Label("Share Card", systemImage: "square.and.arrow.up")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.accent(for: settings.theme))
+                }
+                .padding(.horizontal, Theme.horizontalPadding)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accent(for: settings.theme))
-            .padding(.horizontal, Theme.horizontalPadding)
             .padding(.top, 8)
+            .padding(.bottom, 28)
         }
         .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
-        .navigationTitle("Favorite")
+        .navigationTitle(record.category.title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)

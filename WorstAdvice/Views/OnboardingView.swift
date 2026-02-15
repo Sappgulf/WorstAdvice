@@ -81,13 +81,25 @@ struct HistoryTabView: View {
             ForEach(viewModel.filteredHistory, id: \.id) { record in
                 VStack(alignment: .leading, spacing: 8) {
                     Text(record.adviceLine)
-                        .font(.body)
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Theme.primaryText(for: settings.theme))
+                        .lineSpacing(2)
 
                     HStack(spacing: 6) {
-                        Text("\(record.category.title) • \(record.tone.title)")
+                        Label(record.category.title, systemImage: record.category.icon)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accent(for: settings.theme))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                            )
+
+                        Text(record.tone.title)
                             .font(.caption)
                             .foregroundStyle(Theme.secondaryText(for: settings.theme))
+
                         if record.vote == .like {
                             Image(systemName: "hand.thumbsup.fill")
                                 .font(.caption)
@@ -100,14 +112,21 @@ struct HistoryTabView: View {
                     }
 
                     HStack(spacing: 10) {
-                        Button("Use") {
+                        Button {
                             onUseRecord(record)
+                        } label: {
+                            Label("Use Again", systemImage: "arrow.counterclockwise")
+                                .font(.caption.weight(.semibold))
                         }
                         .buttonStyle(.bordered)
+                        .tint(Theme.accent(for: settings.theme))
 
-                        Button(record.isFavorite ? "Saved" : "Save") {
+                        Button {
                             viewModel.saveFromHistory(record)
                             onDataChanged()
+                        } label: {
+                            Label(record.isFavorite ? "Saved" : "Save", systemImage: record.isFavorite ? "bookmark.fill" : "bookmark")
+                                .font(.caption.weight(.semibold))
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.accent(for: settings.theme))
