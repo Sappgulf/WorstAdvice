@@ -158,11 +158,25 @@ struct GenerateTabView: View {
                             .transition(settings.reduceMotion ? .identity : .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
                             .animation(.spring(response: 0.2, dampingFraction: 0.5), value: viewModel.hapticTrigger)
-                    } else {
-                        emptyState
+                    }
+                }
+                .overlay {
+                    if viewModel.isGenerating {
+                        VStack(spacing: 12) {
+                            ProgressView()
+                                .tint(Theme.accent(for: settings.theme))
+                            Text("Consulting the chaos...")
+                                .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Theme.cardColor(for: settings.theme).opacity(0.8))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
                 }
                 .animation(settings.reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: viewModel.current?.id)
+                .animation(.easeInOut(duration: 0.2), value: viewModel.isGenerating)
 
                 votingRow
                 primaryActionButtons

@@ -138,7 +138,7 @@ enum Theme {
     static func headerShadowColor(for mode: ThemeMode) -> Color {
         switch mode {
         case .minimal: return .clear
-        default: return .white.opacity(0.35) // Glow for visibility on dark backgrounds
+        default: return .white.opacity(0.85) // Strong glow for visibility on dark backgrounds
         }
     }
 }

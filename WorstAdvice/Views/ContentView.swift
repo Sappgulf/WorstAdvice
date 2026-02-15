@@ -30,8 +30,12 @@ struct ContentView: View {
                     ThemeBackgroundView(mode: session.settings.theme)
                         .ignoresSafeArea()
 
-                    FloatingParticlesView(theme: session.settings.theme, reduceMotion: session.settings.reduceMotion)
-                        .ignoresSafeArea()
+                    FloatingParticlesView(
+                        theme: session.settings.theme,
+                        reduceMotion: session.settings.reduceMotion,
+                        isGenerating: session.generate.isGenerating
+                    )
+                    .ignoresSafeArea()
 
                     TabView(selection: $selectedTab) {
                         ForEach(session.settings.tabOrder) { tab in

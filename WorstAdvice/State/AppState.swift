@@ -860,6 +860,7 @@ final class GenerateViewModel {
     var primaryActionTitle: String = "Advise Me"
     var hapticTrigger: Int = 0
     var hapticWeight: Double = 0.5 // 0.0 to 1.0 mapping to intensity
+    var isGenerating: Bool = false
 
     private var recentAdviceFingerprints: [String] = []
     private var recentAdviceFingerprintsByPool: [String: [String]] = [:]
@@ -888,6 +889,7 @@ final class GenerateViewModel {
     }
 
     func generate(seed: Int? = nil) {
+        isGenerating = true
         generationNotice = nil
         let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
         logger.debug("Generate started: category=\(self.selectedCategory.rawValue) tone=\(self.selectedTone.rawValue) seed=\(baseSeed)")
@@ -980,9 +982,12 @@ final class GenerateViewModel {
         rotatePrimaryActionTitleIfNeeded()
         
         // Nuanced Haptics: Alpha Podcast/Crypto/Toxic get heavy kicks. Minimal/Monk get light taps.
-        let intensity = store.toneProfile(for: output.tone).rhetoricalTick.count
-        hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
+        if let profile = self.store.toneProfiles[output.tone] {
+            let intensity = profile.rhetoricalTick.count
+            hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
+        }
         hapticTrigger += 1
+        isGenerating = false
     }
 
     func surpriseMeAndGenerate() {

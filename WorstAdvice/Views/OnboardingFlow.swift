@@ -134,7 +134,7 @@ private struct OnboardingPageView: View {
             Text(title)
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(Color(hex: "2F281F"))
+                .foregroundStyle(Theme.headerColor(for: .minimal))
                 .lineSpacing(2)
                 .offset(y: appeared ? 0 : 24)
                 .opacity(appeared ? 1 : 0)

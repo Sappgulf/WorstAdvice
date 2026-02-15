@@ -4,6 +4,7 @@ import UIKit
 struct FloatingParticlesView: View {
     let theme: ThemeMode
     let reduceMotion: Bool
+    var isGenerating: Bool = false
 
     private var count: Int {
         let screenArea: CGFloat = UIScreen.main.bounds.width * UIScreen.main.bounds.height
@@ -34,7 +35,8 @@ struct FloatingParticlesView: View {
     }
 
     private func drawParticles(context: GraphicsContext, size: CGSize, date: Date) {
-        let t: Double = date.timeIntervalSinceReferenceDate
+        let speedMultiplier: Double = isGenerating ? 3.5 : 1.0
+        let t: Double = date.timeIntervalSinceReferenceDate * speedMultiplier
         let baseColor: Color = Theme.particleColor(for: theme)
         let baseOpacity: Double = particleOpacity
 

@@ -62,13 +62,8 @@ struct SplashView: View {
                 // Wordmark
                 Text("Badvice")
                     .font(.system(size: 58, weight: .bold, design: .rounded))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color(hex: "F0C99E"), Color(hex: "D4845A")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .foregroundStyle(Theme.headerColor(for: .minimal)) // Use iconic black
+                    .shadow(color: Color.white.opacity(0.4), radius: 8, x: 0, y: 0) // Glow on the dark splash
                     .scaleEffect(wordmarkScale)
                     .opacity(wordmarkOpacity)
                     .animation(.spring(response: 0.62, dampingFraction: 0.65).delay(0.05), value: wordmarkScale)
