@@ -67,7 +67,7 @@ enum Theme {
         case .minimal: return Color(hex: "1C1C1E") // Black
         case .ember: return Color(hex: "D65A31")
         case .slate: return Color(hex: "AAB7B8")
-        case .evergreen: return Color(hex: "4CD964") // Vibrant Green
+        case .evergreen: return Color(hex: "81C784") // Natural Sage Green
         }
     }
 
@@ -87,7 +87,7 @@ enum Theme {
         case .minimal: return Color(hex: "1C1C1E")
         case .ember: return Color(hex: "FFF5E6") // High contrast white
         case .slate: return Color(hex: "ECF0F1")
-        case .evergreen: return Color(hex: "F2F7F4")
+        case .evergreen: return Color(hex: "FFFFFF") // Pure White for max contrast
         }
     }
 
@@ -97,7 +97,7 @@ enum Theme {
         case .minimal: return Color(hex: "8E8E93")
         case .ember: return Color(hex: "D0B0B0")
         case .slate: return Color(hex: "BDC3C7")
-        case .evergreen: return Color(hex: "A3C4B0")
+        case .evergreen: return Color(hex: "A5D6A7") // Lighter Green-Grey
         }
     }
 
@@ -127,7 +127,7 @@ enum Theme {
         case .minimal: return Color(hex: "1C1C1E")
         case .ember: return Color(hex: "FF6B6B")
         case .slate: return Color(hex: "ECF0F1")
-        case .evergreen: return Color(hex: "4CD964")
+        case .evergreen: return Color(hex: "66BB6A") // Slightly darker sage for particles
         }
     }
 }
