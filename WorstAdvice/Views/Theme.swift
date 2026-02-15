@@ -1,148 +1,118 @@
 import SwiftUI
 
 enum Theme {
-    static let cardCornerRadius: CGFloat = 28
+    static let cardCornerRadius: CGFloat = 24
     static let cardPadding: CGFloat = 24
     static let horizontalPadding: CGFloat = 20
-    static let largeTapTargetHeight: CGFloat = 52
+    static let largeTapTargetHeight: CGFloat = 56
 
-    static let headlineFont: Font = .system(.largeTitle, design: .rounded, weight: .bold)
-    static let cardFont: Font = .system(.title2, design: .rounded, weight: .semibold)
-    static let bodyFont: Font = .system(.body, design: .rounded, weight: .regular)
+    static let headlineFont: Font = .system(.largeTitle, design: .serif, weight: .bold)
+    static let cardFont: Font = .system(.title2, design: .default, weight: .semibold)
+    static let bodyFont: Font = .system(.body, design: .default, weight: .regular)
     static let chipFont: Font = .system(.subheadline, design: .rounded, weight: .medium)
 
     static func cardShadow(for theme: ThemeMode) -> (color: Color, radius: CGFloat, y: CGFloat) {
         switch theme {
-        case .neon:
-            return (Color.cyan.opacity(0.4), 18, 4)
-        case .dark:
-            return (Color.purple.opacity(0.3), 14, 3)
-        case .warm:
-            return (Color.orange.opacity(0.2), 10, 3)
-        case .sepia:
-            return (Color.brown.opacity(0.15), 8, 2)
-        case .evergreen:
-            return (Color.green.opacity(0.2), 10, 3)
-        case .sunrise:
-            return (Color.pink.opacity(0.25), 12, 3)
+        case .badvice:
+            return (Color.black.opacity(0.4), 16, 6)
+        case .minimal:
+            return (Color.black.opacity(0.08), 12, 4)
+        case .ember:
+            return (Color(hex: "5E2C2C").opacity(0.3), 14, 5)
+        case .slate:
+            return (Color.black.opacity(0.25), 10, 3)
         }
     }
 
     static func backgroundGradient(for mode: ThemeMode) -> LinearGradient {
         switch mode {
-        case .warm:
+        case .badvice:
             return LinearGradient(
-                colors: [Color(hex: "F7F2E8"), Color(hex: "F2EBDD"), Color(hex: "ECE2D1")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .dark:
-            return LinearGradient(
-                colors: [Color(hex: "1C1B24"), Color(hex: "2D2A3A"), Color(hex: "3A334B")],
+                colors: [Color(hex: "2D1B2E"), Color(hex: "1C1C1E"), Color(hex: "121212")],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-        case .neon:
+        case .minimal:
             return LinearGradient(
-                colors: [Color(hex: "0A1422"), Color(hex: "0C2A45"), Color(hex: "0F4158")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .sepia:
-            return LinearGradient(
-                colors: [Color(hex: "F3EBDC"), Color(hex: "E8DDC7"), Color(hex: "DCCDAD")],
+                colors: [Color(hex: "F9F9F9"), Color(hex: "F2F2F7")],
                 startPoint: .top,
                 endPoint: .bottom
             )
-        case .evergreen:
+        case .ember:
             return LinearGradient(
-                colors: [Color(hex: "E8F1EB"), Color(hex: "D9E7DE"), Color(hex: "C6D7CB")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .sunrise:
-            return LinearGradient(
-                colors: [Color(hex: "F8EEE8"), Color(hex: "F2E0D9"), Color(hex: "E9CCC1")],
+                colors: [Color(hex: "4A2626"), Color(hex: "2E1A1A")],
                 startPoint: .top,
                 endPoint: .bottom
+            )
+        case .slate:
+            return LinearGradient(
+                colors: [Color(hex: "2C3E50"), Color(hex: "34495E")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
         }
     }
 
     static func accent(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return Color(hex: "8F4A22")
-        case .dark: return Color(hex: "F39A5B")
-        case .neon: return Color(hex: "00BCD4")
-        case .sepia: return Color(hex: "7A5B3A")
-        case .evergreen: return Color(hex: "2F684D")
-        case .sunrise: return Color(hex: "A3543D")
+        case .badvice: return Color(hex: "E07A5F") // Muted Coral
+        case .minimal: return Color(hex: "1C1C1E") // Black
+        case .ember: return Color(hex: "D65A31")
+        case .slate: return Color(hex: "AAB7B8")
         }
     }
 
     static func cardColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return Color(hex: "FBF7EE")
-        case .dark: return Color.white.opacity(0.13)
-        case .neon: return Color(hex: "0E2637").opacity(0.92)
-        case .sepia: return Color(hex: "F8F1E4")
-        case .evergreen: return Color(hex: "F2F8F4")
-        case .sunrise: return Color(hex: "FBF2EE")
+        case .badvice: return Color(hex: "3D2C3E").opacity(0.6)
+        case .minimal: return Color.white
+        case .ember: return Color(hex: "5E3030").opacity(0.4)
+        case .slate: return Color(hex: "3E5062").opacity(0.7)
         }
     }
 
     static func primaryText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return Color(hex: "2F281F")
-        case .dark: return Color(hex: "F7EADA")
-        case .neon: return Color(hex: "D3E9F4")
-        case .sepia: return Color(hex: "352A1E")
-        case .evergreen: return Color(hex: "203229")
-        case .sunrise: return Color(hex: "372823")
+        case .badvice: return Color(hex: "F4F1DE")
+        case .minimal: return Color(hex: "1C1C1E")
+        case .ember: return Color(hex: "FAEBD7")
+        case .slate: return Color(hex: "ECF0F1")
         }
     }
 
     static func secondaryText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return Color(hex: "665746")
-        case .dark: return Color(hex: "CFBCA9")
-        case .neon: return Color(hex: "96B7C7")
-        case .sepia: return Color(hex: "6A5A47")
-        case .evergreen: return Color(hex: "4D6258")
-        case .sunrise: return Color(hex: "6A544F")
+        case .badvice: return Color(hex: "C2B2C2")
+        case .minimal: return Color(hex: "8E8E93")
+        case .ember: return Color(hex: "D0B0B0")
+        case .slate: return Color(hex: "BDC3C7")
         }
     }
 
     static func buttonText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return .white
-        case .dark: return Color(hex: "161219")
-        case .neon: return Color(hex: "062333")
-        case .sepia: return .white
-        case .evergreen: return .white
-        case .sunrise: return .white
+        case .badvice: return Color(hex: "2D1B2E")
+        case .minimal: return .white
+        case .ember: return .white
+        case .slate: return Color(hex: "2C3E50")
         }
     }
 
     static func tabBarBackground(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return Color(hex: "F2E9D9")
-        case .dark: return Color(hex: "252230")
-        case .neon: return Color(hex: "083145")
-        case .sepia: return Color(hex: "EBDDCA")
-        case .evergreen: return Color(hex: "D4E1D7")
-        case .sunrise: return Color(hex: "F0DDD4")
+        case .badvice: return Color(hex: "1A181C")
+        case .minimal: return Color(hex: "EEEEF0")
+        case .ember: return Color(hex: "261212")
+        case .slate: return Color(hex: "233140")
         }
     }
 
     static func particleColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .warm: return Color(hex: "FFE7D1")
-        case .dark: return Color(hex: "FFD1A9")
-        case .neon: return Color(hex: "38F0FF")
-        case .sepia: return Color(hex: "C6A87C")
-        case .evergreen: return Color(hex: "6BA98A")
-        case .sunrise: return Color(hex: "E8A58E")
+        case .badvice: return Color(hex: "E07A5F")
+        case .minimal: return Color(hex: "1C1C1E")
+        case .ember: return Color(hex: "FF6B6B")
+        case .slate: return Color(hex: "ECF0F1")
         }
     }
 }
@@ -153,9 +123,9 @@ struct ThemeBackgroundView: View {
     var body: some View {
         ZStack {
             Theme.backgroundGradient(for: mode)
-            if mode == .warm || mode == .sepia {
+            if mode == .badvice || mode == .ember {
                 LinearGradient(
-                    colors: [Color.white.opacity(0.26), Color.clear, Color(hex: "D5C3A8").opacity(0.12)],
+                    colors: [Color.white.opacity(0.08), Color.clear, Color.black.opacity(0.12)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -163,7 +133,7 @@ struct ThemeBackgroundView: View {
 
                 PaperGrainView()
                     .blendMode(.multiply)
-                    .opacity(mode == .warm ? 0.35 : 0.28)
+                    .opacity(mode == .badvice ? 0.3 : 0.25)
             }
         }
     }

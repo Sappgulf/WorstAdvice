@@ -173,12 +173,12 @@ final class AppSettingsEntity {
 
     init(
         id: UUID = UUID(),
-        theme: ThemeMode = .warm,
+        theme: ThemeMode = .badvice,
         includeDisclaimerOnShare: Bool = true,
         reduceMotion: Bool = false,
         hapticsEnabled: Bool = true,
         includeRationale: Bool = true,
-        preferredTemplate: ShareCardTemplate = .ember,
+        preferredTemplate: ShareCardTemplate = .minimal,
         preferredAspect: ShareAspectRatio = .square,
         preferredSharePreset: ShareCaptionPreset = .deadpan,
         preferredContentPack: ContentPack = .classic,
@@ -202,12 +202,12 @@ final class AppSettingsEntity {
     }
 
     var theme: ThemeMode {
-        get { ThemeMode(rawValue: themeRaw) ?? .warm }
+        get { ThemeMode(rawValue: themeRaw) ?? .badvice }
         set { themeRaw = newValue.rawValue }
     }
 
     var preferredTemplate: ShareCardTemplate {
-        get { ShareCardTemplate(rawValue: preferredTemplateRaw) ?? .ember }
+        get { ShareCardTemplate(rawValue: preferredTemplateRaw) ?? .minimal }
         set { preferredTemplateRaw = newValue.rawValue }
     }
 

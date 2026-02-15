@@ -132,12 +132,12 @@ struct GenerateTabView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 4) {
+                HStack(spacing: 0) {
                     Text("Bad")
-                        .font(.system(.largeTitle, design: .rounded, weight: .black))
-                        .italic()
+                        .font(Theme.headlineFont.weight(.black))
                     Text("vice")
-                        .font(.system(.largeTitle, design: .serif, weight: .bold))
+                        .font(Theme.headlineFont.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText(for: settings.theme).opacity(0.85))
                 }
                 .foregroundStyle(Theme.primaryText(for: settings.theme))
                 dailyQuoteBanner

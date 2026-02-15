@@ -74,39 +74,35 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
 }
 
 enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
-    case warm
-    case dark
-    case neon
-    case sepia
-    case evergreen
-    case sunrise
+    case badvice
+    case minimal
+    case ember
+    case slate
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .warm: return "Warm"
-        case .dark: return "Dark"
-        case .neon: return "Neon"
-        case .sepia: return "Sepia"
-        case .evergreen: return "Evergreen"
-        case .sunrise: return "Sunrise"
+        case .badvice: return "Badvice"
+        case .minimal: return "Minimal"
+        case .ember: return "Ember"
+        case .slate: return "Slate"
         }
     }
 }
 
 enum ShareCardTemplate: String, CaseIterable, Codable, Identifiable, Sendable {
-    case ember
-    case cocoa
-    case dawn
+    case minimal
+    case gradient
+    case bold
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .ember: return "Ember"
-        case .cocoa: return "Cocoa"
-        case .dawn: return "Dawn"
+        case .minimal: return "Minimal"
+        case .gradient: return "Gradient"
+        case .bold: return "Bold"
         }
     }
 }
