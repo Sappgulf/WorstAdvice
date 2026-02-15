@@ -376,6 +376,15 @@ struct SettingsTabView: View {
                         .padding(.vertical, 8)
                 }
                 .buttonStyle(.plain)
+
+                settingsDivider
+                let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–"
+                let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–"
+                Text("Badvice v\(version) (\(build))")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
             }
         }
     }

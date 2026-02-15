@@ -4,6 +4,8 @@ import OSLog
 import SwiftData
 import UIKit
 
+private let logger = Logger(subsystem: "com.worstadvice.app", category: "state")
+
 protocol AnalyticsTracking {
     func track(_ event: String, properties: [String: String])
 }
@@ -265,9 +267,11 @@ final class AdviceRepository {
     private static let poolFingerprintPrefix = "pool::"
 
     let context: ModelContext
+    private var cachedSeenCount: Int?
 
     init(context: ModelContext) {
         self.context = context
+        logger.debug("AdviceRepository initialized")
     }
 
     @discardableResult
@@ -294,7 +298,9 @@ final class AdviceRepository {
             saveChanges: false
         )
         save()
+        cachedSeenCount = nil
         pruneHistory(maxCount: 50)
+        logger.debug("Inserted advice id=\(generated.id) category=\(generated.category.rawValue) tone=\(generated.tone.rawValue)")
         return record
     }
 
@@ -407,9 +413,12 @@ final class AdviceRepository {
     }
 
     func seenAdviceCount() -> Int {
+        if let cached = cachedSeenCount { return cached }
         let descriptor = FetchDescriptor<AdviceFingerprint>()
         let all = (try? context.fetch(descriptor)) ?? []
-        return all.filter { !$0.normalizedText.hasPrefix(Self.poolFingerprintPrefix) }.count
+        let count = all.filter { !$0.normalizedText.hasPrefix(Self.poolFingerprintPrefix) }.count
+        cachedSeenCount = count
+        return count
     }
 
     func seedAdviceMemoryFromHistoryIfNeeded() {
@@ -566,7 +575,11 @@ final class AdviceRepository {
     }
 
     func save() {
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            logger.error("SwiftData save failed: \(error.localizedDescription)")
+        }
     }
 
     private func poolFingerprint(
@@ -875,6 +888,7 @@ final class GenerateViewModel {
     func generate(seed: Int? = nil) {
         generationNotice = nil
         let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
+        logger.debug("Generate started: category=\(self.selectedCategory.rawValue) tone=\(self.selectedTone.rawValue) seed=\(baseSeed)")
         var picked: GeneratedAdvice?
         var source: String = "engine"
         let situation = preparedSituationText()
@@ -961,6 +975,7 @@ final class GenerateViewModel {
             "strict_no_repeats": shouldEnforceGlobalUniqueness ? "true" : "false",
             "community_only": communityOnlyMode ? "true" : "false"
         ])
+        logger.info("Generated advice id=\(output.id) source=\(source) category=\(output.category.rawValue)")
         rotatePrimaryActionTitleIfNeeded()
         playHaptic()
     }
@@ -1137,9 +1152,9 @@ final class GenerateViewModel {
         guard let current else { return "" }
         let caption = shareCaption(for: current)
         if let rationale = current.rationaleLine, !rationale.isEmpty {
-            return "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nWorst Advice"
+            return "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nBadvice"
         }
-        return "\(caption)\n\n\(current.adviceLine)\n\nWorst Advice"
+        return "\(caption)\n\n\(current.adviceLine)\n\nBadvice"
     }
 
     var currentSharePayload: ShareCardContent? {
@@ -1596,7 +1611,7 @@ final class QuotesViewModel {
     }
 
     func quoteShareText(_ quote: BadQuote) -> String {
-        "\"\(quote.text)\"\n— \(quote.source)\n\nWorst Advice"
+        "\"\(quote.text)\"\n— \(quote.source)\n\nBadvice"
     }
 
     private func reloadCachedData() {

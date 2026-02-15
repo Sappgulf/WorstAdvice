@@ -101,7 +101,7 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.85))
 
-                Text("Worst Advice")
+                Text("Badvice")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.white.opacity(0.92))
             }
