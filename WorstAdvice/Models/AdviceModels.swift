@@ -78,6 +78,7 @@ enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case minimal
     case ember
     case slate
+    case evergreen
 
     var id: String { rawValue }
 
@@ -87,6 +88,7 @@ enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .minimal: return "Minimal"
         case .ember: return "Ember"
         case .slate: return "Slate"
+        case .evergreen: return "Evergreen"
         }
     }
 }

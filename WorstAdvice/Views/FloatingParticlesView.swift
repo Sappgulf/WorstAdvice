@@ -17,6 +17,7 @@ struct FloatingParticlesView: View {
         case .minimal: return 0.08
         case .ember: return 0.15
         case .slate: return 0.12
+        case .evergreen: return 0.14
         }
     }
 

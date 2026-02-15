@@ -168,7 +168,9 @@ struct SettingsTabView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                 ForEach(ThemeMode.allCases) { mode in
                     Button {
-                        viewModel.theme = mode
+                        withAnimation(.easeInOut(duration: 0.35)) {
+                            viewModel.theme = mode
+                        }
                     } label: {
                         VStack(spacing: 6) {
                             ZStack {

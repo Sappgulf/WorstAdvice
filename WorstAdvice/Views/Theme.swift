@@ -21,6 +21,8 @@ enum Theme {
             return (Color(hex: "5E2C2C").opacity(0.3), 14, 5)
         case .slate:
             return (Color.black.opacity(0.25), 10, 3)
+        case .evergreen:
+            return (Color.black.opacity(0.3), 14, 5)
         }
     }
 
@@ -50,6 +52,12 @@ enum Theme {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
+        case .evergreen:
+            return LinearGradient(
+                colors: [Color(hex: "1A2F23"), Color(hex: "142119")],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         }
     }
 
@@ -59,6 +67,7 @@ enum Theme {
         case .minimal: return Color(hex: "1C1C1E") // Black
         case .ember: return Color(hex: "D65A31")
         case .slate: return Color(hex: "AAB7B8")
+        case .evergreen: return Color(hex: "4CD964") // Vibrant Green
         }
     }
 
@@ -68,15 +77,17 @@ enum Theme {
         case .minimal: return Color.white
         case .ember: return Color(hex: "5E3030").opacity(0.4)
         case .slate: return Color(hex: "3E5062").opacity(0.7)
+        case .evergreen: return Color(hex: "253D2E").opacity(0.6)
         }
     }
 
     static func primaryText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "F4F1DE")
+        case .badvice: return Color(hex: "FFFAF0") // Brighter White
         case .minimal: return Color(hex: "1C1C1E")
-        case .ember: return Color(hex: "FAEBD7")
+        case .ember: return Color(hex: "FFF5E6") // High contrast white
         case .slate: return Color(hex: "ECF0F1")
+        case .evergreen: return Color(hex: "F2F7F4")
         }
     }
 
@@ -86,6 +97,7 @@ enum Theme {
         case .minimal: return Color(hex: "8E8E93")
         case .ember: return Color(hex: "D0B0B0")
         case .slate: return Color(hex: "BDC3C7")
+        case .evergreen: return Color(hex: "A3C4B0")
         }
     }
 
@@ -95,6 +107,7 @@ enum Theme {
         case .minimal: return .white
         case .ember: return .white
         case .slate: return Color(hex: "2C3E50")
+        case .evergreen: return Color(hex: "142119")
         }
     }
 
@@ -104,6 +117,7 @@ enum Theme {
         case .minimal: return Color(hex: "EEEEF0")
         case .ember: return Color(hex: "261212")
         case .slate: return Color(hex: "233140")
+        case .evergreen: return Color(hex: "142119")
         }
     }
 
@@ -113,6 +127,7 @@ enum Theme {
         case .minimal: return Color(hex: "1C1C1E")
         case .ember: return Color(hex: "FF6B6B")
         case .slate: return Color(hex: "ECF0F1")
+        case .evergreen: return Color(hex: "4CD964")
         }
     }
 }
@@ -123,7 +138,7 @@ struct ThemeBackgroundView: View {
     var body: some View {
         ZStack {
             Theme.backgroundGradient(for: mode)
-            if mode == .badvice || mode == .ember {
+            if mode == .badvice || mode == .ember || mode == .evergreen {
                 LinearGradient(
                     colors: [Color.white.opacity(0.08), Color.clear, Color.black.opacity(0.12)],
                     startPoint: .top,
