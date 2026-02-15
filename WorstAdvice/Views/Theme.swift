@@ -268,7 +268,26 @@ struct ThemeBackgroundView: View {
                     .opacity(0.1)
                     .blendMode(.overlay)
             }
+            
+            // Cinematic Overlays (Triple-A)
+            CinematicVignetteView()
+                .opacity(mode == .minimal ? 0.3 : 0.6)
+                .allowsHitTesting(false)
         }
+    }
+}
+
+/// A premium cinematic vignette that adds depth and focus to the UI.
+struct CinematicVignetteView: View {
+    var body: some View {
+        RadialGradient(
+            colors: [.clear, .black.opacity(0.4)],
+            center: .center,
+            startRadius: 100,
+            endRadius: 600
+        )
+        .blendMode(.multiply)
+        .ignoresSafeArea()
     }
 }
 

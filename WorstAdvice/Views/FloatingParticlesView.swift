@@ -53,22 +53,30 @@ struct FloatingParticlesView: View {
             let seed: Double = Double(index + 1)
             let modX: Double = seed.truncatingRemainder(dividingBy: 3)
             let modY: Double = seed.truncatingRemainder(dividingBy: 5)
+            let modZ: Double = seed.truncatingRemainder(dividingBy: 7) // Depth seed
 
             let xNorm: Double = sin(t * 0.3 * modX + seed) * 0.5 + 0.5
             let yNorm: Double = cos(t * 0.2 * modY + seed * 1.3) * 0.5 + 0.5
+            let depth: Double = sin(t * 0.1 * modZ + seed * 0.5) * 0.5 + 0.5 // 0.0 to 1.0 (far to near)
 
             let x: CGFloat = CGFloat(xNorm) * size.width
             let y: CGFloat = CGFloat(yNorm) * size.height
 
             let modR: Double = seed.truncatingRemainder(dividingBy: 4)
-            let radius: CGFloat = CGFloat(2.0 + modR)
+            let radius: CGFloat = CGFloat(1.5 + modR + (depth * 3.0)) // Closer particles are larger
 
             let alphaWave: Double = 0.5 + 0.5 * sin(t * 0.5 + seed * 2)
-            let alpha: Double = baseOpacity * alphaWave
+            let alpha: Double = baseOpacity * alphaWave * (0.3 + depth * 0.7) // Nearer are more opaque
 
             let color: Color = baseColor.opacity(alpha)
             let rect = CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)
+            
+            // Triple-A Polish: Add soft blur for "out of focus" depth effect
+            let blurRadius: CGFloat = CGFloat((1.0 - depth) * 2.5)
+            
+            context.addFilter(.blur(radius: blurRadius))
             context.fill(Path(ellipseIn: rect), with: .color(color))
+            context.setFilter(.none) // Reset for next particle
         }
     }
     

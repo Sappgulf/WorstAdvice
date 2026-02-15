@@ -137,6 +137,24 @@ struct AdviceCardView: View {
         // Apply 3D rotation based on drag position
         .rotation3DEffect(.degrees(rotationX), axis: (x: 1, y: 0, z: 0))
         .rotation3DEffect(.degrees(rotationY), axis: (x: 0, y: 1, z: 0))
+        .overlay {
+            // Dynamic Glint Overlay (Triple-A Polish)
+            if theme != .minimal {
+                GeometryReader { geo in
+                    let glintX = (rotationY / 8.0) * (geo.size.width * 0.5)
+                    let glintY = (rotationX / -8.0) * (geo.size.height * 0.5)
+                    
+                    RadialGradient(
+                        colors: [.white.opacity(0.15), .clear],
+                        center: UnitPoint(x: 0.5 + (glintX / geo.size.width), y: 0.5 + (glintY / geo.size.height)),
+                        startRadius: 0,
+                        endRadius: geo.size.width * 0.8
+                    )
+                    .blendMode(.plusLighter)
+                    .allowsHitTesting(false)
+                }
+            }
+        }
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { value in
@@ -145,8 +163,10 @@ struct AdviceCardView: View {
                     let width = UIScreen.main.bounds.width
                     let height = UIScreen.main.bounds.height
                     
-                    rotationY = Double((value.location.x - width/2) / (width/2)) * maxRotation
-                    rotationX = Double((value.location.y - height/2) / (height/2)) * -maxRotation
+                    withAnimation(.interactiveSpring(response: 0.15, dampingFraction: 0.8)) {
+                        rotationY = Double((value.location.x - width/2) / (width/2)) * maxRotation
+                        rotationX = Double((value.location.y - height/2) / (height/2)) * -maxRotation
+                    }
                 }
                 .onEnded { _ in
                     isDragging = false
@@ -160,18 +180,19 @@ struct AdviceCardView: View {
             guard newID != lastRecordID else { return }
             lastRecordID = newID
             
-            // "Deal" Animation: Quick scale and shimmer
+            // "Deal" Animation: Triple-A bounce and haptic feel
             shimmerOffset = -0.3
-            withAnimation(.easeInOut(duration: 0.6)) {
+            withAnimation(.easeInOut(duration: 0.8)) {
                 shimmerOffset = 1.3
             }
             
-            // Subtle pop out effect
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                rotationX = -5 // Slight tilt back like it's being "slapped" onto the table
+            // Pop out and slam down effect
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
+                rotationX = -12 // Deeper tilt back
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.55)) {
                     rotationX = 0
                 }
             }
