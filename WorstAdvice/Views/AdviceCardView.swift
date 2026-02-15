@@ -139,6 +139,7 @@ struct GenerateTabView: View {
                         .font(Theme.headlineFont.weight(.semibold))
                 }
                 .foregroundStyle(Theme.headerColor(for: settings.theme))
+                .shadow(color: settings.theme == .minimal ? .clear : .black.opacity(0.35), radius: 2, x: 0, y: 1)
                 dailyQuoteBanner
 
                 selectorRow

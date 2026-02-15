@@ -87,7 +87,7 @@ enum Theme {
         case .minimal: return Color(hex: "1C1C1E")
         case .ember: return Color(hex: "FFF5E6") // High contrast white
         case .slate: return Color(hex: "ECF0F1")
-        case .evergreen: return Color(hex: "FFFFFF") // Pure White for max contrast
+        case .evergreen: return Color(hex: "FFFFFF")
         }
     }
 
@@ -133,8 +133,8 @@ enum Theme {
 
     static func headerColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .minimal: return Color(hex: "1C1C1E")
-        default: return Color(hex: "FFFAF0") // High contrast off-white for all dark themes
+        case .minimal: return Color(hex: "000000")
+        default: return Color(hex: "FFFFFF")
         }
     }
 }
