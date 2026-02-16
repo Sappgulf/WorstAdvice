@@ -84,6 +84,7 @@ struct ContentView: View {
                         ForEach(session.settings.tabOrder) { tab in
                             tabView(for: tab, session: session)
                                 .tag(tab)
+                                .toolbar(.hidden, for: .tabBar) // Hide standard bar
                         }
                     }
                     

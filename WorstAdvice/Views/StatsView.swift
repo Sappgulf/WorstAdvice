@@ -30,13 +30,20 @@ struct FavoritesTabView: View {
             .navigationTitle("Favorites")
             .searchable(text: $viewModel.searchText, prompt: "Search saved advice")
             .toolbar { toolbarContent }
-            .onAppear { viewModel.reload() }
+            .onAppear { 
+                viewModel.reload()
+                // Initial load haptic for satisfying entry
+                HapticsManager.play(style: .soft, isEnabled: true)
+            }
         }
     }
 
+    @State private var itemAppearedCount = 0
+
     private var listView: some View {
         List {
-            ForEach(viewModel.filteredFavorites, id: \.id) { record in
+            let items = viewModel.filteredFavorites
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, record in
                 NavigationLink {
                     FavoriteDetailView(record: record, settings: settings)
                 } label: {
@@ -64,8 +71,17 @@ struct FavoritesTabView: View {
                         }
                     }
                     .padding(.vertical, 6)
+                    .opacity(index < itemAppearedCount ? 1 : 0)
+                    .offset(y: index < itemAppearedCount ? 0 : 20)
                 }
                 .listRowBackground(Theme.cardColor(for: settings.theme))
+                .onAppear {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75).delay(Double(index) * 0.05)) {
+                        if itemAppearedCount <= index {
+                            itemAppearedCount = index + 1
+                        }
+                    }
+                }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         viewModel.delete(record)
