@@ -74,9 +74,10 @@ struct FloatingParticlesView: View {
             // Triple-A Polish: Add soft blur for "out of focus" depth effect
             let blurRadius: CGFloat = CGFloat((1.0 - depth) * 2.5)
             
-            context.addFilter(.blur(radius: blurRadius))
-            context.fill(Path(ellipseIn: rect), with: .color(color))
-            context.setFilter(.none) // Reset for next particle
+            context.drawLayer { ctx in
+                ctx.addFilter(.blur(radius: blurRadius))
+                ctx.fill(Path(ellipseIn: rect), with: .color(color))
+            }
         }
     }
     

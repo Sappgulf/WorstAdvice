@@ -32,6 +32,14 @@ struct OnboardingFlow: View {
         ZStack(alignment: .bottom) {
             Color(hex: "F7F2E8").ignoresSafeArea()
 
+            // Triple-A Background Elements
+            FloatingParticlesView(theme: .minimal, reduceMotion: false, isGenerating: false)
+                .opacity(0.4)
+            
+            CinematicVignetteView()
+                .opacity(0.2)
+                .blendMode(.multiply)
+
             // Page content
             TabView(selection: $currentPage) {
                 ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
@@ -44,6 +52,9 @@ struct OnboardingFlow: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .onChange(of: currentPage) { _, _ in
+                HapticsManager.playSelection(isEnabled: true)
+            }
 
             // Bottom controls
             VStack(spacing: 20) {
@@ -64,6 +75,7 @@ struct OnboardingFlow: View {
                             currentPage += 1
                         }
                     } else {
+                        HapticsManager.play(style: .medium, isEnabled: true)
                         withAnimation(.easeOut(duration: 0.3)) {
                             isPresented = false
                         }
@@ -76,6 +88,7 @@ struct OnboardingFlow: View {
                         .background(
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .fill(Color(hex: "8F4A22"))
+                                .shadow(color: Color(hex: "8F4A22").opacity(0.3), radius: 10, y: 5)
                         )
                 }
                 .padding(.horizontal, 28)
@@ -84,6 +97,7 @@ struct OnboardingFlow: View {
                 // Skip (hidden on last page)
                 if currentPage < pages.count - 1 {
                     Button("Skip") {
+                        HapticsManager.playSelection(isEnabled: true)
                         withAnimation(.easeOut(duration: 0.25)) {
                             isPresented = false
                         }
@@ -105,6 +119,7 @@ private struct OnboardingPageView: View {
     let subtitle: String
 
     @State private var appeared = false
+    @State private var floatAnim = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -115,19 +130,26 @@ private struct OnboardingPageView: View {
                 Circle()
                     .fill(Color(hex: "8F4A22").opacity(0.1))
                     .frame(width: 140, height: 140)
+                    .scaleEffect(floatAnim ? 1.05 : 0.95)
 
                 Circle()
                     .fill(Color(hex: "8F4A22").opacity(0.06))
                     .frame(width: 110, height: 110)
+                    .scaleEffect(floatAnim ? 0.9 : 1.1)
 
                 Image(systemName: icon)
                     .font(.system(size: 52, weight: .semibold))
                     .foregroundStyle(Color(hex: "8F4A22"))
                     .symbolEffect(.bounce.up.byLayer, value: appeared)
+                    .offset(y: floatAnim ? -5 : 5)
             }
             .scaleEffect(appeared ? 1 : 0.6)
             .opacity(appeared ? 1 : 0)
             .animation(.spring(response: 0.55, dampingFraction: 0.68).delay(0.08), value: appeared)
+            .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true), value: floatAnim)
+            .onAppear {
+                floatAnim = true
+            }
 
             Spacer().frame(height: 52)
 

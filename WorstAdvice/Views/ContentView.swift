@@ -84,14 +84,59 @@ struct ContentView: View {
                         ForEach(session.settings.tabOrder) { tab in
                             tabView(for: tab, session: session)
                                 .tag(tab)
-                                .tabItem {
-                                    Label(tab.title, systemImage: tab.systemImage)
-                                }
                         }
                     }
-                    .tint(Theme.accent(for: session.settings.theme))
-                    .toolbarBackground(Theme.tabBarBackground(for: session.settings.theme), for: .tabBar)
-                    .toolbarBackground(.visible, for: .tabBar)
+                    
+                    // Custom Floating Glassmorphic Tab Bar (Triple-A Polish)
+                    VStack {
+                        Spacer()
+                        HStack(spacing: 0) {
+                            ForEach(session.settings.tabOrder) { tab in
+                                Button {
+                                    if selectedTab != tab {
+                                        HapticsManager.playSelection(isEnabled: true)
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                            selectedTab = tab
+                                        }
+                                    }
+                                } label: {
+                                    VStack(spacing: 4) {
+                                        Image(systemName: tab.systemImage)
+                                            .font(.system(size: 22, weight: selectedTab == tab ? .bold : .medium))
+                                            .symbolVariant(selectedTab == tab ? .fill : .none)
+                                        
+                                        Text(tab.title)
+                                            .font(.system(size: 10, weight: selectedTab == tab ? .bold : .medium))
+                                    }
+                                    .foregroundStyle(selectedTab == tab ? Theme.accent(for: session.settings.theme) : Theme.secondaryText(for: session.settings.theme).opacity(0.8))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.bottom, 24) // Dynamic home indicator spacing
+                        .background {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                                    .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
+                                
+                                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [.white.opacity(0.35), .white.opacity(0.1), .white.opacity(0.2)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1
+                                    )
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
+                    }
+                    .ignoresSafeArea(.keyboard)
 
                     // Confetti overlay — fires on streak milestones
                     ConfettiView(isActive: $showConfetti)

@@ -104,11 +104,23 @@ private struct BarView: View {
                 // Active bar with animated fill
                 RoundedRectangle(cornerRadius: 4)
                     .fill(
-                        shouldPulse
-                            ? Theme.accent(for: theme).opacity(0.7 + 0.3 * pulsePhase)
-                            : Theme.accent(for: theme)
+                        LinearGradient(
+                            colors: [
+                                Theme.accent(for: theme).opacity(0.8),
+                                Theme.accent(for: theme)
+                            ],
+                            startPoint: .bottom,
+                            endPoint: .top
+                        )
                     )
                     .frame(width: 16, height: isActive ? geometry.size.height : 0)
+                    .overlay {
+                        if shouldPulse {
+                            // Inner pulse glow
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(.white.opacity(0.35 * pulsePhase), lineWidth: 1.5)
+                        }
+                    }
                     .overlay(
                         // Glow effect for max intensity
                         shouldPulse ?
