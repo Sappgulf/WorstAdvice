@@ -89,6 +89,7 @@ class ShakeDetector: ObservableObject {
     
     func startMonitoring() {
         guard motionManager.isAccelerometerAvailable else { return }
+        stopMonitoring()
         
         motionManager.accelerometerUpdateInterval = 0.1
         motionManager.startAccelerometerUpdates(to: .main) { [weak self] data, error in
@@ -121,12 +122,14 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.requestReview) private var requestReview
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var selectedTab: AppTab = .generate
     @State private var session: AppSessionViewModel?
     @State private var showConfetti = false
     @State private var showSplash = true
     @State private var tabBarVisible = true
+    @State private var lastShakeHandledAt: Date = .distantPast
     @StateObject private var shakeDetector = ShakeDetector()
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
@@ -172,61 +175,63 @@ struct ContentView: View {
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
                     
                     // Custom Floating Glassmorphic Tab Bar (Compact & Polished)
-                    VStack {
-                        Spacer()
-                        HStack(spacing: 0) {
-                            ForEach(session.settings.tabOrder) { tab in
-                                Button {
-                                    if selectedTab != tab {
-                                        HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
-                                        if reduceMotion {
-                                            selectedTab = tab
-                                        } else {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    GeometryReader { proxy in
+                        VStack {
+                            Spacer()
+                            HStack(spacing: 0) {
+                                ForEach(session.settings.tabOrder) { tab in
+                                    Button {
+                                        if selectedTab != tab {
+                                            HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
+                                            if reduceMotion {
                                                 selectedTab = tab
+                                            } else {
+                                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                    selectedTab = tab
+                                                }
                                             }
                                         }
+                                    } label: {
+                                        VStack(spacing: 3) {
+                                            Image(systemName: tab.systemImage)
+                                                .font(.system(size: 20, weight: selectedTab == tab ? .semibold : .medium))
+                                                .symbolVariant(selectedTab == tab ? .fill : .none)
+
+                                            Text(tab.title)
+                                                .font(.system(size: 9, weight: selectedTab == tab ? .semibold : .regular))
+                                        }
+                                        .foregroundStyle(selectedTab == tab ? Theme.accent(for: session.settings.theme) : Theme.secondaryText(for: session.settings.theme).opacity(0.7))
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 7)
                                     }
-                                } label: {
-                                    VStack(spacing: 3) {
-                                        Image(systemName: tab.systemImage)
-                                            .font(.system(size: 20, weight: selectedTab == tab ? .semibold : .medium))
-                                            .symbolVariant(selectedTab == tab ? .fill : .none)
-                                        
-                                        Text(tab.title)
-                                            .font(.system(size: 9, weight: selectedTab == tab ? .semibold : .regular))
-                                    }
-                                    .foregroundStyle(selectedTab == tab ? Theme.accent(for: session.settings.theme) : Theme.secondaryText(for: session.settings.theme).opacity(0.7))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
+                                    .accessibilityLabel(tab.title)
+                                    .accessibilityValue(selectedTab == tab ? "Selected" : "Not selected")
                                 }
-                                .accessibilityLabel(tab.title)
-                                .accessibilityValue(selectedTab == tab ? "Selected" : "Not selected")
                             }
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.bottom, 8) // Reduce dead space below tab labels
-                        .background {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                    .fill(.ultraThinMaterial)
-                                    .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)
-                                
-                                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [.white.opacity(0.3), .white.opacity(0.08), .white.opacity(0.15)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 0.5
-                                    )
+                            .padding(.horizontal, 6)
+                            .padding(.bottom, 6)
+                            .background {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                        .fill(.ultraThinMaterial)
+                                        .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)
+
+                                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [.white.opacity(0.3), .white.opacity(0.08), .white.opacity(0.15)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 0.5
+                                        )
+                                }
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, max(4, proxy.safeAreaInsets.bottom - 10))
+                            .offset(y: tabBarVisible ? 0 : 120)
+                            .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: tabBarVisible)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 2)
-                        .offset(y: tabBarVisible ? 0 : 120)
-                        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: tabBarVisible)
                     }
                     .ignoresSafeArea(.keyboard)
 
@@ -267,16 +272,37 @@ struct ContentView: View {
                 .onChange(of: shakeDetector.didShake) { _, didShake in
                     guard didShake, shakeToGenerateEnabled, selectedTab == .generate else { return }
                     guard !session.generate.isGenerating else { return }
+                    let now = Date()
+                    guard now.timeIntervalSince(lastShakeHandledAt) > 0.9 else { return }
+                    lastShakeHandledAt = now
                     HapticsManager.playShakeDetected(isEnabled: session.settings.hapticsEnabled)
                     session.generate.generate()
                     session.refreshLists()
                 }
                 .onChange(of: shakeToGenerateEnabled) { _, enabled in
                     shakeDetector.isEnabled = enabled
+                    if enabled, scenePhase == .active {
+                        shakeDetector.startMonitoring()
+                    } else {
+                        shakeDetector.stopMonitoring()
+                    }
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    guard shakeToGenerateEnabled else {
+                        shakeDetector.stopMonitoring()
+                        return
+                    }
+                    if phase == .active {
+                        shakeDetector.startMonitoring()
+                    } else {
+                        shakeDetector.stopMonitoring()
+                    }
                 }
                 .onAppear {
                     shakeDetector.isEnabled = shakeToGenerateEnabled
-                    shakeDetector.startMonitoring()
+                    if shakeToGenerateEnabled {
+                        shakeDetector.startMonitoring()
+                    }
                 }
                 .onDisappear {
                     shakeDetector.stopMonitoring()
@@ -354,6 +380,7 @@ struct ContentView: View {
                 UserAdviceSuggestion.self,
                 UserQuoteSuggestion.self,
                 QuoteVoteRecord.self,
+                LearningStatRecord.self,
                 AppSettingsEntity.self
             ],
             inMemory: true

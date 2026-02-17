@@ -173,6 +173,7 @@ final class PersistenceTests: XCTestCase {
             UserAdviceSuggestion.self,
             UserQuoteSuggestion.self,
             QuoteVoteRecord.self,
+            LearningStatRecord.self,
             AppSettingsEntity.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
@@ -425,7 +426,9 @@ final class PersistenceTests: XCTestCase {
         // Debounce keeps the old result set until the delay completes.
         XCTAssertTrue(viewModel.filteredQuotes.count >= 1)
 
-        try await Task.sleep(for: .milliseconds(360))
+        for _ in 0..<20 where viewModel.filteredQuotes.count != 1 {
+            try await Task.sleep(for: .milliseconds(100))
+        }
         XCTAssertEqual(viewModel.filteredQuotes.count, 1)
         XCTAssertEqual(viewModel.filteredQuotes.first?.id, "community-\(likedSuggestion.id.uuidString)")
         XCTAssertEqual(viewModel.vote(for: viewModel.filteredQuotes[0]), .like)
@@ -460,8 +463,137 @@ final class PersistenceTests: XCTestCase {
         history.searchText = "qzhistory"
         XCTAssertEqual(history.filteredHistory.count, baselineCount)
 
-        try await Task.sleep(for: .milliseconds(360))
+        for _ in 0..<20 where history.filteredHistory.count != 1 {
+            try await Task.sleep(for: .milliseconds(100))
+        }
         XCTAssertEqual(history.filteredHistory.count, 1)
         XCTAssertTrue(history.filteredHistory[0].adviceLine.contains("qzhistory"))
+    }
+
+    func testAdaptiveRankerPrefersLikedScopeAtEqualRelevance() throws {
+        let repository = try makeRepository()
+        let likedScope = "advice|career|wizard"
+        let neutralScope = "advice|career|boomer"
+
+        for _ in 0..<5 {
+            repository.recordLearningSignal(scopeKey: likedScope, type: .shown)
+        }
+        for _ in 0..<3 {
+            repository.recordLearningSignal(scopeKey: likedScope, type: .like)
+        }
+
+        let ranker = AdaptiveRanker()
+        let likedScore = ranker.adviceScore(
+            semanticRelevance: 0.6,
+            stats: repository.learningSnapshot(for: likedScope),
+            noveltyPenalty: 0,
+            seed: 13,
+            candidateIndex: 0
+        )
+        let neutralScore = ranker.adviceScore(
+            semanticRelevance: 0.6,
+            stats: repository.learningSnapshot(for: neutralScope),
+            noveltyPenalty: 0,
+            seed: 13,
+            candidateIndex: 1
+        )
+
+        XCTAssertGreaterThan(likedScore, neutralScore)
+    }
+
+    func testAdaptiveRankerPenalizesDislikedScope() throws {
+        let repository = try makeRepository()
+        let dislikedScope = "advice|money|cryptoBro"
+
+        for _ in 0..<4 {
+            repository.recordLearningSignal(scopeKey: dislikedScope, type: .shown)
+        }
+        for _ in 0..<3 {
+            repository.recordLearningSignal(scopeKey: dislikedScope, type: .dislike)
+        }
+
+        let ranker = AdaptiveRanker()
+        let dislikedScore = ranker.adviceScore(
+            semanticRelevance: 0.62,
+            stats: repository.learningSnapshot(for: dislikedScope),
+            noveltyPenalty: 0,
+            seed: 29,
+            candidateIndex: 0
+        )
+        let neutralScore = ranker.adviceScore(
+            semanticRelevance: 0.62,
+            stats: .empty,
+            noveltyPenalty: 0,
+            seed: 29,
+            candidateIndex: 1
+        )
+
+        XCTAssertLessThan(dislikedScore, neutralScore)
+    }
+
+    func testImplicitSignalsDoNotOutrankStrongExplicitDislike() {
+        let ranker = AdaptiveRanker()
+        let implicitHeavy = LearningStatSnapshot(
+            shownCount: 10,
+            likeCount: 0,
+            dislikeCount: 5,
+            favoriteCount: 0,
+            copyCount: 20,
+            shareCount: 20,
+            regenCount: 0
+        )
+        let neutral = LearningStatSnapshot.empty
+
+        let implicitHeavyScore = ranker.adviceScore(
+            semanticRelevance: 0.58,
+            stats: implicitHeavy,
+            noveltyPenalty: 0,
+            seed: 44,
+            candidateIndex: 0
+        )
+        let neutralScore = ranker.adviceScore(
+            semanticRelevance: 0.58,
+            stats: neutral,
+            noveltyPenalty: 0,
+            seed: 44,
+            candidateIndex: 1
+        )
+
+        XCTAssertLessThan(implicitHeavyScore, neutralScore)
+    }
+
+    func testSynthesizedQuoteCandidatesAreModeratedBoundedAndDeduped() {
+        let moderation = ContentModeration()
+        let service = BadQuoteService()
+        let suggestions = [
+            UserQuoteSuggestion(
+                category: .career,
+                source: "Ops Digest",
+                quoteText: "Always rename the deadline before anyone can measure it."
+            ),
+            UserQuoteSuggestion(
+                category: .career,
+                source: "Ops Digest",
+                quoteText: "Always rename the deadline before anyone can measure it."
+            ),
+            UserQuoteSuggestion(
+                category: .money,
+                source: "Ledger Club",
+                quoteText: "Treat every invoice as a networking event for your wallet."
+            )
+        ]
+
+        let candidates = service.candidateQuotes(
+            communitySuggestions: suggestions,
+            store: AdviceStore(),
+            moderation: moderation,
+            maxSynthesized: 12
+        )
+        let synthesized = candidates.filter { $0.id.hasPrefix("synth-") }
+
+        let normalized = candidates.map { $0.text.normalizedForFiltering }
+        XCTAssertEqual(Set(normalized).count, candidates.count)
+        XCTAssertTrue(synthesized.allSatisfy { $0.text.count <= 160 })
+        XCTAssertTrue(synthesized.allSatisfy { moderation.isSafe(text: "\($0.source) \($0.text)") })
     }
 }

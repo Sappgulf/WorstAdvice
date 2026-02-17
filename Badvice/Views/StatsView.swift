@@ -439,10 +439,15 @@ struct QuotesTabView: View {
                                                 .fill(Theme.accent(for: settings.theme).opacity(0.12))
                                         )
 
-                                    Text("Source: \(quote.source)")
+                                    Text("•")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(Theme.secondaryText(for: settings.theme).opacity(0.7))
+
+                                    Text(quote.source)
                                         .font(.caption2.weight(.medium))
                                         .foregroundStyle(Theme.secondaryText(for: settings.theme))
                                         .lineLimit(1)
+                                        .truncationMode(.tail)
                                 }
 
                                 HStack(spacing: 10) {
@@ -555,7 +560,7 @@ struct QuotesTabView: View {
                                 .frame(width: 34, height: 34)
                         }
                         .buttonStyle(.bordered)
-                        .tint(.white)
+                        .tint(Theme.accent(for: settings.theme))
 
                         Button {
                             viewModel.toggleVote(.dislike, for: viewModel.dailyQuote)
@@ -565,7 +570,7 @@ struct QuotesTabView: View {
                                 .frame(width: 34, height: 34)
                         }
                         .buttonStyle(.bordered)
-                        .tint(.white)
+                        .tint(Theme.accent(for: settings.theme))
                     }
 
                     Spacer()

@@ -142,6 +142,7 @@ struct SettingsTabView: View {
     @Bindable var quotesViewModel: QuotesViewModel
     
     @State private var sectionsAppeared = false
+    @State private var gearWobble = false
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -161,8 +162,24 @@ struct SettingsTabView: View {
                             .foregroundStyle(Theme.accent(for: viewModel.theme))
                             .shadow(color: Theme.accent(for: viewModel.theme).opacity(0.3), radius: 10)
                             .padding(.bottom, 4)
-                            .rotationEffect(.degrees(sectionsAppeared ? 0 : -180))
-                            .scaleEffect(sectionsAppeared ? 1 : 0.5)
+                            .rotationEffect(
+                                .degrees(
+                                    sectionsAppeared
+                                        ? (isMotionReduced ? 0 : (gearWobble ? 3 : -3))
+                                        : -180
+                                )
+                            )
+                            .scaleEffect(
+                                sectionsAppeared
+                                    ? (isMotionReduced ? 1 : (gearWobble ? 1.03 : 0.97))
+                                    : 0.5
+                            )
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
+                                value: gearWobble
+                            )
                         
                         Text("Personalize the Chaos")
                             .font(.system(.title2, design: .rounded, weight: .bold))
@@ -199,6 +216,7 @@ struct SettingsTabView: View {
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 sectionsAppeared = false
+                gearWobble = false
                 if isMotionReduced {
                     sectionsAppeared = true
                 } else {
@@ -206,6 +224,7 @@ struct SettingsTabView: View {
                         withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
                             sectionsAppeared = true
                         }
+                        gearWobble = true
                     }
                 }
                 // Show tab bar when entering settings
@@ -213,6 +232,7 @@ struct SettingsTabView: View {
             }
             .onDisappear {
                 sectionsAppeared = false
+                gearWobble = false
             }
         }
     }
