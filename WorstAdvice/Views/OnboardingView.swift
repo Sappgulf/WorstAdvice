@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct HistoryTabView: View {
+struct OnboardingHistoryView: View {
     @Bindable var viewModel: HistoryViewModel
     @Bindable var settings: SettingsViewModel
     let onUseRecord: (AdviceRecord) -> Void
@@ -216,3 +216,4 @@ struct HistoryTabView: View {
         }
     }
 }
+

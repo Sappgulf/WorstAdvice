@@ -5,10 +5,27 @@ struct FloatingParticlesView: View {
     let reduceMotion: Bool
     var isGenerating: Bool = false
 
+    // Performance optimization: Cache particle count based on screen size
+    private static var cachedScreenArea: CGFloat?
+    private static var cachedParticleCount: Int?
+    
     private var count: Int {
-        let screenArea: CGFloat = UIScreen.main.bounds.width * UIScreen.main.bounds.height
-        let raw: Int = Int(screenArea / 25_000)
-        return max(8, min(20, raw))
+        let screenArea = UIScreen.main.bounds.width * UIScreen.main.bounds.height
+        
+        // Use cached value if screen size hasn't changed
+        if let cached = Self.cachedScreenArea, cached == screenArea,
+           let cachedCount = Self.cachedParticleCount {
+            return cachedCount
+        }
+        
+        let raw = Int(screenArea / 25_000)
+        let result = max(8, min(20, raw))
+        
+        // Cache for future use
+        Self.cachedScreenArea = screenArea
+        Self.cachedParticleCount = result
+        
+        return result
     }
 
     private var particleOpacity: Double {
@@ -30,7 +47,10 @@ struct FloatingParticlesView: View {
 
     var body: some View {
         let interval: TimeInterval = reduceMotion ? 5 : (1.0 / 30.0)
-        TimelineView(.animation(minimumInterval: interval)) { timeline in
+        // Performance: Reduce refresh rate when not generating for battery savings
+        let activeInterval: TimeInterval = isGenerating ? (1.0 / 60.0) : interval
+        
+        TimelineView(.animation(minimumInterval: activeInterval, paused: reduceMotion && !isGenerating)) { timeline in
             Canvas(rendersAsynchronously: true) { context, size in
                 drawParticles(context: context, size: size, date: timeline.date)
                 if isGenerating {

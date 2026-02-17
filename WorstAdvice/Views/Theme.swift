@@ -225,51 +225,55 @@ enum Theme {
 
 struct ThemeBackgroundView: View {
     let mode: ThemeMode
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
             Theme.backgroundGradient(for: mode)
             
-            if mode != .minimal {
-                DynamicChaosView(theme: mode)
-                    .opacity(0.4)
-                    .blendMode(.screen)
-            }
+            // Performance: Only render complex effects when app is active
+            if scenePhase == .active {
+                if mode != .minimal {
+                    DynamicChaosView(theme: mode)
+                        .opacity(0.4)
+                        .blendMode(.screen)
+                }
 
-            if mode == .badvice || mode == .ember || mode == .evergreen || mode == .midnight {
-                LinearGradient(
-                    colors: [Color.white.opacity(0.08), Color.clear, Color.black.opacity(0.12)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .blendMode(.overlay)
-
-                PaperGrainView()
-                    .blendMode(.multiply)
-                    .opacity(mode == .badvice ? 0.3 : 0.25)
-            }
-            
-            // Neon glow effect for neon theme
-            if mode == .neon {
-                NeonGridView()
-                    .opacity(0.15)
-                    .blendMode(.screen)
-            }
-            
-            // Star field for cosmic theme
-            if mode == .cosmic {
-                StarFieldView()
-                    .opacity(0.6)
-            }
-            
-            // Scanlines for retro theme
-            if mode == .retro {
-                ScanlineView()
-                    .opacity(0.1)
+                if mode == .badvice || mode == .ember || mode == .evergreen || mode == .midnight {
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.08), Color.clear, Color.black.opacity(0.12)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
                     .blendMode(.overlay)
+
+                    PaperGrainView()
+                        .blendMode(.multiply)
+                        .opacity(mode == .badvice ? 0.3 : 0.25)
+                }
+                
+                // Neon glow effect for neon theme
+                if mode == .neon {
+                    NeonGridView()
+                        .opacity(0.15)
+                        .blendMode(.screen)
+                }
+                
+                // Star field for cosmic theme
+                if mode == .cosmic {
+                    StarFieldView()
+                        .opacity(0.6)
+                }
+                
+                // Scanlines for retro theme
+                if mode == .retro {
+                    ScanlineView()
+                        .opacity(0.1)
+                        .blendMode(.overlay)
+                }
             }
             
-            // Cinematic Overlays (Triple-A)
+            // Cinematic Overlays (Triple-A) - Keep always visible for consistency
             CinematicVignetteView()
                 .opacity(mode == .minimal ? 0.3 : 0.6)
                 .allowsHitTesting(false)

@@ -2,18 +2,61 @@ import UIKit
 import CoreHaptics
 
 enum HapticsManager {
+    // Performance: Reuse generators to avoid recreation overhead
+    private static var impactGenerators: [UIImpactFeedbackGenerator.FeedbackStyle: UIImpactFeedbackGenerator] = [:]
+    private static var selectionGenerator: UISelectionFeedbackGenerator?
+    private static var notificationGenerator: UINotificationFeedbackGenerator?
+    
+    private static func getImpactGenerator(style: UIImpactFeedbackGenerator.FeedbackStyle) -> UIImpactFeedbackGenerator {
+        if let existing = impactGenerators[style] {
+            return existing
+        }
+        let generator = UIImpactFeedbackGenerator(style: style)
+        impactGenerators[style] = generator
+        return generator
+    }
+    
     static func play(style: UIImpactFeedbackGenerator.FeedbackStyle, isEnabled: Bool) {
         guard isEnabled else { return }
-        let generator = UIImpactFeedbackGenerator(style: style)
+        let generator = getImpactGenerator(style: style)
         generator.prepare()
         generator.impactOccurred()
     }
 
     static func playSelection(isEnabled: Bool) {
         guard isEnabled else { return }
-        let generator = UISelectionFeedbackGenerator()
-        generator.prepare()
-        generator.selectionChanged()
+        if selectionGenerator == nil {
+            selectionGenerator = UISelectionFeedbackGenerator()
+        }
+        selectionGenerator?.prepare()
+        selectionGenerator?.selectionChanged()
+    }
+    
+    static func playSuccess(isEnabled: Bool) {
+        guard isEnabled else { return }
+        if notificationGenerator == nil {
+            notificationGenerator = UINotificationFeedbackGenerator()
+        }
+        notificationGenerator?.prepare()
+        notificationGenerator?.notificationOccurred(.success)
+    }
+    
+    static func playError(isEnabled: Bool) {
+        guard isEnabled else { return }
+        if notificationGenerator == nil {
+            notificationGenerator = UINotificationFeedbackGenerator()
+        }
+        notificationGenerator?.prepare()
+        notificationGenerator?.notificationOccurred(.error)
+    }
+    
+    static func playWarning(isEnabled: Bool) {
+        guard isEnabled else { return }
+        if notificationGenerator == nil {
+            notificationGenerator = UINotificationFeedbackGenerator()
+        }
+        notificationGenerator?.prepare()
+        notificationGenerator?.notificationOccurred(.warning)
     }
     
     // MARK: - Tone-Specific Haptic Patterns

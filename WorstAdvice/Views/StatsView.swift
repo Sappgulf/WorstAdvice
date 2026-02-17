@@ -5,6 +5,14 @@ struct FavoritesTabView: View {
     @Bindable var settings: SettingsViewModel
 
     @State private var layout: FavoritesLayout = .list
+    @State private var searchTask: Task<Void, Never>?
+    @State private var debouncedSearchText = ""
+    @Environment(\.tabBarVisible) private var tabBarVisible
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    private var isMotionReduced: Bool {
+        settings.reduceMotion || accessibilityReduceMotion
+    }
 
     enum FavoritesLayout: String, CaseIterable, Identifiable {
         case list
@@ -18,7 +26,7 @@ struct FavoritesTabView: View {
             Group {
                 if viewModel.favorites.isEmpty {
                     emptyState
-                } else if viewModel.filteredFavorites.isEmpty {
+                } else if filteredFavorites.isEmpty {
                     noResultsState
                 } else if layout == .list {
                     listView
@@ -28,13 +36,45 @@ struct FavoritesTabView: View {
             }
             .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
             .navigationTitle("Favorites")
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "Search saved advice")
+            .onChange(of: viewModel.searchText) { _, newValue in
+                // Debounce search input for better performance
+                searchTask?.cancel()
+                searchTask = Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run {
+                        debouncedSearchText = newValue
+                    }
+                }
+            }
             .toolbar { toolbarContent }
             .onAppear { 
                 viewModel.reload()
                 // Initial load haptic for satisfying entry
-                HapticsManager.play(style: .soft, isEnabled: true)
+                HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
+                // Show tab bar in list views
+                tabBarVisible.wrappedValue = true
             }
+            .onChange(of: layout) { _, _ in
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            }
+        }
+    }
+    
+    // Performance: Use debounced search text for filtering
+    private var filteredFavorites: [AdviceRecord] {
+        viewModel.favorites.filter { record in
+            let matchesCategory = viewModel.selectedCategory == nil || record.category == viewModel.selectedCategory
+            let matchesSearch: Bool
+            if debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                matchesSearch = true
+            } else {
+                let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
+                matchesSearch = haystack.contains(debouncedSearchText.normalizedForFiltering)
+            }
+            return matchesCategory && matchesSearch
         }
     }
 
@@ -42,7 +82,12 @@ struct FavoritesTabView: View {
 
     private var listView: some View {
         List {
-            let items = viewModel.filteredFavorites
+            Section {
+                favoritesSummaryRow
+            }
+            .listRowBackground(Theme.cardColor(for: settings.theme))
+
+            let items = filteredFavorites
             ForEach(Array(items.enumerated()), id: \.element.id) { index, record in
                 NavigationLink {
                     FavoriteDetailView(record: record, settings: settings)
@@ -76,9 +121,17 @@ struct FavoritesTabView: View {
                 }
                 .listRowBackground(Theme.cardColor(for: settings.theme))
                 .onAppear {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75).delay(Double(index) * 0.05)) {
+                    if isMotionReduced {
                         if itemAppearedCount <= index {
                             itemAppearedCount = index + 1
+                        }
+                    } else {
+                        // Performance: Limit animation delay to first 20 items
+                        let animationDelay = index < 20 ? Double(index) * 0.05 : 0
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75).delay(animationDelay)) {
+                            if itemAppearedCount <= index {
+                                itemAppearedCount = index + 1
+                            }
                         }
                     }
                 }
@@ -103,59 +156,84 @@ struct FavoritesTabView: View {
 
     private var gridView: some View {
         ScrollView {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(viewModel.filteredFavorites, id: \.id) { record in
-                    NavigationLink {
-                        FavoriteDetailView(record: record, settings: settings)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 0) {
-                            // Category chip
-                            Label(record.category.title, systemImage: record.category.icon)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Theme.accent(for: settings.theme))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(Theme.accent(for: settings.theme).opacity(0.12))
-                                )
+            VStack(spacing: 12) {
+                favoritesSummaryRow
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    ForEach(filteredFavorites, id: \.id) { record in
+                        NavigationLink {
+                            FavoriteDetailView(record: record, settings: settings)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 0) {
+                                // Category chip
+                                Label(record.category.title, systemImage: record.category.icon)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(Theme.accent(for: settings.theme))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                                    )
 
-                            Spacer(minLength: 8)
+                                Spacer(minLength: 8)
 
-                            Text(record.adviceLine)
-                                .font(.footnote.weight(.medium))
-                                .lineLimit(5)
-                                .multilineTextAlignment(.leading)
-                                .foregroundStyle(Theme.primaryText(for: settings.theme))
-                                .lineSpacing(2)
+                                Text(record.adviceLine)
+                                    .font(.footnote.weight(.medium))
+                                    .lineLimit(5)
+                                    .multilineTextAlignment(.leading)
+                                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                    .lineSpacing(2)
 
-                            Spacer(minLength: 10)
+                                Spacer(minLength: 10)
 
-                            Text(record.tone.title)
-                                .font(.caption2)
-                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                Text(record.tone.title)
+                                    .font(.caption2)
+                                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                            }
+                            .padding(14)
+                            .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .fill(Theme.cardColor(for: settings.theme))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                            .stroke(Theme.accent(for: settings.theme).opacity(0.08), lineWidth: 1)
+                                    )
+                            )
                         }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(Theme.cardColor(for: settings.theme))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .stroke(Theme.accent(for: settings.theme).opacity(0.08), lineWidth: 1)
-                                )
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button("Unsave") { viewModel.remove(record) }
-                        Button("Delete", role: .destructive) { viewModel.delete(record) }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button("Unsave") { viewModel.remove(record) }
+                            Button("Delete", role: .destructive) { viewModel.delete(record) }
+                        }
                     }
                 }
             }
             .padding(.horizontal, Theme.horizontalPadding)
             .padding(.bottom, 18)
         }
+    }
+
+    private var favoritesSummaryRow: some View {
+        HStack(spacing: 12) {
+            Label("\(filteredFavorites.count) shown", systemImage: "bookmark")
+                .font(.caption.weight(.semibold))
+            Spacer(minLength: 8)
+            Text("of \(viewModel.favorites.count) saved")
+                .font(.caption)
+            if viewModel.selectedCategory != nil {
+                Text("Filtered")
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Theme.accent(for: settings.theme).opacity(0.14))
+                    )
+            }
+        }
+        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+        .padding(.vertical, 4)
     }
 
     @ToolbarContentBuilder
@@ -238,8 +316,10 @@ struct FavoritesTabView: View {
                     .symbolEffect(.bounce, options: .repeating, value: emptyStateAppeared)
             }
             .onAppear {
-                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                    floatingOffset = -8
+                if !isMotionReduced {
+                    withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                        floatingOffset = -8
+                    }
                 }
             }
             
@@ -262,8 +342,13 @@ struct FavoritesTabView: View {
         .padding(.horizontal, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+            if isMotionReduced {
                 emptyStateAppeared = true
+                floatingOffset = 0
+            } else {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                    emptyStateAppeared = true
+                }
             }
         }
         .onDisappear {
@@ -295,8 +380,12 @@ struct FavoritesTabView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            if isMotionReduced {
                 noResultsAppeared = true
+            } else {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    noResultsAppeared = true
+                }
             }
         }
         .onDisappear {
@@ -311,6 +400,12 @@ struct QuotesTabView: View {
 
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
+    @Environment(\.tabBarVisible) private var tabBarVisible
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    private var isMotionReduced: Bool {
+        settings.reduceMotion || accessibilityReduceMotion
+    }
 
     var body: some View {
         NavigationStack {
@@ -351,7 +446,7 @@ struct QuotesTabView: View {
                 // Quote rows
                 if viewModel.filteredQuotes.isEmpty {
                     Section {
-                        QuotesEmptyState(theme: settings.theme)
+                        QuotesEmptyState(theme: settings.theme, reduceMotion: isMotionReduced)
                     }
                 } else {
                     Section {
@@ -394,6 +489,7 @@ struct QuotesTabView: View {
             .scrollContentBackground(.hidden)
             .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
             .navigationTitle("Quotes")
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "Search bad quotes")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -426,6 +522,13 @@ struct QuotesTabView: View {
         }
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
+        }
+        .onAppear {
+            // Show tab bar in list views
+            tabBarVisible.wrappedValue = true
+        }
+        .onChange(of: viewModel.rankingMode) { _, _ in
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
         }
     }
 
@@ -517,6 +620,15 @@ struct QuotesTabView: View {
             }
             .padding(22)
         }
+        .overlay(alignment: .topTrailing) {
+            Text("TODAY")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white.opacity(0.9))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(.white.opacity(0.18), in: Capsule(style: .continuous))
+                .padding(12)
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Bad quote of the day: \(viewModel.dailyQuote.text) by \(viewModel.dailyQuote.source)")
     }
@@ -591,7 +703,11 @@ private struct FavoriteDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                AdviceCardView(record: record, theme: settings.theme)
+                AdviceCardView(
+                    record: record,
+                    theme: settings.theme,
+                    reduceMotion: settings.reduceMotion
+                )
                     .padding(.horizontal, Theme.horizontalPadding)
 
                 HStack(spacing: 10) {
@@ -647,8 +763,315 @@ private struct FavoriteDetailView: View {
 
 // MARK: - Empty State Views
 
+// MARK: - Performance-Optimized Button Styles
+
+struct ScaleButtonStyle: ButtonStyle {
+    let scale: CGFloat
+    
+    init(scale: CGFloat = 0.95) {
+        self.scale = scale
+    }
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1.0)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == ScaleButtonStyle {
+    static var scaled: ScaleButtonStyle {
+        ScaleButtonStyle()
+    }
+    
+    static func scaled(_ scale: CGFloat) -> ScaleButtonStyle {
+        ScaleButtonStyle(scale: scale)
+    }
+}
+
+// MARK: - History Tab
+
+struct HistoryTabView: View {
+    @Bindable var viewModel: HistoryViewModel
+    @Bindable var settings: SettingsViewModel
+    @Environment(\.tabBarVisible) private var tabBarVisible
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    var onUseRecord: (AdviceRecord) -> Void
+    var onDataChanged: () -> Void
+    
+    @State private var showingClearConfirmation = false
+    @State private var itemAppearedCount = 0
+
+    private var isMotionReduced: Bool {
+        settings.reduceMotion || accessibilityReduceMotion
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Group {
+                if viewModel.history.isEmpty {
+                    historyEmptyState
+                } else if viewModel.filteredHistory.isEmpty {
+                    noResultsState
+                } else {
+                    historyList
+                }
+            }
+            .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
+            .navigationTitle("History")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $viewModel.searchText, prompt: "Search history")
+            .toolbar { toolbarContent }
+            .confirmationDialog(
+                "Clear all history?",
+                isPresented: $showingClearConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Clear History", role: .destructive) {
+                    viewModel.clearHistory()
+                    onDataChanged()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete all history items.")
+            }
+            .onAppear {
+                viewModel.reload()
+                HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
+                // Show tab bar in list views
+                tabBarVisible.wrappedValue = true
+            }
+            .onChange(of: viewModel.rankingMode) { _, _ in
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            }
+        }
+    }
+    
+    private var historyList: some View {
+        List {
+            // Stats Section
+            Section {
+                HStack {
+                    Label("\(viewModel.likedCount) liked", systemImage: "hand.thumbsup")
+                    Spacer()
+                    Text("\(viewModel.filteredHistory.count) shown")
+                        .font(.caption2.monospacedDigit())
+                    Spacer()
+                    Label("\(viewModel.dislikedCount) disliked", systemImage: "hand.thumbsdown")
+                }
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                
+                Picker("Sort", selection: $viewModel.rankingMode) {
+                    ForEach(HistoryViewModel.RankingMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("History Stats")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .textCase(nil)
+            }
+            .listRowBackground(Theme.cardColor(for: settings.theme))
+            
+            // History Items
+            Section {
+                let items = viewModel.filteredHistory
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, record in
+                    Button {
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        onUseRecord(record)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(record.adviceLine)
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                .lineLimit(3)
+                                .lineSpacing(2)
+                                .multilineTextAlignment(.leading)
+                            
+                            HStack(spacing: 6) {
+                                Label(record.category.title, systemImage: record.category.icon)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Theme.accent(for: settings.theme))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                                    )
+                                
+                                Text(record.tone.title)
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                
+                                Spacer()
+                                
+                                // Vote indicator
+                                if record.vote == .like {
+                                    Image(systemName: "hand.thumbsup.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.accent(for: settings.theme))
+                                } else if record.vote == .dislike {
+                                    Image(systemName: "hand.thumbsdown.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.red.opacity(0.7))
+                                }
+                                
+                                // Favorite indicator
+                                if record.isFavorite {
+                                    Image(systemName: "bookmark.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 6)
+                    }
+                    .opacity(index < itemAppearedCount ? 1 : 0)
+                    .offset(y: index < itemAppearedCount ? 0 : 20)
+                    .listRowBackground(Theme.cardColor(for: settings.theme))
+                    .onAppear {
+                        if isMotionReduced {
+                            if itemAppearedCount <= index {
+                                itemAppearedCount = index + 1
+                            }
+                        } else {
+                            // Performance: Limit animation delay to first 20 items
+                            let animationDelay = index < 20 ? Double(index) * 0.04 : 0
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.75).delay(animationDelay)) {
+                                if itemAppearedCount <= index {
+                                    itemAppearedCount = index + 1
+                                }
+                            }
+                        }
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button {
+                            viewModel.saveFromHistory(record)
+                            onDataChanged()
+                            HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                        } label: {
+                            Label("Save", systemImage: "bookmark")
+                        }
+                        .tint(.orange)
+                    }
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            onUseRecord(record)
+                        } label: {
+                            Label("Use", systemImage: "arrow.forward")
+                        }
+                        .tint(Theme.accent(for: settings.theme))
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+    }
+    
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                ForEach(AdviceCategory.allCases) { category in
+                    Button {
+                        viewModel.selectedCategory = viewModel.selectedCategory == category ? nil : category
+                    } label: {
+                        Label(
+                            category.title,
+                            systemImage: viewModel.selectedCategory == category ? "checkmark" : category.icon
+                        )
+                    }
+                }
+                
+                Divider()
+                
+                Button(role: .destructive) {
+                    showingClearConfirmation = true
+                } label: {
+                    Label("Clear History", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .foregroundStyle(Theme.accent(for: settings.theme))
+            }
+        }
+    }
+    
+    private var historyEmptyState: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                    .frame(width: 100, height: 100)
+                
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 44, weight: .medium))
+                    .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.7))
+            }
+            
+            VStack(spacing: 8) {
+                Text("No History Yet")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                
+                Text("Generate some advice to see it here.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+    
+    @State private var noResultsAppeared = false
+    
+    private var noResultsState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 40, weight: .medium))
+                .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.6))
+                .opacity(noResultsAppeared ? 1 : 0)
+                .offset(y: noResultsAppeared ? 0 : 10)
+            
+            Text("No matches found")
+                .font(.headline)
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .opacity(noResultsAppeared ? 1 : 0)
+                .offset(y: noResultsAppeared ? 0 : 10)
+            
+            Text("Try a different search or category.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .opacity(noResultsAppeared ? 1 : 0)
+                .offset(y: noResultsAppeared ? 0 : 10)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            if isMotionReduced {
+                noResultsAppeared = true
+            } else {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    noResultsAppeared = true
+                }
+            }
+        }
+        .onDisappear {
+            noResultsAppeared = false
+        }
+    }
+}
+
+// MARK: - Empty States
+
 private struct QuotesEmptyState: View {
     let theme: ThemeMode
+    var reduceMotion: Bool = false
     
     @State private var appeared = false
     @State private var floatOffset: CGFloat = 0
@@ -680,11 +1103,16 @@ private struct QuotesEmptyState: View {
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
         .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            if reduceMotion {
                 appeared = true
-            }
-            withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
-                floatOffset = -6
+                floatOffset = 0
+            } else {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    appeared = true
+                }
+                withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
+                    floatOffset = -6
+                }
             }
         }
         .onDisappear {

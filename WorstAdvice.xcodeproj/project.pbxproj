@@ -7,11 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		15D513E5FD6D9380FB5819D4 /* WorstAdviceWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 0ED4144827DD3BE9366FEAA6 /* WorstAdviceWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		15D513E5FD6D9380FB5819D4 /* WorstAdviceWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0ED4144827DD3BE9366FEAA6 /* WorstAdviceWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		58C6274C9DD58EBDFC00DD56 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89E0183259A65059B4694547 /* Foundation.framework */; };
 		6023FF49F2203A380675F04A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA4E285DDB5972C81A405FFA /* SwiftUI.framework */; };
 		A10000010000000000000001 /* WorstAdviceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* WorstAdviceApp.swift */; };
-		A20000010000000000000029 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000029 /* NotificationManager.swift */; };
 		A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002 /* ContentView.swift */; };
 		A10000010000000000000003 /* AdviceCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* AdviceCardView.swift */; };
 		A10000010000000000000004 /* IntensityIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* IntensityIndicator.swift */; };
@@ -31,6 +30,7 @@
 		A10000010000000000000026 /* OnboardingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000026 /* OnboardingFlow.swift */; };
 		A10000010000000000000027 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000027 /* ConfettiView.swift */; };
 		A20000010000000000000028 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000028 /* SplashView.swift */; };
+		A20000010000000000000029 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000029 /* NotificationManager.swift */; };
 		B07D78E07800DE9F6C60ABAF /* WorstAdviceWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */; };
 		C285D7C82E780E2D147DA18C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2C35747C3F426FECEBC093F /* WidgetKit.framework */; };
 		F67E4DFCBEDF98A26BE99151 /* WorstAdviceQuoteWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */; };
@@ -54,15 +54,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		A2804759C89612E04790A6CF /* Embed App Extensions */ = {
+		A2804759C89612E04790A6CF /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				15D513E5FD6D9380FB5819D4 /* WorstAdviceWidget.appex in Embed App Extensions */,
+				15D513E5FD6D9380FB5819D4 /* WorstAdviceWidget.appex in Embed Foundation Extensions */,
 			);
-			name = "Embed App Extensions";
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -72,8 +72,9 @@
 		2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorstAdviceQuoteWidget.swift; path = WorstAdviceWidget/WorstAdviceQuoteWidget.swift; sourceTree = "<group>"; };
 		483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorstAdviceWidgetBundle.swift; path = WorstAdviceWidget/WorstAdviceWidgetBundle.swift; sourceTree = "<group>"; };
 		89E0183259A65059B4694547 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
-		A20000010000000000000001 /* WorstAdviceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorstAdviceApp.swift; sourceTree = "<group>"; };
+		A10000010000000000000028 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		A10000010000000000000029 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		A20000010000000000000001 /* WorstAdviceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorstAdviceApp.swift; sourceTree = "<group>"; };
 		A20000010000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A20000010000000000000003 /* AdviceCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceCardView.swift; sourceTree = "<group>"; };
 		A20000010000000000000004 /* IntensityIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntensityIndicator.swift; sourceTree = "<group>"; };
@@ -94,7 +95,6 @@
 		A20000010000000000000025 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		A20000010000000000000026 /* OnboardingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlow.swift; sourceTree = "<group>"; };
 		A20000010000000000000027 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
-		A10000010000000000000028 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		AA4E285DDB5972C81A405FFA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = "<group>"; };
 		E2C35747C3F426FECEBC093F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -169,7 +169,7 @@
 			isa = PBXGroup;
 			children = (
 				A20000010000000000000001 /* WorstAdviceApp.swift */,
-					A10000010000000000000029 /* NotificationManager.swift */,
+				A10000010000000000000029 /* NotificationManager.swift */,
 				A70000010000000000000003 /* Models */,
 				A70000010000000000000004 /* Data */,
 				A70000010000000000000005 /* Engine */,
@@ -227,7 +227,7 @@
 				A20000010000000000000025 /* StatsView.swift */,
 				A20000010000000000000026 /* OnboardingFlow.swift */,
 				A20000010000000000000027 /* ConfettiView.swift */,
-					A10000010000000000000028 /* SplashView.swift */,
+				A10000010000000000000028 /* SplashView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -285,7 +285,7 @@
 				A90000010000000000000001 /* Sources */,
 				A60000010000000000000001 /* Frameworks */,
 				AA0000010000000000000001 /* Resources */,
-				A2804759C89612E04790A6CF /* Embed App Extensions */,
+				A2804759C89612E04790A6CF /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
@@ -322,7 +322,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1540;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					A40000010000000000000001 = {
 						CreatedOnToolsVersion = 15.4;
@@ -378,7 +378,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000010000000000000001 /* WorstAdviceApp.swift in Sources */,
-					A20000010000000000000029 /* NotificationManager.swift in Sources */,
+				A20000010000000000000029 /* NotificationManager.swift in Sources */,
 				A10000010000000000000002 /* ContentView.swift in Sources */,
 				A10000010000000000000003 /* AdviceCardView.swift in Sources */,
 				A10000010000000000000004 /* IntensityIndicator.swift in Sources */,
@@ -394,7 +394,7 @@
 				A10000010000000000000025 /* StatsView.swift in Sources */,
 				A10000010000000000000026 /* OnboardingFlow.swift in Sources */,
 				A10000010000000000000027 /* ConfettiView.swift in Sources */,
-					A20000010000000000000028 /* SplashView.swift in Sources */,
+				A20000010000000000000028 /* SplashView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -438,9 +438,10 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FW6FWBCF5U;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = WorstAdviceWidget/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -462,9 +463,10 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FW6FWBCF5U;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = WorstAdviceWidget/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -538,6 +540,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -593,6 +596,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -605,15 +609,17 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = FW6FWBCF5U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Badvice;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -634,15 +640,17 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = FW6FWBCF5U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Badvice;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -664,7 +672,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -683,7 +691,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

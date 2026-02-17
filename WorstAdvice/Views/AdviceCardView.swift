@@ -3,6 +3,9 @@ import SwiftUI
 struct AdviceCardView: View {
     let record: AdviceRecord
     let theme: ThemeMode
+    var reduceMotion: Bool = false
+
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     @State private var shimmerOffset: CGFloat = -1.0
     @State private var lastRecordID: UUID = UUID()
@@ -10,7 +13,10 @@ struct AdviceCardView: View {
     // Triple-A Polish: Tilt & Parallax State
     @State private var rotationX: Double = 0
     @State private var rotationY: Double = 0
-    @State private var isDragging: Bool = false
+
+    private var isMotionReduced: Bool {
+        reduceMotion || accessibilityReduceMotion
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -127,7 +133,7 @@ struct AdviceCardView: View {
                     )
                 )
                 .allowsHitTesting(false)
-                .opacity(shimmerOffset >= 0 && shimmerOffset <= 1.0 ? 1 : 0)
+                .opacity(isMotionReduced ? 0 : (shimmerOffset >= 0 && shimmerOffset <= 1.0 ? 1 : 0))
         }
         .shadow(
             color: Theme.cardShadow(for: theme).color,
@@ -135,11 +141,11 @@ struct AdviceCardView: View {
             y: Theme.cardShadow(for: theme).y
         )
         // Apply 3D rotation based on drag position
-        .rotation3DEffect(.degrees(rotationX), axis: (x: 1, y: 0, z: 0))
-        .rotation3DEffect(.degrees(rotationY), axis: (x: 0, y: 1, z: 0))
+        .rotation3DEffect(.degrees(isMotionReduced ? 0 : rotationX), axis: (x: 1, y: 0, z: 0))
+        .rotation3DEffect(.degrees(isMotionReduced ? 0 : rotationY), axis: (x: 0, y: 1, z: 0))
         .overlay {
             // Dynamic Glint Overlay (Triple-A Polish)
-            if theme != .minimal {
+            if theme != .minimal && !isMotionReduced {
                 GeometryReader { geo in
                     let glintX = (rotationY / 8.0) * (geo.size.width * 0.5)
                     let glintY = (rotationX / -8.0) * (geo.size.height * 0.5)
@@ -158,7 +164,7 @@ struct AdviceCardView: View {
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { value in
-                    isDragging = true
+                    guard !isMotionReduced else { return }
                     let maxRotation: Double = 8
                     let width = UIScreen.main.bounds.width
                     let height = UIScreen.main.bounds.height
@@ -169,7 +175,7 @@ struct AdviceCardView: View {
                     }
                 }
                 .onEnded { _ in
-                    isDragging = false
+                    guard !isMotionReduced else { return }
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
                         rotationX = 0
                         rotationY = 0
@@ -179,6 +185,13 @@ struct AdviceCardView: View {
         .onChange(of: record.id) { _, newID in
             guard newID != lastRecordID else { return }
             lastRecordID = newID
+
+            guard !isMotionReduced else {
+                shimmerOffset = -1.0
+                rotationX = 0
+                rotationY = 0
+                return
+            }
             
             // "Deal" Animation: Triple-A bounce and haptic feel
             shimmerOffset = -0.3
@@ -199,6 +212,9 @@ struct AdviceCardView: View {
         }
         .onAppear {
             lastRecordID = record.id
+            if isMotionReduced {
+                shimmerOffset = -1.0
+            }
         }
         .accessibilityElement(children: .contain)
     }
@@ -213,6 +229,12 @@ struct GenerateTabView: View {
     @State private var showingShareSheet = false
     @State private var showingAdvanced = false
     @State private var generateButtonPulsing = false
+    @Environment(\.tabBarVisible) private var tabBarVisible
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    private var isMotionReduced: Bool {
+        settings.reduceMotion || accessibilityReduceMotion
+    }
 
     var body: some View {
         ScrollView {
@@ -225,19 +247,24 @@ struct GenerateTabView: View {
                 }
                 .foregroundStyle(Theme.headerColor(for: settings.theme))
                 .shadow(color: Theme.headerShadowColor(for: settings.theme), radius: 6, x: 0, y: 0)
-                .hueRotation(.degrees(Double(viewModel.hapticTrigger % 3) * 30))
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: viewModel.hapticTrigger)
+                .hueRotation(.degrees(isMotionReduced ? 0 : Double(viewModel.hapticTrigger % 3) * 30))
+                .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.6), value: viewModel.hapticTrigger)
 
                 selectorRow
+                dailyQuoteBanner
                 scenarioComposer
                 friendRoastComposer
 
                 Group {
                     if let record = viewModel.current {
-                        AdviceCardView(record: record, theme: settings.theme)
-                            .transition(settings.reduceMotion ? .identity : .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
+                        AdviceCardView(
+                            record: record,
+                            theme: settings.theme,
+                            reduceMotion: settings.reduceMotion
+                        )
+                            .transition(isMotionReduced ? .identity : .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
-                            .animation(.spring(response: 0.2, dampingFraction: 0.5), value: viewModel.hapticTrigger)
+                            .animation(isMotionReduced ? nil : .spring(response: 0.2, dampingFraction: 0.5), value: viewModel.hapticTrigger)
                     }
                 }
                 .overlay {
@@ -245,8 +272,8 @@ struct GenerateTabView: View {
                         GeneratingOverlay(theme: settings.theme)
                     }
                 }
-                .animation(settings.reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: viewModel.current?.id)
-                .animation(.easeInOut(duration: 0.2), value: viewModel.isGenerating)
+                .animation(isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: viewModel.current?.id)
+                .animation(isMotionReduced ? nil : .easeInOut(duration: 0.2), value: viewModel.isGenerating)
 
                 votingRow
                 primaryActionButtons
@@ -261,8 +288,24 @@ struct GenerateTabView: View {
             .padding(.top, 16)
             .padding(.bottom, 28)
         }
+        .coordinateSpace(name: "scroll")
+        .trackScrollForTabBar()
+        .refreshable {
+            // Pull to generate new advice
+            await withCheckedContinuation { continuation in
+                viewModel.generate()
+                onDataChanged()
+                HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    continuation.resume()
+                }
+            }
+        }
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
+        }
+        .onAppear {
+            tabBarVisible.wrappedValue = true
         }
     }
 
@@ -499,6 +542,7 @@ struct GenerateTabView: View {
             .buttonStyle(.borderedProminent)
             .tint(Theme.accent(for: settings.theme))
             .foregroundStyle(Theme.buttonText(for: settings.theme))
+            .disabled(viewModel.isGenerating)
             .scaleEffect(generateButtonPulsing ? 1.03 : 1.0)
             .animation(
                 generateButtonPulsing
@@ -520,22 +564,26 @@ struct GenerateTabView: View {
                 Button {
                     viewModel.surpriseMeAndGenerate()
                     onDataChanged()
+                    HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 } label: {
                     Label("Surprise Me", systemImage: "dice")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.bordered)
+                .disabled(viewModel.isGenerating)
 
                 Button {
                     viewModel.generateDailyDrop()
                     onDataChanged()
+                    HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 } label: {
                     Label("Daily Drop", systemImage: "calendar.badge.clock")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.bordered)
+                .disabled(viewModel.isGenerating)
             }
             .tint(Theme.accent(for: settings.theme))
 
@@ -544,16 +592,17 @@ struct GenerateTabView: View {
                 railButton(
                     title: viewModel.isCurrentFavorite ? "Saved" : "Save",
                     systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
-                    isEnabled: hasCurrent
+                    isEnabled: hasCurrent && !viewModel.isGenerating
                 ) {
                     viewModel.toggleFavorite()
                     onDataChanged()
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 }
 
                 railButton(
                     title: "Copy",
                     systemImage: "doc.on.doc",
-                    isEnabled: hasCurrent
+                    isEnabled: hasCurrent && !viewModel.isGenerating
                 ) {
                     UIPasteboard.general.string = viewModel.currentShareText
                     viewModel.trackCopy()
@@ -563,13 +612,14 @@ struct GenerateTabView: View {
                 railButton(
                     title: "Share",
                     systemImage: "square.and.arrow.up",
-                    isEnabled: hasCurrent
+                    isEnabled: hasCurrent && !viewModel.isGenerating
                 ) {
                     guard let payload = viewModel.currentSharePayload else { return }
                     let image = ShareCardRenderer.render(content: payload)
                     shareItems = [image, viewModel.currentShareText]
                     viewModel.trackShare(template: payload.template, ratio: payload.aspectRatio)
                     showingShareSheet = true
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -600,6 +650,7 @@ struct GenerateTabView: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.45)
         .accessibilityLabel(title)
     }
 
@@ -706,6 +757,7 @@ struct GenerateTabView: View {
                 ForEach(viewModel.keywordSuggestions, id: \.self) { suggestion in
                     Button(suggestion) {
                         viewModel.applySuggestion(suggestion)
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     }
                     .buttonStyle(.bordered)
                     .tint(Theme.accent(for: settings.theme))

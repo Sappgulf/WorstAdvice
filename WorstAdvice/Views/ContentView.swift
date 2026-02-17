@@ -3,6 +3,80 @@ import SwiftData
 import SwiftUI
 import CoreMotion
 
+// MARK: - Tab Bar Visibility Environment
+
+private struct TabBarVisibilityKey: EnvironmentKey {
+    static let defaultValue: Binding<Bool> = .constant(true)
+}
+
+extension EnvironmentValues {
+    var tabBarVisible: Binding<Bool> {
+        get { self[TabBarVisibilityKey.self] }
+        set { self[TabBarVisibilityKey.self] = newValue }
+    }
+}
+
+// MARK: - Scroll-Aware Tab Bar Helper
+
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+extension View {
+    func trackScrollForTabBar() -> some View {
+        self.modifier(ScrollTrackingModifier())
+    }
+}
+
+private struct ScrollTrackingModifier: ViewModifier {
+    @Environment(\.tabBarVisible) private var tabBarVisible
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @State private var lastOffset: CGFloat = 0
+    
+    func body(content: Content) -> some View {
+        content
+            .background(
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: ScrollOffsetPreferenceKey.self,
+                        value: proxy.frame(in: .named("scroll")).minY
+                    )
+                }
+            )
+            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                let delta = offset - lastOffset
+                
+                // Scrolling down (delta < 0) -> hide tab bar
+                // Scrolling up (delta > 0) -> show tab bar
+                // Only trigger if scroll delta is significant
+                if abs(delta) > 5 {
+                    let nextVisibility: Bool?
+                    if delta < -10 {
+                        nextVisibility = false
+                    } else if delta > 10 {
+                        nextVisibility = true
+                    } else {
+                        nextVisibility = nil
+                    }
+
+                    if let nextVisibility {
+                        if accessibilityReduceMotion {
+                            tabBarVisible.wrappedValue = nextVisibility
+                        } else {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                tabBarVisible.wrappedValue = nextVisibility
+                            }
+                        }
+                    }
+                    lastOffset = offset
+                }
+            }
+    }
+}
+
 // MARK: - Shake Detector
 class ShakeDetector: ObservableObject {
     private let motionManager = CMMotionManager()
@@ -46,11 +120,13 @@ class ShakeDetector: ObservableObject {
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.requestReview) private var requestReview
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     @State private var selectedTab: AppTab = .generate
     @State private var session: AppSessionViewModel?
     @State private var showConfetti = false
     @State private var showSplash = true
+    @State private var tabBarVisible = true
     @StateObject private var shakeDetector = ShakeDetector()
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
@@ -69,6 +145,7 @@ struct ContentView: View {
                         }
                     }
             } else if let session {
+                let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion
                 ZStack {
                     ThemeBackgroundView(mode: session.settings.theme)
                         .ignoresSafeArea()
@@ -85,57 +162,69 @@ struct ContentView: View {
                             tabView(for: tab, session: session)
                                 .tag(tab)
                                 .toolbar(.hidden, for: .tabBar) // Hide standard bar
+                                .environment(\.tabBarVisible, $tabBarVisible)
                         }
                     }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    // Performance: Disable animation if reduce motion is enabled
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
                     
-                    // Custom Floating Glassmorphic Tab Bar (Triple-A Polish)
+                    // Custom Floating Glassmorphic Tab Bar (Compact & Polished)
                     VStack {
                         Spacer()
                         HStack(spacing: 0) {
                             ForEach(session.settings.tabOrder) { tab in
                                 Button {
                                     if selectedTab != tab {
-                                        HapticsManager.playSelection(isEnabled: true)
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
+                                        if reduceMotion {
                                             selectedTab = tab
+                                        } else {
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                selectedTab = tab
+                                            }
                                         }
                                     }
                                 } label: {
-                                    VStack(spacing: 4) {
+                                    VStack(spacing: 3) {
                                         Image(systemName: tab.systemImage)
-                                            .font(.system(size: 22, weight: selectedTab == tab ? .bold : .medium))
+                                            .font(.system(size: 20, weight: selectedTab == tab ? .semibold : .medium))
                                             .symbolVariant(selectedTab == tab ? .fill : .none)
                                         
                                         Text(tab.title)
-                                            .font(.system(size: 10, weight: selectedTab == tab ? .bold : .medium))
+                                            .font(.system(size: 9, weight: selectedTab == tab ? .semibold : .regular))
                                     }
-                                    .foregroundStyle(selectedTab == tab ? Theme.accent(for: session.settings.theme) : Theme.secondaryText(for: session.settings.theme).opacity(0.8))
+                                    .foregroundStyle(selectedTab == tab ? Theme.accent(for: session.settings.theme) : Theme.secondaryText(for: session.settings.theme).opacity(0.7))
                                     .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
+                                    .padding(.vertical, 8)
                                 }
+                                .accessibilityLabel(tab.title)
+                                .accessibilityValue(selectedTab == tab ? "Selected" : "Not selected")
                             }
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.bottom, 24) // Dynamic home indicator spacing
+                        .padding(.horizontal, 6)
+                        .padding(.bottom, 20) // Compact spacing
                         .background {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
                                     .fill(.ultraThinMaterial)
-                                    .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 10)
+                                    .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)
                                 
-                                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
                                     .stroke(
                                         LinearGradient(
-                                            colors: [.white.opacity(0.35), .white.opacity(0.1), .white.opacity(0.2)],
+                                            colors: [.white.opacity(0.3), .white.opacity(0.08), .white.opacity(0.15)],
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         ),
-                                        lineWidth: 1
+                                        lineWidth: 0.5
                                     )
                             }
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 12)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                        .offset(y: tabBarVisible ? 0 : 120)
+                        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: tabBarVisible)
                     }
                     .ignoresSafeArea(.keyboard)
 
@@ -223,11 +312,13 @@ struct ContentView: View {
             HistoryTabView(
                 viewModel: session.history,
                 settings: session.settings,
-                onUseRecord: { record in
+                onUseRecord: { (record: AdviceRecord) in
                     session.generate.current = record
                     selectedTab = .generate
                 },
-                onDataChanged: { session.refreshLists() }
+                onDataChanged: { () -> Void in
+                    session.refreshLists()
+                }
             )
         case .settings:
             SettingsTabView(

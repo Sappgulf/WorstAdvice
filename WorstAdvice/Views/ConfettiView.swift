@@ -2,20 +2,23 @@ import SwiftUI
 
 struct ConfettiView: View {
     @Binding var isActive: Bool
+    @Environment(\.scenePhase) private var scenePhase
 
     private let count = 72
+    
+    // Performance: Cache colors to avoid recreation
+    private let confettiColors: [Color] = [
+        Color(hex: "E85D3A"), Color(hex: "F5A623"),
+        Color(hex: "4CAF50"), Color(hex: "3B9EE8"),
+        Color(hex: "9C5FC2"), Color(hex: "F06292"),
+        Color(hex: "FFD740"), Color(hex: "26C6DA")
+    ]
 
     var body: some View {
-        if isActive {
-            TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+        if isActive && scenePhase == .active {
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: false)) { timeline in
                 Canvas(rendersAsynchronously: true) { context, size in
                     let t = timeline.date.timeIntervalSinceReferenceDate
-                    let confettiColors: [Color] = [
-                        Color(hex: "E85D3A"), Color(hex: "F5A623"),
-                        Color(hex: "4CAF50"), Color(hex: "3B9EE8"),
-                        Color(hex: "9C5FC2"), Color(hex: "F06292"),
-                        Color(hex: "FFD740"), Color(hex: "26C6DA")
-                    ]
 
                     for i in 0..<count {
                         let seed = Double(i + 1)
@@ -59,11 +62,15 @@ struct ConfettiView: View {
                     }
                 }
             }
+            .drawingGroup() // Metal acceleration
             .allowsHitTesting(false)
             .ignoresSafeArea()
+            .transition(.opacity.animation(.easeOut(duration: 0.3)))
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
-                    isActive = false
+                    withAnimation(.easeOut(duration: 0.4)) {
+                        isActive = false
+                    }
                 }
             }
         }

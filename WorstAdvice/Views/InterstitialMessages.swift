@@ -140,6 +140,14 @@ struct SettingsTabView: View {
     @Bindable var viewModel: SettingsViewModel
     @Bindable var generateViewModel: GenerateViewModel
     @Bindable var quotesViewModel: QuotesViewModel
+    
+    @State private var sectionsAppeared = false
+    @Environment(\.tabBarVisible) private var tabBarVisible
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    private var isMotionReduced: Bool {
+        viewModel.reduceMotion || accessibilityReduceMotion
+    }
 
     var body: some View {
         NavigationStack {
@@ -152,27 +160,53 @@ struct SettingsTabView: View {
                             .foregroundStyle(Theme.accent(for: viewModel.theme))
                             .shadow(color: Theme.accent(for: viewModel.theme).opacity(0.3), radius: 10)
                             .padding(.bottom, 4)
+                            .rotationEffect(.degrees(sectionsAppeared ? 0 : -180))
+                            .scaleEffect(sectionsAppeared ? 1 : 0.5)
                         
                         Text("Personalize the Chaos")
                             .font(.system(.title2, design: .rounded, weight: .bold))
                             .foregroundStyle(Theme.primaryText(for: viewModel.theme))
+                            .opacity(sectionsAppeared ? 1 : 0)
                     }
                     .padding(.top, 20)
 
                     VStack(spacing: 20) {
                         themeSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 20)
                         experienceSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 20)
                         sharingSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 20)
                         dataSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 20)
                         aboutSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 20)
                     }
                     .padding(.horizontal, 16)
                 }
                 .padding(.bottom, 120) // Tab bar clearance
             }
+            .coordinateSpace(name: "scroll")
+            .trackScrollForTabBar()
             .background(ThemeBackgroundView(mode: viewModel.theme).ignoresSafeArea())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if isMotionReduced {
+                    sectionsAppeared = true
+                } else {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
+                        sectionsAppeared = true
+                    }
+                }
+                // Show tab bar when entering settings
+                tabBarVisible.wrappedValue = true
+            }
         }
     }
 
@@ -183,8 +217,13 @@ struct SettingsTabView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                 ForEach(ThemeMode.allCases) { mode in
                     Button {
-                        withAnimation(.easeInOut(duration: 0.35)) {
+                        HapticsManager.playSelection(isEnabled: viewModel.hapticsEnabled)
+                        if isMotionReduced {
                             viewModel.theme = mode
+                        } else {
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                viewModel.theme = mode
+                            }
                         }
                     } label: {
                         VStack(spacing: 6) {

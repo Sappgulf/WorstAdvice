@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "self:">
+   </FileRef>
+   <FileRef
+      location = "group:AchievementsView.swift">
+   </FileRef>
+   <FileRef
+      location = "group:QuickActionsManager.swift">
+   </FileRef>
+   <FileRef
+      location = "group:AdviceExporter.swift">
+   </FileRef>
+   <FileRef
+      location = "group:LiveActivityManager.swift">
+   </FileRef>
+   <FileRef
+      location = "group:StatisticsView.swift">
+   </FileRef>
+   <FileRef
+      location = "group:TipJarView.swift">
+   </FileRef>
+   <FileRef
+      location = "group:NEW_FEATURES_SUMMARY.md">
+   </FileRef>
+   <FileRef
+      location = "group:PreviewHelper.swift">
+   </FileRef>
+   <FileRef
+      location = "group:MLAdviceGenerator.swift">
+   </FileRef>
+   <FileRef
+      location = "group:iOS18Controls.swift">
+   </FileRef>
+   <FileRef
+      location = "group:BadviceAppIntents.swift">
+   </FileRef>
+   <FileRef
+      location = "group:iOS18_ML_FEATURES.md">
+   </FileRef>
+   <FileRef
+      location = "group:MASTER_SUMMARY.md">
+   </FileRef>
+   <FileRef
+      location = "group:HandoffManager.swift">
+   </FileRef>
+   <FileRef
+      location = "group:FocusModeManager.swift">
+   </FileRef>
+   <FileRef
+      location = "group:AppleWatchSupport.swift">
+   </FileRef>
+   <FileRef
+      location = "group:DeepLinkManager.swift">
+   </FileRef>
+   <FileRef
+      location = "group:SESSION_4_FEATURES.md">
+   </FileRef>
+   <FileRef
+      location = "group:VisionOSSupport.swift">
+   </FileRef>
+   <FileRef
+      location = "group:MultiPlatformSupport.swift">
+   </FileRef>
+   <FileRef
+      location = "group:AdvancedMLFeatures.swift">
+   </FileRef>
+   <FileRef
+      location = "group:PerformanceOptimizations.swift">
+   </FileRef>
+   <FileRef
+      location = "group:FINAL_SUMMARY.md">
+   </FileRef>
+</Workspace>
