@@ -29,6 +29,7 @@
 		A10000010000000000000025 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000025 /* StatsView.swift */; };
 		A10000010000000000000026 /* OnboardingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000026 /* OnboardingFlow.swift */; };
 		A10000010000000000000027 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000027 /* ConfettiView.swift */; };
+		A10000010000000000000030 /* AdaptiveRanker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000030 /* AdaptiveRanker.swift */; };
 		A20000010000000000000028 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000028 /* SplashView.swift */; };
 		A20000010000000000000029 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000029 /* NotificationManager.swift */; };
 		B07D78E07800DE9F6C60ABAF /* WorstAdviceWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */; };
@@ -95,6 +96,7 @@
 		A20000010000000000000025 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		A20000010000000000000026 /* OnboardingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlow.swift; sourceTree = "<group>"; };
 		A20000010000000000000027 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
+		A20000010000000000000030 /* AdaptiveRanker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveRanker.swift; sourceTree = "<group>"; };
 		AA4E285DDB5972C81A405FFA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = "<group>"; };
 		E2C35747C3F426FECEBC093F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -201,6 +203,7 @@
 			isa = PBXGroup;
 			children = (
 				A20000010000000000000007 /* AdviceEngine.swift */,
+				A20000010000000000000030 /* AdaptiveRanker.swift */,
 			);
 			path = Engine;
 			sourceTree = "<group>";
@@ -394,6 +397,7 @@
 				A10000010000000000000025 /* StatsView.swift in Sources */,
 				A10000010000000000000026 /* OnboardingFlow.swift in Sources */,
 				A10000010000000000000027 /* ConfettiView.swift in Sources */,
+				A10000010000000000000030 /* AdaptiveRanker.swift in Sources */,
 				A20000010000000000000028 /* SplashView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

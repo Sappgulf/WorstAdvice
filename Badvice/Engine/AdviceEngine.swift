@@ -86,6 +86,40 @@ struct AdviceEngine {
         )
     }
 
+    func generateCandidates(
+        category: AdviceCategory,
+        tone: ToneMode,
+        includeRationale: Bool,
+        contentPack: ContentPack = .classic,
+        situation: String? = nil,
+        seed: Int? = nil,
+        now: Date = Date(),
+        count: Int = 6
+    ) -> [GeneratedAdvice] {
+        let total = max(1, count)
+        let baseSeed = seed ?? defaultSeed(from: now)
+        var seen = Set<String>()
+        var generated: [GeneratedAdvice] = []
+
+        for index in 0..<total {
+            let candidate = generate(
+                category: category,
+                tone: tone,
+                includeRationale: includeRationale,
+                contentPack: contentPack,
+                situation: situation,
+                seed: baseSeed + (index * 7919),
+                now: now
+            )
+            let fingerprint = candidate.adviceLine.normalizedForFiltering
+            if seen.insert(fingerprint).inserted {
+                generated.append(candidate)
+            }
+        }
+
+        return generated
+    }
+
     func validateOutput(_ output: GeneratedAdvice, for category: AdviceCategory) -> Bool {
         let forbidden = store.rules(for: category).forbiddenPatterns
         if containsForbidden(output.adviceLine, forbidden: forbidden) {

@@ -179,6 +179,44 @@ enum AdviceVoteState: Int, CaseIterable, Codable, Identifiable, Sendable {
     var id: Int { rawValue }
 }
 
+enum LearningSignalType: String, CaseIterable, Codable, Identifiable, Sendable {
+    case shown
+    case like
+    case dislike
+    case favorite
+    case copy
+    case share
+    case regen
+
+    var id: String { rawValue }
+}
+
+struct LearningWeightProfile: Sendable {
+    let semanticWeight: Double
+    let explicitWeight: Double
+    let implicitWeight: Double
+    let noveltyWeight: Double
+    let explorationWeight: Double
+    let dislikePenaltyWeight: Double
+    let favoriteBonusWeight: Double
+    let copyBonusWeight: Double
+    let shareBonusWeight: Double
+    let regenPenaltyWeight: Double
+
+    static let balanced = LearningWeightProfile(
+        semanticWeight: 0.44,
+        explicitWeight: 0.34,
+        implicitWeight: 0.12,
+        noveltyWeight: 0.10,
+        explorationWeight: 0.08,
+        dislikePenaltyWeight: 1.00,
+        favoriteBonusWeight: 0.65,
+        copyBonusWeight: 0.35,
+        shareBonusWeight: 0.50,
+        regenPenaltyWeight: 0.18
+    )
+}
+
 enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     case generate
     case quotes

@@ -11,6 +11,7 @@ struct WorstAdviceApp: App {
             UserAdviceSuggestion.self,
             UserQuoteSuggestion.self,
             QuoteVoteRecord.self,
+            LearningStatRecord.self,
             AppSettingsEntity.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

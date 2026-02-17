@@ -156,6 +156,53 @@ final class QuoteVoteRecord {
 }
 
 @Model
+final class LearningStatRecord {
+    @Attribute(.unique) var scopeKey: String
+    var shownCount: Double
+    var likeCount: Double
+    var dislikeCount: Double
+    var favoriteCount: Double
+    var copyCount: Double
+    var shareCount: Double
+    var regenCount: Double
+    var updatedAt: Date
+
+    init(
+        scopeKey: String,
+        shownCount: Double = 0,
+        likeCount: Double = 0,
+        dislikeCount: Double = 0,
+        favoriteCount: Double = 0,
+        copyCount: Double = 0,
+        shareCount: Double = 0,
+        regenCount: Double = 0,
+        updatedAt: Date = Date()
+    ) {
+        self.scopeKey = scopeKey
+        self.shownCount = shownCount
+        self.likeCount = likeCount
+        self.dislikeCount = dislikeCount
+        self.favoriteCount = favoriteCount
+        self.copyCount = copyCount
+        self.shareCount = shareCount
+        self.regenCount = regenCount
+        self.updatedAt = updatedAt
+    }
+
+    var snapshot: LearningStatSnapshot {
+        LearningStatSnapshot(
+            shownCount: shownCount,
+            likeCount: likeCount,
+            dislikeCount: dislikeCount,
+            favoriteCount: favoriteCount,
+            copyCount: copyCount,
+            shareCount: shareCount,
+            regenCount: regenCount
+        )
+    }
+}
+
+@Model
 final class AppSettingsEntity {
     @Attribute(.unique) var id: UUID
     var themeRaw: String
@@ -265,10 +312,12 @@ final class AppSettingsEntity {
 @MainActor
 final class AdviceRepository {
     private static let poolFingerprintPrefix = "pool::"
+    private static let maxLearningScopes = 800
 
     let context: ModelContext
     private var cachedSeenCount: Int?
     private var cachedFingerprintSet: Set<String>?
+    private var cachedLearningStatsByKey: [String: LearningStatRecord]?
 
     init(context: ModelContext) {
         self.context = context
@@ -548,6 +597,69 @@ final class AdviceRepository {
         return Dictionary(uniqueKeysWithValues: all.map { ($0.quoteID, $0.vote) })
     }
 
+    func recordLearningSignal(scopeKey: String, type: LearningSignalType, weight: Double = 1.0) {
+        let normalizedKey = scopeKey
+            .normalizedForFiltering
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let delta = max(weight, 0)
+        guard !normalizedKey.isEmpty, delta > 0 else { return }
+
+        ensureLearningCache()
+        let record: LearningStatRecord
+        if let existing = cachedLearningStatsByKey?[normalizedKey] {
+            record = existing
+        } else {
+            record = LearningStatRecord(scopeKey: normalizedKey)
+            context.insert(record)
+            cachedLearningStatsByKey?[normalizedKey] = record
+        }
+
+        switch type {
+        case .shown:
+            record.shownCount += delta
+        case .like:
+            record.likeCount += delta
+        case .dislike:
+            record.dislikeCount += delta
+        case .favorite:
+            record.favoriteCount += delta
+        case .copy:
+            record.copyCount += delta
+        case .share:
+            record.shareCount += delta
+        case .regen:
+            record.regenCount += delta
+        }
+        record.updatedAt = Date()
+
+        pruneLearningStats(maxCount: Self.maxLearningScopes)
+        save()
+    }
+
+    func learningStat(for scopeKey: String) -> LearningStatRecord? {
+        let normalizedKey = scopeKey
+            .normalizedForFiltering
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedKey.isEmpty else { return nil }
+        ensureLearningCache()
+        return cachedLearningStatsByKey?[normalizedKey]
+    }
+
+    func learningSnapshot(for scopeKey: String) -> LearningStatSnapshot {
+        learningStat(for: scopeKey)?.snapshot ?? .empty
+    }
+
+    func learningStats(prefix: String) -> [LearningStatRecord] {
+        let normalizedPrefix = prefix
+            .normalizedForFiltering
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        ensureLearningCache()
+        return (cachedLearningStatsByKey ?? [:])
+            .values
+            .filter { normalizedPrefix.isEmpty || $0.scopeKey.hasPrefix(normalizedPrefix) }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
     func pruneSuggestions(maxCount: Int) {
         guard maxCount > 0 else { return }
         let descriptor = FetchDescriptor<UserAdviceSuggestion>(
@@ -601,6 +713,24 @@ final class AdviceRepository {
         let descriptor = FetchDescriptor<AdviceFingerprint>()
         let all = (try? context.fetch(descriptor)) ?? []
         cachedFingerprintSet = Set(all.map(\.normalizedText))
+    }
+
+    private func ensureLearningCache() {
+        guard cachedLearningStatsByKey == nil else { return }
+        let descriptor = FetchDescriptor<LearningStatRecord>()
+        let all = (try? context.fetch(descriptor)) ?? []
+        cachedLearningStatsByKey = Dictionary(uniqueKeysWithValues: all.map { ($0.scopeKey, $0) })
+    }
+
+    private func pruneLearningStats(maxCount: Int) {
+        guard maxCount > 0 else { return }
+        ensureLearningCache()
+        guard let current = cachedLearningStatsByKey, current.count > maxCount else { return }
+        let ordered = current.values.sorted { $0.updatedAt > $1.updatedAt }
+        for stale in ordered.suffix(from: maxCount) {
+            context.delete(stale)
+            cachedLearningStatsByKey?.removeValue(forKey: stale.scopeKey)
+        }
     }
 
     private func quoteVoteRecord(for quoteID: String) -> QuoteVoteRecord? {
@@ -781,6 +911,94 @@ struct BadQuoteService: Sendable {
         return candidateBank[index]
     }
 
+    func candidateQuotes(
+        communitySuggestions: [UserQuoteSuggestion],
+        store: AdviceStore,
+        moderation: ContentModeration,
+        maxSynthesized: Int = 28
+    ) -> [BadQuote] {
+        let base = quotes.isEmpty ? Self.defaultQuotes : quotes
+        let community = communitySuggestions.map { suggestion in
+            BadQuote(
+                id: "community-\(suggestion.id.uuidString)",
+                text: suggestion.quoteText,
+                source: suggestion.source,
+                category: suggestion.category
+            )
+        }
+        let synthesized = synthesizedQuotes(
+            sourceQuotes: community + base,
+            store: store,
+            moderation: moderation,
+            limit: maxSynthesized
+        )
+        return dedupe(base + community + synthesized)
+    }
+
+    private func synthesizedQuotes(
+        sourceQuotes: [BadQuote],
+        store: AdviceStore,
+        moderation: ContentModeration,
+        limit: Int
+    ) -> [BadQuote] {
+        guard limit > 0, !sourceQuotes.isEmpty else { return [] }
+
+        let templates = [
+            "%@, so make %@ your whole personality.",
+            "If %@ gets messy, call %@ a strategic pivot.",
+            "%@ means %@ is obviously the premium move.",
+            "When %@ backfires, blame %@ and double down."
+        ]
+
+        var built: [BadQuote] = []
+        var seen = Set<String>()
+
+        for (index, quote) in sourceQuotes.enumerated() {
+            guard built.count < limit else { break }
+            let rules = store.rules(for: quote.category, contentPack: .classic)
+            guard !rules.keywords.isEmpty else { continue }
+
+            let keyword = rules.keywords[(index * 5 + quote.text.count) % rules.keywords.count]
+            let stemWords = quote.text
+                .split(separator: " ")
+                .prefix(6)
+                .map(String.init)
+                .joined(separator: " ")
+            guard stemWords.count >= 8 else { continue }
+
+            let template = templates[(quote.text.count + index) % templates.count]
+            let remix = String(format: template, stemWords, keyword)
+            let normalized = remix.normalizedForFiltering
+            guard seen.insert(normalized).inserted else { continue }
+            guard remix.count <= 160 else { continue }
+            guard moderation.isSafe(text: "\(quote.source) \(remix)") else { continue }
+
+            let id = "synth-\(quote.category.rawValue)-\(abs((quote.id + remix).hashValue))"
+            built.append(
+                BadQuote(
+                    id: id,
+                    text: remix,
+                    source: "ML Remix Lab",
+                    category: quote.category
+                )
+            )
+        }
+
+        return built
+    }
+
+    private func dedupe(_ quotes: [BadQuote]) -> [BadQuote] {
+        var seen = Set<String>()
+        var merged: [BadQuote] = []
+        for quote in quotes {
+            let normalized = quote.text.normalizedForFiltering
+            if seen.insert(normalized).inserted {
+                merged.append(quote)
+            }
+        }
+        return merged
+    }
+
     static let defaultQuotes: [BadQuote] = [
         BadQuote(id: "career-1", text: "If nobody understands the plan, call it leadership.", source: "Quarterly Wisdom Deck", category: .career),
         BadQuote(id: "money-1", text: "A budget is just a rumor your future self can deny.", source: "Finance Group Chat", category: .money),
@@ -860,6 +1078,7 @@ final class GenerateViewModel {
     private let badQuoteService: BadQuoteService
     private let moderation: ContentModeration
     private let analyticsTracker: AnalyticsTracking
+    private let adaptiveRanker = AdaptiveRanker()
 
     var selectedCategory: AdviceCategory = .dating
     var selectedTone: ToneMode = .corporateConsultant
@@ -905,14 +1124,24 @@ final class GenerateViewModel {
         generationNotice = nil
         let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
         logger.debug("Generate started: category=\(self.selectedCategory.rawValue) tone=\(self.selectedTone.rawValue) seed=\(baseSeed)")
-        var picked: GeneratedAdvice?
-        var source: String = "engine"
+        if let current {
+            repository.recordLearningSignal(
+                scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
+                type: .regen
+            )
+        }
+
         let situation = preparedSituationText()
         let shouldEnforceGlobalUniqueness = settingsViewModel.strictNoRepeats
         let communityOnlyMode = settingsViewModel.communityOnlyMode
         let selectedPack = settingsViewModel.preferredContentPack
         let suggestionPool = suggestionCandidates(for: selectedCategory, situation: situation)
-        var triedFingerprints = Set<String>()
+        let semanticScorer = SemanticTextScorer.shared
+        let preparedQuery = semanticScorer.preparedQuery(
+            from: [situation, selectedCategory.title, selectedTone.title]
+                .compactMap { $0 }
+                .joined(separator: " ")
+        )
 
         if communityOnlyMode, suggestionPool.isEmpty {
             generationNotice = "Community-only mode is on. Add suggestions in Settings > Suggestion Lab."
@@ -923,49 +1152,28 @@ final class GenerateViewModel {
             return
         }
 
-        for attempt in 0..<(shouldEnforceGlobalUniqueness ? 96 : 12) {
-            let candidate: GeneratedAdvice
-            if let suggested = communityCandidate(
-                from: suggestionPool,
-                attempt: attempt,
-                baseSeed: baseSeed,
-                forceCommunity: communityOnlyMode
-            ) {
-                candidate = suggested
-                source = "community"
-            } else if communityOnlyMode {
-                continue
-            } else {
-                candidate = engine.generate(
-                    category: selectedCategory,
-                    tone: selectedTone,
-                    includeRationale: settingsViewModel.includeRationale,
-                    contentPack: selectedPack,
-                    situation: situation,
-                    seed: baseSeed + (attempt * 7919)
-                )
-                source = "engine"
-            }
-
-            picked = candidate
-            let candidateFingerprint = fingerprint(for: candidate)
-            let candidatePoolKey = poolKey(category: candidate.category, tone: candidate.tone)
-            let alreadySeen = recentAdviceFingerprints.contains(candidateFingerprint)
-                || (recentAdviceFingerprintsByPool[candidatePoolKey] ?? []).contains(candidateFingerprint)
-                || triedFingerprints.contains(candidateFingerprint)
-                || (shouldEnforceGlobalUniqueness && repository.hasSeenAdvice(candidateFingerprint))
-                || (shouldEnforceGlobalUniqueness && repository.hasSeenAdviceInPool(
-                    candidateFingerprint,
-                    category: candidate.category,
-                    tone: candidate.tone
-                ))
-            triedFingerprints.insert(candidateFingerprint)
-            if !alreadySeen {
-                break
-            }
+        var candidatePool: [(candidate: GeneratedAdvice, source: String)] = []
+        if !communityOnlyMode {
+            let engineCandidates = engine.generateCandidates(
+                category: selectedCategory,
+                tone: selectedTone,
+                includeRationale: settingsViewModel.includeRationale,
+                contentPack: selectedPack,
+                situation: situation,
+                seed: baseSeed,
+                count: shouldEnforceGlobalUniqueness ? 9 : 6
+            )
+            candidatePool.append(contentsOf: engineCandidates.map { ($0, "engine") })
         }
 
-        guard var output = picked else {
+        let communityCandidates = communityCandidates(
+            from: suggestionPool,
+            baseSeed: baseSeed,
+            maxCount: shouldEnforceGlobalUniqueness ? 8 : 5
+        )
+        candidatePool.append(contentsOf: communityCandidates.map { ($0, "community") })
+
+        guard !candidatePool.isEmpty else {
             generationNotice = "Community suggestions were filtered by safety checks."
             analyticsTracker.track("generate_blocked", properties: [
                 "reason": "community_candidates_filtered",
@@ -973,6 +1181,65 @@ final class GenerateViewModel {
             ])
             return
         }
+
+        let ranked = candidatePool.enumerated().map { index, item -> (candidate: GeneratedAdvice, source: String, score: Double) in
+            let fingerprint = fingerprint(for: item.candidate)
+            let candidatePoolKey = poolKey(category: item.candidate.category, tone: item.candidate.tone)
+            let seenRecently = recentAdviceFingerprints.contains(fingerprint)
+                || (recentAdviceFingerprintsByPool[candidatePoolKey] ?? []).contains(fingerprint)
+            let seenHistorically = repository.hasSeenAdvice(fingerprint)
+                || repository.hasSeenAdviceInPool(
+                    fingerprint,
+                    category: item.candidate.category,
+                    tone: item.candidate.tone
+                )
+            let noveltyPenalty = (seenRecently || (shouldEnforceGlobalUniqueness && seenHistorically)) ? 1.0 : 0.0
+            let semanticRelevance = preparedQuery.map {
+                semanticScorer.similarity(item.candidate.adviceLine, to: $0)
+            } ?? 0.5
+            let learning = repository.learningSnapshot(
+                for: adviceScopeKey(category: item.candidate.category, tone: item.candidate.tone)
+            )
+            let score = adaptiveRanker.adviceScore(
+                semanticRelevance: semanticRelevance,
+                stats: learning,
+                noveltyPenalty: noveltyPenalty,
+                seed: baseSeed,
+                candidateIndex: index
+            )
+            return (item.candidate, item.source, score)
+        }
+        .sorted { lhs, rhs in
+            if lhs.score == rhs.score {
+                return lhs.candidate.adviceLine.localizedCaseInsensitiveCompare(rhs.candidate.adviceLine) == .orderedAscending
+            }
+            return lhs.score > rhs.score
+        }
+
+        var chosen: (candidate: GeneratedAdvice, source: String)?
+        for rankedCandidate in ranked {
+            let candidateFingerprint = fingerprint(for: rankedCandidate.candidate)
+            let candidatePoolKey = poolKey(category: rankedCandidate.candidate.category, tone: rankedCandidate.candidate.tone)
+            let alreadySeen = recentAdviceFingerprints.contains(candidateFingerprint)
+                || (recentAdviceFingerprintsByPool[candidatePoolKey] ?? []).contains(candidateFingerprint)
+                || (shouldEnforceGlobalUniqueness && repository.hasSeenAdvice(candidateFingerprint))
+                || (shouldEnforceGlobalUniqueness && repository.hasSeenAdviceInPool(
+                    candidateFingerprint,
+                    category: rankedCandidate.candidate.category,
+                    tone: rankedCandidate.candidate.tone
+                ))
+            if !alreadySeen || !shouldEnforceGlobalUniqueness {
+                chosen = (rankedCandidate.candidate, rankedCandidate.source)
+                break
+            }
+        }
+
+        guard var output = chosen?.candidate ?? ranked.first?.candidate else {
+            generationNotice = "Unable to rank candidates right now."
+            return
+        }
+        let source = chosen?.source ?? ranked.first?.source ?? "engine"
+
         if shouldEnforceGlobalUniqueness, repository.hasSeenAdvice(fingerprint(for: output)) {
             output = forceUniqueVariant(from: output)
         }
@@ -981,6 +1248,10 @@ final class GenerateViewModel {
         rememberPoolFingerprint(for: output)
         lastWhyTerrible = "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
         current = repository.insert(output)
+        repository.recordLearningSignal(
+            scopeKey: adviceScopeKey(category: output.category, tone: output.tone),
+            type: .shown
+        )
         leaderboardVersion += 1
         analyticsTracker.track("generate", properties: [
             "category": output.category.rawValue,
@@ -1035,6 +1306,12 @@ final class GenerateViewModel {
         guard let current else { return }
         let newValue = !current.isFavorite
         repository.toggleFavorite(current)
+        if newValue {
+            repository.recordLearningSignal(
+                scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
+                type: .favorite
+            )
+        }
         analyticsTracker.track("toggle_favorite", properties: [
             "is_favorite": newValue ? "true" : "false"
         ])
@@ -1045,6 +1322,20 @@ final class GenerateViewModel {
         guard let current else { return }
         let next: AdviceVoteState = current.vote == vote ? .none : vote
         repository.setVote(current, vote: next)
+        switch next {
+        case .like:
+            repository.recordLearningSignal(
+                scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
+                type: .like
+            )
+        case .dislike:
+            repository.recordLearningSignal(
+                scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
+                type: .dislike
+            )
+        case .none:
+            break
+        }
         leaderboardVersion += 1
         analyticsTracker.track("advice_vote", properties: [
             "vote": "\(next.rawValue)"
@@ -1104,6 +1395,10 @@ final class GenerateViewModel {
     func markFavorite() {
         guard let current else { return }
         repository.setFavorite(current, isFavorite: true)
+        repository.recordLearningSignal(
+            scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
+            type: .favorite
+        )
         analyticsTracker.track("save_from_generate", properties: [:])
         playHaptic(style: .light)
     }
@@ -1243,6 +1538,12 @@ final class GenerateViewModel {
     }
 
     func trackShare(template: ShareCardTemplate, ratio: ShareAspectRatio) {
+        if let current {
+            repository.recordLearningSignal(
+                scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
+                type: .share
+            )
+        }
         analyticsTracker.track("share_card", properties: [
             "template": template.rawValue,
             "ratio": ratio.rawValue,
@@ -1251,6 +1552,12 @@ final class GenerateViewModel {
     }
 
     func trackCopy() {
+        if let current {
+            repository.recordLearningSignal(
+                scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
+                type: .copy
+            )
+        }
         analyticsTracker.track("copy_text", properties: [:])
     }
 
@@ -1394,6 +1701,10 @@ final class GenerateViewModel {
         "\(category.rawValue)|\(tone.rawValue)"
     }
 
+    private func adviceScopeKey(category: AdviceCategory, tone: ToneMode) -> String {
+        "advice|\(category.rawValue)|\(tone.rawValue)"
+    }
+
     private func rotatePrimaryActionTitleIfNeeded() {
         successfulGenerationCount += 1
         guard successfulGenerationCount % 3 == 0 else { return }
@@ -1445,34 +1756,41 @@ final class GenerateViewModel {
         return (prioritized.isEmpty ? ranked : prioritized).map(\.suggestion)
     }
 
-    private func communityCandidate(
+    private func communityCandidates(
         from pool: [UserAdviceSuggestion],
-        attempt: Int,
         baseSeed: Int,
-        forceCommunity: Bool
-    ) -> GeneratedAdvice? {
-        guard !pool.isEmpty else { return nil }
-        // Bias toward custom suggestions on early attempts without replacing core generation.
-        if !forceCommunity, attempt % 4 != 0 {
-            return nil
-        }
-        let index = abs(baseSeed + (attempt * 37)) % pool.count
-        let suggestion = pool[index]
-        guard moderation.isSafe(text: "\(suggestion.topic) \(suggestion.adviceLine)") else { return nil }
+        maxCount: Int
+    ) -> [GeneratedAdvice] {
+        guard !pool.isEmpty, maxCount > 0 else { return [] }
+        var results: [GeneratedAdvice] = []
+        var seen = Set<String>()
 
-        let rationale: String?
-        if settingsViewModel.includeRationale {
-            rationale = "Community bad idea: for \(suggestion.topic), confidence was preferred over caution."
-        } else {
-            rationale = nil
+        for attempt in 0..<(min(maxCount, pool.count)) {
+            let index = abs(baseSeed + (attempt * 37)) % pool.count
+            let suggestion = pool[index]
+            guard moderation.isSafe(text: "\(suggestion.topic) \(suggestion.adviceLine)") else { continue }
+
+            let normalizedAdvice = suggestion.adviceLine.normalizedForFiltering
+            guard seen.insert(normalizedAdvice).inserted else { continue }
+
+            let rationale: String?
+            if settingsViewModel.includeRationale {
+                rationale = "Community bad idea: for \(suggestion.topic), confidence was preferred over caution."
+            } else {
+                rationale = nil
+            }
+
+            results.append(
+                GeneratedAdvice(
+                    category: suggestion.category,
+                    tone: selectedTone,
+                    adviceLine: suggestion.adviceLine,
+                    rationaleLine: rationale
+                )
+            )
         }
 
-        return GeneratedAdvice(
-            category: suggestion.category,
-            tone: selectedTone,
-            adviceLine: suggestion.adviceLine,
-            rationaleLine: rationale
-        )
+        return results
     }
 
     private static let primaryActionTitles = [
@@ -1492,6 +1810,7 @@ final class QuotesViewModel {
     private let moderation: ContentModeration
     private let store: AdviceStore
     private let analyticsTracker: AnalyticsTracking
+    private let adaptiveRanker = AdaptiveRanker()
 
     var searchText: String = "" {
         didSet { scheduleSearchDebounce(searchText) }
@@ -1541,15 +1860,45 @@ final class QuotesViewModel {
             let haystack = quoteSearchIndex[quote.id] ?? ""
             return categoryMatch && haystack.contains(normalizedSearch)
         }
+
         let votes = quoteVoteMap
+        let modeFiltered: [BadQuote]
         switch rankingMode {
         case .recent:
-            return filtered
+            modeFiltered = filtered
         case .topLiked:
-            return filtered.filter { votes[$0.id] == .like }
+            modeFiltered = filtered.filter { votes[$0.id] == .like }
         case .topDisliked:
-            return filtered.filter { votes[$0.id] == .dislike }
+            modeFiltered = filtered.filter { votes[$0.id] == .dislike }
         }
+
+        let scorer = SemanticTextScorer.shared
+        let preparedQuery = normalizedSearch.isEmpty ? nil : scorer.preparedQuery(from: normalizedSearch)
+
+        return modeFiltered
+            .enumerated()
+            .map { index, quote in
+                let stat = repository.learningSnapshot(for: quoteScopeKey(for: quote))
+                let semantic = preparedQuery.map {
+                    scorer.similarity("\(quote.text) \(quote.source)", to: $0)
+                } ?? 0.45
+                let noveltyPenalty = min(stat.shownCount / 24.0, 1.0)
+                let score = adaptiveRanker.quoteScore(
+                    semanticRelevance: semantic,
+                    stats: stat,
+                    noveltyPenalty: noveltyPenalty,
+                    seed: stableSeed(for: "\(quote.id)|\(normalizedSearch)"),
+                    candidateIndex: index
+                )
+                return (quote, score)
+            }
+            .sorted {
+                if $0.1 == $1.1 {
+                    return $0.0.text.localizedCaseInsensitiveCompare($1.0.text) == .orderedAscending
+                }
+                return $0.1 > $1.1
+            }
+            .map(\.0)
     }
 
     var recentQuoteSuggestions: [UserQuoteSuggestion] {
@@ -1580,6 +1929,14 @@ final class QuotesViewModel {
         let currentVote = votesByQuoteID[quote.id] ?? .none
         let nextVote: AdviceVoteState = currentVote == vote ? .none : vote
         repository.setQuoteVote(quoteID: quote.id, vote: nextVote)
+        switch nextVote {
+        case .like:
+            repository.recordLearningSignal(scopeKey: quoteScopeKey(for: quote), type: .like)
+        case .dislike:
+            repository.recordLearningSignal(scopeKey: quoteScopeKey(for: quote), type: .dislike)
+        case .none:
+            break
+        }
         reloadCachedData()
         analyticsTracker.track("quote_vote", properties: [
             "id": quote.id,
@@ -1632,6 +1989,7 @@ final class QuotesViewModel {
     }
 
     func trackCopy(_ quote: BadQuote, isDaily: Bool) {
+        repository.recordLearningSignal(scopeKey: quoteScopeKey(for: quote), type: .copy)
         analyticsTracker.track("quote_copy", properties: [
             "id": quote.id,
             "category": quote.category.rawValue,
@@ -1640,6 +1998,7 @@ final class QuotesViewModel {
     }
 
     func trackShare(_ quote: BadQuote, isDaily: Bool) {
+        repository.recordLearningSignal(scopeKey: quoteScopeKey(for: quote), type: .share)
         analyticsTracker.track("quote_share", properties: [
             "id": quote.id,
             "category": quote.category.rawValue,
@@ -1658,20 +2017,16 @@ final class QuotesViewModel {
     }
 
     private func rebuildQuoteCache() {
-        let base = quoteService.quotes
-        let fromCommunity = quoteSuggestions.map { suggestion in
-            BadQuote(
-                id: "community-\(suggestion.id.uuidString)",
-                text: suggestion.quoteText,
-                source: suggestion.source,
-                category: suggestion.category
-            )
-        }
+        let base = quoteService.candidateQuotes(
+            communitySuggestions: quoteSuggestions,
+            store: store,
+            moderation: moderation
+        )
         var seen = Set<String>()
         var merged: [BadQuote] = []
         var index: [String: String] = [:]
 
-        for quote in base + fromCommunity {
+        for quote in base {
             let normalizedText = quote.text.normalizedForFiltering
             if seen.insert(normalizedText).inserted {
                 merged.append(quote)
@@ -1681,6 +2036,20 @@ final class QuotesViewModel {
 
         cachedAllQuotes = merged
         quoteSearchIndex = index
+    }
+
+    private func quoteScopeKey(for quote: BadQuote) -> String {
+        let sourceBucket = quote.source
+            .normalizedForFiltering
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSource = sourceBucket.isEmpty ? "community submission" : sourceBucket
+        return "quote|\(quote.category.rawValue)|\(normalizedSource)"
+    }
+
+    private func stableSeed(for text: String) -> Int {
+        text.unicodeScalars.reduce(0) { partial, scalar in
+            (partial &* 16777619) ^ Int(scalar.value)
+        }
     }
 
     private func scheduleSearchDebounce(_ value: String) {
