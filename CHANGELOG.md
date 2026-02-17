@@ -3,6 +3,26 @@
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
+
+### Session Log (2026-02-17 CI Follow-up)
+- Planned (devops/docs): isolate CI iOS simulator failures on GitHub Actions and harden workflow against project/scheme naming drift. Baseline verification: YAML parse check (`ruby -e "require 'yaml'; YAML.load_file(...)"`) passed; local `xcodebuild` remains unavailable in container.
+- Implemented (devops/docs):
+  - Reworked `.github/workflows/ios-tests.yml` to auto-resolve existing `.xcodeproj`, detect an available shared scheme, and then resolve/boot an iOS Simulator destination before running tests.
+  - Removed hard-coded `WorstAdvice.xcodeproj`/`WorstAdvice` assumptions that could break CI when repo naming differs from target/scheme names.
+  - Updated `README.md` build/test commands to use the current project/scheme defaults and added a simulator discovery hint.
+  - Verification performed: YAML parse check re-run and whitespace diff check passed.
+
+
+### Session Log (2026-02-17)
+- Planned (frontend/performance): Audit fullscreen layout behavior, add production polish upgrades (favorites collections, timeline filters, advice quick search), and run available local verification checks. Baseline verification: `xcodebuild -list -project Badvice.xcodeproj` could not run in this environment because `xcodebuild` is unavailable.
+- Implemented (frontend/performance):
+  - Enforced fullscreen root layout constraints in `ContentView` so tab content always occupies the full display while backgrounds remain edge-to-edge.
+  - Added searchable quick category/tone chips in Advice generation for faster discovery.
+  - Added Favorites collections (assign/filter persisted in `UserDefaults`) and collection badges in list/grid surfaces.
+  - Added History timeline filtering (`All`, `Today`, `7D`, `30D`) plus cached filtered data pipelines in Favorites/History view models to reduce repeated recomputation during rendering.
+  - Added Settings sound-effects toggle with lightweight system sound feedback on successful generation.
+  - Verification performed: static repo checks via `rg`, and `xcodebuild` attempted but unavailable in container.
+
 ### Added
 - New `Quotes` tab with searchable/filterable bad-quote library.
 - Deterministic `Bad Quote of the Day` service (same quote for everyone each day).

@@ -284,6 +284,7 @@ struct GenerateTabView: View {
     @State private var showingShareSheet = false
     @State private var showingAdvanced = false
     @State private var generateButtonPulsing = false
+    @State private var quickFilterQuery = ""
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -306,6 +307,7 @@ struct GenerateTabView: View {
                 .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.6), value: viewModel.hapticTrigger)
 
                 selectorRow
+                quickFilterRow
                 dailyQuoteBanner
                 scenarioComposer
                 friendRoastComposer
@@ -362,6 +364,57 @@ struct GenerateTabView: View {
         }
         .onAppear {
             tabBarVisible.wrappedValue = true
+        }
+    }
+
+
+
+    private var filteredCategories: [AdviceCategory] {
+        let query = quickFilterQuery.trimmingCharacters(in: .whitespacesAndNewlines).normalizedForFiltering
+        guard !query.isEmpty else { return AdviceCategory.allCases }
+        return AdviceCategory.allCases.filter {
+            $0.title.normalizedForFiltering.contains(query)
+        }
+    }
+
+    private var filteredTones: [ToneMode] {
+        let query = quickFilterQuery.trimmingCharacters(in: .whitespacesAndNewlines).normalizedForFiltering
+        guard !query.isEmpty else { return ToneMode.allCases }
+        return ToneMode.allCases.filter {
+            $0.title.normalizedForFiltering.contains(query)
+        }
+    }
+
+    private var quickFilterRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TextField("Search categories or tones", text: $quickFilterQuery)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.cardColor(for: settings.theme)))
+                .accessibilityLabel("Search categories or tones")
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(filteredCategories.prefix(6), id: \.id) { category in
+                        Button(category.title) {
+                            viewModel.selectedCategory = category
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(viewModel.selectedCategory == category ? Theme.accent(for: settings.theme) : Theme.secondaryText(for: settings.theme))
+                    }
+                    ForEach(filteredTones.prefix(4), id: \.id) { tone in
+                        Button(tone.title) {
+                            viewModel.selectedTone = tone
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(viewModel.selectedTone == tone ? Theme.accent(for: settings.theme) : Theme.secondaryText(for: settings.theme).opacity(0.5))
+                    }
+                }
+            }
         }
     }
 
