@@ -293,6 +293,8 @@ struct SettingsTabView: View {
             VStack(spacing: 12) {
                 Toggle("Haptic Feedback", isOn: $viewModel.hapticsEnabled)
                 Divider().opacity(0.5)
+                Toggle("Sound Effects", isOn: $viewModel.soundEnabled)
+                Divider().opacity(0.5)
                 Toggle("Reduce Motion", isOn: $viewModel.reduceMotion)
                 Divider().opacity(0.5)
                 Toggle("Shake to Generate", isOn: $shakeToGenerateEnabled)
