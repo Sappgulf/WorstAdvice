@@ -3,7 +3,14 @@
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
+### Session Log
+- **2026-02-17 — Planned (devops/ml/testing):** Fix CI simulator resolution regression observed in `iOS Tests / xcodebuild-tests` and expand adaptive ranking polish so ML preference learning is more stable out-of-the-box. Baseline verification: `swift --version` succeeds in container; `xcodebuild -project "Badvice.xcodeproj" -scheme "Badvice" -destination 'platform=iOS Simulator,name=iPhone 16' build` is not runnable here because `xcodebuild` is unavailable.
+- **2026-02-17 — Planned (frontend/state/testing):** Continue polish with a focused settings UX expansion by adding a one-tap reset-to-defaults flow for app preferences. Baseline verification: attempted `xcodebuild -project "Badvice.xcodeproj" -scheme "Badvice" -destination 'platform=iOS Simulator,name=iPhone 16' build` but the environment does not provide `xcodebuild`.
+
+- **2026-02-17 — Implemented (devops/ml/testing):** Fixed CI workflow project/scheme resolution by targeting `Badvice.xcodeproj` + `Badvice` in destination discovery, diagnostics, and test execution steps, preventing simulator lookup from querying a non-existent project path. Expanded `AdaptiveRanker` with confidence-gated explicit/implicit learning plus a dislike guardrail to improve early-session stability and suppress repeatedly disliked scopes. Added adaptive-ranking tests for low-sample confidence behavior and guardrail suppression; updated README feature notes. Verification: `swift --version` succeeded, `xcodebuild -project "Badvice.xcodeproj" -scheme "Badvice" -destination 'platform=iOS Simulator,name=iPhone 16' build` remains blocked here (`xcodebuild` unavailable).
 ### Added
+- **2026-02-17 — Implemented (frontend/state/testing):** Added a Settings reset-to-defaults flow with destructive confirmation, wired to a new `SettingsViewModel.resetToDefaults()` helper that restores all persisted settings and tab order defaults; the UI reset action also restores the `shakeToGenerateEnabled` preference. Added persistence-facing test coverage validating reset behavior across all configurable fields. Verification: `swift --version` (toolchain available), and attempted `xcodebuild -project "Badvice.xcodeproj" -scheme "Badvice" -destination 'platform=iOS Simulator,name=iPhone 16' build` (blocked: `xcodebuild` unavailable in this environment).
+
 - New `Quotes` tab with searchable/filterable bad-quote library.
 - Deterministic `Bad Quote of the Day` service (same quote for everyone each day).
 - Daily quote banner on Generate for quick daily humor.

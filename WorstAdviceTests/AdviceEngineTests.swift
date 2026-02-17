@@ -393,6 +393,39 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(repository.fetchQuoteSuggestions(limit: 20).count, 0)
     }
 
+    func testResetToDefaultsRestoresCustomizedSettings() throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+
+        settings.theme = .neon
+        settings.includeDisclaimerOnShare = false
+        settings.reduceMotion = true
+        settings.hapticsEnabled = false
+        settings.includeRationale = false
+        settings.preferredTemplate = .bold
+        settings.preferredAspect = .story
+        settings.preferredSharePreset = .chaotic
+        settings.preferredContentPack = .officeMeltdown
+        settings.strictNoRepeats = false
+        settings.communityOnlyMode = true
+        settings.tabOrder = [.generate, .history, .quotes, .favorites, .settings]
+
+        settings.resetToDefaults()
+
+        XCTAssertEqual(settings.theme, .badvice)
+        XCTAssertTrue(settings.includeDisclaimerOnShare)
+        XCTAssertFalse(settings.reduceMotion)
+        XCTAssertTrue(settings.hapticsEnabled)
+        XCTAssertTrue(settings.includeRationale)
+        XCTAssertEqual(settings.preferredTemplate, .minimal)
+        XCTAssertEqual(settings.preferredAspect, .square)
+        XCTAssertEqual(settings.preferredSharePreset, .deadpan)
+        XCTAssertEqual(settings.preferredContentPack, .classic)
+        XCTAssertTrue(settings.strictNoRepeats)
+        XCTAssertFalse(settings.communityOnlyMode)
+        XCTAssertEqual(settings.tabOrder, AppTab.defaultOrder)
+    }
+
     func testTabOrderSettingPersistsAndKeepsSettingsLast() throws {
         let repository = try makeRepository()
         let settings = SettingsViewModel(repository: repository)
@@ -537,6 +570,67 @@ final class PersistenceTests: XCTestCase {
 
         XCTAssertLessThan(dislikedScore, neutralScore)
     }
+
+    func testAdaptiveRankerConfidenceGatesLowSampleBoosts() {
+        let ranker = AdaptiveRanker()
+        let sparsePositive = LearningStatSnapshot(
+            shownCount: 1,
+            likeCount: 1,
+            dislikeCount: 0,
+            favoriteCount: 0,
+            copyCount: 0,
+            shareCount: 0,
+            regenCount: 0
+        )
+
+        let sparseScore = ranker.adviceScore(
+            semanticRelevance: 0.6,
+            stats: sparsePositive,
+            noveltyPenalty: 0,
+            seed: 55,
+            candidateIndex: 0
+        )
+        let neutralScore = ranker.adviceScore(
+            semanticRelevance: 0.6,
+            stats: .empty,
+            noveltyPenalty: 0,
+            seed: 55,
+            candidateIndex: 1
+        )
+
+        XCTAssertLessThan(abs(sparseScore - neutralScore), 0.07)
+    }
+
+    func testAdaptiveRankerDislikeGuardrailSuppressesHighNegativeScopes() {
+        let ranker = AdaptiveRanker()
+        let stronglyDisliked = LearningStatSnapshot(
+            shownCount: 8,
+            likeCount: 0,
+            dislikeCount: 5,
+            favoriteCount: 0,
+            copyCount: 5,
+            shareCount: 4,
+            regenCount: 1
+        )
+
+        let guardedScore = ranker.adviceScore(
+            semanticRelevance: 0.75,
+            stats: stronglyDisliked,
+            noveltyPenalty: 0,
+            seed: 72,
+            candidateIndex: 0
+        )
+        let neutralScore = ranker.adviceScore(
+            semanticRelevance: 0.75,
+            stats: .empty,
+            noveltyPenalty: 0,
+            seed: 72,
+            candidateIndex: 1
+        )
+
+        XCTAssertLessThan(guardedScore, neutralScore)
+    }
+
 
     func testImplicitSignalsDoNotOutrankStrongExplicitDislike() {
         let ranker = AdaptiveRanker()

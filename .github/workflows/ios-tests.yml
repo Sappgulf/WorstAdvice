@@ -35,8 +35,8 @@ jobs:
 
           DESTINATION_ID=$(
             xcodebuild -showdestinations \
-              -project "WorstAdvice.xcodeproj" \
-              -scheme "WorstAdvice" \
+              -project "Badvice.xcodeproj" \
+              -scheme "Badvice" \
             | tr -d '\r' \
             | awk '
               /platform:[[:space:]]*iOS Simulator/ && /id:/ && $0 !~ /placeholder/ {
@@ -52,14 +52,22 @@ jobs:
           if [ -z "${DESTINATION_ID:-}" ]; then
             DESTINATION_ID=$(
               xcrun simctl list devices available \
-              | awk -F '[()]' '/iPhone/ { print $2; exit }'
+              | awk -F '[()]' '/Booted/ && /iPhone/ { print $2; exit }'
+            )
+          fi
+
+          if [ -z "${DESTINATION_ID:-}" ]; then
+            DESTINATION_ID=$(
+              xcrun simctl list devices available \
+              | awk -F '[()]' '/iPhone/ { print $2 }' \
+              | tail -n 1
             )
           fi
 
           if [ -z "${DESTINATION_ID:-}" ]; then
             echo "No iOS Simulator destination could be resolved."
             echo "xcodebuild -showdestinations output:"
-            xcodebuild -showdestinations -project "WorstAdvice.xcodeproj" -scheme "WorstAdvice" || true
+            xcodebuild -showdestinations -project "Badvice.xcodeproj" -scheme "Badvice" || true
             echo "xcrun simctl list devices available output:"
             xcrun simctl list devices available || true
             exit 1
@@ -72,8 +80,8 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild test \
-            -project "WorstAdvice.xcodeproj" \
-            -scheme "WorstAdvice" \
+            -project "Badvice.xcodeproj" \
+            -scheme "Badvice" \
             -destination "$TEST_DESTINATION" \
             -resultBundlePath "TestResults.xcresult"
 

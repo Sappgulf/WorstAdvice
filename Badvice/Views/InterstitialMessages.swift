@@ -143,6 +143,7 @@ struct SettingsTabView: View {
     
     @State private var sectionsAppeared = false
     @State private var gearWobble = false
+    @State private var showResetDefaultsConfirmation = false
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -233,6 +234,15 @@ struct SettingsTabView: View {
             .onDisappear {
                 sectionsAppeared = false
                 gearWobble = false
+            }
+            .confirmationDialog("Reset all settings?", isPresented: $showResetDefaultsConfirmation, titleVisibility: .visible) {
+                Button("Reset", role: .destructive) {
+                    viewModel.resetToDefaults()
+                    shakeToGenerateEnabled = true
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This restores theme, generation, sharing, and tab-order preferences to defaults.")
             }
         }
     }
@@ -451,6 +461,18 @@ struct SettingsTabView: View {
                     Text("Reset Order")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Theme.accent(for: viewModel.theme))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+                Button(role: .destructive) {
+                    showResetDefaultsConfirmation = true
+                } label: {
+                    Text("Reset Preferences to Default")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.red)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 8)
                 }
