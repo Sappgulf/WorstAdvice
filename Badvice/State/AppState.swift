@@ -209,6 +209,7 @@ final class AppSettingsEntity {
     var includeDisclaimerOnShare: Bool
     var reduceMotion: Bool
     var hapticsEnabled: Bool
+    var soundEnabledRaw: Bool?
     var includeRationale: Bool
     var preferredTemplateRaw: String
     var preferredAspectRaw: String
@@ -224,6 +225,7 @@ final class AppSettingsEntity {
         includeDisclaimerOnShare: Bool = true,
         reduceMotion: Bool = false,
         hapticsEnabled: Bool = true,
+        soundEnabled: Bool = true,
         includeRationale: Bool = true,
         preferredTemplate: ShareCardTemplate = .minimal,
         preferredAspect: ShareAspectRatio = .square,
@@ -238,6 +240,7 @@ final class AppSettingsEntity {
         self.includeDisclaimerOnShare = includeDisclaimerOnShare
         self.reduceMotion = reduceMotion
         self.hapticsEnabled = hapticsEnabled
+        self.soundEnabledRaw = soundEnabled
         self.includeRationale = includeRationale
         self.preferredTemplateRaw = preferredTemplate.rawValue
         self.preferredAspectRaw = preferredAspect.rawValue
@@ -276,6 +279,11 @@ final class AppSettingsEntity {
     var strictNoRepeats: Bool {
         get { strictNoRepeatsRaw ?? true }
         set { strictNoRepeatsRaw = newValue }
+    }
+
+    var soundEnabled: Bool {
+        get { soundEnabledRaw ?? true }
+        set { soundEnabledRaw = newValue }
     }
 
     var communityOnlyMode: Bool {
@@ -787,6 +795,14 @@ final class SettingsViewModel {
         }
     }
 
+    var soundEnabled: Bool {
+        get { settings.soundEnabled }
+        set {
+            settings.soundEnabled = newValue
+            repository.save()
+        }
+    }
+
     var includeRationale: Bool {
         get { settings.includeRationale }
         set {
@@ -1270,6 +1286,7 @@ final class GenerateViewModel {
             hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
         }
         hapticTrigger += 1
+        SoundFeedback.playGenerate(isEnabled: settingsViewModel.soundEnabled)
     }
 
     func surpriseMeAndGenerate() {
@@ -2065,13 +2082,32 @@ final class QuotesViewModel {
 @MainActor
 @Observable
 final class FavoritesViewModel {
+    enum Collection: String, CaseIterable, Identifiable {
+        case inbox = "Inbox"
+        case hallOfShame = "Hall of Shame"
+        case shareLater = "Share Later"
+
+        var id: String { rawValue }
+    }
+
     private let repository: AdviceRepository
     private let analyticsTracker: AnalyticsTracking
+    private let collectionStorageKey = "favoriteCollectionAssignments"
     var favorites: [AdviceRecord] = []
     var searchText: String = "" {
-        didSet { scheduleSearchDebounce(searchText) }
+        didSet {
+            scheduleSearchDebounce(searchText)
+            recomputeFilteredFavorites()
+        }
     }
-    var selectedCategory: AdviceCategory?
+    var selectedCategory: AdviceCategory? {
+        didSet { recomputeFilteredFavorites() }
+    }
+    var selectedCollection: Collection? {
+        didSet { recomputeFilteredFavorites() }
+    }
+    private var collectionAssignments: [String: String] = [:]
+    private(set) var filteredFavorites: [AdviceRecord] = []
     private var debouncedSearchText = ""
     private var searchDebounceTask: Task<Void, Never>?
 
@@ -2079,11 +2115,15 @@ final class FavoritesViewModel {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
         self.debouncedSearchText = searchText
+        if let stored = UserDefaults.standard.dictionary(forKey: collectionStorageKey) as? [String: String] {
+            collectionAssignments = stored
+        }
         reload()
     }
 
     func reload() {
         favorites = repository.fetchFavorites()
+        recomputeFilteredFavorites()
     }
 
     func remove(_ record: AdviceRecord) {
@@ -2104,11 +2144,31 @@ final class FavoritesViewModel {
         reload()
     }
 
-    var filteredFavorites: [AdviceRecord] {
+    func collection(for record: AdviceRecord) -> Collection? {
+        guard let raw = collectionAssignments[record.id.uuidString] else { return nil }
+        return Collection(rawValue: raw)
+    }
+
+    func assign(_ collection: Collection?, to record: AdviceRecord) {
+        let key = record.id.uuidString
+        if let collection {
+            collectionAssignments[key] = collection.rawValue
+        } else {
+            collectionAssignments.removeValue(forKey: key)
+        }
+        UserDefaults.standard.set(collectionAssignments, forKey: collectionStorageKey)
+        analyticsTracker.track("favorite_collection_update", properties: [
+            "collection": collection?.rawValue ?? "none"
+        ])
+        recomputeFilteredFavorites()
+    }
+
+    private func recomputeFilteredFavorites() {
         let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
-        return favorites.filter { record in
+        filteredFavorites = favorites.filter { record in
             let matchesCategory = selectedCategory == nil || record.category == selectedCategory
+            let matchesCollection = selectedCollection == nil || collection(for: record) == selectedCollection
             let matchesSearch: Bool
             if normalizedSearch.isEmpty {
                 matchesSearch = true
@@ -2116,7 +2176,7 @@ final class FavoritesViewModel {
                 let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
                 matchesSearch = haystack.contains(normalizedSearch)
             }
-            return matchesCategory && matchesSearch
+            return matchesCategory && matchesCollection && matchesSearch
         }
     }
 
@@ -2126,6 +2186,7 @@ final class FavoritesViewModel {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
             self?.debouncedSearchText = value
+            self?.recomputeFilteredFavorites()
         }
     }
 }
@@ -2149,14 +2210,42 @@ final class HistoryViewModel {
         }
     }
 
+    enum TimeFilter: String, CaseIterable, Identifiable {
+        case all
+        case today
+        case week
+        case month
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .all: return "All"
+            case .today: return "Today"
+            case .week: return "7D"
+            case .month: return "30D"
+            }
+        }
+    }
+
     private let repository: AdviceRepository
     private let analyticsTracker: AnalyticsTracking
     var history: [AdviceRecord] = []
     var searchText: String = "" {
         didSet { scheduleSearchDebounce(searchText) }
     }
-    var selectedCategory: AdviceCategory?
-    var rankingMode: RankingMode = .recent
+    var selectedCategory: AdviceCategory? {
+        didSet { recomputeFilteredHistory() }
+    }
+    var rankingMode: RankingMode = .recent {
+        didSet { recomputeFilteredHistory() }
+    }
+    var timeFilter: TimeFilter = .all {
+        didSet { recomputeFilteredHistory() }
+    }
+    private(set) var filteredHistory: [AdviceRecord] = []
+    private(set) var likedCount: Int = 0
+    private(set) var dislikedCount: Int = 0
     private var debouncedSearchText = ""
     private var searchDebounceTask: Task<Void, Never>?
 
@@ -2169,6 +2258,7 @@ final class HistoryViewModel {
 
     func reload() {
         history = repository.fetchHistory(limit: 50)
+        recomputeFilteredHistory()
     }
 
     func saveFromHistory(_ record: AdviceRecord) {
@@ -2183,11 +2273,24 @@ final class HistoryViewModel {
         reload()
     }
 
-    var filteredHistory: [AdviceRecord] {
+    private func recomputeFilteredHistory() {
         let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
+        let now = Date()
+        let calendar = Calendar.current
         let filtered = history.filter { record in
             let matchesCategory = selectedCategory == nil || record.category == selectedCategory
+            let matchesDate: Bool
+            switch timeFilter {
+            case .all:
+                matchesDate = true
+            case .today:
+                matchesDate = calendar.isDateInToday(record.createdAt)
+            case .week:
+                matchesDate = record.createdAt >= calendar.date(byAdding: .day, value: -7, to: now) ?? .distantPast
+            case .month:
+                matchesDate = record.createdAt >= calendar.date(byAdding: .day, value: -30, to: now) ?? .distantPast
+            }
             let matchesSearch: Bool
             if normalizedSearch.isEmpty {
                 matchesSearch = true
@@ -2195,25 +2298,19 @@ final class HistoryViewModel {
                 let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
                 matchesSearch = haystack.contains(normalizedSearch)
             }
-            return matchesCategory && matchesSearch
+            return matchesCategory && matchesDate && matchesSearch
         }
 
         switch rankingMode {
         case .recent:
-            return filtered
+            filteredHistory = filtered
         case .topLiked:
-            return filtered.filter { $0.vote == .like }
+            filteredHistory = filtered.filter { $0.vote == .like }
         case .topDisliked:
-            return filtered.filter { $0.vote == .dislike }
+            filteredHistory = filtered.filter { $0.vote == .dislike }
         }
-    }
-
-    var likedCount: Int {
-        history.filter { $0.vote == .like }.count
-    }
-
-    var dislikedCount: Int {
-        history.filter { $0.vote == .dislike }.count
+        likedCount = filteredHistory.filter { $0.vote == .like }.count
+        dislikedCount = filteredHistory.filter { $0.vote == .dislike }.count
     }
 
     private func scheduleSearchDebounce(_ value: String) {
@@ -2222,6 +2319,7 @@ final class HistoryViewModel {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
             self?.debouncedSearchText = value
+            self?.recomputeFilteredHistory()
         }
     }
 }
