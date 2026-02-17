@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Session Log (2026-02-17 CI Follow-up)
+- Planned (devops/docs): isolate CI iOS simulator failures on GitHub Actions and harden workflow against project/scheme naming drift. Baseline verification: YAML parse check (`ruby -e "require 'yaml'; YAML.load_file(...)"`) passed; local `xcodebuild` remains unavailable in container.
+- Implemented (devops/docs):
+  - Reworked `.github/workflows/ios-tests.yml` to auto-resolve existing `.xcodeproj`, detect an available shared scheme, and then resolve/boot an iOS Simulator destination before running tests.
+  - Removed hard-coded `WorstAdvice.xcodeproj`/`WorstAdvice` assumptions that could break CI when repo naming differs from target/scheme names.
+  - Updated `README.md` build/test commands to use the current project/scheme defaults and added a simulator discovery hint.
+  - Verification performed: YAML parse check re-run and whitespace diff check passed.
+
+
 ### Session Log (2026-02-17)
 - Planned (frontend/performance): Audit fullscreen layout behavior, add production polish upgrades (favorites collections, timeline filters, advice quick search), and run available local verification checks. Baseline verification: `xcodebuild -list -project Badvice.xcodeproj` could not run in this environment because `xcodebuild` is unavailable.
 - Implemented (frontend/performance):
