@@ -77,24 +77,21 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - `WorstAdvice/Views/*.swift`: tab screens, advice card, theming, share-card renderer
 
 ## Build & Run
-1. Open `/Users/austinbeatty/Downloads/untitled folder/WorstAdvice/WorstAdvice.xcodeproj` in Xcode.
+1. Open `Badvice.xcodeproj` in Xcode.
 2. Select the `WorstAdvice` scheme.
 3. Run on simulator (for example iPhone 17).
 
 CLI build:
 ```bash
 xcodebuild build \
-  -project "WorstAdvice.xcodeproj" \
+  -project "Badvice.xcodeproj" \
   -scheme "WorstAdvice" \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
 ## Test
 ```bash
-xcodebuild test \
-  -project "WorstAdvice.xcodeproj" \
-  -scheme "WorstAdvice" \
-  -destination 'platform=iOS Simulator,name=iPhone 17'
+bash scripts/ci_xcodebuild_tests.sh
 ```
 
 ## QA Checklist

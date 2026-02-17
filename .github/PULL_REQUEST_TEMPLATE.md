@@ -9,7 +9,7 @@
 - [ ] Docs/maintenance
 
 ## Validation
-- [ ] `xcodebuild test -project "WorstAdvice.xcodeproj" -scheme "WorstAdvice" -destination 'platform=iOS Simulator,name=iPhone 17'`
+- [ ] `bash scripts/ci_xcodebuild_tests.sh`
 - [ ] Manual simulator smoke check
 
 ## UX Notes
