@@ -20,36 +20,29 @@ struct AdviceCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Category + tone chips row
-            HStack(spacing: 8) {
-                Label(record.category.title, systemImage: record.category.icon)
-                    .font(Theme.chipFont)
-                    .foregroundStyle(Theme.accent(for: theme))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Theme.accent(for: theme).opacity(0.13))
-                    )
+            // Meta row
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 8) {
+                    Label(record.category.title, systemImage: record.category.icon)
+                        .font(Theme.chipFont)
+                        .foregroundStyle(Theme.accent(for: theme))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Theme.accent(for: theme).opacity(0.13))
+                        )
 
-                Text(record.tone.title)
-                    .font(Theme.chipFont)
-                    .foregroundStyle(Theme.secondaryText(for: theme))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(Theme.secondaryText(for: theme).opacity(0.1))
-                    )
+                    Spacer()
 
-                Spacer()
-
-                HStack(spacing: 4) {
-                    Text("Chaos Level")
-                        .font(.system(size: 8, weight: .bold).uppercaseSmallCaps())
-                        .foregroundStyle(Theme.secondaryText(for: theme).opacity(0.6))
                     IntensityIndicator(tone: record.tone, theme: theme)
+                        .accessibilityLabel("Tone intensity")
                 }
+
+                Label(record.tone.title, systemImage: "dial.medium")
+                    .font(.caption.weight(.medium))
+                    .lineLimit(1)
+                    .foregroundStyle(Theme.secondaryText(for: theme))
             }
 
             // Decorative quote mark
@@ -161,17 +154,21 @@ struct AdviceCardView: View {
                 }
             }
         }
-        .gesture(
-            DragGesture(minimumDistance: 0)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 14)
                 .onChanged { value in
                     guard !isMotionReduced else { return }
                     let maxRotation: Double = 8
-                    let width = UIScreen.main.bounds.width
-                    let height = UIScreen.main.bounds.height
-                    
+                    let horizontalWeight = abs(value.translation.width)
+                    let verticalWeight = abs(value.translation.height)
+                    // Keep vertical list scrolling responsive by only reacting to mostly horizontal drags.
+                    guard horizontalWeight >= verticalWeight * 0.8 else { return }
+
                     withAnimation(.interactiveSpring(response: 0.15, dampingFraction: 0.8)) {
-                        rotationY = Double((value.location.x - width/2) / (width/2)) * maxRotation
-                        rotationX = Double((value.location.y - height/2) / (height/2)) * -maxRotation
+                        let nextY = Double(value.translation.width / 18)
+                        let nextX = Double(-value.translation.height / 24)
+                        rotationY = min(max(nextY, -maxRotation), maxRotation)
+                        rotationX = min(max(nextX, -maxRotation), maxRotation)
                     }
                 }
                 .onEnded { _ in
@@ -290,6 +287,7 @@ struct GenerateTabView: View {
         }
         .coordinateSpace(name: "scroll")
         .trackScrollForTabBar()
+        .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
         .refreshable {
             // Pull to generate new advice
             await withCheckedContinuation { continuation in
@@ -698,7 +696,7 @@ struct GenerateTabView: View {
                     .padding(.horizontal, viewModel.currentVote == .dislike ? 12 : 0)
                 }
                 .buttonStyle(.bordered)
-                .tint(viewModel.currentVote == .dislike ? Color(red: 0.78, green: 0.28, blue: 0.22) : Theme.secondaryText(for: settings.theme))
+                .tint(viewModel.currentVote == .dislike ? Theme.accent(for: settings.theme).opacity(0.8) : Theme.secondaryText(for: settings.theme))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)

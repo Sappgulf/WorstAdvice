@@ -491,6 +491,7 @@ struct QuotesTabView: View {
             .navigationTitle("Quotes")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "Search bad quotes")
+            .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -646,15 +647,26 @@ struct QuotesTabView: View {
     }
 
     private func voteButtons(for quote: BadQuote) -> some View {
-        HStack(spacing: 8) {
+        let accent = Theme.accent(for: settings.theme)
+        let neutralFill = accent.opacity(0.14)
+        let activeFill = accent.opacity(0.26)
+        let likeSelected = viewModel.vote(for: quote) == .like
+        let dislikeSelected = viewModel.vote(for: quote) == .dislike
+
+        return HStack(spacing: 8) {
             Button {
                 viewModel.toggleVote(.like, for: quote)
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             } label: {
                 Image(systemName: viewModel.vote(for: quote) == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    .foregroundStyle(accent)
                     .frame(width: 34, height: 34)
+                    .background(
+                        Circle()
+                            .fill(likeSelected ? activeFill : neutralFill)
+                    )
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.plain)
             .accessibilityLabel("Like quote")
 
             Button {
@@ -662,9 +674,14 @@ struct QuotesTabView: View {
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             } label: {
                 Image(systemName: viewModel.vote(for: quote) == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                    .foregroundStyle(accent)
                     .frame(width: 34, height: 34)
+                    .background(
+                        Circle()
+                            .fill(dislikeSelected ? activeFill : neutralFill)
+                    )
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.plain)
             .accessibilityLabel("Dislike quote")
         }
     }
