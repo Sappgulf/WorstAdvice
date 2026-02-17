@@ -4,12 +4,13 @@ struct FloatingParticlesView: View {
     let theme: ThemeMode
     let reduceMotion: Bool
     var isGenerating: Bool = false
+    var budget: RenderBudget = .balanced
 
     // Performance optimization: Cache particle count based on screen size
     private static var cachedScreenArea: CGFloat?
     private static var cachedParticleCount: Int?
     
-    private var count: Int {
+    private var baseCount: Int {
         let screenArea = UIScreen.main.bounds.width * UIScreen.main.bounds.height
         
         // Use cached value if screen size hasn't changed
@@ -28,6 +29,20 @@ struct FloatingParticlesView: View {
         return result
     }
 
+    private var count: Int {
+        let multiplier: Double
+        switch budget {
+        case .full:
+            multiplier = 1.0
+        case .balanced:
+            multiplier = 0.72
+        case .reduced:
+            multiplier = 0.45
+        }
+        let minimum = isGenerating ? 6 : 4
+        return max(minimum, Int(Double(baseCount) * multiplier))
+    }
+
     private var particleOpacity: Double {
         switch theme {
         case .badvice: return 0.25
@@ -43,12 +58,41 @@ struct FloatingParticlesView: View {
         }
     }
     
-    private var generationParticleCount: Int { count * 3 }
+    private var generationParticleCount: Int {
+        switch budget {
+        case .full:
+            return count * 3
+        case .balanced:
+            return count * 2
+        case .reduced:
+            return max(8, count)
+        }
+    }
+
+    private var idleInterval: TimeInterval {
+        switch budget {
+        case .full:
+            return 1.0 / 30.0
+        case .balanced:
+            return 1.0 / 22.0
+        case .reduced:
+            return 1.0 / 12.0
+        }
+    }
+
+    private var generationInterval: TimeInterval {
+        switch budget {
+        case .full:
+            return 1.0 / 60.0
+        case .balanced:
+            return 1.0 / 42.0
+        case .reduced:
+            return 1.0 / 24.0
+        }
+    }
 
     var body: some View {
-        let interval: TimeInterval = reduceMotion ? 5 : (1.0 / 30.0)
-        // Performance: Reduce refresh rate when not generating for battery savings
-        let activeInterval: TimeInterval = isGenerating ? (1.0 / 60.0) : interval
+        let activeInterval: TimeInterval = reduceMotion ? 5 : (isGenerating ? generationInterval : idleInterval)
         
         TimelineView(.animation(minimumInterval: activeInterval, paused: reduceMotion && !isGenerating)) { timeline in
             Canvas(rendersAsynchronously: true) { context, size in

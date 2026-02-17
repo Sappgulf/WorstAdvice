@@ -146,14 +146,16 @@ struct ContentView: View {
                     }
             } else if let session {
                 let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion
+                let renderBudget = budget(for: session)
                 ZStack {
-                    ThemeBackgroundView(mode: session.settings.theme)
+                    ThemeBackgroundView(mode: session.settings.theme, budget: renderBudget)
                         .ignoresSafeArea()
 
                     FloatingParticlesView(
                         theme: session.settings.theme,
-                        reduceMotion: session.settings.reduceMotion,
-                        isGenerating: session.generate.isGenerating
+                        reduceMotion: reduceMotion,
+                        isGenerating: session.generate.isGenerating,
+                        budget: renderBudget
                     )
                     .ignoresSafeArea()
 
@@ -292,6 +294,15 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func budget(for session: AppSessionViewModel) -> RenderBudget {
+        switch selectedTab {
+        case .generate:
+            return session.generate.isGenerating ? .full : .balanced
+        case .quotes, .favorites, .history, .settings:
+            return tabBarVisible ? .balanced : .reduced
         }
     }
 

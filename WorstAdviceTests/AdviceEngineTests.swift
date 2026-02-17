@@ -396,4 +396,72 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(reloaded.tabOrder.last, .settings)
         XCTAssertEqual(reloaded.tabOrder, [.generate, .history, .quotes, .favorites, .settings])
     }
+
+    func testQuotesFilteringAndRankingRemainCorrectAfterDebounce() async throws {
+        let repository = try makeRepository()
+        let likedSuggestion = repository.addQuoteSuggestion(
+            category: .career,
+            source: "Debug Desk",
+            quoteText: "qzalpha delay budget the launch to feel decisive."
+        )
+        let dislikedSuggestion = repository.addQuoteSuggestion(
+            category: .money,
+            source: "Panic Ledger",
+            quoteText: "qzbeta interest rates are just a confidence poll."
+        )
+        repository.setQuoteVote(
+            quoteID: "community-\(likedSuggestion.id.uuidString)",
+            vote: .like
+        )
+        repository.setQuoteVote(
+            quoteID: "community-\(dislikedSuggestion.id.uuidString)",
+            vote: .dislike
+        )
+
+        let viewModel = QuotesViewModel(repository: repository)
+        viewModel.rankingMode = .topLiked
+        viewModel.searchText = "qzalpha"
+
+        // Debounce keeps the old result set until the delay completes.
+        XCTAssertTrue(viewModel.filteredQuotes.count >= 1)
+
+        try await Task.sleep(for: .milliseconds(360))
+        XCTAssertEqual(viewModel.filteredQuotes.count, 1)
+        XCTAssertEqual(viewModel.filteredQuotes.first?.id, "community-\(likedSuggestion.id.uuidString)")
+        XCTAssertEqual(viewModel.vote(for: viewModel.filteredQuotes[0]), .like)
+    }
+
+    func testHistoryDebounceChangesTimingButNotFinalFilterResult() async throws {
+        let repository = try makeRepository()
+
+        _ = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .corporateConsultant,
+                adviceLine: "qzhistory keep every meeting optional but mandatory.",
+                rationaleLine: nil,
+                createdAt: Date(timeIntervalSince1970: 200)
+            )
+        )
+        _ = repository.insert(
+            GeneratedAdvice(
+                category: .social,
+                tone: .influencer,
+                adviceLine: "Post an hour-by-hour updates thread for lunch.",
+                rationaleLine: nil,
+                createdAt: Date(timeIntervalSince1970: 201)
+            )
+        )
+
+        let history = HistoryViewModel(repository: repository)
+        let baselineCount = history.filteredHistory.count
+        XCTAssertEqual(baselineCount, 2)
+
+        history.searchText = "qzhistory"
+        XCTAssertEqual(history.filteredHistory.count, baselineCount)
+
+        try await Task.sleep(for: .milliseconds(360))
+        XCTAssertEqual(history.filteredHistory.count, 1)
+        XCTAssertTrue(history.filteredHistory[0].adviceLine.contains("qzhistory"))
+    }
 }

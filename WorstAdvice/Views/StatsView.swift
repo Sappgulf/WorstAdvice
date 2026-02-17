@@ -5,8 +5,7 @@ struct FavoritesTabView: View {
     @Bindable var settings: SettingsViewModel
 
     @State private var layout: FavoritesLayout = .list
-    @State private var searchTask: Task<Void, Never>?
-    @State private var debouncedSearchText = ""
+    @State private var listContentAppeared = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -26,7 +25,7 @@ struct FavoritesTabView: View {
             Group {
                 if viewModel.favorites.isEmpty {
                     emptyState
-                } else if filteredFavorites.isEmpty {
+                } else if viewModel.filteredFavorites.isEmpty {
                     noResultsState
                 } else if layout == .list {
                     listView
@@ -38,17 +37,6 @@ struct FavoritesTabView: View {
             .navigationTitle("Favorites")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "Search saved advice")
-            .onChange(of: viewModel.searchText) { _, newValue in
-                // Debounce search input for better performance
-                searchTask?.cancel()
-                searchTask = Task {
-                    try? await Task.sleep(for: .milliseconds(300))
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run {
-                        debouncedSearchText = newValue
-                    }
-                }
-            }
             .toolbar { toolbarContent }
             .onAppear { 
                 viewModel.reload()
@@ -56,29 +44,13 @@ struct FavoritesTabView: View {
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 // Show tab bar in list views
                 tabBarVisible.wrappedValue = true
+                animateListContentIfNeeded()
             }
             .onChange(of: layout) { _, _ in
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             }
         }
     }
-    
-    // Performance: Use debounced search text for filtering
-    private var filteredFavorites: [AdviceRecord] {
-        viewModel.favorites.filter { record in
-            let matchesCategory = viewModel.selectedCategory == nil || record.category == viewModel.selectedCategory
-            let matchesSearch: Bool
-            if debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                matchesSearch = true
-            } else {
-                let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
-                matchesSearch = haystack.contains(debouncedSearchText.normalizedForFiltering)
-            }
-            return matchesCategory && matchesSearch
-        }
-    }
-
-    @State private var itemAppearedCount = 0
 
     private var listView: some View {
         List {
@@ -87,8 +59,8 @@ struct FavoritesTabView: View {
             }
             .listRowBackground(Theme.cardColor(for: settings.theme))
 
-            let items = filteredFavorites
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, record in
+            let items = viewModel.filteredFavorites
+            ForEach(items, id: \.id) { record in
                 NavigationLink {
                     FavoriteDetailView(record: record, settings: settings)
                 } label: {
@@ -116,25 +88,8 @@ struct FavoritesTabView: View {
                         }
                     }
                     .padding(.vertical, 6)
-                    .opacity(index < itemAppearedCount ? 1 : 0)
-                    .offset(y: index < itemAppearedCount ? 0 : 20)
                 }
                 .listRowBackground(Theme.cardColor(for: settings.theme))
-                .onAppear {
-                    if isMotionReduced {
-                        if itemAppearedCount <= index {
-                            itemAppearedCount = index + 1
-                        }
-                    } else {
-                        // Performance: Limit animation delay to first 20 items
-                        let animationDelay = index < 20 ? Double(index) * 0.05 : 0
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75).delay(animationDelay)) {
-                            if itemAppearedCount <= index {
-                                itemAppearedCount = index + 1
-                            }
-                        }
-                    }
-                }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         viewModel.delete(record)
@@ -152,6 +107,8 @@ struct FavoritesTabView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .opacity(listContentAppeared ? 1 : 0)
+        .offset(y: listContentAppeared ? 0 : 12)
     }
 
     private var gridView: some View {
@@ -159,7 +116,7 @@ struct FavoritesTabView: View {
             VStack(spacing: 12) {
                 favoritesSummaryRow
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    ForEach(filteredFavorites, id: \.id) { record in
+                    ForEach(viewModel.filteredFavorites, id: \.id) { record in
                         NavigationLink {
                             FavoriteDetailView(record: record, settings: settings)
                         } label: {
@@ -212,11 +169,13 @@ struct FavoritesTabView: View {
             .padding(.horizontal, Theme.horizontalPadding)
             .padding(.bottom, 18)
         }
+        .opacity(listContentAppeared ? 1 : 0)
+        .offset(y: listContentAppeared ? 0 : 12)
     }
 
     private var favoritesSummaryRow: some View {
         HStack(spacing: 12) {
-            Label("\(filteredFavorites.count) shown", systemImage: "bookmark")
+            Label("\(viewModel.filteredFavorites.count) shown", systemImage: "bookmark")
                 .font(.caption.weight(.semibold))
             Spacer(minLength: 8)
             Text("of \(viewModel.favorites.count) saved")
@@ -287,6 +246,17 @@ struct FavoritesTabView: View {
                 }
             } label: {
                 Image(systemName: "line.3.horizontal.decrease.circle")
+            }
+        }
+    }
+
+    private func animateListContentIfNeeded() {
+        guard !listContentAppeared else { return }
+        if isMotionReduced {
+            listContentAppeared = true
+        } else {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                listContentAppeared = true
             }
         }
     }
@@ -469,9 +439,10 @@ struct QuotesTabView: View {
                                                 .fill(Theme.accent(for: settings.theme).opacity(0.12))
                                         )
 
-                                    Text(quote.source)
-                                        .font(.caption)
+                                    Text("Source: \(quote.source)")
+                                        .font(.caption2.weight(.medium))
                                         .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                        .lineLimit(1)
                                 }
 
                                 HStack(spacing: 10) {
@@ -817,7 +788,7 @@ struct HistoryTabView: View {
     var onDataChanged: () -> Void
     
     @State private var showingClearConfirmation = false
-    @State private var itemAppearedCount = 0
+    @State private var historyListAppeared = false
 
     private var isMotionReduced: Bool {
         settings.reduceMotion || accessibilityReduceMotion
@@ -857,6 +828,7 @@ struct HistoryTabView: View {
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 // Show tab bar in list views
                 tabBarVisible.wrappedValue = true
+                animateHistoryListIfNeeded()
             }
             .onChange(of: viewModel.rankingMode) { _, _ in
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
@@ -896,7 +868,7 @@ struct HistoryTabView: View {
             // History Items
             Section {
                 let items = viewModel.filteredHistory
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, record in
+                ForEach(items, id: \.id) { record in
                     Button {
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         onUseRecord(record)
@@ -934,7 +906,7 @@ struct HistoryTabView: View {
                                 } else if record.vote == .dislike {
                                     Image(systemName: "hand.thumbsdown.fill")
                                         .font(.caption)
-                                        .foregroundStyle(.red.opacity(0.7))
+                                        .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.72))
                                 }
                                 
                                 // Favorite indicator
@@ -947,24 +919,7 @@ struct HistoryTabView: View {
                         }
                         .padding(.vertical, 6)
                     }
-                    .opacity(index < itemAppearedCount ? 1 : 0)
-                    .offset(y: index < itemAppearedCount ? 0 : 20)
                     .listRowBackground(Theme.cardColor(for: settings.theme))
-                    .onAppear {
-                        if isMotionReduced {
-                            if itemAppearedCount <= index {
-                                itemAppearedCount = index + 1
-                            }
-                        } else {
-                            // Performance: Limit animation delay to first 20 items
-                            let animationDelay = index < 20 ? Double(index) * 0.04 : 0
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.75).delay(animationDelay)) {
-                                if itemAppearedCount <= index {
-                                    itemAppearedCount = index + 1
-                                }
-                            }
-                        }
-                    }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button {
                             viewModel.saveFromHistory(record)
@@ -988,6 +943,8 @@ struct HistoryTabView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .opacity(historyListAppeared ? 1 : 0)
+        .offset(y: historyListAppeared ? 0 : 12)
     }
     
     @ToolbarContentBuilder
@@ -1080,6 +1037,17 @@ struct HistoryTabView: View {
         }
         .onDisappear {
             noResultsAppeared = false
+        }
+    }
+
+    private func animateHistoryListIfNeeded() {
+        guard !historyListAppeared else { return }
+        if isMotionReduced {
+            historyListAppeared = true
+        } else {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                historyListAppeared = true
+            }
         }
     }
 }

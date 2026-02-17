@@ -1,5 +1,11 @@
 import SwiftUI
 
+enum RenderBudget {
+    case full
+    case balanced
+    case reduced
+}
+
 enum Theme {
     static let cardCornerRadius: CGFloat = 24
     static let cardPadding: CGFloat = 24
@@ -225,21 +231,24 @@ enum Theme {
 
 struct ThemeBackgroundView: View {
     let mode: ThemeMode
+    var budget: RenderBudget = .balanced
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
             Theme.backgroundGradient(for: mode)
-            
-            // Performance: Only render complex effects when app is active
+
             if scenePhase == .active {
-                if mode != .minimal {
+                let allowsDynamic = budget != .reduced
+                let allowsFullEffects = budget == .full
+
+                if allowsDynamic && mode != .minimal {
                     DynamicChaosView(theme: mode)
-                        .opacity(0.4)
+                        .opacity(allowsFullEffects ? 0.4 : 0.26)
                         .blendMode(.screen)
                 }
 
-                if mode == .badvice || mode == .ember || mode == .evergreen || mode == .midnight {
+                if allowsFullEffects && (mode == .badvice || mode == .ember || mode == .evergreen || mode == .midnight) {
                     LinearGradient(
                         colors: [Color.white.opacity(0.08), Color.clear, Color.black.opacity(0.12)],
                         startPoint: .top,
@@ -251,29 +260,25 @@ struct ThemeBackgroundView: View {
                         .blendMode(.multiply)
                         .opacity(mode == .badvice ? 0.3 : 0.25)
                 }
-                
-                // Neon glow effect for neon theme
-                if mode == .neon {
+
+                if allowsFullEffects && mode == .neon {
                     NeonGridView()
                         .opacity(0.15)
                         .blendMode(.screen)
                 }
-                
-                // Star field for cosmic theme
-                if mode == .cosmic {
+
+                if allowsFullEffects && mode == .cosmic {
                     StarFieldView()
                         .opacity(0.6)
                 }
-                
-                // Scanlines for retro theme
-                if mode == .retro {
+
+                if allowsFullEffects && mode == .retro {
                     ScanlineView()
                         .opacity(0.1)
                         .blendMode(.overlay)
                 }
             }
-            
-            // Cinematic Overlays (Triple-A) - Keep always visible for consistency
+
             CinematicVignetteView()
                 .opacity(mode == .minimal ? 0.3 : 0.6)
                 .allowsHitTesting(false)

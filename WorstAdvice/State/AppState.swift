@@ -1493,11 +1493,17 @@ final class QuotesViewModel {
     private let store: AdviceStore
     private let analyticsTracker: AnalyticsTracking
 
-    var searchText: String = ""
+    var searchText: String = "" {
+        didSet { scheduleSearchDebounce(searchText) }
+    }
     var selectedCategory: AdviceCategory?
     var rankingMode: QuoteRankingMode = .recent
     private var quoteSuggestions: [UserQuoteSuggestion] = []
     private var votesByQuoteID: [String: AdviceVoteState] = [:]
+    private var cachedAllQuotes: [BadQuote] = []
+    private var quoteSearchIndex: [String: String] = [:]
+    private var debouncedSearchText = ""
+    private var searchDebounceTask: Task<Void, Never>?
 
     init(
         repository: AdviceRepository,
@@ -1511,6 +1517,7 @@ final class QuotesViewModel {
         self.moderation = moderation
         self.store = store
         self.analyticsTracker = analyticsTracker
+        self.debouncedSearchText = searchText
         reloadCachedData()
     }
 
@@ -1519,35 +1526,20 @@ final class QuotesViewModel {
     }
 
     var allQuotes: [BadQuote] {
-        let base = quoteService.quotes
-        let fromCommunity = quoteSuggestions.map { suggestion in
-            BadQuote(
-                id: "community-\(suggestion.id.uuidString)",
-                text: suggestion.quoteText,
-                source: suggestion.source,
-                category: suggestion.category
-            )
-        }
-        var seen = Set<String>()
-        var merged: [BadQuote] = []
-        for quote in base + fromCommunity {
-            let normalized = quote.text.normalizedForFiltering
-            if seen.insert(normalized).inserted {
-                merged.append(quote)
-            }
-        }
-        return merged
+        cachedAllQuotes
     }
 
     var filteredQuotes: [BadQuote] {
+        let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
+
         let filtered = allQuotes.filter { quote in
             let categoryMatch = selectedCategory == nil || quote.category == selectedCategory
-            let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-            if search.isEmpty {
+            if normalizedSearch.isEmpty {
                 return categoryMatch
             }
-            let haystack = "\(quote.text) \(quote.source) \(quote.category.title)".normalizedForFiltering
-            return categoryMatch && haystack.contains(search.normalizedForFiltering)
+            let haystack = quoteSearchIndex[quote.id] ?? ""
+            return categoryMatch && haystack.contains(normalizedSearch)
         }
         let votes = quoteVoteMap
         switch rankingMode {
@@ -1662,6 +1654,42 @@ final class QuotesViewModel {
     private func reloadCachedData() {
         quoteSuggestions = repository.fetchQuoteSuggestions(limit: 30)
         votesByQuoteID = repository.quoteVoteMap()
+        rebuildQuoteCache()
+    }
+
+    private func rebuildQuoteCache() {
+        let base = quoteService.quotes
+        let fromCommunity = quoteSuggestions.map { suggestion in
+            BadQuote(
+                id: "community-\(suggestion.id.uuidString)",
+                text: suggestion.quoteText,
+                source: suggestion.source,
+                category: suggestion.category
+            )
+        }
+        var seen = Set<String>()
+        var merged: [BadQuote] = []
+        var index: [String: String] = [:]
+
+        for quote in base + fromCommunity {
+            let normalizedText = quote.text.normalizedForFiltering
+            if seen.insert(normalizedText).inserted {
+                merged.append(quote)
+                index[quote.id] = "\(quote.text) \(quote.source) \(quote.category.title)".normalizedForFiltering
+            }
+        }
+
+        cachedAllQuotes = merged
+        quoteSearchIndex = index
+    }
+
+    private func scheduleSearchDebounce(_ value: String) {
+        searchDebounceTask?.cancel()
+        searchDebounceTask = Task { [weak self, value] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            self?.debouncedSearchText = value
+        }
     }
 }
 
@@ -1671,12 +1699,17 @@ final class FavoritesViewModel {
     private let repository: AdviceRepository
     private let analyticsTracker: AnalyticsTracking
     var favorites: [AdviceRecord] = []
-    var searchText: String = ""
+    var searchText: String = "" {
+        didSet { scheduleSearchDebounce(searchText) }
+    }
     var selectedCategory: AdviceCategory?
+    private var debouncedSearchText = ""
+    private var searchDebounceTask: Task<Void, Never>?
 
     init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker()) {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
+        self.debouncedSearchText = searchText
         reload()
     }
 
@@ -1703,16 +1736,27 @@ final class FavoritesViewModel {
     }
 
     var filteredFavorites: [AdviceRecord] {
-        favorites.filter { record in
+        let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
+        return favorites.filter { record in
             let matchesCategory = selectedCategory == nil || record.category == selectedCategory
             let matchesSearch: Bool
-            if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if normalizedSearch.isEmpty {
                 matchesSearch = true
             } else {
                 let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
-                matchesSearch = haystack.contains(searchText.normalizedForFiltering)
+                matchesSearch = haystack.contains(normalizedSearch)
             }
             return matchesCategory && matchesSearch
+        }
+    }
+
+    private func scheduleSearchDebounce(_ value: String) {
+        searchDebounceTask?.cancel()
+        searchDebounceTask = Task { [weak self, value] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            self?.debouncedSearchText = value
         }
     }
 }
@@ -1739,13 +1783,18 @@ final class HistoryViewModel {
     private let repository: AdviceRepository
     private let analyticsTracker: AnalyticsTracking
     var history: [AdviceRecord] = []
-    var searchText: String = ""
+    var searchText: String = "" {
+        didSet { scheduleSearchDebounce(searchText) }
+    }
     var selectedCategory: AdviceCategory?
     var rankingMode: RankingMode = .recent
+    private var debouncedSearchText = ""
+    private var searchDebounceTask: Task<Void, Never>?
 
     init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker()) {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
+        self.debouncedSearchText = searchText
         reload()
     }
 
@@ -1766,14 +1815,16 @@ final class HistoryViewModel {
     }
 
     var filteredHistory: [AdviceRecord] {
+        let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
         let filtered = history.filter { record in
             let matchesCategory = selectedCategory == nil || record.category == selectedCategory
             let matchesSearch: Bool
-            if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if normalizedSearch.isEmpty {
                 matchesSearch = true
             } else {
                 let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
-                matchesSearch = haystack.contains(searchText.normalizedForFiltering)
+                matchesSearch = haystack.contains(normalizedSearch)
             }
             return matchesCategory && matchesSearch
         }
@@ -1794,6 +1845,15 @@ final class HistoryViewModel {
 
     var dislikedCount: Int {
         history.filter { $0.vote == .dislike }.count
+    }
+
+    private func scheduleSearchDebounce(_ value: String) {
+        searchDebounceTask?.cancel()
+        searchDebounceTask = Task { [weak self, value] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            self?.debouncedSearchText = value
+        }
     }
 }
 
