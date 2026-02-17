@@ -29,53 +29,14 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Resolve simulator destination
+      - name: Run canonical iOS test script
+        env:
+          PROJECT_PATH: Badvice.xcodeproj
+          SCHEME_NAME: WorstAdvice
+          IOS_DESTINATION: platform=iOS Simulator,name=iPhone 15,OS=latest
         run: |
           set -euo pipefail
-
-          DESTINATION_ID=$(
-            xcodebuild -showdestinations \
-              -project "WorstAdvice.xcodeproj" \
-              -scheme "WorstAdvice" \
-            | tr -d '\r' \
-            | awk '
-              /platform:[[:space:]]*iOS Simulator/ && /id:/ && $0 !~ /placeholder/ {
-                line = $0
-                sub(/^.*id:[[:space:]]*/, "", line)
-                sub(/[,}].*$/, "", line)
-                print line
-                exit
-              }
-            '
-          )
-
-          if [ -z "${DESTINATION_ID:-}" ]; then
-            DESTINATION_ID=$(
-              xcrun simctl list devices available \
-              | awk -F '[()]' '/iPhone/ { print $2; exit }'
-            )
-          fi
-
-          if [ -z "${DESTINATION_ID:-}" ]; then
-            echo "No iOS Simulator destination could be resolved."
-            echo "xcodebuild -showdestinations output:"
-            xcodebuild -showdestinations -project "WorstAdvice.xcodeproj" -scheme "WorstAdvice" || true
-            echo "xcrun simctl list devices available output:"
-            xcrun simctl list devices available || true
-            exit 1
-          fi
-
-          echo "Using simulator id: $DESTINATION_ID"
-          echo "TEST_DESTINATION=platform=iOS Simulator,id=$DESTINATION_ID" >> "$GITHUB_ENV"
-
-      - name: Run tests
-        run: |
-          set -euo pipefail
-          xcodebuild test \
-            -project "WorstAdvice.xcodeproj" \
-            -scheme "WorstAdvice" \
-            -destination "$TEST_DESTINATION" \
-            -resultBundlePath "TestResults.xcresult"
+          bash scripts/ci_xcodebuild_tests.sh
 
       - name: Upload xcresult
         if: always()
@@ -83,4 +44,12 @@ jobs:
         with:
           name: xcode-test-results
           path: TestResults.xcresult
+          if-no-files-found: ignore
+
+      - name: Upload xcodebuild log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-raw-log
+          path: xcodebuild-test.log
           if-no-files-found: ignore
