@@ -3,6 +3,40 @@
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
+
+### Session Log (2026-02-17) — Deterministic CI xcodebuild command
+- Planned (devops): Diagnose persistent CI `xcodebuild` exit 70 and remove destination ambiguity by introducing a single canonical test command used by both CI and local macOS runs. Baseline verification: inspected top-level tree, workflow command flow, and project artifacts; confirmed `Badvice.xcodeproj` exists and workflow still contained dynamic destination resolution logic.
+- Implemented (devops/docs):
+  - Added `scripts/ci_xcodebuild_tests.sh` as the single source of truth for iOS test invocation (`xcodebuild test`) with explicit destination (`platform=iOS Simulator,name=iPhone 15,OS=latest`), fixed derived data path, package resolution, and `CODE_SIGNING_ALLOWED=NO`.
+  - Added scheme visibility guard in script (`xcodebuild -list`) to fail fast with diagnostics if CI cannot see `WorstAdvice` scheme.
+  - Updated `.github/workflows/ios-tests.yml` to call the canonical script directly and upload both `.xcresult` and raw xcodebuild logs.
+  - Updated README and PR template validation command to use the canonical script for reproducibility.
+  - Verification performed: `bash -n scripts/ci_xcodebuild_tests.sh`, `awk` parser self-check for scheme list guard, `git diff --check`.
+
+### Session Log (2026-02-17)
+- Planned (frontend/performance): Audit fullscreen layout behavior, add production polish upgrades (favorites collections, timeline filters, advice quick search), and run available local verification checks. Baseline verification: `xcodebuild -list -project Badvice.xcodeproj` could not run in this environment because `xcodebuild` is unavailable.
+- Implemented (frontend/performance):
+  - Enforced fullscreen root layout constraints in `ContentView` so tab content always occupies the full display while backgrounds remain edge-to-edge.
+  - Added searchable quick category/tone chips in Advice generation for faster discovery.
+  - Added Favorites collections (assign/filter persisted in `UserDefaults`) and collection badges in list/grid surfaces.
+  - Added History timeline filtering (`All`, `Today`, `7D`, `30D`) plus cached filtered data pipelines in Favorites/History view models to reduce repeated recomputation during rendering.
+  - Added Settings sound-effects toggle with lightweight system sound feedback on successful generation.
+  - Verification performed: static repo checks via `rg`, and `xcodebuild` attempted but unavailable in container.
+
+### Session Log (2026-02-17) — CI test fixup
+- Planned (devops/docs): Investigate failing GitHub Action test run (`exit code 70`) and confirm whether the workflow is targeting the correct Xcode project file. Baseline verification: inspected `.github/workflows/ios-tests.yml` and found it references `WorstAdvice.xcodeproj` while repo contains `Badvice.xcodeproj`.
+- Implemented (devops/docs):
+  - Updated iOS test workflow project references to `Badvice.xcodeproj` for destination resolution and test execution.
+  - Updated PR checklist test command and README build/test snippets to use `Badvice.xcodeproj` so local and CI instructions match.
+  - Verification performed: `rg -n "WorstAdvice\.xcodeproj" README.md .github -S`, `git diff --check`.
+
+### Session Log (2026-02-17) — CI destination parsing hardening
+- Planned (devops): Debug continued CI `exit code 70` failures and verify fallback simulator UUID resolution in `.github/workflows/ios-tests.yml`. Baseline verification: reviewed fallback `simctl` parser and confirmed it extracted parenthetical field 2 (OS version) instead of simulator UUID.
+- Implemented (devops):
+  - Hardened fallback destination parsing to extract a 36-character UUID token from `xcrun simctl list devices available` lines.
+  - This ensures `TEST_DESTINATION=platform=iOS Simulator,id=<uuid>` is always valid when `xcodebuild -showdestinations` parsing yields no match.
+  - Verification performed: reviewed workflow logic with `awk` regex UUID capture and ran `git diff --check`.
+
 ### Added
 - New `Quotes` tab with searchable/filterable bad-quote library.
 - Deterministic `Bad Quote of the Day` service (same quote for everyone each day).
