@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		15D513E5FD6D9380FB5819D4 /* WorstAdviceWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0ED4144827DD3BE9366FEAA6 /* WorstAdviceWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		15D513E5FD6D9380FB5819D4 /* BadviceWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		58C6274C9DD58EBDFC00DD56 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89E0183259A65059B4694547 /* Foundation.framework */; };
 		6023FF49F2203A380675F04A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA4E285DDB5972C81A405FFA /* SwiftUI.framework */; };
 		A10000010000000000000001 /* WorstAdviceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* WorstAdviceApp.swift */; };
@@ -60,7 +60,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				15D513E5FD6D9380FB5819D4 /* WorstAdviceWidget.appex in Embed Foundation Extensions */,
+				15D513E5FD6D9380FB5819D4 /* BadviceWidget.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -68,7 +68,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		0ED4144827DD3BE9366FEAA6 /* WorstAdviceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WorstAdviceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BadviceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorstAdviceQuoteWidget.swift; path = WorstAdviceWidget/WorstAdviceQuoteWidget.swift; sourceTree = "<group>"; };
 		483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorstAdviceWidgetBundle.swift; path = WorstAdviceWidget/WorstAdviceWidgetBundle.swift; sourceTree = "<group>"; };
 		89E0183259A65059B4694547 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
@@ -85,8 +85,8 @@
 		A20000010000000000000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000010000000000000010 /* AdviceCorpus.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AdviceCorpus.json; sourceTree = "<group>"; };
 		A20000010000000000000011 /* AdviceEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngineTests.swift; sourceTree = "<group>"; };
-		A20000010000000000000012 /* WorstAdvice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WorstAdvice.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A20000010000000000000013 /* WorstAdviceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WorstAdviceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000010000000000000012 /* Badvice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Badvice.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000010000000000000013 /* BadviceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000020 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		A20000010000000000000021 /* HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsManager.swift; sourceTree = "<group>"; };
 		A20000010000000000000022 /* FloatingParticlesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingParticlesView.swift; sourceTree = "<group>"; };
@@ -157,7 +157,7 @@
 		A70000010000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				A70000010000000000000002 /* WorstAdvice */,
+				A70000010000000000000002 /* Badvice */,
 				A70000010000000000000008 /* WorstAdviceTests */,
 				A70000010000000000000009 /* Products */,
 				63F07643C4497560E69F37C8 /* Frameworks */,
@@ -165,7 +165,7 @@
 			);
 			sourceTree = "<group>";
 		};
-		A70000010000000000000002 /* WorstAdvice */ = {
+		A70000010000000000000002 /* Badvice */ = {
 			isa = PBXGroup;
 			children = (
 				A20000010000000000000001 /* WorstAdviceApp.swift */,
@@ -178,7 +178,7 @@
 				A70000010000000000000010 /* Resources */,
 				A20000010000000000000009 /* Assets.xcassets */,
 			);
-			path = WorstAdvice;
+			path = Badvice;
 			sourceTree = "<group>";
 		};
 		A70000010000000000000003 /* Models */ = {
@@ -243,9 +243,9 @@
 		A70000010000000000000009 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A20000010000000000000012 /* WorstAdvice.app */,
-				A20000010000000000000013 /* WorstAdviceTests.xctest */,
-				0ED4144827DD3BE9366FEAA6 /* WorstAdviceWidget.appex */,
+				A20000010000000000000012 /* Badvice.app */,
+				A20000010000000000000013 /* BadviceTests.xctest */,
+				0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -261,9 +261,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		520AF678E5FABB1F9BBFB4CB /* WorstAdviceWidget */ = {
+		520AF678E5FABB1F9BBFB4CB /* BadviceWidget */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0EF652FF3ADC5BB8A25E62F3 /* Build configuration list for PBXNativeTarget "WorstAdviceWidget" */;
+			buildConfigurationList = 0EF652FF3ADC5BB8A25E62F3 /* Build configuration list for PBXNativeTarget "BadviceWidget" */;
 			buildPhases = (
 				E18EBD1CABCE4DC2E8B9ED5D /* Sources */,
 				EB1A88684EB826A299ECFE8A /* Frameworks */,
@@ -273,14 +273,14 @@
 			);
 			dependencies = (
 			);
-			name = WorstAdviceWidget;
+			name = BadviceWidget;
 			productName = WorstAdviceWidget;
-			productReference = 0ED4144827DD3BE9366FEAA6 /* WorstAdviceWidget.appex */;
+			productReference = 0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		A40000010000000000000001 /* WorstAdvice */ = {
+		A40000010000000000000001 /* Badvice */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A80000010000000000000003 /* Build configuration list for PBXNativeTarget "WorstAdvice" */;
+			buildConfigurationList = A80000010000000000000003 /* Build configuration list for PBXNativeTarget "Badvice" */;
 			buildPhases = (
 				A90000010000000000000001 /* Sources */,
 				A60000010000000000000001 /* Frameworks */,
@@ -292,14 +292,14 @@
 			dependencies = (
 				25262E22BFC735B3AE191EBF /* PBXTargetDependency */,
 			);
-			name = WorstAdvice;
+			name = Badvice;
 			productName = WorstAdvice;
-			productReference = A20000010000000000000012 /* WorstAdvice.app */;
+			productReference = A20000010000000000000012 /* Badvice.app */;
 			productType = "com.apple.product-type.application";
 		};
-		A40000010000000000000002 /* WorstAdviceTests */ = {
+		A40000010000000000000002 /* BadviceTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A80000010000000000000006 /* Build configuration list for PBXNativeTarget "WorstAdviceTests" */;
+			buildConfigurationList = A80000010000000000000006 /* Build configuration list for PBXNativeTarget "BadviceTests" */;
 			buildPhases = (
 				A90000010000000000000002 /* Sources */,
 				A60000010000000000000002 /* Frameworks */,
@@ -309,9 +309,9 @@
 			dependencies = (
 				AB0000010000000000000001 /* PBXTargetDependency */,
 			);
-			name = WorstAdviceTests;
+			name = BadviceTests;
 			productName = WorstAdviceTests;
-			productReference = A20000010000000000000013 /* WorstAdviceTests.xctest */;
+			productReference = A20000010000000000000013 /* BadviceTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -333,7 +333,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A80000010000000000000001 /* Build configuration list for PBXProject "WorstAdvice" */;
+			buildConfigurationList = A80000010000000000000001 /* Build configuration list for PBXProject "Badvice" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -346,9 +346,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A40000010000000000000001 /* WorstAdvice */,
-				A40000010000000000000002 /* WorstAdviceTests */,
-				520AF678E5FABB1F9BBFB4CB /* WorstAdviceWidget */,
+				A40000010000000000000001 /* Badvice */,
+				A40000010000000000000002 /* BadviceTests */,
+				520AF678E5FABB1F9BBFB4CB /* BadviceWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -421,12 +421,12 @@
 		25262E22BFC735B3AE191EBF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = WorstAdviceWidget;
-			target = 520AF678E5FABB1F9BBFB4CB /* WorstAdviceWidget */;
+			target = 520AF678E5FABB1F9BBFB4CB /* BadviceWidget */;
 			targetProxy = A1EB4F08F7AC67C9F5C8D237 /* PBXContainerItemProxy */;
 		};
 		AB0000010000000000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A40000010000000000000001 /* WorstAdvice */;
+			target = A40000010000000000000001 /* Badvice */;
 			targetProxy = A30000010000000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -679,7 +679,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WorstAdvice.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WorstAdvice";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Badvice.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Badvice";
 			};
 			name = Debug;
 		};
@@ -698,14 +698,14 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WorstAdvice.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WorstAdvice";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Badvice.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Badvice";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0EF652FF3ADC5BB8A25E62F3 /* Build configuration list for PBXNativeTarget "WorstAdviceWidget" */ = {
+		0EF652FF3ADC5BB8A25E62F3 /* Build configuration list for PBXNativeTarget "BadviceWidget" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A2B8F6D2DF3947F5D20FFFCC /* Release */,
@@ -714,7 +714,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A80000010000000000000001 /* Build configuration list for PBXProject "WorstAdvice" */ = {
+		A80000010000000000000001 /* Build configuration list for PBXProject "Badvice" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AC0000010000000000000001 /* Debug */,
@@ -723,7 +723,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A80000010000000000000003 /* Build configuration list for PBXNativeTarget "WorstAdvice" */ = {
+		A80000010000000000000003 /* Build configuration list for PBXNativeTarget "Badvice" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AC0000010000000000000003 /* Debug */,
@@ -732,7 +732,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A80000010000000000000006 /* Build configuration list for PBXNativeTarget "WorstAdviceTests" */ = {
+		A80000010000000000000006 /* Build configuration list for PBXNativeTarget "BadviceTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AC0000010000000000000005 /* Debug */,

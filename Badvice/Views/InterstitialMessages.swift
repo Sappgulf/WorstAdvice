@@ -142,6 +142,7 @@ struct SettingsTabView: View {
     @Bindable var quotesViewModel: QuotesViewModel
     
     @State private var sectionsAppeared = false
+    @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -197,15 +198,21 @@ struct SettingsTabView: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
+                sectionsAppeared = false
                 if isMotionReduced {
                     sectionsAppeared = true
                 } else {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
-                        sectionsAppeared = true
+                    DispatchQueue.main.async {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
+                            sectionsAppeared = true
+                        }
                     }
                 }
                 // Show tab bar when entering settings
                 tabBarVisible.wrappedValue = true
+            }
+            .onDisappear {
+                sectionsAppeared = false
             }
         }
     }
@@ -268,10 +275,7 @@ struct SettingsTabView: View {
                 Divider().opacity(0.5)
                 Toggle("Reduce Motion", isOn: $viewModel.reduceMotion)
                 Divider().opacity(0.5)
-                Toggle("Shake to Generate", isOn: .init(
-                    get: { UserDefaults.standard.bool(forKey: "shakeToGenerateEnabled") },
-                    set: { UserDefaults.standard.set($0, forKey: "shakeToGenerateEnabled") }
-                ))
+                Toggle("Shake to Generate", isOn: $shakeToGenerateEnabled)
             }
             .tint(Theme.accent(for: viewModel.theme))
         }

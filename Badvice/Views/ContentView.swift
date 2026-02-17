@@ -205,7 +205,7 @@ struct ContentView: View {
                             }
                         }
                         .padding(.horizontal, 6)
-                        .padding(.bottom, 20) // Compact spacing
+                        .padding(.bottom, 8) // Reduce dead space below tab labels
                         .background {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -224,7 +224,7 @@ struct ContentView: View {
                             }
                         }
                         .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
+                        .padding(.bottom, 2)
                         .offset(y: tabBarVisible ? 0 : 120)
                         .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: tabBarVisible)
                     }
@@ -266,9 +266,13 @@ struct ContentView: View {
                 // MARK: - Shake to Generate
                 .onChange(of: shakeDetector.didShake) { _, didShake in
                     guard didShake, shakeToGenerateEnabled, selectedTab == .generate else { return }
+                    guard !session.generate.isGenerating else { return }
                     HapticsManager.playShakeDetected(isEnabled: session.settings.hapticsEnabled)
                     session.generate.generate()
                     session.refreshLists()
+                }
+                .onChange(of: shakeToGenerateEnabled) { _, enabled in
+                    shakeDetector.isEnabled = enabled
                 }
                 .onAppear {
                     shakeDetector.isEnabled = shakeToGenerateEnabled

@@ -1,6 +1,6 @@
 import SwiftData
 import XCTest
-@testable import WorstAdvice
+@testable import Badvice
 
 final class AdviceEngineTests: XCTestCase {
     func testDeterministicOutputWithSeed() {
