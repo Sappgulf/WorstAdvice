@@ -85,6 +85,15 @@ struct FavoritesTabView: View {
                             Text(record.tone.title)
                                 .font(.caption)
                                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
+
+                            if let collection = viewModel.collection(for: record) {
+                                Text(collection.rawValue)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(Theme.accent(for: settings.theme))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Capsule().fill(Theme.accent(for: settings.theme).opacity(0.14)))
+                            }
                         }
                     }
                     .padding(.vertical, 6)
@@ -103,6 +112,13 @@ struct FavoritesTabView: View {
                         Label("Unsave", systemImage: "bookmark.slash")
                     }
                     .tint(.orange)
+
+                    Menu("Collection") {
+                        Button("None") { viewModel.assign(nil, to: record) }
+                        ForEach(FavoritesViewModel.Collection.allCases) { collection in
+                            Button(collection.rawValue) { viewModel.assign(collection, to: record) }
+                        }
+                    }
                 }
             }
         }
@@ -162,6 +178,11 @@ struct FavoritesTabView: View {
                         .contextMenu {
                             Button("Unsave") { viewModel.remove(record) }
                             Button("Delete", role: .destructive) { viewModel.delete(record) }
+                            Divider()
+                            Button("No Collection") { viewModel.assign(nil, to: record) }
+                            ForEach(FavoritesViewModel.Collection.allCases) { collection in
+                                Button(collection.rawValue) { viewModel.assign(collection, to: record) }
+                            }
                         }
                     }
                 }
@@ -219,6 +240,26 @@ struct FavoritesTabView: View {
                 }
             } label: {
                 Image(systemName: "rectangle.grid.1x2")
+            }
+        }
+
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    viewModel.selectedCollection = nil
+                } label: {
+                    Label("All collections", systemImage: viewModel.selectedCollection == nil ? "checkmark" : "tray")
+                }
+
+                ForEach(FavoritesViewModel.Collection.allCases) { collection in
+                    Button {
+                        viewModel.selectedCollection = collection
+                    } label: {
+                        Label(collection.rawValue, systemImage: viewModel.selectedCollection == collection ? "checkmark" : "folder")
+                    }
+                }
+            } label: {
+                Image(systemName: "folder")
             }
         }
 
@@ -859,6 +900,13 @@ struct HistoryTabView: View {
                 Picker("Sort", selection: $viewModel.rankingMode) {
                     ForEach(HistoryViewModel.RankingMode.allCases) { mode in
                         Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Picker("Timeline", selection: $viewModel.timeFilter) {
+                    ForEach(HistoryViewModel.TimeFilter.allCases) { filter in
+                        Text(filter.title).tag(filter)
                     }
                 }
                 .pickerStyle(.segmented)

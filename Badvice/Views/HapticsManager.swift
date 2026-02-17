@@ -1,6 +1,15 @@
 import UIKit
 import CoreHaptics
+import AudioToolbox
 
+
+
+enum SoundFeedback {
+    static func playGenerate(isEnabled: Bool) {
+        guard isEnabled else { return }
+        AudioServicesPlaySystemSound(1113)
+    }
+}
 enum HapticsManager {
     // Performance: Reuse generators to avoid recreation overhead
     private static var impactGenerators: [UIImpactFeedbackGenerator.FeedbackStyle: UIImpactFeedbackGenerator] = [:]
