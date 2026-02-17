@@ -77,13 +77,29 @@ struct AdaptiveRanker: Sendable {
         let weightedDislikes = stat.dislikeCount * profile.dislikePenaltyWeight
         let explicitPrior = (weightedLikes + 1.0) / (weightedLikes + weightedDislikes + 2.0)
 
-        // Light implicit signals; capped to avoid overpowering explicit actions.
+        // Confidence gating: keep low-sample scopes near neutral until enough interactions accrue.
+        let confidence = shown / (shown + 6.0)
+        let explicitSignal = 0.5 + ((explicitPrior - 0.5) * confidence)
+
+        // Light implicit signals with separate confidence curve; capped to avoid overpowering explicit actions.
         let implicitRaw = (
             (stat.copyCount * profile.copyBonusWeight)
                 + (stat.shareCount * profile.shareBonusWeight)
                 - (stat.regenCount * profile.regenPenaltyWeight)
         ) / (shown + 5.0)
         let implicitPrior = min(max(implicitRaw + 0.5, 0.0), 1.0)
+        let implicitConfidence = min(1.0, shown / 10.0)
+        let implicitSignal = 0.5 + ((implicitPrior - 0.5) * implicitConfidence)
+
+        // Strong dislike patterns get an extra guardrail to avoid repeatedly surfacing low-quality scopes.
+        let dislikeRate = stat.dislikeCount / (shown + 1.0)
+        let likeRate = stat.likeCount / (shown + 1.0)
+        let dislikeGuardrail: Double
+        if shown >= 3.0 && dislikeRate > likeRate + 0.25 {
+            dislikeGuardrail = min(0.18, (dislikeRate - likeRate) * 0.25)
+        } else {
+            dislikeGuardrail = 0.0
+        }
 
         let exploration = 1.0 / sqrt(shown + 1.0)
         let semantic = min(max(semanticRelevance, 0.0), 1.0)
@@ -91,11 +107,12 @@ struct AdaptiveRanker: Sendable {
 
         let base =
             (semantic * profile.semanticWeight)
-            + (explicitPrior * profile.explicitWeight)
-            + (implicitPrior * profile.implicitWeight)
+            + (explicitSignal * profile.explicitWeight)
+            + (implicitSignal * profile.implicitWeight)
             + (exploration * profile.explorationWeight)
             - (novelty * profile.noveltyWeight)
             + channelBias
+            - dislikeGuardrail
 
         return base + deterministicTieBreaker(seed: seed, index: candidateIndex)
     }

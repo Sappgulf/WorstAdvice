@@ -571,6 +571,67 @@ final class PersistenceTests: XCTestCase {
         XCTAssertLessThan(dislikedScore, neutralScore)
     }
 
+    func testAdaptiveRankerConfidenceGatesLowSampleBoosts() {
+        let ranker = AdaptiveRanker()
+        let sparsePositive = LearningStatSnapshot(
+            shownCount: 1,
+            likeCount: 1,
+            dislikeCount: 0,
+            favoriteCount: 0,
+            copyCount: 0,
+            shareCount: 0,
+            regenCount: 0
+        )
+
+        let sparseScore = ranker.adviceScore(
+            semanticRelevance: 0.6,
+            stats: sparsePositive,
+            noveltyPenalty: 0,
+            seed: 55,
+            candidateIndex: 0
+        )
+        let neutralScore = ranker.adviceScore(
+            semanticRelevance: 0.6,
+            stats: .empty,
+            noveltyPenalty: 0,
+            seed: 55,
+            candidateIndex: 1
+        )
+
+        XCTAssertLessThan(abs(sparseScore - neutralScore), 0.07)
+    }
+
+    func testAdaptiveRankerDislikeGuardrailSuppressesHighNegativeScopes() {
+        let ranker = AdaptiveRanker()
+        let stronglyDisliked = LearningStatSnapshot(
+            shownCount: 8,
+            likeCount: 0,
+            dislikeCount: 5,
+            favoriteCount: 0,
+            copyCount: 5,
+            shareCount: 4,
+            regenCount: 1
+        )
+
+        let guardedScore = ranker.adviceScore(
+            semanticRelevance: 0.75,
+            stats: stronglyDisliked,
+            noveltyPenalty: 0,
+            seed: 72,
+            candidateIndex: 0
+        )
+        let neutralScore = ranker.adviceScore(
+            semanticRelevance: 0.75,
+            stats: .empty,
+            noveltyPenalty: 0,
+            seed: 72,
+            candidateIndex: 1
+        )
+
+        XCTAssertLessThan(guardedScore, neutralScore)
+    }
+
+
     func testImplicitSignalsDoNotOutrankStrongExplicitDislike() {
         let ranker = AdaptiveRanker()
         let implicitHeavy = LearningStatSnapshot(

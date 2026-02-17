@@ -52,6 +52,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Streak challenge progress (3/7/14/30-day goals)
   - Friend Roast flow with friend-name targeting
   - Lightweight analytics event logging hooks for key actions
+  - Adaptive ranking polish: low-sample confidence gating plus dislike guardrails for steadier recommendations
   - Local voting feedback on generated advice (`like` / `dislike`)
   - Suggestion Lab for user-submitted bad advice ideas
   - Community Pulse leaderboard for top suggested topics and top liked/disliked lines
