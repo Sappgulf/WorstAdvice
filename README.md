@@ -30,6 +30,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Per-quote local vote state (`like` / `dislike`)
   - Optional community-only generation mode backed by local suggestions
   - Persisted settings
+  - One-tap settings reset-to-defaults flow with confirmation
 - Share-first workflow:
   - One-tap copy/share
   - Dynamic primary CTA on Advice tab (`Advise Me` rotates to fresh prompts every few generations)
@@ -118,6 +119,7 @@ xcodebuild test \
   - Both square/story aspect ratios render correctly.
   - Disclaimer appears only when enabled in settings.
 - Settings:
+  - Reset Preferences restores theme, generation, sharing, and tab-order settings to defaults after confirmation.
   - Theme picker shows all 6 themes and applies instantly.
   - Neon remains readable across Advice card, chips, and controls.
 - Favorites tab:

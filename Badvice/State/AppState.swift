@@ -883,6 +883,21 @@ final class SettingsViewModel {
     func resetTabOrder() {
         tabOrder = AppTab.defaultOrder
     }
+
+    func resetToDefaults() {
+        theme = .badvice
+        includeDisclaimerOnShare = true
+        reduceMotion = false
+        hapticsEnabled = true
+        includeRationale = true
+        preferredTemplate = .minimal
+        preferredAspect = .square
+        preferredSharePreset = .deadpan
+        preferredContentPack = .classic
+        strictNoRepeats = true
+        communityOnlyMode = false
+        tabOrder = AppTab.defaultOrder
+    }
 }
 
 struct BadQuoteService: Sendable {

@@ -3,7 +3,12 @@
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
+### Session Log
+- **2026-02-17 — Planned (frontend/state/testing):** Continue polish with a focused settings UX expansion by adding a one-tap reset-to-defaults flow for app preferences. Baseline verification: attempted `xcodebuild -project "Badvice.xcodeproj" -scheme "Badvice" -destination 'platform=iOS Simulator,name=iPhone 16' build` but the environment does not provide `xcodebuild`.
+
 ### Added
+- **2026-02-17 — Implemented (frontend/state/testing):** Added a Settings reset-to-defaults flow with destructive confirmation, wired to a new `SettingsViewModel.resetToDefaults()` helper that restores all persisted settings and tab order defaults; the UI reset action also restores the `shakeToGenerateEnabled` preference. Added persistence-facing test coverage validating reset behavior across all configurable fields. Verification: `swift --version` (toolchain available), and attempted `xcodebuild -project "Badvice.xcodeproj" -scheme "Badvice" -destination 'platform=iOS Simulator,name=iPhone 16' build` (blocked: `xcodebuild` unavailable in this environment).
+
 - New `Quotes` tab with searchable/filterable bad-quote library.
 - Deterministic `Bad Quote of the Day` service (same quote for everyone each day).
 - Daily quote banner on Generate for quick daily humor.

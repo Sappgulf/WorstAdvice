@@ -393,6 +393,39 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(repository.fetchQuoteSuggestions(limit: 20).count, 0)
     }
 
+    func testResetToDefaultsRestoresCustomizedSettings() throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+
+        settings.theme = .neon
+        settings.includeDisclaimerOnShare = false
+        settings.reduceMotion = true
+        settings.hapticsEnabled = false
+        settings.includeRationale = false
+        settings.preferredTemplate = .bold
+        settings.preferredAspect = .story
+        settings.preferredSharePreset = .chaotic
+        settings.preferredContentPack = .officeMeltdown
+        settings.strictNoRepeats = false
+        settings.communityOnlyMode = true
+        settings.tabOrder = [.generate, .history, .quotes, .favorites, .settings]
+
+        settings.resetToDefaults()
+
+        XCTAssertEqual(settings.theme, .badvice)
+        XCTAssertTrue(settings.includeDisclaimerOnShare)
+        XCTAssertFalse(settings.reduceMotion)
+        XCTAssertTrue(settings.hapticsEnabled)
+        XCTAssertTrue(settings.includeRationale)
+        XCTAssertEqual(settings.preferredTemplate, .minimal)
+        XCTAssertEqual(settings.preferredAspect, .square)
+        XCTAssertEqual(settings.preferredSharePreset, .deadpan)
+        XCTAssertEqual(settings.preferredContentPack, .classic)
+        XCTAssertTrue(settings.strictNoRepeats)
+        XCTAssertFalse(settings.communityOnlyMode)
+        XCTAssertEqual(settings.tabOrder, AppTab.defaultOrder)
+    }
+
     func testTabOrderSettingPersistsAndKeepsSettingsLast() throws {
         let repository = try makeRepository()
         let settings = SettingsViewModel(repository: repository)
