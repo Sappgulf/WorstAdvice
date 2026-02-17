@@ -4,7 +4,13 @@ import Foundation
 enum PreviewHelper {
     @MainActor
     static var previewContext: ModelContext {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let config = ModelConfiguration(
+            "Preview",
+            isStoredInMemoryOnly: true,
+            allowsSave: true,
+            groupContainer: .none,
+            cloudKitDatabase: .none
+        )
         let container = try! ModelContainer(
             for: AdviceRecord.self,
             AdviceFingerprint.self,

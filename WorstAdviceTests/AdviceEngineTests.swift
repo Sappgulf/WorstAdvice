@@ -176,7 +176,14 @@ final class PersistenceTests: XCTestCase {
             LearningStatRecord.self,
             AppSettingsEntity.self
         ])
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let configuration = ModelConfiguration(
+            "Tests",
+            schema: schema,
+            isStoredInMemoryOnly: true,
+            allowsSave: true,
+            groupContainer: .none,
+            cloudKitDatabase: .none
+        )
         let container = try ModelContainer(for: schema, configurations: [configuration])
         return AdviceRepository(context: ModelContext(container))
     }
