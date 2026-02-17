@@ -4,4 +4,25 @@
    <FileRef
       location = "self:">
    </FileRef>
+   <FileRef
+      location = "group:ThemePolishSummary.md">
+   </FileRef>
+   <FileRef
+      location = "group:ThemeShowcaseView.swift">
+   </FileRef>
+   <FileRef
+      location = "group:ThemePerformanceHelper.swift">
+   </FileRef>
+   <FileRef
+      location = "group:PerformanceOptimizer.swift">
+   </FileRef>
+   <FileRef
+      location = "group:PerformanceEnhancementSummary.md">
+   </FileRef>
+   <FileRef
+      location = "group:COMMIT_MESSAGE.txt">
+   </FileRef>
+   <FileRef
+      location = "group:QuickReferenceGuide.md">
+   </FileRef>
 </Workspace>

@@ -3,6 +3,8 @@ import SwiftData
 import SwiftUI
 import CoreMotion
 
+// RenderBudget and related view-performance helpers are defined in Theme.swift.
+
 // MARK: - Tab Bar Visibility Environment
 
 private struct TabBarVisibilityKey: EnvironmentKey {
@@ -161,6 +163,7 @@ struct ContentView: View {
                         budget: renderBudget
                     )
                     .ignoresSafeArea()
+                    .conditionalDrawingGroup(renderBudget == .full && !reduceMotion)
 
                     TabView(selection: $selectedTab) {
                         ForEach(session.settings.tabOrder) { tab in

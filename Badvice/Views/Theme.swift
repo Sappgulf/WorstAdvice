@@ -16,154 +16,217 @@ enum Theme {
     static let cardFont: Font = .system(.title2, design: .default, weight: .semibold)
     static let bodyFont: Font = .system(.body, design: .default, weight: .regular)
     static let chipFont: Font = .system(.subheadline, design: .rounded, weight: .medium)
+    
+    // MARK: - Performance: Gradient Cache
+    
+    private static var gradientCache: [ThemeMode: LinearGradient] = [:]
+    private static let cacheQueue = DispatchQueue(label: "com.worstadvice.theme.cache", qos: .userInitiated)
 
     static func cardShadow(for theme: ThemeMode) -> (color: Color, radius: CGFloat, y: CGFloat) {
         switch theme {
         case .badvice:
-            return (Color.black.opacity(0.4), 16, 6)
+            return (Color.black.opacity(0.45), 18, 7)
         case .minimal:
-            return (Color.black.opacity(0.08), 12, 4)
+            return (Color.black.opacity(0.06), 8, 3)
         case .ember:
-            return (Color(hex: "5E2C2C").opacity(0.3), 14, 5)
+            return (Color(hex: "5E2C2C").opacity(0.5), 16, 6)
         case .slate:
-            return (Color.black.opacity(0.25), 10, 3)
+            return (Color.black.opacity(0.35), 12, 4)
         case .evergreen:
-            return (Color.black.opacity(0.3), 14, 5)
+            return (Color(hex: "0A1A10").opacity(0.4), 16, 6)
         case .neon:
-            return (Color(hex: "FF00FF").opacity(0.3), 20, 8)
+            return (Color(hex: "FF00FF").opacity(0.4), 24, 10)
         case .midnight:
-            return (Color.black.opacity(0.5), 18, 8)
+            return (Color.black.opacity(0.6), 20, 9)
         case .sunset:
-            return (Color(hex: "FF6B35").opacity(0.25), 16, 6)
+            return (Color(hex: "DD2476").opacity(0.35), 18, 7)
         case .cosmic:
-            return (Color(hex: "9D4EDD").opacity(0.4), 22, 8)
+            return (Color(hex: "9D4EDD").opacity(0.5), 24, 9)
         case .retro:
-            return (Color(hex: "00FF9F").opacity(0.2), 14, 5)
+            return (Color(hex: "00FF9F").opacity(0.3), 16, 6)
+        }
+    }
+    
+    /// Returns a secondary shadow for enhanced depth (used for layered shadow effects)
+    static func cardSecondaryShadow(for theme: ThemeMode) -> (color: Color, radius: CGFloat, y: CGFloat)? {
+        switch theme {
+        case .neon:
+            return (Color(hex: "00FFFF").opacity(0.2), 12, 5)
+        case .cosmic:
+            return (Color(hex: "C77DFF").opacity(0.3), 12, 4)
+        case .sunset:
+            return (Color(hex: "FFD700").opacity(0.2), 10, 3)
+        case .retro:
+            return (Color(hex: "FF1493").opacity(0.2), 10, 3)
+        default:
+            return nil
         }
     }
 
     static func backgroundGradient(for mode: ThemeMode) -> LinearGradient {
+        // Performance: Check cache first
+        if let cached = gradientCache[mode] {
+            return cached
+        }
+        
+        let gradient: LinearGradient
         switch mode {
         case .badvice:
-            return LinearGradient(
+            gradient = LinearGradient(
                 colors: [Color(hex: "1A111A"), Color(hex: "121212")],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .minimal:
-            return LinearGradient(
+            gradient = LinearGradient(
                 colors: [Color(hex: "F9F9F9"), Color(hex: "F2F2F7")],
                 startPoint: .top,
                 endPoint: .bottom
             )
         case .ember:
-            return LinearGradient(
+            gradient = LinearGradient(
                 colors: [Color(hex: "4A2626"), Color(hex: "2E1A1A")],
                 startPoint: .top,
                 endPoint: .bottom
             )
         case .slate:
-            return LinearGradient(
+            gradient = LinearGradient(
                 colors: [Color(hex: "2C3E50"), Color(hex: "34495E")],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .evergreen:
-            return LinearGradient(
+            gradient = LinearGradient(
                 colors: [Color(hex: "1A2F23"), Color(hex: "142119")],
                 startPoint: .top,
                 endPoint: .bottom
             )
         case .neon:
-            return LinearGradient(
+            gradient = LinearGradient(
                 colors: [Color(hex: "0A0A0A"), Color(hex: "1A0033")],
                 startPoint: .top,
                 endPoint: .bottom
             )
         case .midnight:
-            return LinearGradient(
+            gradient = LinearGradient(
                 colors: [Color(hex: "000000"), Color(hex: "0D1B2A")],
                 startPoint: .top,
                 endPoint: .bottom
             )
         case .sunset:
-            return LinearGradient(
+            gradient = LinearGradient(
                 colors: [Color(hex: "FF512F"), Color(hex: "DD2476")],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .cosmic:
-            return LinearGradient(
+            gradient = LinearGradient(
                 colors: [Color(hex: "0F0C29"), Color(hex: "302B63"), Color(hex: "24243E")],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         case .retro:
-            return LinearGradient(
+            gradient = LinearGradient(
                 colors: [Color(hex: "2C1A3D"), Color(hex: "1A1A2E")],
                 startPoint: .top,
                 endPoint: .bottom
             )
         }
+        
+        // Cache the result
+        gradientCache[mode] = gradient
+        return gradient
     }
 
     static func accent(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "E07A5F") // Muted Coral
+        case .badvice: return Color(hex: "E88D72") // Brighter Coral with more saturation
         case .minimal: return Color(hex: "1C1C1E") // Black
-        case .ember: return Color(hex: "D65A31")
-        case .slate: return Color(hex: "AAB7B8")
-        case .evergreen: return Color(hex: "81C784") // Natural Sage Green
+        case .ember: return Color(hex: "FF6B47") // Vibrant Ember Orange
+        case .slate: return Color(hex: "8EC5FC") // Cool Blue accent for better contrast
+        case .evergreen: return Color(hex: "66BB6A") // Vibrant Sage Green
         case .neon: return Color(hex: "FF00FF") // Hot Magenta
-        case .midnight: return Color(hex: "5E81AC") // Frost Blue
+        case .midnight: return Color(hex: "88C0D0") // Brighter Frost Blue
         case .sunset: return Color(hex: "FFD700") // Gold
         case .cosmic: return Color(hex: "C77DFF") // Purple
         case .retro: return Color(hex: "00FF9F") // Matrix Green
         }
     }
+    
+    /// Returns a secondary accent color for enhanced visual interest
+    static func secondaryAccent(for mode: ThemeMode) -> Color? {
+        switch mode {
+        case .sunset:
+            return Color(hex: "FF6B35") // Coral complement to gold
+        case .cosmic:
+            return Color(hex: "9D4EDD") // Deeper purple
+        case .neon:
+            return Color(hex: "00FFFF") // Cyan complement
+        case .retro:
+            return Color(hex: "FF1493") // Hot Pink complement
+        case .evergreen:
+            return Color(hex: "4CAF50") // Forest complement
+        default:
+            return nil
+        }
+    }
 
     static func cardColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "3D2C3E").opacity(0.6)
+        case .badvice: return Color(hex: "3D2C3E").opacity(0.65)
         case .minimal: return Color.white
-        case .ember: return Color(hex: "5E3030").opacity(0.4)
-        case .slate: return Color(hex: "3E5062").opacity(0.7)
-        case .evergreen: return Color(hex: "253D2E").opacity(0.6)
-        case .neon: return Color(hex: "1A1A2E").opacity(0.8)
-        case .midnight: return Color(hex: "16213E").opacity(0.7)
-        case .sunset: return Color(hex: "2D1B4E").opacity(0.5)
-        case .cosmic: return Color(hex: "1A1A2E").opacity(0.6)
-        case .retro: return Color(hex: "2D1B4E").opacity(0.7)
+        case .ember: return Color(hex: "5E3030").opacity(0.5)
+        case .slate: return Color(hex: "3E5062").opacity(0.75)
+        case .evergreen: return Color(hex: "253D2E").opacity(0.7)
+        case .neon: return Color(hex: "1A1A2E").opacity(0.85)
+        case .midnight: return Color(hex: "16213E").opacity(0.75)
+        case .sunset: return Color(hex: "3D2847").opacity(0.6)
+        case .cosmic: return Color(hex: "1A1A2E").opacity(0.7)
+        case .retro: return Color(hex: "2D1B4E").opacity(0.75)
+        }
+    }
+    
+    /// Returns the glassmorphism intensity for themes that support it
+    static func glassMorphismOpacity(for mode: ThemeMode) -> Double {
+        switch mode {
+        case .minimal:
+            return 0.0 // No glass effect for minimal
+        case .neon, .cosmic, .midnight:
+            return 0.6 // Strong glass effect for vibrant themes
+        case .sunset, .retro:
+            return 0.55
+        default:
+            return 0.5 // Default glass effect
         }
     }
 
     static func primaryText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "FFFAF0") // Brighter White
+        case .badvice: return Color(hex: "FFFCF7") // Warm bright white
         case .minimal: return Color(hex: "1C1C1E")
-        case .ember: return Color(hex: "FFF5E6") // High contrast white
-        case .slate: return Color(hex: "ECF0F1")
-        case .evergreen: return Color(hex: "FFFFFF")
+        case .ember: return Color(hex: "FFFAF0") // Warm white with better contrast
+        case .slate: return Color(hex: "F0F4F8") // Cooler white
+        case .evergreen: return Color(hex: "F5FFF7") // Slight green tint white
         case .neon: return Color(hex: "FFFFFF")
-        case .midnight: return Color(hex: "E5E9F0")
-        case .sunset: return Color(hex: "FFFFFF")
-        case .cosmic: return Color(hex: "F8F9FA")
-        case .retro: return Color(hex: "00FF9F")
+        case .midnight: return Color(hex: "ECEFF4") // Nord Snow Storm
+        case .sunset: return Color(hex: "FFF8F0") // Warm white
+        case .cosmic: return Color(hex: "FFFFFF")
+        case .retro: return Color(hex: "E0FFE0") // Slight green tint for CRT effect
         }
     }
 
     static func secondaryText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "C2B2C2")
+        case .badvice: return Color(hex: "D0C0D0") // Lighter, better contrast
         case .minimal: return Color(hex: "8E8E93")
-        case .ember: return Color(hex: "D0B0B0")
-        case .slate: return Color(hex: "BDC3C7")
+        case .ember: return Color(hex: "FFCAB0") // Warmer, more visible
+        case .slate: return Color(hex: "CBD5E1") // Cooler, higher contrast
         case .evergreen: return Color(hex: "A5D6A7") // Lighter Green-Grey
-        case .neon: return Color(hex: "FF00FF").opacity(0.7)
-        case .midnight: return Color(hex: "81A1C1")
-        case .sunset: return Color(hex: "FFE4E1")
-        case .cosmic: return Color(hex: "E0AAFF")
-        case .retro: return Color(hex: "00FF9F").opacity(0.7)
+        case .neon: return Color(hex: "FF00FF").opacity(0.8) // More opaque
+        case .midnight: return Color(hex: "88C0D0") // Nord Frost
+        case .sunset: return Color(hex: "FFE4CC") // Warmer
+        case .cosmic: return Color(hex: "E0AAFF") // Lighter purple
+        case .retro: return Color(hex: "66FFB2") // Brighter for visibility
         }
     }
 
@@ -199,11 +262,11 @@ enum Theme {
 
     static func particleColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "E07A5F")
+        case .badvice: return Color(hex: "E88D72")
         case .minimal: return Color(hex: "1C1C1E")
-        case .ember: return Color(hex: "FF6B6B")
-        case .slate: return Color(hex: "ECF0F1")
-        case .evergreen: return Color(hex: "66BB6A") // Slightly darker sage for particles
+        case .ember: return Color(hex: "FF6B47")
+        case .slate: return Color(hex: "8EC5FC")
+        case .evergreen: return Color(hex: "66BB6A")
         case .neon: return Color(hex: "00FFFF")
         case .midnight: return Color(hex: "88C0D0")
         case .sunset: return Color(hex: "FFD700")
@@ -211,10 +274,59 @@ enum Theme {
         case .retro: return Color(hex: "00FF9F")
         }
     }
+    
+    /// Secondary particle color for multi-color effects
+    static func secondaryParticleColor(for mode: ThemeMode) -> Color? {
+        switch mode {
+        case .neon:
+            return Color(hex: "FF00FF") // Alternate between cyan and magenta
+        case .cosmic:
+            return Color(hex: "C77DFF") // Lighter purple
+        case .sunset:
+            return Color(hex: "FF6B35") // Coral orange
+        case .retro:
+            return Color(hex: "FF1493") // Hot pink
+        default:
+            return nil
+        }
+    }
+    
+    /// Returns whether a theme should use glow effects
+    static func shouldUseGlow(for mode: ThemeMode) -> Bool {
+        switch mode {
+        case .neon, .cosmic, .retro, .midnight:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    /// Returns the glow color for themes that support it
+    static func glowColor(for mode: ThemeMode) -> Color? {
+        guard shouldUseGlow(for: mode) else { return nil }
+        switch mode {
+        case .neon:
+            return Color(hex: "FF00FF")
+        case .cosmic:
+            return Color(hex: "9D4EDD")
+        case .retro:
+            return Color(hex: "00FF9F")
+        case .midnight:
+            return Color(hex: "88C0D0")
+        default:
+            return nil
+        }
+    }
 
     static func headerColor(for mode: ThemeMode) -> Color {
         switch mode {
         case .retro: return Color(hex: "00FF9F")
+        case .neon: return Color(hex: "FF00FF")
+        case .cosmic: return Color(hex: "C77DFF")
+        case .sunset: return Color(hex: "FFD700")
+        case .ember: return Color(hex: "FF6B47")
+        case .evergreen: return Color(hex: "66BB6A")
+        case .midnight: return Color(hex: "88C0D0")
         default: return Color(hex: "1C1C1E") // Iconic Black
         }
     }
@@ -222,9 +334,24 @@ enum Theme {
     static func headerShadowColor(for mode: ThemeMode) -> Color {
         switch mode {
         case .minimal: return .clear
-        case .neon: return Color(hex: "FF00FF").opacity(0.8)
-        case .retro: return Color(hex: "00FF9F").opacity(0.8)
-        default: return .white.opacity(0.85) // Strong glow for visibility on dark backgrounds
+        case .neon: return Color(hex: "FF00FF").opacity(0.9)
+        case .retro: return Color(hex: "00FF9F").opacity(0.9)
+        case .cosmic: return Color(hex: "C77DFF").opacity(0.8)
+        case .sunset: return Color(hex: "FFD700").opacity(0.7)
+        case .ember: return Color(hex: "FF6B47").opacity(0.7)
+        case .evergreen: return Color(hex: "66BB6A").opacity(0.6)
+        case .midnight: return Color(hex: "88C0D0").opacity(0.8)
+        default: return .white.opacity(0.9) // Strong glow for visibility on dark backgrounds
+        }
+    }
+    
+    /// Returns whether the header should have an animated glow effect
+    static func headerShouldGlow(for mode: ThemeMode) -> Bool {
+        switch mode {
+        case .neon, .cosmic, .retro, .midnight:
+            return true
+        default:
+            return false
         }
     }
 }
@@ -233,12 +360,15 @@ struct ThemeBackgroundView: View {
     let mode: ThemeMode
     var budget: RenderBudget = .balanced
     @Environment(\.scenePhase) private var scenePhase
+    
+    // Performance: Only update when necessary
+    @State private var shouldRenderEffects = true
 
     var body: some View {
         ZStack {
             Theme.backgroundGradient(for: mode)
 
-            if scenePhase == .active {
+            if scenePhase == .active && shouldRenderEffects {
                 let allowsDynamic = budget != .reduced
                 let allowsFullEffects = budget == .full
 
@@ -246,6 +376,7 @@ struct ThemeBackgroundView: View {
                     DynamicChaosView(theme: mode)
                         .opacity(allowsFullEffects ? 0.4 : 0.26)
                         .blendMode(.screen)
+                        .drawingGroup(opaque: false) // Performance: Metal acceleration
                 }
 
                 if allowsFullEffects && (mode == .badvice || mode == .ember || mode == .evergreen || mode == .midnight) {
@@ -259,29 +390,37 @@ struct ThemeBackgroundView: View {
                     PaperGrainView()
                         .blendMode(.multiply)
                         .opacity(mode == .badvice ? 0.3 : 0.25)
+                        .drawingGroup() // Performance: Rasterize complex texture
                 }
 
                 if allowsFullEffects && mode == .neon {
                     NeonGridView()
                         .opacity(0.15)
                         .blendMode(.screen)
+                        .drawingGroup() // Performance: Cache grid rendering
                 }
 
                 if allowsFullEffects && mode == .cosmic {
                     StarFieldView()
                         .opacity(0.6)
+                        .drawingGroup() // Performance: Cache star rendering
                 }
 
                 if allowsFullEffects && mode == .retro {
                     ScanlineView()
                         .opacity(0.1)
                         .blendMode(.overlay)
+                        .drawingGroup() // Performance: Cache scanline rendering
                 }
             }
 
             CinematicVignetteView()
                 .opacity(mode == .minimal ? 0.3 : 0.6)
                 .allowsHitTesting(false)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Performance: Pause effects when backgrounded
+            shouldRenderEffects = newPhase == .active
         }
     }
 }
@@ -407,6 +546,34 @@ extension Color {
             blue: Double(b) / 255,
             opacity: 1
         )
+    }
+}
+
+// MARK: - Theme Transition Helper
+
+struct ThemeTransition: ViewModifier {
+    let theme: ThemeMode
+    
+    func body(content: Content) -> some View {
+        content
+            .animation(.easeInOut(duration: 0.35), value: theme)
+    }
+}
+
+extension View {
+    /// Apply smooth theme transitions to any view
+    func themeTransition(_ theme: ThemeMode) -> some View {
+        modifier(ThemeTransition(theme: theme))
+    }
+
+    /// Applies a drawing group only when the caller enables it.
+    @ViewBuilder
+    func conditionalDrawingGroup(_ enabled: Bool) -> some View {
+        if enabled {
+            drawingGroup()
+        } else {
+            self
+        }
     }
 }
 

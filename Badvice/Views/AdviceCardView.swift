@@ -13,24 +13,54 @@ struct AdviceCardView: View {
     // Triple-A Polish: Tilt & Parallax State
     @State private var rotationX: Double = 0
     @State private var rotationY: Double = 0
+    
+    // Performance: Cache computed values
+    @State private var cachedShadow: (color: Color, radius: CGFloat, y: CGFloat)?
+    @State private var cachedAccent: Color?
 
     private var isMotionReduced: Bool {
         reduceMotion || accessibilityReduceMotion
     }
+    
+    // Performance: Memoize expensive computations
+    private var primaryShadow: (color: Color, radius: CGFloat, y: CGFloat) {
+        if let cached = cachedShadow {
+            return cached
+        }
+        let shadow = Theme.cardShadow(for: theme)
+        return shadow
+    }
+    
+    private var accentColor: Color {
+        if let cached = cachedAccent {
+            return cached
+        }
+        return Theme.accent(for: theme)
+    }
 
     var body: some View {
+        let accent = accentColor
+        let tertiaryStroke = Theme.secondaryAccent(for: theme)?.opacity(0.4) ?? accent.opacity(0.3)
+        let primaryText = Theme.primaryText(for: theme)
+        let secondaryText = Theme.secondaryText(for: theme)
+        let cardColor = Theme.cardColor(for: theme)
+        let glassOpacity = Theme.glassMorphismOpacity(for: theme)
+        let shadow = primaryShadow
+        let secondaryShadow = Theme.cardSecondaryShadow(for: theme)
+        let glowColor = Theme.glowColor(for: theme)
+
         VStack(alignment: .leading, spacing: 0) {
             // Meta row
             VStack(alignment: .leading, spacing: 7) {
                 HStack(spacing: 8) {
                     Label(record.category.title, systemImage: record.category.icon)
                         .font(Theme.chipFont)
-                        .foregroundStyle(Theme.accent(for: theme))
+                        .foregroundStyle(accent)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(Theme.accent(for: theme).opacity(0.13))
+                                .fill(accent.opacity(0.13))
                         )
 
                     Spacer()
@@ -42,13 +72,13 @@ struct AdviceCardView: View {
                 Label(record.tone.title, systemImage: "dial.medium")
                     .font(.caption.weight(.medium))
                     .lineLimit(1)
-                    .foregroundStyle(Theme.secondaryText(for: theme))
+                    .foregroundStyle(secondaryText)
             }
 
             // Decorative quote mark
             Text("\u{201C}")
                 .font(.system(size: 56, weight: .heavy, design: .serif))
-                .foregroundStyle(Theme.accent(for: theme).opacity(0.22))
+                .foregroundStyle(accent.opacity(0.22))
                 .frame(height: 24)
                 .padding(.top, 10)
                 .offset(y: 4)
@@ -56,7 +86,7 @@ struct AdviceCardView: View {
             // Advice text
             Text(record.adviceLine)
                 .font(Theme.cardFont)
-                .foregroundStyle(Theme.primaryText(for: theme))
+                .foregroundStyle(primaryText)
                 .lineSpacing(5)
                 .minimumScaleFactor(0.8)
                 .padding(.top, 6)
@@ -65,18 +95,18 @@ struct AdviceCardView: View {
 
             if let rationale = record.rationaleLine, !rationale.isEmpty {
                 Rectangle()
-                    .fill(Theme.secondaryText(for: theme).opacity(0.15))
+                    .fill(secondaryText.opacity(0.15))
                     .frame(height: 1)
                     .padding(.vertical, 14)
 
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(Theme.accent(for: theme).opacity(0.65))
+                        .foregroundStyle(accent.opacity(0.65))
                         .padding(.top, 2)
                     Text(rationale)
                         .font(Theme.bodyFont)
-                        .foregroundStyle(Theme.secondaryText(for: theme))
+                        .foregroundStyle(secondaryText)
                         .accessibilityLabel("Fake rationale")
                         .accessibilityValue(rationale)
                 }
@@ -89,13 +119,20 @@ struct AdviceCardView: View {
         .background {
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                    .fill(Theme.cardColor(for: theme))
+                    .fill(cardColor)
                 
-                // Add Glassmorphism depth
+                // Add Glassmorphism depth with improved opacity
                 if theme != .minimal {
                     RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                         .fill(.ultraThinMaterial)
-                        .opacity(0.5)
+                        .opacity(glassOpacity)
+                }
+                
+                // Add subtle inner glow for glow-supporting themes
+                if let glowColor, !isMotionReduced {
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .stroke(glowColor.opacity(0.15), lineWidth: 2)
+                        .blur(radius: 4)
                 }
             }
         }
@@ -104,9 +141,9 @@ struct AdviceCardView: View {
                 .stroke(
                     LinearGradient(
                         colors: [
-                            Theme.accent(for: theme).opacity(0.4),
-                            Theme.accent(for: theme).opacity(0.1),
-                            Theme.accent(for: theme).opacity(0.3)
+                            accent.opacity(0.5),
+                            accent.opacity(0.15),
+                            tertiaryStroke
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -129,10 +166,23 @@ struct AdviceCardView: View {
                 .opacity(isMotionReduced ? 0 : (shimmerOffset >= 0 && shimmerOffset <= 1.0 ? 1 : 0))
         }
         .shadow(
-            color: Theme.cardShadow(for: theme).color,
-            radius: Theme.cardShadow(for: theme).radius,
-            y: Theme.cardShadow(for: theme).y
+            color: shadow.color,
+            radius: shadow.radius,
+            y: shadow.y
         )
+        .overlay {
+            // Secondary shadow for enhanced depth on select themes
+            if let secondaryShadow {
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                    .fill(Color.clear)
+                    .shadow(
+                        color: secondaryShadow.color,
+                        radius: secondaryShadow.radius,
+                        y: secondaryShadow.y
+                    )
+                    .allowsHitTesting(false)
+            }
+        }
         // Apply 3D rotation based on drag position
         .rotation3DEffect(.degrees(isMotionReduced ? 0 : rotationX), axis: (x: 1, y: 0, z: 0))
         .rotation3DEffect(.degrees(isMotionReduced ? 0 : rotationY), axis: (x: 0, y: 1, z: 0))
@@ -182,6 +232,10 @@ struct AdviceCardView: View {
         .onChange(of: record.id) { _, newID in
             guard newID != lastRecordID else { return }
             lastRecordID = newID
+            
+            // Clear cache on theme change
+            cachedShadow = Theme.cardShadow(for: theme)
+            cachedAccent = Theme.accent(for: theme)
 
             guard !isMotionReduced else {
                 shimmerOffset = -1.0
@@ -209,6 +263,10 @@ struct AdviceCardView: View {
         }
         .onAppear {
             lastRecordID = record.id
+            // Initialize cache
+            cachedShadow = Theme.cardShadow(for: theme)
+            cachedAccent = Theme.accent(for: theme)
+            
             if isMotionReduced {
                 shimmerOffset = -1.0
             }
@@ -818,20 +876,20 @@ private struct GeneratingOverlay: View {
     
     var body: some View {
         ZStack {
-            // Blurred background
+            // Blurred background with enhanced opacity
             Theme.cardColor(for: theme)
-                .opacity(0.85)
-                .blur(radius: 1)
+                .opacity(0.92)
+                .blur(radius: 2)
             
             VStack(spacing: 20) {
                 ZStack {
-                    // Central pulsing orb
+                    // Central pulsing orb with dual-color support
                     Circle()
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    Theme.accent(for: theme).opacity(0.8),
-                                    Theme.accent(for: theme).opacity(0.4),
+                                    Theme.accent(for: theme).opacity(0.9),
+                                    Theme.secondaryAccent(for: theme)?.opacity(0.5) ?? Theme.accent(for: theme).opacity(0.5),
                                     Theme.accent(for: theme).opacity(0.0)
                                 ],
                                 center: .center,
@@ -843,13 +901,14 @@ private struct GeneratingOverlay: View {
                         .scaleEffect(pulseScale)
                         .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseScale)
                     
-                    // Spinning ring
+                    // Spinning ring with gradient
                     Circle()
                         .stroke(
                             AngularGradient(
                                 colors: [
                                     Theme.accent(for: theme).opacity(0.0),
                                     Theme.accent(for: theme),
+                                    Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme),
                                     Theme.accent(for: theme).opacity(0.0)
                                 ],
                                 center: .center
@@ -860,10 +919,23 @@ private struct GeneratingOverlay: View {
                         .rotationEffect(.degrees(rotation))
                         .animation(.linear(duration: 1.5).repeatForever(autoreverses: false), value: rotation)
                     
-                    // Orbiting particles
+                    // Add glow for glow-supporting themes
+                    if let glowColor = Theme.glowColor(for: theme) {
+                        Circle()
+                            .fill(glowColor.opacity(0.3))
+                            .blur(radius: 20)
+                            .frame(width: 100, height: 100)
+                            .scaleEffect(pulseScale)
+                    }
+                    
+                    // Orbiting particles with theme colors
                     ForEach(orbitingDots) { dot in
                         Circle()
-                            .fill(Theme.accent(for: theme))
+                            .fill(
+                                dot.id.hashValue % 2 == 0 
+                                    ? Theme.accent(for: theme)
+                                    : (Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme))
+                            )
                             .frame(width: dot.size, height: dot.size)
                             .offset(
                                 x: cos(dot.angle + rotation * dot.speed) * dot.radius,
