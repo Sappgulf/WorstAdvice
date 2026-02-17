@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 
 struct AdviceEngine {
     let store: AdviceStore
@@ -52,7 +53,17 @@ struct AdviceEngine {
             "\(opener), \(filledAction) \(pivot) Anchor everything to \(principle.lowercased()) and keep the \(tick) narrative loud. \(ending)",
             "\(opener), \(filledAction) \(confidence) \(escalation) Keep execution in \(slang) mode. \(ending)"
         ]
-        var advice = rng.pick(adviceShapes)
+        let semanticQuery = [scenario, selectedTopic, category.title, tone.title, principle, keyword]
+            .compactMap { $0 }
+            .joined(separator: " ")
+        let tieBreakerSeed = seed ?? defaultSeed(from: now)
+        var advice = scenario == nil
+            ? rng.pick(adviceShapes)
+            : (Self.semanticTextScorer.bestCandidate(
+                from: adviceShapes,
+                query: semanticQuery,
+                tieBreakerSeed: tieBreakerSeed
+            ) ?? rng.pick(adviceShapes))
 
         if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
             advice = "\(opener), treat the \(keyword) like a stage performance and commit to the loudest overconfident plan. \(confidence)"
@@ -204,6 +215,8 @@ struct AdviceEngine {
             "If deadlines slip, schedule a planning sprint about planning."
         ]
     ]
+
+    private static let semanticTextScorer = SemanticTextScorer.shared
 }
 
 struct ContentModeration {
@@ -261,5 +274,135 @@ private struct SeededGenerator {
     mutating func pick(_ values: [String]) -> String {
         guard !values.isEmpty else { return "" }
         return values[nextInt(upperBound: values.count)]
+    }
+}
+
+final class SemanticTextScorer {
+    static let shared = SemanticTextScorer()
+
+    struct PreparedQuery {
+        fileprivate let vector: [Double]?
+        fileprivate let tokenSet: Set<String>
+    }
+
+    private let lock = NSLock()
+    private let sentenceEmbedding = NLEmbedding.sentenceEmbedding(for: .english)
+    private var vectorCache: [String: [Double]] = [:]
+    private var cacheOrder: [String] = []
+    private let maxCacheSize = 320
+
+    private init() {}
+
+    func bestCandidate(from candidates: [String], query: String, tieBreakerSeed: Int) -> String? {
+        guard !candidates.isEmpty else { return nil }
+        guard let preparedQuery = preparedQuery(from: query) else { return nil }
+
+        var bestScore = -Double.infinity
+        var bestCandidates: [String] = []
+
+        for candidate in candidates {
+            let score = similarity(candidate, to: preparedQuery)
+            if score > bestScore + 0.0001 {
+                bestScore = score
+                bestCandidates = [candidate]
+            } else if abs(score - bestScore) <= 0.0001 {
+                bestCandidates.append(candidate)
+            }
+        }
+
+        guard bestScore > 0, !bestCandidates.isEmpty else { return nil }
+        let index = abs(tieBreakerSeed) % bestCandidates.count
+        return bestCandidates[index]
+    }
+
+    func preparedQuery(from query: String) -> PreparedQuery? {
+        let normalized = query.normalizedForFiltering.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return nil }
+        let queryVector: [Double]?
+        if let sentenceEmbedding {
+            queryVector = vector(for: normalized, embedding: sentenceEmbedding)
+        } else {
+            queryVector = nil
+        }
+        return PreparedQuery(
+            vector: queryVector,
+            tokenSet: tokenSet(for: normalized)
+        )
+    }
+
+    func similarity(_ lhs: String, _ rhs: String) -> Double {
+        guard let preparedQuery = preparedQuery(from: rhs) else { return 0 }
+        return similarity(lhs, to: preparedQuery)
+    }
+
+    func similarity(_ candidate: String, to preparedQuery: PreparedQuery) -> Double {
+        let normalizedCandidate = candidate.normalizedForFiltering
+        guard !normalizedCandidate.isEmpty else { return 0 }
+
+        if let sentenceEmbedding,
+           let queryVector = preparedQuery.vector,
+           let candidateVector = vector(for: normalizedCandidate, embedding: sentenceEmbedding) {
+            return cosineSimilarity(candidateVector, queryVector)
+        }
+
+        return tokenOverlap(
+            candidateTokens: tokenSet(for: normalizedCandidate),
+            queryTokens: preparedQuery.tokenSet
+        )
+    }
+
+    private func vector(for text: String, embedding: NLEmbedding) -> [Double]? {
+        lock.lock()
+        if let cached = vectorCache[text] {
+            cacheOrder.removeAll { $0 == text }
+            cacheOrder.append(text)
+            lock.unlock()
+            return cached
+        }
+        lock.unlock()
+
+        guard let vector = embedding.vector(for: text) else { return nil }
+
+        lock.lock()
+        vectorCache[text] = vector
+        cacheOrder.removeAll { $0 == text }
+        cacheOrder.append(text)
+        if cacheOrder.count > maxCacheSize, let toEvict = cacheOrder.first {
+            cacheOrder.removeFirst()
+            vectorCache.removeValue(forKey: toEvict)
+        }
+        lock.unlock()
+        return vector
+    }
+
+    private func cosineSimilarity(_ lhs: [Double], _ rhs: [Double]) -> Double {
+        guard lhs.count == rhs.count, !lhs.isEmpty else { return 0 }
+        var dot = 0.0
+        var lhsNorm = 0.0
+        var rhsNorm = 0.0
+        for index in lhs.indices {
+            let l = lhs[index]
+            let r = rhs[index]
+            dot += l * r
+            lhsNorm += l * l
+            rhsNorm += r * r
+        }
+        guard lhsNorm > 0, rhsNorm > 0 else { return 0 }
+        return dot / (sqrt(lhsNorm) * sqrt(rhsNorm))
+    }
+
+    private func tokenOverlap(_ lhs: String, _ rhs: String) -> Double {
+        tokenOverlap(candidateTokens: tokenSet(for: lhs), queryTokens: tokenSet(for: rhs))
+    }
+
+    private func tokenSet(for text: String) -> Set<String> {
+        Set(text.split(separator: " ").map(String.init).filter { $0.count > 2 })
+    }
+
+    private func tokenOverlap(candidateTokens: Set<String>, queryTokens: Set<String>) -> Double {
+        guard !candidateTokens.isEmpty, !queryTokens.isEmpty else { return 0 }
+        let intersection = candidateTokens.intersection(queryTokens).count
+        let denominator = max(candidateTokens.count, queryTokens.count)
+        return Double(intersection) / Double(max(denominator, 1))
     }
 }

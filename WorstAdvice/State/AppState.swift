@@ -268,6 +268,7 @@ final class AdviceRepository {
 
     let context: ModelContext
     private var cachedSeenCount: Int?
+    private var cachedFingerprintSet: Set<String>?
 
     init(context: ModelContext) {
         self.context = context
@@ -366,13 +367,10 @@ final class AdviceRepository {
 
     func hasSeenAdvice(_ normalizedAdviceLine: String) -> Bool {
         let normalized = normalizedAdviceLine.normalizedForFiltering
-        let predicate = #Predicate<AdviceFingerprint> { $0.normalizedText == normalized }
-        var descriptor = FetchDescriptor<AdviceFingerprint>(
-            predicate: predicate,
-            sortBy: [SortDescriptor(\AdviceFingerprint.createdAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = 1
-        return ((try? context.fetch(descriptor)) ?? []).isEmpty == false
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return false }
+        ensureFingerprintCache()
+        return cachedFingerprintSet?.contains(normalized) ?? false
     }
 
     func rememberAdviceFingerprint(
@@ -383,8 +381,11 @@ final class AdviceRepository {
         let normalized = normalizedAdviceLine.normalizedForFiltering
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty else { return }
-        guard !hasSeenAdvice(normalized) else { return }
+        ensureFingerprintCache()
+        guard !(cachedFingerprintSet?.contains(normalized) ?? false) else { return }
         context.insert(AdviceFingerprint(normalizedText: normalized, createdAt: createdAt))
+        cachedFingerprintSet?.insert(normalized)
+        cachedSeenCount = nil
         if saveChanges {
             save()
         }
@@ -414,9 +415,10 @@ final class AdviceRepository {
 
     func seenAdviceCount() -> Int {
         if let cached = cachedSeenCount { return cached }
-        let descriptor = FetchDescriptor<AdviceFingerprint>()
-        let all = (try? context.fetch(descriptor)) ?? []
-        let count = all.filter { !$0.normalizedText.hasPrefix(Self.poolFingerprintPrefix) }.count
+        ensureFingerprintCache()
+        let count = (cachedFingerprintSet ?? [])
+            .filter { !$0.hasPrefix(Self.poolFingerprintPrefix) }
+            .count
         cachedSeenCount = count
         return count
     }
@@ -442,6 +444,8 @@ final class AdviceRepository {
             }
         }
         save()
+        cachedFingerprintSet = nil
+        cachedSeenCount = nil
     }
 
     @discardableResult
@@ -590,6 +594,13 @@ final class AdviceRepository {
         let normalized = normalizedAdviceLine.normalizedForFiltering
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return "\(Self.poolFingerprintPrefix)\(category.rawValue)|\(tone.rawValue)|\(normalized)"
+    }
+
+    private func ensureFingerprintCache() {
+        guard cachedFingerprintSet == nil else { return }
+        let descriptor = FetchDescriptor<AdviceFingerprint>()
+        let all = (try? context.fetch(descriptor)) ?? []
+        cachedFingerprintSet = Set(all.map(\.normalizedText))
     }
 
     private func quoteVoteRecord(for quoteID: String) -> QuoteVoteRecord? {
@@ -890,6 +901,7 @@ final class GenerateViewModel {
 
     func generate(seed: Int? = nil) {
         isGenerating = true
+        defer { isGenerating = false }
         generationNotice = nil
         let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
         logger.debug("Generate started: category=\(self.selectedCategory.rawValue) tone=\(self.selectedTone.rawValue) seed=\(baseSeed)")
@@ -987,7 +999,6 @@ final class GenerateViewModel {
             hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
         }
         hapticTrigger += 1
-        isGenerating = false
     }
 
     func surpriseMeAndGenerate() {
@@ -1401,13 +1412,37 @@ final class GenerateViewModel {
     }
 
     private func suggestionCandidates(for category: AdviceCategory, situation: String?) -> [UserAdviceSuggestion] {
-        let all = repository.fetchSuggestions(limit: 120).filter { $0.category == category }
-        let normalizedSituation = situation?.normalizedForFiltering ?? ""
-        let matched = all.filter { suggestion in
-            let topic = suggestion.topic.normalizedForFiltering
-            return !normalizedSituation.isEmpty && (normalizedSituation.contains(topic) || topic.contains(normalizedSituation))
+        let all = repository.fetchSuggestions(limit: 120).filter {
+            $0.category == category
+                && !$0.topic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !$0.adviceLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
-        return matched.isEmpty ? all : matched
+        let normalizedSituation = situation?.normalizedForFiltering ?? ""
+        guard !normalizedSituation.isEmpty else { return all }
+        let scorer = SemanticTextScorer.shared
+        let preparedQuery = scorer.preparedQuery(from: normalizedSituation)
+
+        let ranked = all
+            .map { suggestion -> (suggestion: UserAdviceSuggestion, score: Double, lexicalMatch: Bool) in
+                let topic = suggestion.topic.normalizedForFiltering
+                let lexicalMatch = !topic.isEmpty && (normalizedSituation.contains(topic) || topic.contains(normalizedSituation))
+                let semanticScore = preparedQuery.map {
+                    scorer.similarity("\(suggestion.topic) \(suggestion.adviceLine)", to: $0)
+                } ?? 0
+                return (suggestion, semanticScore, lexicalMatch)
+            }
+            .sorted { lhs, rhs in
+                if lhs.lexicalMatch != rhs.lexicalMatch {
+                    return lhs.lexicalMatch && !rhs.lexicalMatch
+                }
+                if lhs.score == rhs.score {
+                    return lhs.suggestion.topic.localizedCaseInsensitiveCompare(rhs.suggestion.topic) == .orderedAscending
+                }
+                return lhs.score > rhs.score
+            }
+
+        let prioritized = ranked.filter { $0.lexicalMatch || $0.score >= 0.18 }
+        return (prioritized.isEmpty ? ranked : prioritized).map(\.suggestion)
     }
 
     private func communityCandidate(

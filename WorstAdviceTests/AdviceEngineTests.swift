@@ -248,6 +248,33 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(repository.seenAdviceCount(), 0)
     }
 
+    func testSeenAdviceCountStaysAccurateAfterCacheWarmAndPoolWrites() throws {
+        let repository = try makeRepository()
+
+        repository.rememberAdviceFingerprint("global one")
+        XCTAssertEqual(repository.seenAdviceCount(), 1) // Warm the count/cache path.
+
+        repository.rememberAdviceFingerprintInPool(
+            "global one",
+            category: .career,
+            tone: .wizard
+        )
+        repository.rememberAdviceFingerprint("global two")
+
+        XCTAssertTrue(repository.hasSeenAdvice("global two"))
+        XCTAssertTrue(repository.hasSeenAdviceInPool("global one", category: .career, tone: .wizard))
+        XCTAssertEqual(repository.seenAdviceCount(), 2)
+    }
+
+    func testFingerprintLookupIgnoresEdgeWhitespaceNoise() throws {
+        let repository = try makeRepository()
+
+        repository.rememberAdviceFingerprint("   same   line   ")
+        XCTAssertTrue(repository.hasSeenAdvice("same   line"))
+        XCTAssertTrue(repository.hasSeenAdvice("  same   line  "))
+        XCTAssertFalse(repository.hasSeenAdvice("same line"))
+    }
+
     func testVotePersistsOnRecord() throws {
         let repository = try makeRepository()
         let record = repository.insert(
