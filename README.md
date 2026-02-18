@@ -1,4 +1,4 @@
-# Worst Advice (iOS)
+# Badvice (iOS)
 
 A SwiftUI satire app that generates confidently wrong advice that still sounds plausible.
 
@@ -70,16 +70,16 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
 - Pattern: MVVM
 - Persistence: SwiftData (`AdviceRecord`, `AdviceFingerprint`, `UserAdviceSuggestion`, `UserQuoteSuggestion`, `QuoteVoteRecord`, `AppSettingsEntity`)
 - Core modules:
-  - `WorstAdvice/Models/AdviceModels.swift`: enums + shared models
-  - `WorstAdvice/Data/AdviceStore.swift`: category/tone rule definitions
-  - `WorstAdvice/Engine/AdviceEngine.swift`: deterministic template engine + moderation
-  - `WorstAdvice/State/AppState.swift`: SwiftData models, repository, tab view models, daily quote service
-  - `WorstAdvice/Views/*.swift`: tab screens, advice card, theming, share-card renderer
+  - `Badvice/Models/AdviceModels.swift`: enums + shared models
+  - `Badvice/Data/AdviceStore.swift`: category/tone rule definitions
+  - `Badvice/Engine/AdviceEngine.swift`: deterministic template engine + moderation
+  - `Badvice/State/AppState.swift`: SwiftData models, repository, tab view models, daily quote service
+  - `Badvice/Views/*.swift`: tab screens, advice card, theming, share-card renderer
 
 ## Build & Run
-1. Open `/workspace/WorstAdvice/Badvice.xcodeproj` in Xcode.
-2. Select the `Badvice` scheme (or first shared iOS app scheme).
-3. Run on simulator (for example iPhone 17).
+1. Open `Badvice.xcodeproj` in Xcode.
+2. Select the `Badvice` scheme.
+3. Run on simulator.
 
 CLI build:
 
@@ -92,15 +92,12 @@ xcrun simctl list devices available | rg "iPhone 1[456]"
 xcodebuild build \
   -project "Badvice.xcodeproj" \
   -scheme "Badvice" \
-  -destination "platform=iOS Simulator,name=iPhone 16"
+  -destination "platform=iOS Simulator,name=iPhone 17"
 ```
 
 ## Test
 ```bash
-xcodebuild test \
-  -project "Badvice.xcodeproj" \
-  -scheme "Badvice" \
-  -destination "platform=iOS Simulator,name=iPhone 16"
+bash scripts/ci_xcodebuild_tests.sh
 ```
 
 ## QA Checklist

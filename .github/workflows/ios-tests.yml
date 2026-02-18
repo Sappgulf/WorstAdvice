@@ -29,89 +29,16 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Resolve project, scheme, and simulator destination
-        run: |
-          set -euo pipefail
-
-          PROJECT_FILE="Badvice.xcodeproj"
-          if [ ! -d "$PROJECT_FILE" ]; then
-            PROJECT_FILE=$(find . -maxdepth 1 -name "*.xcodeproj" | head -n 1 | sed 's|^\./||')
-          fi
-
-          if [ -z "${PROJECT_FILE:-}" ] || [ ! -d "$PROJECT_FILE" ]; then
-            echo "No .xcodeproj file found at repository root."
-            exit 1
-          fi
-
-          LIST_OUTPUT=$(xcodebuild -list -project "$PROJECT_FILE")
-
-          SCHEME="Badvice"
-          if ! printf "%s\n" "$LIST_OUTPUT" | grep -qE "^[[:space:]]+$SCHEME$"; then
-            SCHEME=$(printf "%s\n" "$LIST_OUTPUT" | awk '
-              /Schemes:/ { in_schemes = 1; next }
-              in_schemes && NF {
-                gsub(/^[[:space:]]+|[[:space:]]+$/, "", $0)
-                print
-                exit
-              }
-            ')
-          fi
-
-          if [ -z "${SCHEME:-}" ]; then
-            echo "No shared scheme found for project: $PROJECT_FILE"
-            echo "$LIST_OUTPUT"
-            exit 1
-          fi
-
-          DESTINATION_ID=$(xcodebuild -showdestinations -project "$PROJECT_FILE" -scheme "$SCHEME" \
-            | tr -d '\r' \
-            | awk '
-              /platform:[[:space:]]*iOS Simulator/ && /id:/ && $0 !~ /placeholder/ {
-                line = $0
-                sub(/^.*id:[[:space:]]*/, "", line)
-                sub(/[,}].*$/, "", line)
-                print line
-                exit
-              }
-            ')
-
-          if [ -z "${DESTINATION_ID:-}" ]; then
-            DESTINATION_ID=$(xcrun simctl list devices available \
-              | awk -F '[()]' '/iPhone/ { print $2; exit }')
-          fi
-
-          if [ -z "${DESTINATION_ID:-}" ]; then
-            echo "No iOS Simulator destination could be resolved."
-            echo "xcodebuild -showdestinations output:"
-            xcodebuild -showdestinations -project "$PROJECT_FILE" -scheme "$SCHEME" || true
-            echo "xcrun simctl list devices available output:"
-            xcrun simctl list devices available || true
-            exit 1
-          fi
-
-          xcrun simctl boot "$DESTINATION_ID" >/dev/null 2>&1 || true
-          xcrun simctl bootstatus "$DESTINATION_ID" -b >/dev/null 2>&1 || true
-
-          echo "Using project: $PROJECT_FILE"
-          echo "Using scheme: $SCHEME"
-          echo "Using simulator id: $DESTINATION_ID"
-          echo "PROJECT_FILE=$PROJECT_FILE" >> "$GITHUB_ENV"
-          echo "SCHEME=$SCHEME" >> "$GITHUB_ENV"
-          echo "TEST_DESTINATION=platform=iOS Simulator,id=$DESTINATION_ID" >> "$GITHUB_ENV"
-
       - name: Run tests
         run: |
           set -euo pipefail
-          xcodebuild test \
-            -project "$PROJECT_FILE" \
-            -scheme "$SCHEME" \
-            -destination "$TEST_DESTINATION" \
-            -resultBundlePath "TestResults.xcresult"
+          chmod +x scripts/ci_xcodebuild_tests.sh
+          bash scripts/ci_xcodebuild_tests.sh
 
       - name: Upload xcresult
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: xcode-test-results
-          path: TestResults.xcresult
+          path: .build/TestResults.xcresult
           if-no-files-found: ignore
