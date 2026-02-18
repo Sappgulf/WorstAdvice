@@ -27,32 +27,55 @@ if ! xcodebuild -list -project "$PROJECT_PATH" | awk -v scheme="$SCHEME" '
   exit 1
 fi
 
-AVAILABLE_DESTINATIONS="$(xcodebuild -showdestinations -project "$PROJECT_PATH" -scheme "$SCHEME" 2>/dev/null || true)"
+SIMCTL_DEVICES="$(xcrun simctl list devices available 2>/dev/null || true)"
 
 if [ -z "$IOS_DESTINATION" ]; then
-  if printf "%s\n" "$AVAILABLE_DESTINATIONS" | grep -Fq "platform:iOS Simulator" \
-    && printf "%s\n" "$AVAILABLE_DESTINATIONS" | grep -Fq "name:$IOS_SIMULATOR_NAME"; then
+  IOS_DESTINATION="$(
+    printf "%s\n" "$SIMCTL_DEVICES" \
+      | awk -v wanted="$IOS_SIMULATOR_NAME" '
+          /^-- iOS / {
+            os = $0
+            sub(/^-- iOS /, "", os)
+            sub(/ --$/, "", os)
+            next
+          }
+          $0 ~ "^[[:space:]]+" wanted " \\(" {
+            line = $0
+            gsub(/^[[:space:]]+/, "", line)
+            name = line
+            sub(/ \(.*/, "", name)
+            if (os == "") os = "latest"
+            print "platform=iOS Simulator,name=" name ",OS=" os
+            exit
+          }
+        '
+  )"
+
+  if [ -z "$IOS_DESTINATION" ]; then
+    IOS_DESTINATION="$(
+      printf "%s\n" "$SIMCTL_DEVICES" \
+        | awk '
+            /^-- iOS / {
+              os = $0
+              sub(/^-- iOS /, "", os)
+              sub(/ --$/, "", os)
+              next
+            }
+            /^[[:space:]]+iPhone / {
+              line = $0
+              gsub(/^[[:space:]]+/, "", line)
+              name = line
+              sub(/ \(.*/, "", name)
+              if (os == "") os = "latest"
+              print "platform=iOS Simulator,name=" name ",OS=" os
+              exit
+            }
+          '
+    )"
+  fi
+
+  if [ -z "$IOS_DESTINATION" ]; then
     IOS_DESTINATION="platform=iOS Simulator,name=$IOS_SIMULATOR_NAME,OS=latest"
-  else
-    FALLBACK_LINE="$(
-      printf "%s\n" "$AVAILABLE_DESTINATIONS" \
-        | awk '/platform:iOS Simulator/ && /name:iPhone / { print; exit }'
-    )"
-
-    if [ -z "$FALLBACK_LINE" ]; then
-      echo "No available iOS simulator destination found." >&2
-      printf "%s\n" "$AVAILABLE_DESTINATIONS" >&2
-      exit 1
-    fi
-
-    FALLBACK_NAME="$(
-      printf "%s\n" "$FALLBACK_LINE" | sed -E 's/.*name:([^,}]+).*/\1/' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g'
-    )"
-    FALLBACK_OS="$(
-      printf "%s\n" "$FALLBACK_LINE" | sed -E 's/.*OS:([^,}]+).*/\1/' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g'
-    )"
-
-    IOS_DESTINATION="platform=iOS Simulator,name=$FALLBACK_NAME,OS=$FALLBACK_OS"
   fi
 fi
 
