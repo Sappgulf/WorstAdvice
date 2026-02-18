@@ -63,7 +63,7 @@ struct FavoritesTabView: View {
             let items = viewModel.filteredFavorites
             ForEach(items, id: \.id) { record in
                 NavigationLink {
-                    FavoriteDetailView(record: record, settings: settings)
+                    FavoriteDetailView(record: record, viewModel: viewModel, settings: settings)
                 } label: {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(record.adviceLine)
@@ -86,6 +86,12 @@ struct FavoritesTabView: View {
                             Text(record.tone.title)
                                 .font(.caption)
                                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
+
+                            if record.aftermathNote != nil {
+                                Image(systemName: "book.pages")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.7))
+                            }
                         }
                     }
                     .padding(.vertical, 6)
@@ -120,19 +126,27 @@ struct FavoritesTabView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                     ForEach(viewModel.filteredFavorites, id: \.id) { record in
                         NavigationLink {
-                            FavoriteDetailView(record: record, settings: settings)
+                            FavoriteDetailView(record: record, viewModel: viewModel, settings: settings)
                         } label: {
                             VStack(alignment: .leading, spacing: 0) {
-                                // Category chip
-                                Label(record.category.title, systemImage: record.category.icon)
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(Theme.accent(for: settings.theme))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule(style: .continuous)
-                                            .fill(Theme.accent(for: settings.theme).opacity(0.12))
-                                    )
+                                // Category chip + aftermath indicator
+                                HStack(spacing: 6) {
+                                    Label(record.category.title, systemImage: record.category.icon)
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(Theme.accent(for: settings.theme))
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            Capsule(style: .continuous)
+                                                .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                                        )
+                                    Spacer(minLength: 0)
+                                    if record.aftermathNote != nil {
+                                        Image(systemName: "book.pages")
+                                            .font(.caption2)
+                                            .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.7))
+                                    }
+                                }
 
                                 Spacer(minLength: 8)
 
@@ -758,11 +772,17 @@ struct QuotesTabView: View {
 
 private struct FavoriteDetailView: View {
     let record: AdviceRecord
+    @Bindable var viewModel: FavoritesViewModel
     @Bindable var settings: SettingsViewModel
 
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
     @State private var copied = false
+    @State private var aftermathText: String = ""
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
+    private var aftermathIsDirty: Bool { aftermathText != (record.aftermathNote ?? "") }
 
     var body: some View {
         ScrollView {
@@ -812,10 +832,62 @@ private struct FavoriteDetailView: View {
                     .tint(Theme.accent(for: settings.theme))
                 }
                 .padding(.horizontal, Theme.horizontalPadding)
+
+                // MARK: - Aftermath Journal
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 6) {
+                        Label("What Actually Happened", systemImage: "book.pages")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accent(for: settings.theme))
+                        Spacer()
+                        if aftermathIsDirty {
+                            Button {
+                                HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                                viewModel.setAftermathNote(record, note: aftermathText)
+                            } label: {
+                                Text("Save Note")
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 5)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(Theme.accent(for: settings.theme).opacity(0.15))
+                                    )
+                                    .foregroundStyle(Theme.accent(for: settings.theme))
+                            }
+                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                        }
+                    }
+                    .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.7), value: aftermathIsDirty)
+
+                    TextField(
+                        "Did you follow this? What happened? Rate the disaster.",
+                        text: $aftermathText,
+                        axis: .vertical
+                    )
+                    .lineLimit(3...8)
+                    .font(Theme.bodyFont)
+                    .textInputAutocapitalization(.sentences)
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Theme.cardColor(for: settings.theme))
+                    )
+                }
+                .padding(.horizontal, Theme.horizontalPadding)
+                .onAppear { aftermathText = record.aftermathNote ?? "" }
+                .onDisappear {
+                    if aftermathIsDirty {
+                        viewModel.setAftermathNote(record, note: aftermathText)
+                    }
+                }
             }
             .padding(.top, 8)
             .padding(.bottom, 28)
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
         .navigationTitle(record.category.title)
         .navigationBarTitleDisplayMode(.inline)
@@ -991,6 +1063,13 @@ struct HistoryTabView: View {
                                     Image(systemName: "bookmark.fill")
                                         .font(.caption)
                                         .foregroundStyle(.orange)
+                                }
+
+                                // Aftermath journal indicator
+                                if record.aftermathNote != nil {
+                                    Image(systemName: "book.pages")
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.7))
                                 }
                             }
                         }

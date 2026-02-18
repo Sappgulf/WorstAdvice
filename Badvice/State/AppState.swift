@@ -33,6 +33,7 @@ final class AdviceRecord {
     var rationaleLine: String?
     var isFavorite: Bool
     var voteRaw: Int?
+    var aftermathNote: String?   // User's personal journal entry: what happened when they followed this advice
 
     init(
         id: UUID = UUID(),
@@ -390,6 +391,11 @@ final class AdviceRepository {
 
     func toggleFavorite(_ record: AdviceRecord) {
         record.isFavorite.toggle()
+        save()
+    }
+
+    func setAftermathNote(_ record: AdviceRecord, note: String) {
+        record.aftermathNote = note.isEmpty ? nil : note
         save()
     }
 
@@ -2643,6 +2649,10 @@ final class FavoritesViewModel {
         repository.toggleFavorite(record)
         analyticsTracker.track("favorite_toggle", properties: [:])
         reload()
+    }
+
+    func setAftermathNote(_ record: AdviceRecord, note: String) {
+        repository.setAftermathNote(record, note: note)
     }
 
     var filteredFavorites: [AdviceRecord] {
