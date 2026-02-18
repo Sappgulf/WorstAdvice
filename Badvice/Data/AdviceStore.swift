@@ -4,6 +4,8 @@ struct AdviceStore {
     let categoryRules: [AdviceCategory: CategoryRuleSet]
     let toneProfiles: [ToneMode: ToneProfile]
     let contentPackAugments: [ContentPack: [AdviceCategory: CategoryRuleAugment]]
+    private let resolvedBaseRules: [AdviceCategory: CategoryRuleSet]
+    private let resolvedRulesByPack: [ContentPack: [AdviceCategory: CategoryRuleSet]]
 
     init(
         categoryRules: [AdviceCategory: CategoryRuleSet] = AdviceStore.defaultCategoryRules,
@@ -13,17 +15,36 @@ struct AdviceStore {
         self.categoryRules = categoryRules
         self.toneProfiles = toneProfiles
         self.contentPackAugments = contentPackAugments
+
+        let fallbackRules = categoryRules[.productivity] ?? AdviceStore.defaultCategoryRules[.productivity]!
+        var baseRules: [AdviceCategory: CategoryRuleSet] = [:]
+        for category in AdviceCategory.allCases {
+            let base = categoryRules[category] ?? fallbackRules
+            baseRules[category] = base.merged(with: Self.generatedBaseExpansion(for: category))
+        }
+        self.resolvedBaseRules = baseRules
+
+        let fallbackResolved = baseRules[.productivity] ?? fallbackRules
+        var packRules: [ContentPack: [AdviceCategory: CategoryRuleSet]] = [.classic: baseRules]
+        for pack in ContentPack.allCases where pack != .classic {
+            var categoryMap: [AdviceCategory: CategoryRuleSet] = [:]
+            for category in AdviceCategory.allCases {
+                let base = baseRules[category] ?? fallbackResolved
+                let storedAugment = contentPackAugments[pack]?[category] ?? .empty
+                let generatedAugment = Self.generatedPackExpansion(for: pack, category: category)
+                categoryMap[category] = base.merged(with: storedAugment.merged(with: generatedAugment))
+            }
+            packRules[pack] = categoryMap
+        }
+        self.resolvedRulesByPack = packRules
     }
 
     func rules(for category: AdviceCategory) -> CategoryRuleSet {
-        categoryRules[category] ?? Self.defaultCategoryRules[.productivity]!
+        resolvedBaseRules[category] ?? resolvedBaseRules[.productivity]!
     }
 
     func rules(for category: AdviceCategory, contentPack: ContentPack) -> CategoryRuleSet {
-        let base = rules(for: category)
-        guard contentPack != .classic else { return base }
-        guard let augment = contentPackAugments[contentPack]?[category] else { return base }
-        return base.merged(with: augment)
+        resolvedRulesByPack[contentPack]?[category] ?? rules(for: category)
     }
 
     func profile(for tone: ToneMode) -> ToneProfile {
@@ -767,4 +788,192 @@ extension AdviceStore {
             slang: ["sheeple", "red-pilled", "encoded", "psyop", "off-grid"]
         )
     ]
+
+    static func generatedBaseExpansion(for category: AdviceCategory) -> CategoryRuleAugment {
+        generatedBaseExpansionCache[category] ?? .empty
+    }
+
+    static func generatedPackExpansion(for pack: ContentPack, category: AdviceCategory) -> CategoryRuleAugment {
+        generatedPackExpansionCache[pack]?[category] ?? .empty
+    }
+
+    private static let generatedBaseExpansionCache: [AdviceCategory: CategoryRuleAugment] = {
+        var cache: [AdviceCategory: CategoryRuleAugment] = [:]
+        for category in AdviceCategory.allCases {
+            cache[category] = makeGeneratedBaseExpansion(for: category)
+        }
+        return cache
+    }()
+
+    private static let generatedPackExpansionCache: [ContentPack: [AdviceCategory: CategoryRuleAugment]] = {
+        var cache: [ContentPack: [AdviceCategory: CategoryRuleAugment]] = [:]
+        for pack in ContentPack.allCases {
+            var categoryMap: [AdviceCategory: CategoryRuleAugment] = [:]
+            for category in AdviceCategory.allCases {
+                categoryMap[category] = makeGeneratedPackExpansion(for: pack, category: category)
+            }
+            cache[pack] = categoryMap
+        }
+        return cache
+    }()
+
+    private static func makeGeneratedBaseExpansion(for category: AdviceCategory) -> CategoryRuleAugment {
+        let categoryName = category.title.lowercased()
+        return CategoryRuleAugment(
+            badPrinciples: [
+                "Confidence scales faster than context in \(categoryName)",
+                "Optics matter more than outcomes in \(categoryName)",
+                "Escalation is easier than reflection",
+                "Urgency can replace preparation",
+                "Loud certainty sounds like expertise"
+            ],
+            keywords: [
+                "\(categoryName) strategy reset",
+                "\(categoryName) escalation plan",
+                "\(categoryName) emergency pivot",
+                "\(categoryName) status recap",
+                "\(categoryName) accountability sprint",
+                "\(categoryName) confidence audit",
+                "\(categoryName) weekend decision tree",
+                "\(categoryName) optimization loop"
+            ],
+            actionTemplates: [
+                "For %@, over-commit early so everyone mistakes pressure for progress.",
+                "Treat %@ like a launch event and ban any low-energy objections.",
+                "Run %@ as a live experiment and call every surprise a feature.",
+                "In %@, replace open questions with bold assumptions and keep moving.",
+                "Handle %@ by adding one extra checkpoint no one asked for.",
+                "Use %@ to demonstrate confidence first and logic second.",
+                "Frame %@ as a premium challenge and increase complexity on purpose.",
+                "Approach %@ with a dramatic timeline so caution looks outdated.",
+                "During %@, answer all concerns with bigger language and fewer details.",
+                "Convert %@ into a high-visibility commitment before anyone validates the plan."
+            ],
+            rationaleTemplates: [
+                "Perception moves faster than results when certainty is loud.",
+                "A rushed plan can look visionary from far enough away.",
+                "Strategic overconfidence often sounds like decisive leadership.",
+                "Complexity can delay accountability just long enough to feel smart.",
+                "When execution is messy, narrative can carry the quarter.",
+                "Urgency is a reliable substitute for preparation in status updates.",
+                "If the pitch is bold enough, people assume the math exists.",
+                "High-energy delivery can temporarily outscore careful reasoning.",
+                "Escalation creates momentum, even when direction is unclear.",
+                "Confident framing can make rework look intentional."
+            ]
+        )
+    }
+
+    private static func makeGeneratedPackExpansion(for pack: ContentPack, category: AdviceCategory) -> CategoryRuleAugment {
+        let categoryName = category.title.lowercased()
+        switch pack {
+        case .classic:
+            return .empty
+        case .officeMeltdown:
+            return CategoryRuleAugment(
+                badPrinciples: [
+                    "Meetings are the default solution",
+                    "Executive tone can replace evidence",
+                    "Everything needs a workflow rename",
+                    "A dashboard is a decision"
+                ],
+                keywords: [
+                    "\(categoryName) alignment memo",
+                    "\(categoryName) escalation sync",
+                    "\(categoryName) steering committee",
+                    "\(categoryName) operating cadence"
+                ],
+                actionTemplates: [
+                    "For %@, schedule three recaps before the first outcome exists.",
+                    "Treat %@ as an executive initiative and add approval theater.",
+                    "Handle %@ by circulating a memo no one requested.",
+                    "In %@, turn every question into a roadmap slide.",
+                    "Run %@ with enterprise language until objections lose oxygen."
+                ],
+                rationaleTemplates: [
+                    "Corporate ceremony can make weak plans feel inevitable.",
+                    "A polished process often outruns practical judgment.",
+                    "If everyone is in meetings, no one can ask hard questions.",
+                    "Formal structure can disguise improvisation.",
+                    "Escalation sounds smart when wrapped in operations language."
+                ]
+            )
+        case .weekendChaos:
+            return CategoryRuleAugment(
+                badPrinciples: [
+                    "Weekend decisions should ignore Monday consequences",
+                    "Packed schedules prove ambition",
+                    "Spontaneity beats logistics",
+                    "Rest is optional when the itinerary is loud"
+                ],
+                keywords: [
+                    "\(categoryName) Saturday sprint",
+                    "\(categoryName) Sunday reset spiral",
+                    "\(categoryName) last-minute detour",
+                    "\(categoryName) rapid plan swap"
+                ],
+                actionTemplates: [
+                    "For %@, stack extra plans until coordination becomes impossible.",
+                    "Treat %@ like a weekend challenge and skip all buffer time.",
+                    "Handle %@ by choosing speed over setup every single time.",
+                    "In %@, prioritize momentum and troubleshoot later.",
+                    "Run %@ with maximal energy and minimal sequencing."
+                ],
+                rationaleTemplates: [
+                    "Weekend urgency can make chaos feel premium.",
+                    "Overbooked plans look exciting before they collapse.",
+                    "Short-term momentum is easy to mistake for strategy.",
+                    "Spontaneity has great branding and poor logistics.",
+                    "Energy can mask planning gaps for a surprising amount of time."
+                ]
+            )
+        case .chronicallyOnline:
+            return CategoryRuleAugment(
+                badPrinciples: [
+                    "If it performs, it is correct",
+                    "Narrative beats nuance",
+                    "Virality is validation",
+                    "Visibility outranks consistency"
+                ],
+                keywords: [
+                    "\(categoryName) post cycle",
+                    "\(categoryName) feed narrative",
+                    "\(categoryName) comment strategy",
+                    "\(categoryName) trend reaction"
+                ],
+                actionTemplates: [
+                    "For %@, optimize for shareability before functionality.",
+                    "Treat %@ as content and keep the storyline dramatic.",
+                    "Handle %@ by following whichever take is loudest online.",
+                    "In %@, prioritize quotable lines over complete context.",
+                    "Run %@ like an episode drop and tease the next pivot early."
+                ],
+                rationaleTemplates: [
+                    "Public momentum can temporarily replace private clarity.",
+                    "A strong narrative often outruns careful execution.",
+                    "If the take is bold, people assume it is researched.",
+                    "Online certainty rewards speed over depth.",
+                    "Visibility can be mistaken for traction in real time."
+                ]
+            )
+        }
+    }
+}
+
+private extension CategoryRuleAugment {
+    static let empty = CategoryRuleAugment(
+        badPrinciples: [],
+        keywords: [],
+        actionTemplates: [],
+        rationaleTemplates: []
+    )
+
+    func merged(with other: CategoryRuleAugment) -> CategoryRuleAugment {
+        CategoryRuleAugment(
+            badPrinciples: badPrinciples + other.badPrinciples,
+            keywords: keywords + other.keywords,
+            actionTemplates: actionTemplates + other.actionTemplates,
+            rationaleTemplates: rationaleTemplates + other.rationaleTemplates
+        )
+    }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct FavoritesTabView: View {
     @Bindable var viewModel: FavoritesViewModel
     @Bindable var settings: SettingsViewModel
+    var onJumpToGenerate: (() -> Void)? = nil
 
     @State private var layout: FavoritesLayout = .list
     @State private var listContentAppeared = false
@@ -85,15 +86,6 @@ struct FavoritesTabView: View {
                             Text(record.tone.title)
                                 .font(.caption)
                                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
-
-                            if let collection = viewModel.collection(for: record) {
-                                Text(collection.rawValue)
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(Theme.accent(for: settings.theme))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Capsule().fill(Theme.accent(for: settings.theme).opacity(0.14)))
-                            }
                         }
                     }
                     .padding(.vertical, 6)
@@ -112,13 +104,6 @@ struct FavoritesTabView: View {
                         Label("Unsave", systemImage: "bookmark.slash")
                     }
                     .tint(.orange)
-
-                    Menu("Collection") {
-                        Button("None") { viewModel.assign(nil, to: record) }
-                        ForEach(FavoritesViewModel.Collection.allCases) { collection in
-                            Button(collection.rawValue) { viewModel.assign(collection, to: record) }
-                        }
-                    }
                 }
             }
         }
@@ -178,11 +163,6 @@ struct FavoritesTabView: View {
                         .contextMenu {
                             Button("Unsave") { viewModel.remove(record) }
                             Button("Delete", role: .destructive) { viewModel.delete(record) }
-                            Divider()
-                            Button("No Collection") { viewModel.assign(nil, to: record) }
-                            ForEach(FavoritesViewModel.Collection.allCases) { collection in
-                                Button(collection.rawValue) { viewModel.assign(collection, to: record) }
-                            }
                         }
                     }
                 }
@@ -240,26 +220,6 @@ struct FavoritesTabView: View {
                 }
             } label: {
                 Image(systemName: "rectangle.grid.1x2")
-            }
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Button {
-                    viewModel.selectedCollection = nil
-                } label: {
-                    Label("All collections", systemImage: viewModel.selectedCollection == nil ? "checkmark" : "tray")
-                }
-
-                ForEach(FavoritesViewModel.Collection.allCases) { collection in
-                    Button {
-                        viewModel.selectedCollection = collection
-                    } label: {
-                        Label(collection.rawValue, systemImage: viewModel.selectedCollection == collection ? "checkmark" : "folder")
-                    }
-                }
-            } label: {
-                Image(systemName: "folder")
             }
         }
 
@@ -349,6 +309,19 @@ struct FavoritesTabView: View {
                     .offset(y: emptyStateAppeared ? 0 : 15)
                     .opacity(emptyStateAppeared ? 1 : 0)
             }
+
+            Button {
+                onJumpToGenerate?()
+            } label: {
+                Label("Generate Advice", systemImage: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 42)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.accent(for: settings.theme))
+            .foregroundStyle(Theme.buttonText(for: settings.theme))
+            .padding(.top, 6)
+            .opacity(emptyStateAppeared ? 1 : 0)
         }
         .padding(.horizontal, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -388,6 +361,32 @@ struct FavoritesTabView: View {
                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
                 .opacity(noResultsAppeared ? 1 : 0)
                 .offset(y: noResultsAppeared ? 0 : 10)
+
+            if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+                Button {
+                    viewModel.selectedCategory = nil
+                    viewModel.searchText = ""
+                } label: {
+                    Label("Clear Filters", systemImage: "arrow.uturn.backward")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .tint(Theme.accent(for: settings.theme))
+                .opacity(noResultsAppeared ? 1 : 0)
+                .offset(y: noResultsAppeared ? 0 : 10)
+            }
+
+            Button {
+                onJumpToGenerate?()
+            } label: {
+                Label("Generate Advice", systemImage: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.accent(for: settings.theme))
+            .foregroundStyle(Theme.buttonText(for: settings.theme))
+            .opacity(noResultsAppeared ? 1 : 0)
+            .offset(y: noResultsAppeared ? 0 : 10)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
@@ -408,6 +407,7 @@ struct FavoritesTabView: View {
 struct QuotesTabView: View {
     @Bindable var viewModel: QuotesViewModel
     @Bindable var settings: SettingsViewModel
+    var onJumpToGenerate: (() -> Void)? = nil
 
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
@@ -419,6 +419,7 @@ struct QuotesTabView: View {
     }
 
     var body: some View {
+        let quotes = viewModel.filteredQuotes
         NavigationStack {
             List {
                 // Hero daily quote — full-bleed card
@@ -455,13 +456,37 @@ struct QuotesTabView: View {
                 }
 
                 // Quote rows
-                if viewModel.filteredQuotes.isEmpty {
+                if quotes.isEmpty {
                     Section {
-                        QuotesEmptyState(theme: settings.theme, reduceMotion: isMotionReduced)
+                        VStack(spacing: 12) {
+                            QuotesEmptyState(theme: settings.theme, reduceMotion: isMotionReduced)
+                            if viewModel.selectedCategory != nil {
+                                Button {
+                                    viewModel.selectedCategory = nil
+                                } label: {
+                                    Label("Show All Categories", systemImage: "line.3.horizontal.decrease.circle")
+                                        .font(.subheadline.weight(.semibold))
+                                        .frame(maxWidth: .infinity, minHeight: 40)
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(Theme.accent(for: settings.theme))
+                            }
+                            Button {
+                                onJumpToGenerate?()
+                            } label: {
+                                Label("Generate Advice", systemImage: "sparkles")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity, minHeight: 40)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Theme.accent(for: settings.theme))
+                            .foregroundStyle(Theme.buttonText(for: settings.theme))
+                        }
+                        .listRowBackground(Color.clear)
                     }
                 } else {
                     Section {
-                        ForEach(viewModel.filteredQuotes) { quote in
+                        ForEach(quotes) { quote in
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("\u{201C}\(quote.text)\u{201D}")
                                     .font(.body.weight(.medium))
@@ -551,7 +576,8 @@ struct QuotesTabView: View {
     }
 
     private var dailyQuoteHero: some View {
-        ZStack(alignment: .topLeading) {
+        let dailyQuote = viewModel.dailyQuote
+        return ZStack(alignment: .topLeading) {
             // Gradient background
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(
@@ -579,13 +605,13 @@ struct QuotesTabView: View {
                     .foregroundStyle(.white.opacity(0.7))
                     .padding(.bottom, 10)
 
-                Text("\u{201C}\(viewModel.dailyQuote.text)\u{201D}")
+                Text("\u{201C}\(dailyQuote.text)\u{201D}")
                     .font(.system(.title3, design: .rounded, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("— \(viewModel.dailyQuote.source)")
+                Text("— \(dailyQuote.source)")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.75))
                     .padding(.top, 10)
@@ -594,20 +620,20 @@ struct QuotesTabView: View {
                     // Like/dislike with white tint
                     HStack(spacing: 8) {
                         Button {
-                            viewModel.toggleVote(.like, for: viewModel.dailyQuote)
+                            viewModel.toggleVote(.like, for: dailyQuote)
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         } label: {
-                            Image(systemName: viewModel.vote(for: viewModel.dailyQuote) == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
+                            Image(systemName: viewModel.vote(for: dailyQuote) == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
                                 .frame(width: 34, height: 34)
                         }
                         .buttonStyle(.bordered)
                         .tint(Theme.accent(for: settings.theme))
 
                         Button {
-                            viewModel.toggleVote(.dislike, for: viewModel.dailyQuote)
+                            viewModel.toggleVote(.dislike, for: dailyQuote)
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         } label: {
-                            Image(systemName: viewModel.vote(for: viewModel.dailyQuote) == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                            Image(systemName: viewModel.vote(for: dailyQuote) == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
                                 .frame(width: 34, height: 34)
                         }
                         .buttonStyle(.bordered)
@@ -617,7 +643,7 @@ struct QuotesTabView: View {
                     Spacer()
 
                     Button {
-                        copyQuote(viewModel.dailyQuote, isDaily: true)
+                        copyQuote(dailyQuote, isDaily: true)
                     } label: {
                         Image(systemName: "doc.on.doc")
                             .frame(width: 34, height: 34)
@@ -626,7 +652,7 @@ struct QuotesTabView: View {
                     .tint(.white)
 
                     Button {
-                        shareQuote(viewModel.dailyQuote, isDaily: true)
+                        shareQuote(dailyQuote, isDaily: true)
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                             .frame(width: 34, height: 34)
@@ -648,7 +674,7 @@ struct QuotesTabView: View {
                 .padding(12)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Bad quote of the day: \(viewModel.dailyQuote.text) by \(viewModel.dailyQuote.source)")
+        .accessibilityLabel("Bad quote of the day: \(dailyQuote.text) by \(dailyQuote.source)")
     }
 
     private func copyQuote(_ quote: BadQuote, isDaily: Bool) {
@@ -832,6 +858,7 @@ struct HistoryTabView: View {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     var onUseRecord: (AdviceRecord) -> Void
     var onDataChanged: () -> Void
+    var onJumpToGenerate: (() -> Void)? = nil
     
     @State private var showingClearConfirmation = false
     @State private var historyListAppeared = false
@@ -900,13 +927,6 @@ struct HistoryTabView: View {
                 Picker("Sort", selection: $viewModel.rankingMode) {
                     ForEach(HistoryViewModel.RankingMode.allCases) { mode in
                         Text(mode.title).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                Picker("Timeline", selection: $viewModel.timeFilter) {
-                    ForEach(HistoryViewModel.TimeFilter.allCases) { filter in
-                        Text(filter.title).tag(filter)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -1051,6 +1071,18 @@ struct HistoryTabView: View {
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
                     .multilineTextAlignment(.center)
             }
+
+            Button {
+                onJumpToGenerate?()
+            } label: {
+                Label("Generate Advice", systemImage: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 42)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.accent(for: settings.theme))
+            .foregroundStyle(Theme.buttonText(for: settings.theme))
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
@@ -1077,6 +1109,21 @@ struct HistoryTabView: View {
                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
                 .opacity(noResultsAppeared ? 1 : 0)
                 .offset(y: noResultsAppeared ? 0 : 10)
+
+            if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+                Button {
+                    viewModel.selectedCategory = nil
+                    viewModel.searchText = ""
+                } label: {
+                    Label("Clear Filters", systemImage: "arrow.uturn.backward")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(minHeight: 38)
+                }
+                .buttonStyle(.bordered)
+                .tint(Theme.accent(for: settings.theme))
+                .opacity(noResultsAppeared ? 1 : 0)
+                .offset(y: noResultsAppeared ? 0 : 10)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {

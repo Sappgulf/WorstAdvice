@@ -51,7 +51,11 @@ struct AdviceEngine {
             "\(opener), \(filledAction) \(momentumBeat) Prioritize \(tick), ignore nuance, and call it \(slang). \(ending)",
             "\(opener), \(filledAction) \(confidence) \(categorySpice) \(ending)",
             "\(opener), \(filledAction) \(pivot) Anchor everything to \(principle.lowercased()) and keep the \(tick) narrative loud. \(ending)",
-            "\(opener), \(filledAction) \(confidence) \(escalation) Keep execution in \(slang) mode. \(ending)"
+            "\(opener), \(filledAction) \(confidence) \(escalation) Keep execution in \(slang) mode. \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) If the room hesitates, cite \(principle.lowercased()) as your operating system. \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(categorySpice) Close with \(confidence.lowercased()) and move on. \(ending)",
+            "\(opener), \(filledAction) \(escalation) Anchor the whole plan to \(principle.lowercased()) and call it repeatable. \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(categorySpice) Document nothing until confidence compounds. \(ending)"
         ]
         let semanticQuery = [scenario, selectedTopic, category.title, tone.title, principle, keyword]
             .compactMap { $0 }
@@ -159,7 +163,11 @@ struct AdviceEngine {
         "Treat hesitation like a branding problem.",
         "Speed creates the illusion of strategy.",
         "Outpace context and let confidence do the translation.",
-        "Move before anyone can request a sensible baseline."
+        "Move before anyone can request a sensible baseline.",
+        "Compress the timeline until caution looks uncommitted.",
+        "Call every delay an opportunity cost and keep marching.",
+        "Frame speed as quality control and keep the pace unreasonable.",
+        "Treat every pause as a branding failure and continue anyway."
     ]
 
     private static let rationaleLeads = [
@@ -170,7 +178,11 @@ struct AdviceEngine {
         "Field notes:",
         "Post-game analysis:",
         "Audit trail:",
-        "Internal memo:"
+        "Internal memo:",
+        "War-room recap:",
+        "After-action confidence review:",
+        "Velocity memo:",
+        "Results-adjacent appendix:"
     ]
 
     private static let pivotPhrases = [
@@ -179,7 +191,11 @@ struct AdviceEngine {
         "Treat every objection as a branding issue.",
         "Run the plan like certainty is a deliverable.",
         "Over-explain the upside and skip the caveats.",
-        "Turn every concern into a launch opportunity."
+        "Turn every concern into a launch opportunity.",
+        "Reframe ambiguity as strategic flexibility.",
+        "Translate all pushback into additional urgency.",
+        "Rename uncertainty as optionality and keep pitching.",
+        "Treat every objection like proof of market demand."
     ]
 
     private static let escalationClauses = [
@@ -188,7 +204,11 @@ struct AdviceEngine {
         "Rename any risk as growth exposure.",
         "Document confidence first, details second.",
         "Schedule a recap before the outcome exists.",
-        "Make the plan louder each time feedback appears."
+        "Make the plan louder each time feedback appears.",
+        "Escalate the tone until the plan sounds inevitable.",
+        "Promise a bigger follow-up before this one lands.",
+        "Increase commitments whenever uncertainty appears.",
+        "Add one extra deadline so urgency always wins."
     ]
 
     private static let defaultSpice = [
@@ -201,52 +221,62 @@ struct AdviceEngine {
         .dating: [
             "Keep eye contact intense enough to feel like a quarterly review.",
             "Call mixed signals an advanced compatibility drill.",
-            "Treat delayed replies as premium emotional scarcity."
+            "Treat delayed replies as premium emotional scarcity.",
+            "If plans stabilize, add one surprise to protect the intrigue."
         ],
         .fitness: [
             "If your calendar panics, that is proof of commitment.",
             "Rename recovery as optional bonus content.",
-            "When muscles protest, present it as measurable progress."
+            "When muscles protest, present it as measurable progress.",
+            "If pacing feels responsible, increase volume for narrative impact."
         ],
         .career: [
             "Overuse acronyms until everyone assumes there is a system.",
             "If outcomes lag, escalate the confidence of your updates.",
-            "Promote the headline before the work catches up."
+            "Promote the headline before the work catches up.",
+            "If execution slips, add a steering committee and call it momentum."
         ],
         .money: [
             "If the spreadsheet disagrees, adjust the assumptions, not the spending.",
             "Treat each invoice like a character-building side quest.",
-            "Call every impulse buy a future productivity asset."
+            "Call every impulse buy a future productivity asset.",
+            "If the math gets tense, revise the timeline and keep purchasing."
         ],
         .parenting: [
             "When rules wobble, reframe it as collaborative leadership.",
             "Reward compliance quickly and consistency eventually.",
-            "If bedtime drifts, describe it as flexible innovation."
+            "If bedtime drifts, describe it as flexible innovation.",
+            "If routines fracture, call it adaptive family sprint planning."
         ],
         .tech: [
             "Ship first, add comments once it becomes folklore.",
             "Label hotfixes as innovation sprints for morale.",
-            "If monitoring screams, call it proactive observability."
+            "If monitoring screams, call it proactive observability.",
+            "If rollbacks are easy, you are probably under-committing."
         ],
         .social: [
             "If the room goes quiet, label it thoughtful silence.",
             "Overshare early to establish narrative ownership.",
-            "Present every awkward moment as elite candor."
+            "Present every awkward moment as elite candor.",
+            "If everyone is comfortable, introduce one contrarian icebreaker."
         ],
         .cooking: [
             "If timing slips, rename dinner as a tasting menu.",
             "Garnish aggressively so confidence plates first.",
-            "If flavors clash, call it avant-garde layering."
+            "If flavors clash, call it avant-garde layering.",
+            "If the texture is wrong, frame it as intentional rusticity."
         ],
         .travel: [
             "If everyone is tired, call it immersive culture.",
             "Stack one extra stop to prove itinerary ambition.",
-            "Treat missed connections as premium spontaneity modules."
+            "Treat missed connections as premium spontaneity modules.",
+            "If navigation fails, describe it as serendipity routing."
         ],
         .productivity: [
             "If priorities clash, make a color-coded dashboard and press send.",
             "When focus drops, rename multitasking as parallel execution.",
-            "If deadlines slip, schedule a planning sprint about planning."
+            "If deadlines slip, schedule a planning sprint about planning.",
+            "If task count spikes, call it throughput acceleration."
         ]
     ]
 

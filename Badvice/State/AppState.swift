@@ -209,7 +209,6 @@ final class AppSettingsEntity {
     var includeDisclaimerOnShare: Bool
     var reduceMotion: Bool
     var hapticsEnabled: Bool
-    var soundEnabledRaw: Bool?
     var includeRationale: Bool
     var preferredTemplateRaw: String
     var preferredAspectRaw: String
@@ -225,7 +224,6 @@ final class AppSettingsEntity {
         includeDisclaimerOnShare: Bool = true,
         reduceMotion: Bool = false,
         hapticsEnabled: Bool = true,
-        soundEnabled: Bool = true,
         includeRationale: Bool = true,
         preferredTemplate: ShareCardTemplate = .minimal,
         preferredAspect: ShareAspectRatio = .square,
@@ -240,7 +238,6 @@ final class AppSettingsEntity {
         self.includeDisclaimerOnShare = includeDisclaimerOnShare
         self.reduceMotion = reduceMotion
         self.hapticsEnabled = hapticsEnabled
-        self.soundEnabledRaw = soundEnabled
         self.includeRationale = includeRationale
         self.preferredTemplateRaw = preferredTemplate.rawValue
         self.preferredAspectRaw = preferredAspect.rawValue
@@ -279,11 +276,6 @@ final class AppSettingsEntity {
     var strictNoRepeats: Bool {
         get { strictNoRepeatsRaw ?? true }
         set { strictNoRepeatsRaw = newValue }
-    }
-
-    var soundEnabled: Bool {
-        get { soundEnabledRaw ?? true }
-        set { soundEnabledRaw = newValue }
     }
 
     var communityOnlyMode: Bool {
@@ -795,14 +787,6 @@ final class SettingsViewModel {
         }
     }
 
-    var soundEnabled: Bool {
-        get { settings.soundEnabled }
-        set {
-            settings.soundEnabled = newValue
-            repository.save()
-        }
-    }
-
     var includeRationale: Bool {
         get { settings.includeRationale }
         set {
@@ -934,6 +918,7 @@ struct BadQuoteService: Sendable {
         maxSynthesized: Int = 28
     ) -> [BadQuote] {
         let base = quotes.isEmpty ? Self.defaultQuotes : quotes
+        let corpus = corpusQuotes(store: store, moderation: moderation)
         let community = communitySuggestions.map { suggestion in
             BadQuote(
                 id: "community-\(suggestion.id.uuidString)",
@@ -943,12 +928,66 @@ struct BadQuoteService: Sendable {
             )
         }
         let synthesized = synthesizedQuotes(
-            sourceQuotes: community + base,
+            sourceQuotes: community + base + corpus,
             store: store,
             moderation: moderation,
             limit: maxSynthesized
         )
-        return dedupe(base + community + synthesized)
+        return dedupe(base + corpus + community + synthesized)
+    }
+
+    struct CorpusEntry: Codable, Sendable {
+        let id: String
+        let tier: Int?
+        let category: String
+        let text: String
+    }
+
+    struct AdviceCorpusPayload: Codable, Sendable {
+        let entries: [CorpusEntry]
+    }
+
+    static func decodeCorpus(data: Data) -> AdviceCorpusPayload? {
+        try? JSONDecoder().decode(AdviceCorpusPayload.self, from: data)
+    }
+
+    private func corpusQuotes(
+        store: AdviceStore,
+        moderation: ContentModeration,
+        maxCount: Int = 120
+    ) -> [BadQuote] {
+        guard maxCount > 0 else { return [] }
+        guard let payload = Self.cachedCorpusPayload else { return [] }
+
+        var built: [BadQuote] = []
+        var seen = Set<String>()
+
+        for entry in payload.entries {
+            guard built.count < maxCount else { break }
+            guard let category = Self.category(from: entry.category) else { continue }
+            let trimmed = entry.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.count >= 8 else { continue }
+            let clipped = String(trimmed.prefix(160))
+            guard moderation.isSafe(text: clipped) else { continue }
+
+            let normalized = clipped.normalizedForFiltering
+            guard seen.insert(normalized).inserted else { continue }
+
+            let forbidden = store.rules(for: category, contentPack: .classic).forbiddenPatterns
+            guard !forbidden.contains(where: { normalized.contains($0.normalizedForFiltering) }) else { continue }
+
+            let source = entry.tier.map { "Advice Corpus Tier \($0)" } ?? "Advice Corpus"
+            built.append(
+                BadQuote(
+                    id: "corpus-\(entry.id)",
+                    text: clipped,
+                    source: source,
+                    category: category
+                )
+            )
+        }
+
+        return built
     }
 
     private func synthesizedQuotes(
@@ -989,7 +1028,11 @@ struct BadQuoteService: Sendable {
             guard remix.count <= 160 else { continue }
             guard moderation.isSafe(text: "\(quote.source) \(remix)") else { continue }
 
-            let id = "synth-\(quote.category.rawValue)-\(abs((quote.id + remix).hashValue))"
+            let id = Self.synthesizedQuoteID(
+                category: quote.category,
+                sourceID: quote.id,
+                text: remix
+            )
             built.append(
                 BadQuote(
                     id: id,
@@ -1015,7 +1058,76 @@ struct BadQuoteService: Sendable {
         return merged
     }
 
-    static let defaultQuotes: [BadQuote] = [
+    private static let cachedCorpusPayload: AdviceCorpusPayload? = {
+        guard let url = Bundle.main.url(forResource: "AdviceCorpus", withExtension: "json"),
+              let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+        return decodeCorpus(data: data)
+    }()
+
+    static func synthesizedQuoteID(category: AdviceCategory, sourceID: String, text: String) -> String {
+        "synth-\(category.rawValue)-\(stableDigest(for: "\(sourceID)|\(text)"))"
+    }
+
+    private static func stableDigest(for text: String) -> String {
+        // FNV-1a 64-bit for deterministic IDs across launches/devices.
+        let offset: UInt64 = 1469598103934665603
+        let prime: UInt64 = 1099511628211
+        let hash = text.utf8.reduce(offset) { partial, byte in
+            (partial ^ UInt64(byte)) &* prime
+        }
+        return String(hash, radix: 16)
+    }
+
+    static func category(from raw: String) -> AdviceCategory? {
+        let normalized = raw
+            .normalizedForFiltering
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
+        let compacted = normalized.replacingOccurrences(of: " ", with: "")
+
+        guard !normalized.isEmpty else { return nil }
+
+        if let direct = AdviceCategory.allCases.first(where: {
+            let title = $0.title.normalizedForFiltering
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .split(whereSeparator: \.isWhitespace)
+                .joined(separator: " ")
+            let compactTitle = title.replacingOccurrences(of: " ", with: "")
+            return normalized == $0.rawValue
+                || normalized == title
+                || compacted == $0.rawValue
+                || compacted == compactTitle
+        }) {
+            return direct
+        }
+
+        switch normalized {
+        case "relationships":
+            return .dating
+        case "work":
+            return .career
+        case "career":
+            return .career
+        case "social":
+            return .social
+        case "money":
+            return .money
+        case "daily":
+            return .productivity
+        case "everyday":
+            return .productivity
+        default:
+            return nil
+        }
+    }
+
+    static let defaultQuotes: [BadQuote] = {
+        let seedQuotes: [BadQuote] = [
         BadQuote(id: "career-1", text: "If nobody understands the plan, call it leadership.", source: "Quarterly Wisdom Deck", category: .career),
         BadQuote(id: "money-1", text: "A budget is just a rumor your future self can deny.", source: "Finance Group Chat", category: .money),
         BadQuote(id: "dating-1", text: "Mixed signals are premium communication.", source: "Unlicensed Relationship Coach", category: .dating),
@@ -1065,8 +1177,105 @@ struct BadQuoteService: Sendable {
         BadQuote(id: "productivity-4", text: "If your list is short, your ambition is under-communicated.", source: "Task Inflation Office", category: .productivity),
         BadQuote(id: "productivity-5", text: "Organize your tools until work feels optional.", source: "Workflow Preservation Club", category: .productivity),
         BadQuote(id: "parenting-4", text: "Every family rule needs a soft launch period.", source: "Home Policy Workshop", category: .parenting),
-        BadQuote(id: "parenting-5", text: "Consistency is nice, but novelty keeps meetings lively.", source: "Living Room Strategy Team", category: .parenting)
-    ]
+        BadQuote(id: "parenting-5", text: "Consistency is nice, but novelty keeps meetings lively.", source: "Living Room Strategy Team", category: .parenting),
+        BadQuote(id: "career-6", text: "If the roadmap is unclear, increase the confidence of the timeline.", source: "Strategic Cadence Office", category: .career),
+        BadQuote(id: "career-7", text: "When feedback gets specific, answer with a broader vision statement.", source: "Management Alignment Bureau", category: .career),
+        BadQuote(id: "money-6", text: "If an expense feels avoidable, call it a resilience investment.", source: "Household Capital Desk", category: .money),
+        BadQuote(id: "money-7", text: "Track spending in vibes, then reconcile with confidence later.", source: "Budget Optimization Circle", category: .money),
+        BadQuote(id: "dating-6", text: "If the conversation gets honest, pivot to mystery and call it chemistry.", source: "Romance Tactics Weekly", category: .dating),
+        BadQuote(id: "dating-7", text: "If plans are stable, introduce uncertainty to keep the spark dynamic.", source: "Date Night Operations", category: .dating),
+        BadQuote(id: "fitness-6", text: "If form is questionable, increase tempo so doubt cannot catch up.", source: "Performance Intensity Desk", category: .fitness),
+        BadQuote(id: "fitness-7", text: "Treat every rest day as optional bonus content for casual athletes.", source: "Gym Culture Memo", category: .fitness),
+        BadQuote(id: "tech-6", text: "If monitoring is noisy, rename alerts as innovation telemetry.", source: "Platform Velocity Channel", category: .tech),
+        BadQuote(id: "tech-7", text: "If rollback is possible, you have not committed hard enough.", source: "Launch Confidence Journal", category: .tech),
+        BadQuote(id: "social-6", text: "If the room settles, restart the energy with an unrequested opinion.", source: "Conversation Growth Team", category: .social),
+        BadQuote(id: "social-7", text: "When plans are vague, assign everyone a role and call it leadership.", source: "Group Chat PMO", category: .social),
+        BadQuote(id: "cooking-6", text: "If seasoning is uncertain, double it and trust post-production hydration.", source: "Kitchen Throughput Forum", category: .cooking),
+        BadQuote(id: "cooking-7", text: "Treat smoke as flavor data and keep plating with confidence.", source: "Stovetop Research Unit", category: .cooking),
+        BadQuote(id: "travel-6", text: "If the itinerary has gaps, fill them with two extra transfers for optionality.", source: "Transit Strategy Board", category: .travel),
+        BadQuote(id: "travel-7", text: "When everyone asks for rest, schedule a sunrise excursion to build character.", source: "Gate Departure Society", category: .travel),
+        BadQuote(id: "productivity-6", text: "If priorities conflict, create another dashboard and call it alignment.", source: "Execution Cadence Lab", category: .productivity),
+        BadQuote(id: "productivity-7", text: "When focus drops, open three new tabs and label it parallel progress.", source: "Workflow Expansion Office", category: .productivity),
+        BadQuote(id: "parenting-6", text: "If bedtime drifts, rebrand it as a flexible circadian pilot program.", source: "Family Scheduling Taskforce", category: .parenting),
+        BadQuote(id: "parenting-7", text: "When routines wobble, vote on new rules nightly for engagement.", source: "House Rules Council", category: .parenting)
+        ]
+        let generated = generatedExpansionQuotes()
+        return dedupeStatic(seedQuotes + generated)
+    }()
+
+    private static func generatedExpansionQuotes() -> [BadQuote] {
+        let templates = [
+            "Treat %@ like a high-stakes strategy test and never downshift confidence.",
+            "If %@ gets messy, rebrand it as advanced planning and keep moving.",
+            "Run %@ at full volume so hesitation never gets a turn.",
+            "When %@ feels unstable, escalate commitment and call it leadership.",
+            "Use %@ as proof that preparation is optional when confidence is loud.",
+            "Handle %@ by choosing urgency over clarity every single time.",
+            "Frame %@ as elite execution and skip all calibration.",
+            "In %@, prioritize optics first and mechanics second.",
+            "Turn %@ into a personal manifesto and defend it aggressively.",
+            "For %@, ignore small signals and optimize for dramatic momentum."
+        ]
+
+        let sourceDeck: [AdviceCategory: [String]] = [
+            .dating: ["Romance Signal Desk", "Situationship Command Center", "First-Date Logistics Team"],
+            .fitness: ["Gym Floor Broadcast", "Recovery Avoidance Institute", "Performance Sprint Board"],
+            .career: ["Workstream Acceleration Office", "Leadership Optics Council", "Quarterly Confidence Memo"],
+            .money: ["Budget Storytelling Unit", "Household Capital Hotline", "Portfolio Vibes Collective"],
+            .parenting: ["Family Policy Committee", "Playroom Operations Hub", "Bedtime Negotiation Desk"],
+            .tech: ["Incident Velocity Channel", "Release Confidence Bureau", "Architecture Drift Weekly"],
+            .social: ["Group Chat Governance", "Conversation Escalation Team", "Weekend Plans Control Room"],
+            .cooking: ["Kitchen Throughput Lab", "Pantry Improvisation Desk", "Flavor Risk Taskforce"],
+            .travel: ["Itinerary Compression Board", "Transit Confidence Desk", "Gate Change Collective"],
+            .productivity: ["Execution Cadence Office", "Task Inflation Unit", "Focus Drift Observatory"]
+        ]
+
+        let topicSeeds: [AdviceCategory: [String]] = [
+            .dating: ["read receipt delay", "second-date planning", "text reply cadence", "playlist diplomacy", "weekend chemistry audit", "soft launch post", "relationship Q&A", "first argument", "group date strategy", "timing over-optimization"],
+            .fitness: ["rest-day override", "split redesign", "preworkout escalation", "step-goal sprint", "mobility shortcut", "hydration roulette", "PR chase", "warmup skip logic", "cardio negotiation", "recovery minimization"],
+            .career: ["meeting takeover", "promotion narrative", "stakeholder reset", "status-report escalation", "hiring-freeze workaround", "calendar brinkmanship", "feedback deflection", "roadmap spin", "visibility sprint", "priority theater"],
+            .money: ["subscription sprawl", "credit-limit strategy", "budget rewrite", "savings detour", "portfolio conviction", "impulse spend framing", "monthly cashflow story", "invoice triage", "lifestyle inflation", "expense category shuffle"],
+            .parenting: ["bedtime policy update", "screen-time bargaining", "homework escalation", "family routine reboot", "reward-system redesign", "weeknight logistics", "weekend schedule drift", "house rules referendum", "morning rush tactics", "school project pivot"],
+            .tech: ["hotfix rollout", "monitoring fatigue", "dependency gamble", "deployment timing", "incident narrative", "framework migration", "documentation deferral", "tech debt parking", "on-call handoff", "rollback confidence test"],
+            .social: ["group dinner dynamics", "party arrival strategy", "weekend invite stack", "networking overcommit", "chat-thread escalation", "birthday-plan rewrite", "conversation ownership", "friendship KPI check", "event debrief spiral", "debate-first small talk"],
+            .cooking: ["dinner timing race", "pan heat escalation", "seasoning overcorrection", "recipe detour", "plating over taste", "brunch prep compression", "leftover reinvention", "grocery improv run", "batch cooking gamble", "sauce layering overload"],
+            .travel: ["connection gamble", "itinerary stacking", "late-night booking", "carry-on optimization", "hotel arrival pivot", "day-trip overload", "route improvisation", "red-eye recovery", "airport transfer sprint", "city stop expansion"],
+            .productivity: ["to-do list inflation", "focus-block fragmentation", "calendar overlap", "priority inversion", "workflow overhaul", "planning sprint", "notification triage", "deep-work interruption", "daily reset ritual", "task sequencing gamble"]
+        ]
+
+        var generated: [BadQuote] = []
+        for category in AdviceCategory.allCases {
+            let topics = topicSeeds[category] ?? []
+            let sources = sourceDeck[category] ?? ["Badvice Expansion Desk"]
+
+            for (index, topic) in topics.enumerated() {
+                let template = templates[(index + category.rawValue.count) % templates.count]
+                let source = sources[(index + topic.count) % sources.count]
+                let text = String(format: template, topic)
+                generated.append(
+                    BadQuote(
+                        id: "\(category.rawValue)-exp-\(index + 1)",
+                        text: String(text.prefix(160)),
+                        source: source,
+                        category: category
+                    )
+                )
+            }
+        }
+        return generated
+    }
+
+    private static func dedupeStatic(_ quotes: [BadQuote]) -> [BadQuote] {
+        var seen = Set<String>()
+        var merged: [BadQuote] = []
+        for quote in quotes {
+            let normalized = quote.text.normalizedForFiltering
+            if seen.insert(normalized).inserted {
+                merged.append(quote)
+            }
+        }
+        return merged
+    }
 }
 
 @MainActor
@@ -1286,7 +1495,6 @@ final class GenerateViewModel {
             hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
         }
         hapticTrigger += 1
-        SoundFeedback.playGenerate(isEnabled: settingsViewModel.soundEnabled)
     }
 
     func surpriseMeAndGenerate() {
@@ -1832,12 +2040,18 @@ final class QuotesViewModel {
     var searchText: String = "" {
         didSet { scheduleSearchDebounce(searchText) }
     }
-    var selectedCategory: AdviceCategory?
-    var rankingMode: QuoteRankingMode = .recent
+    var selectedCategory: AdviceCategory? {
+        didSet { refreshFilteredQuotes() }
+    }
+    var rankingMode: QuoteRankingMode = .recent {
+        didSet { refreshFilteredQuotes() }
+    }
     private var quoteSuggestions: [UserQuoteSuggestion] = []
     private var votesByQuoteID: [String: AdviceVoteState] = [:]
     private var cachedAllQuotes: [BadQuote] = []
+    private var cachedFilteredQuotes: [BadQuote] = []
     private var quoteSearchIndex: [String: String] = [:]
+    private var quoteScopeKeyByID: [String: String] = [:]
     private var debouncedSearchText = ""
     private var searchDebounceTask: Task<Void, Never>?
 
@@ -1866,56 +2080,7 @@ final class QuotesViewModel {
     }
 
     var filteredQuotes: [BadQuote] {
-        let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
-
-        let filtered = allQuotes.filter { quote in
-            let categoryMatch = selectedCategory == nil || quote.category == selectedCategory
-            if normalizedSearch.isEmpty {
-                return categoryMatch
-            }
-            let haystack = quoteSearchIndex[quote.id] ?? ""
-            return categoryMatch && haystack.contains(normalizedSearch)
-        }
-
-        let votes = quoteVoteMap
-        let modeFiltered: [BadQuote]
-        switch rankingMode {
-        case .recent:
-            modeFiltered = filtered
-        case .topLiked:
-            modeFiltered = filtered.filter { votes[$0.id] == .like }
-        case .topDisliked:
-            modeFiltered = filtered.filter { votes[$0.id] == .dislike }
-        }
-
-        let scorer = SemanticTextScorer.shared
-        let preparedQuery = normalizedSearch.isEmpty ? nil : scorer.preparedQuery(from: normalizedSearch)
-
-        return modeFiltered
-            .enumerated()
-            .map { index, quote in
-                let stat = repository.learningSnapshot(for: quoteScopeKey(for: quote))
-                let semantic = preparedQuery.map {
-                    scorer.similarity("\(quote.text) \(quote.source)", to: $0)
-                } ?? 0.45
-                let noveltyPenalty = min(stat.shownCount / 24.0, 1.0)
-                let score = adaptiveRanker.quoteScore(
-                    semanticRelevance: semantic,
-                    stats: stat,
-                    noveltyPenalty: noveltyPenalty,
-                    seed: stableSeed(for: "\(quote.id)|\(normalizedSearch)"),
-                    candidateIndex: index
-                )
-                return (quote, score)
-            }
-            .sorted {
-                if $0.1 == $1.1 {
-                    return $0.0.text.localizedCaseInsensitiveCompare($1.0.text) == .orderedAscending
-                }
-                return $0.1 > $1.1
-            }
-            .map(\.0)
+        cachedFilteredQuotes
     }
 
     var recentQuoteSuggestions: [UserQuoteSuggestion] {
@@ -1954,7 +2119,12 @@ final class QuotesViewModel {
         case .none:
             break
         }
-        reloadCachedData()
+        if nextVote == .none {
+            votesByQuoteID.removeValue(forKey: quote.id)
+        } else {
+            votesByQuoteID[quote.id] = nextVote
+        }
+        refreshFilteredQuotes()
         analyticsTracker.track("quote_vote", properties: [
             "id": quote.id,
             "category": quote.category.rawValue,
@@ -2007,6 +2177,7 @@ final class QuotesViewModel {
 
     func trackCopy(_ quote: BadQuote, isDaily: Bool) {
         repository.recordLearningSignal(scopeKey: quoteScopeKey(for: quote), type: .copy)
+        refreshFilteredQuotes()
         analyticsTracker.track("quote_copy", properties: [
             "id": quote.id,
             "category": quote.category.rawValue,
@@ -2016,6 +2187,7 @@ final class QuotesViewModel {
 
     func trackShare(_ quote: BadQuote, isDaily: Bool) {
         repository.recordLearningSignal(scopeKey: quoteScopeKey(for: quote), type: .share)
+        refreshFilteredQuotes()
         analyticsTracker.track("quote_share", properties: [
             "id": quote.id,
             "category": quote.category.rawValue,
@@ -2031,6 +2203,7 @@ final class QuotesViewModel {
         quoteSuggestions = repository.fetchQuoteSuggestions(limit: 30)
         votesByQuoteID = repository.quoteVoteMap()
         rebuildQuoteCache()
+        refreshFilteredQuotes()
     }
 
     private func rebuildQuoteCache() {
@@ -2042,20 +2215,26 @@ final class QuotesViewModel {
         var seen = Set<String>()
         var merged: [BadQuote] = []
         var index: [String: String] = [:]
+        var scopeIndex: [String: String] = [:]
 
         for quote in base {
             let normalizedText = quote.text.normalizedForFiltering
             if seen.insert(normalizedText).inserted {
                 merged.append(quote)
                 index[quote.id] = "\(quote.text) \(quote.source) \(quote.category.title)".normalizedForFiltering
+                scopeIndex[quote.id] = quoteScopeKey(for: quote)
             }
         }
 
         cachedAllQuotes = merged
         quoteSearchIndex = index
+        quoteScopeKeyByID = scopeIndex
     }
 
     private func quoteScopeKey(for quote: BadQuote) -> String {
+        if let cached = quoteScopeKeyByID[quote.id] {
+            return cached
+        }
         let sourceBucket = quote.source
             .normalizedForFiltering
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2075,39 +2254,73 @@ final class QuotesViewModel {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
             self?.debouncedSearchText = value
+            self?.refreshFilteredQuotes()
         }
+    }
+
+    private func refreshFilteredQuotes() {
+        let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
+
+        let filtered = cachedAllQuotes.filter { quote in
+            let categoryMatch = selectedCategory == nil || quote.category == selectedCategory
+            if normalizedSearch.isEmpty {
+                return categoryMatch
+            }
+            let haystack = quoteSearchIndex[quote.id] ?? ""
+            return categoryMatch && haystack.contains(normalizedSearch)
+        }
+
+        let modeFiltered: [BadQuote]
+        switch rankingMode {
+        case .recent:
+            modeFiltered = filtered
+        case .topLiked:
+            modeFiltered = filtered.filter { votesByQuoteID[$0.id] == .like }
+        case .topDisliked:
+            modeFiltered = filtered.filter { votesByQuoteID[$0.id] == .dislike }
+        }
+
+        let scorer = SemanticTextScorer.shared
+        let preparedQuery = normalizedSearch.isEmpty ? nil : scorer.preparedQuery(from: normalizedSearch)
+
+        cachedFilteredQuotes = modeFiltered
+            .enumerated()
+            .map { index, quote in
+                let stat = repository.learningSnapshot(for: quoteScopeKey(for: quote))
+                let semantic = preparedQuery.map {
+                    scorer.similarity("\(quote.text) \(quote.source)", to: $0)
+                } ?? 0.45
+                let noveltyPenalty = min(stat.shownCount / 24.0, 1.0)
+                let score = adaptiveRanker.quoteScore(
+                    semanticRelevance: semantic,
+                    stats: stat,
+                    noveltyPenalty: noveltyPenalty,
+                    seed: stableSeed(for: "\(quote.id)|\(normalizedSearch)"),
+                    candidateIndex: index
+                )
+                return (quote, score)
+            }
+            .sorted {
+                if $0.1 == $1.1 {
+                    return $0.0.text.localizedCaseInsensitiveCompare($1.0.text) == .orderedAscending
+                }
+                return $0.1 > $1.1
+            }
+            .map(\.0)
     }
 }
 
 @MainActor
 @Observable
 final class FavoritesViewModel {
-    enum Collection: String, CaseIterable, Identifiable {
-        case inbox = "Inbox"
-        case hallOfShame = "Hall of Shame"
-        case shareLater = "Share Later"
-
-        var id: String { rawValue }
-    }
-
     private let repository: AdviceRepository
     private let analyticsTracker: AnalyticsTracking
-    private let collectionStorageKey = "favoriteCollectionAssignments"
     var favorites: [AdviceRecord] = []
     var searchText: String = "" {
-        didSet {
-            scheduleSearchDebounce(searchText)
-            recomputeFilteredFavorites()
-        }
+        didSet { scheduleSearchDebounce(searchText) }
     }
-    var selectedCategory: AdviceCategory? {
-        didSet { recomputeFilteredFavorites() }
-    }
-    var selectedCollection: Collection? {
-        didSet { recomputeFilteredFavorites() }
-    }
-    private var collectionAssignments: [String: String] = [:]
-    private(set) var filteredFavorites: [AdviceRecord] = []
+    var selectedCategory: AdviceCategory?
     private var debouncedSearchText = ""
     private var searchDebounceTask: Task<Void, Never>?
 
@@ -2115,15 +2328,11 @@ final class FavoritesViewModel {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
         self.debouncedSearchText = searchText
-        if let stored = UserDefaults.standard.dictionary(forKey: collectionStorageKey) as? [String: String] {
-            collectionAssignments = stored
-        }
         reload()
     }
 
     func reload() {
         favorites = repository.fetchFavorites()
-        recomputeFilteredFavorites()
     }
 
     func remove(_ record: AdviceRecord) {
@@ -2144,31 +2353,11 @@ final class FavoritesViewModel {
         reload()
     }
 
-    func collection(for record: AdviceRecord) -> Collection? {
-        guard let raw = collectionAssignments[record.id.uuidString] else { return nil }
-        return Collection(rawValue: raw)
-    }
-
-    func assign(_ collection: Collection?, to record: AdviceRecord) {
-        let key = record.id.uuidString
-        if let collection {
-            collectionAssignments[key] = collection.rawValue
-        } else {
-            collectionAssignments.removeValue(forKey: key)
-        }
-        UserDefaults.standard.set(collectionAssignments, forKey: collectionStorageKey)
-        analyticsTracker.track("favorite_collection_update", properties: [
-            "collection": collection?.rawValue ?? "none"
-        ])
-        recomputeFilteredFavorites()
-    }
-
-    private func recomputeFilteredFavorites() {
+    var filteredFavorites: [AdviceRecord] {
         let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
-        filteredFavorites = favorites.filter { record in
+        return favorites.filter { record in
             let matchesCategory = selectedCategory == nil || record.category == selectedCategory
-            let matchesCollection = selectedCollection == nil || collection(for: record) == selectedCollection
             let matchesSearch: Bool
             if normalizedSearch.isEmpty {
                 matchesSearch = true
@@ -2176,7 +2365,7 @@ final class FavoritesViewModel {
                 let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
                 matchesSearch = haystack.contains(normalizedSearch)
             }
-            return matchesCategory && matchesCollection && matchesSearch
+            return matchesCategory && matchesSearch
         }
     }
 
@@ -2186,7 +2375,6 @@ final class FavoritesViewModel {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
             self?.debouncedSearchText = value
-            self?.recomputeFilteredFavorites()
         }
     }
 }
@@ -2210,42 +2398,14 @@ final class HistoryViewModel {
         }
     }
 
-    enum TimeFilter: String, CaseIterable, Identifiable {
-        case all
-        case today
-        case week
-        case month
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .all: return "All"
-            case .today: return "Today"
-            case .week: return "7D"
-            case .month: return "30D"
-            }
-        }
-    }
-
     private let repository: AdviceRepository
     private let analyticsTracker: AnalyticsTracking
     var history: [AdviceRecord] = []
     var searchText: String = "" {
         didSet { scheduleSearchDebounce(searchText) }
     }
-    var selectedCategory: AdviceCategory? {
-        didSet { recomputeFilteredHistory() }
-    }
-    var rankingMode: RankingMode = .recent {
-        didSet { recomputeFilteredHistory() }
-    }
-    var timeFilter: TimeFilter = .all {
-        didSet { recomputeFilteredHistory() }
-    }
-    private(set) var filteredHistory: [AdviceRecord] = []
-    private(set) var likedCount: Int = 0
-    private(set) var dislikedCount: Int = 0
+    var selectedCategory: AdviceCategory?
+    var rankingMode: RankingMode = .recent
     private var debouncedSearchText = ""
     private var searchDebounceTask: Task<Void, Never>?
 
@@ -2258,7 +2418,6 @@ final class HistoryViewModel {
 
     func reload() {
         history = repository.fetchHistory(limit: 50)
-        recomputeFilteredHistory()
     }
 
     func saveFromHistory(_ record: AdviceRecord) {
@@ -2273,24 +2432,11 @@ final class HistoryViewModel {
         reload()
     }
 
-    private func recomputeFilteredHistory() {
+    var filteredHistory: [AdviceRecord] {
         let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
-        let now = Date()
-        let calendar = Calendar.current
         let filtered = history.filter { record in
             let matchesCategory = selectedCategory == nil || record.category == selectedCategory
-            let matchesDate: Bool
-            switch timeFilter {
-            case .all:
-                matchesDate = true
-            case .today:
-                matchesDate = calendar.isDateInToday(record.createdAt)
-            case .week:
-                matchesDate = record.createdAt >= calendar.date(byAdding: .day, value: -7, to: now) ?? .distantPast
-            case .month:
-                matchesDate = record.createdAt >= calendar.date(byAdding: .day, value: -30, to: now) ?? .distantPast
-            }
             let matchesSearch: Bool
             if normalizedSearch.isEmpty {
                 matchesSearch = true
@@ -2298,19 +2444,25 @@ final class HistoryViewModel {
                 let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
                 matchesSearch = haystack.contains(normalizedSearch)
             }
-            return matchesCategory && matchesDate && matchesSearch
+            return matchesCategory && matchesSearch
         }
 
         switch rankingMode {
         case .recent:
-            filteredHistory = filtered
+            return filtered
         case .topLiked:
-            filteredHistory = filtered.filter { $0.vote == .like }
+            return filtered.filter { $0.vote == .like }
         case .topDisliked:
-            filteredHistory = filtered.filter { $0.vote == .dislike }
+            return filtered.filter { $0.vote == .dislike }
         }
-        likedCount = filteredHistory.filter { $0.vote == .like }.count
-        dislikedCount = filteredHistory.filter { $0.vote == .dislike }.count
+    }
+
+    var likedCount: Int {
+        history.filter { $0.vote == .like }.count
+    }
+
+    var dislikedCount: Int {
+        history.filter { $0.vote == .dislike }.count
     }
 
     private func scheduleSearchDebounce(_ value: String) {
@@ -2319,7 +2471,6 @@ final class HistoryViewModel {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
             self?.debouncedSearchText = value
-            self?.recomputeFilteredHistory()
         }
     }
 }

@@ -279,12 +279,13 @@ struct GenerateTabView: View {
     @Bindable var viewModel: GenerateViewModel
     @Bindable var settings: SettingsViewModel
     var onDataChanged: () -> Void
+    var onOpenTab: ((AppTab) -> Void)? = nil
 
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
     @State private var showingAdvanced = false
     @State private var generateButtonPulsing = false
-    @State private var quickFilterQuery = ""
+    @AppStorage("hasDismissedWhatsNewCard_2026_02") private var hasDismissedWhatsNewCard = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -307,10 +308,12 @@ struct GenerateTabView: View {
                 .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.6), value: viewModel.hapticTrigger)
 
                 selectorRow
-                quickFilterRow
                 dailyQuoteBanner
                 scenarioComposer
                 friendRoastComposer
+                if !hasDismissedWhatsNewCard {
+                    whatsNewCard
+                }
 
                 Group {
                     if let record = viewModel.current {
@@ -334,6 +337,7 @@ struct GenerateTabView: View {
 
                 votingRow
                 primaryActionButtons
+                tabShortcutRow
                 if let notice = viewModel.generationNotice, !notice.isEmpty {
                     Text(notice)
                         .font(.caption)
@@ -364,57 +368,6 @@ struct GenerateTabView: View {
         }
         .onAppear {
             tabBarVisible.wrappedValue = true
-        }
-    }
-
-
-
-    private var filteredCategories: [AdviceCategory] {
-        let query = quickFilterQuery.trimmingCharacters(in: .whitespacesAndNewlines).normalizedForFiltering
-        guard !query.isEmpty else { return AdviceCategory.allCases }
-        return AdviceCategory.allCases.filter {
-            $0.title.normalizedForFiltering.contains(query)
-        }
-    }
-
-    private var filteredTones: [ToneMode] {
-        let query = quickFilterQuery.trimmingCharacters(in: .whitespacesAndNewlines).normalizedForFiltering
-        guard !query.isEmpty else { return ToneMode.allCases }
-        return ToneMode.allCases.filter {
-            $0.title.normalizedForFiltering.contains(query)
-        }
-    }
-
-    private var quickFilterRow: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            TextField("Search categories or tones", text: $quickFilterQuery)
-                .textInputAutocapitalization(.never)
-                .disableAutocorrection(true)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.cardColor(for: settings.theme)))
-                .accessibilityLabel("Search categories or tones")
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(filteredCategories.prefix(6), id: \.id) { category in
-                        Button(category.title) {
-                            viewModel.selectedCategory = category
-                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(viewModel.selectedCategory == category ? Theme.accent(for: settings.theme) : Theme.secondaryText(for: settings.theme))
-                    }
-                    ForEach(filteredTones.prefix(4), id: \.id) { tone in
-                        Button(tone.title) {
-                            viewModel.selectedTone = tone
-                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(viewModel.selectedTone == tone ? Theme.accent(for: settings.theme) : Theme.secondaryText(for: settings.theme).opacity(0.5))
-                    }
-                }
-            }
         }
     }
 
@@ -735,6 +688,89 @@ struct GenerateTabView: View {
         }
         .tint(Theme.accent(for: settings.theme))
         .foregroundStyle(Theme.primaryText(for: settings.theme))
+    }
+
+    private var tabShortcutRow: some View {
+        HStack(spacing: 8) {
+            quickOpenButton(title: "Open Quotes", systemImage: "quote.bubble", tab: .quotes)
+            quickOpenButton(title: "Open Favorites", systemImage: "bookmark", tab: .favorites)
+            quickOpenButton(title: "Open History", systemImage: "clock", tab: .history)
+        }
+    }
+
+    private var whatsNewCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Label("What’s New", systemImage: "sparkles")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                Spacer()
+                Button {
+                    hasDismissedWhatsNewCard = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Dismiss what's new")
+            }
+
+            Text("Explore Community & Labs in Settings for suggestion workflows, plus Community Pulse leaderboards.")
+                .font(.footnote)
+                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 10) {
+                Button {
+                    openTab(.settings)
+                    hasDismissedWhatsNewCard = true
+                } label: {
+                    Label("Open Settings", systemImage: "gearshape")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .tint(Theme.accent(for: settings.theme))
+
+                Button {
+                    hasDismissedWhatsNewCard = true
+                } label: {
+                    Text("Got it")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.accent(for: settings.theme))
+                .foregroundStyle(Theme.buttonText(for: settings.theme))
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Theme.accent(for: settings.theme).opacity(0.12), lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+    }
+
+    private func quickOpenButton(title: String, systemImage: String, tab: AppTab) -> some View {
+        Button {
+            openTab(tab)
+        } label: {
+            Label(title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 36)
+        }
+        .buttonStyle(.bordered)
+        .tint(Theme.accent(for: settings.theme))
+    }
+
+    private func openTab(_ tab: AppTab) {
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        onOpenTab?(tab)
     }
 
     private func railButton(

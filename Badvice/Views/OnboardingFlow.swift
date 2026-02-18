@@ -3,6 +3,7 @@ import SwiftUI
 struct OnboardingFlow: View {
     @Binding var isPresented: Bool
     @State private var currentPage = 0
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     private struct Page {
         let icon: String
@@ -14,26 +15,35 @@ struct OnboardingFlow: View {
         Page(
             icon: "sparkles",
             title: "Badvice.\nConfidently delivered.",
-            subtitle: "Hilariously wrong guidance for every situation — dating, money, fitness, and more."
+            subtitle: "Hilariously wrong guidance for dating, money, fitness, work, and everyday chaos."
         ),
         Page(
             icon: "quote.bubble.fill",
-            title: "10 categories.\n9 tones of chaos.",
-            subtitle: "Corporate Consultant to Crypto Bro. Every terrible take has a distinct flavor."
+            title: "10 categories.\n11 tones of chaos.",
+            subtitle: "From Corporate Consultant to Conspiracy Theorist, every terrible take has a distinct voice."
         ),
         Page(
             icon: "square.and.arrow.up",
             title: "Share the\nspectacular failure.",
-            subtitle: "Beautiful cards. One-tap copy. Wisdom so bad it's almost useful."
+            subtitle: "Beautiful cards, one-tap copy/share, and daily drops built for group chats."
+        ),
+        Page(
+            icon: "map.fill",
+            title: "Where to next?",
+            subtitle: "Advice for instant bad ideas, Quotes for daily chaos, Favorites to save disasters, Settings for Labs."
         )
     ]
+
+    private var isMotionReduced: Bool {
+        accessibilityReduceMotion
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Color(hex: "F7F2E8").ignoresSafeArea()
 
             // Triple-A Background Elements
-            FloatingParticlesView(theme: .minimal, reduceMotion: false, isGenerating: false)
+            FloatingParticlesView(theme: .minimal, reduceMotion: isMotionReduced, isGenerating: false)
                 .opacity(0.4)
             
             CinematicVignetteView()
@@ -46,7 +56,8 @@ struct OnboardingFlow: View {
                     OnboardingPageView(
                         icon: page.icon,
                         title: page.title,
-                        subtitle: page.subtitle
+                        subtitle: page.subtitle,
+                        reduceMotion: isMotionReduced
                     )
                     .tag(index)
                 }
@@ -64,24 +75,32 @@ struct OnboardingFlow: View {
                         Capsule(style: .continuous)
                             .fill(Color(hex: "8F4A22").opacity(i == currentPage ? 1 : 0.22))
                             .frame(width: i == currentPage ? 28 : 8, height: 8)
-                            .animation(.spring(response: 0.35, dampingFraction: 0.75), value: currentPage)
+                            .animation(isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.75), value: currentPage)
                     }
                 }
 
                 // CTA
                 Button {
                     if currentPage < pages.count - 1 {
-                        withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
+                        if isMotionReduced {
                             currentPage += 1
+                        } else {
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
+                                currentPage += 1
+                            }
                         }
                     } else {
                         HapticsManager.play(style: .medium, isEnabled: true)
-                        withAnimation(.easeOut(duration: 0.3)) {
+                        if isMotionReduced {
                             isPresented = false
+                        } else {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                isPresented = false
+                            }
                         }
                     }
                 } label: {
-                    Text(currentPage < pages.count - 1 ? "Next" : "Let\u{2019}s Go")
+                    Text(currentPage < pages.count - 1 ? "Next" : "Start The Chaos")
                         .font(.system(.body, design: .rounded, weight: .bold))
                         .frame(maxWidth: .infinity, minHeight: 54)
                         .foregroundStyle(.white)
@@ -98,8 +117,12 @@ struct OnboardingFlow: View {
                 if currentPage < pages.count - 1 {
                     Button("Skip") {
                         HapticsManager.playSelection(isEnabled: true)
-                        withAnimation(.easeOut(duration: 0.25)) {
+                        if isMotionReduced {
                             isPresented = false
+                        } else {
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                isPresented = false
+                            }
                         }
                     }
                     .font(.subheadline.weight(.medium))
@@ -117,6 +140,7 @@ private struct OnboardingPageView: View {
     let icon: String
     let title: String
     let subtitle: String
+    var reduceMotion: Bool = false
 
     @State private var appeared = false
     @State private var floatAnim = false
@@ -137,18 +161,24 @@ private struct OnboardingPageView: View {
                     .frame(width: 110, height: 110)
                     .scaleEffect(floatAnim ? 0.9 : 1.1)
 
-                Image(systemName: icon)
-                    .font(.system(size: 52, weight: .semibold))
-                    .foregroundStyle(Color(hex: "8F4A22"))
-                    .symbolEffect(.bounce.up.byLayer, value: appeared)
-                    .offset(y: floatAnim ? -5 : 5)
+                if reduceMotion {
+                    Image(systemName: icon)
+                        .font(.system(size: 52, weight: .semibold))
+                        .foregroundStyle(Color(hex: "8F4A22"))
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 52, weight: .semibold))
+                        .foregroundStyle(Color(hex: "8F4A22"))
+                        .symbolEffect(.bounce.up.byLayer, value: appeared)
+                        .offset(y: floatAnim ? -5 : 5)
+                }
             }
             .scaleEffect(appeared ? 1 : 0.6)
             .opacity(appeared ? 1 : 0)
-            .animation(.spring(response: 0.55, dampingFraction: 0.68).delay(0.08), value: appeared)
-            .animation(.easeInOut(duration: 3).repeatForever(autoreverses: true), value: floatAnim)
+            .animation(reduceMotion ? nil : .spring(response: 0.55, dampingFraction: 0.68).delay(0.08), value: appeared)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 3).repeatForever(autoreverses: true), value: floatAnim)
             .onAppear {
-                floatAnim = true
+                floatAnim = !reduceMotion
             }
 
             Spacer().frame(height: 52)
@@ -160,7 +190,7 @@ private struct OnboardingPageView: View {
                 .lineSpacing(2)
                 .offset(y: appeared ? 0 : 24)
                 .opacity(appeared ? 1 : 0)
-                .animation(.spring(response: 0.45, dampingFraction: 0.82).delay(0.18), value: appeared)
+                .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.82).delay(0.18), value: appeared)
 
             Spacer().frame(height: 18)
 
@@ -172,7 +202,7 @@ private struct OnboardingPageView: View {
                 .padding(.horizontal, 40)
                 .offset(y: appeared ? 0 : 20)
                 .opacity(appeared ? 1 : 0)
-                .animation(.spring(response: 0.45, dampingFraction: 0.82).delay(0.28), value: appeared)
+                .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.82).delay(0.28), value: appeared)
 
             Spacer()
             Spacer()

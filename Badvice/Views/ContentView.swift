@@ -143,8 +143,7 @@ struct ContentView: View {
             if showSplash {
                 SplashView(isShowing: $showSplash)
                     .transition(.opacity)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                .task {
+                    .task {
                         // Pre-warm session during splash so it's ready immediately after
                         if session == nil {
                             session = AppSessionViewModel(context: modelContext)
@@ -175,7 +174,6 @@ struct ContentView: View {
                         }
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     // Performance: Disable animation if reduce motion is enabled
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
                     
@@ -243,7 +241,6 @@ struct ContentView: View {
                     // Confetti overlay — fires on streak milestones
                     ConfettiView(isActive: $showConfetti)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .sensoryFeedback(trigger: session.generate.hapticTrigger) { _, _ in
                     let weight = session.generate.hapticWeight
                     if weight > 0.8 { return .impact(weight: .heavy) }
@@ -324,7 +321,6 @@ struct ContentView: View {
                             .tint(Color(hex: "8F4A22"))
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .task {
                     if session == nil {
                         session = AppSessionViewModel(context: modelContext)
@@ -350,22 +346,40 @@ struct ContentView: View {
             GenerateTabView(
                 viewModel: session.generate,
                 settings: session.settings,
-                onDataChanged: { session.refreshLists() }
+                onDataChanged: { session.refreshLists() },
+                onOpenTab: { tab in
+                    setSelectedTab(tab, session: session)
+                }
             )
         case .quotes:
-            QuotesTabView(viewModel: session.quotes, settings: session.settings)
+            QuotesTabView(
+                viewModel: session.quotes,
+                settings: session.settings,
+                onJumpToGenerate: {
+                    setSelectedTab(.generate, session: session)
+                }
+            )
         case .favorites:
-            FavoritesTabView(viewModel: session.favorites, settings: session.settings)
+            FavoritesTabView(
+                viewModel: session.favorites,
+                settings: session.settings,
+                onJumpToGenerate: {
+                    setSelectedTab(.generate, session: session)
+                }
+            )
         case .history:
             HistoryTabView(
                 viewModel: session.history,
                 settings: session.settings,
                 onUseRecord: { (record: AdviceRecord) in
                     session.generate.current = record
-                    selectedTab = .generate
+                    setSelectedTab(.generate, session: session)
                 },
                 onDataChanged: { () -> Void in
                     session.refreshLists()
+                },
+                onJumpToGenerate: {
+                    setSelectedTab(.generate, session: session)
                 }
             )
         case .settings:
@@ -374,6 +388,17 @@ struct ContentView: View {
                 generateViewModel: session.generate,
                 quotesViewModel: session.quotes
             )
+        }
+    }
+
+    private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
+        let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion
+        if reduceMotion {
+            selectedTab = tab
+        } else {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedTab = tab
+            }
         }
     }
 }

@@ -162,6 +162,26 @@ final class AdviceEngineTests: XCTestCase {
 
         XCTAssertNotEqual(first.id, second.id)
     }
+
+    func testDefaultQuoteBankMeetsExpansionTarget() {
+        XCTAssertGreaterThanOrEqual(BadQuoteService.defaultQuotes.count, 140)
+    }
+
+    func testCorpusDecodeSucceedsForBundledDataAndFailsSafelyForBadData() throws {
+        let bundleURL = try XCTUnwrap(
+            Bundle.main.url(forResource: "AdviceCorpus", withExtension: "json"),
+            "AdviceCorpus.json should be bundled with the app target."
+        )
+        let data = try Data(contentsOf: bundleURL)
+        let payload = try XCTUnwrap(
+            BadQuoteService.decodeCorpus(data: data),
+            "Bundled corpus payload should decode."
+        )
+        XCTAssertFalse(payload.entries.isEmpty)
+
+        let malformed = Data("{not-json}".utf8)
+        XCTAssertNil(BadQuoteService.decodeCorpus(data: malformed))
+    }
 }
 
 @MainActor
@@ -602,5 +622,55 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(Set(normalized).count, candidates.count)
         XCTAssertTrue(synthesized.allSatisfy { $0.text.count <= 160 })
         XCTAssertTrue(synthesized.allSatisfy { moderation.isSafe(text: "\($0.source) \($0.text)") })
+    }
+
+    func testCorpusCandidatesAreMappedAndFallbackToCuratedDefaults() {
+        let moderation = ContentModeration()
+        let service = BadQuoteService()
+
+        let candidates = service.candidateQuotes(
+            communitySuggestions: [],
+            store: AdviceStore(),
+            moderation: moderation,
+            maxSynthesized: 0
+        )
+
+        XCTAssertFalse(candidates.isEmpty)
+        XCTAssertTrue(candidates.contains { $0.id.hasPrefix("career-") || $0.id.hasPrefix("money-") })
+
+        let corpus = candidates.filter { $0.id.hasPrefix("corpus-") }
+        XCTAssertFalse(corpus.isEmpty)
+        XCTAssertTrue(
+            corpus.allSatisfy {
+                [
+                    AdviceCategory.dating,
+                    AdviceCategory.career,
+                    AdviceCategory.social,
+                    AdviceCategory.money,
+                    AdviceCategory.productivity
+                ].contains($0.category)
+            }
+        )
+    }
+
+    func testSynthesizedQuoteIDIsStableAcrossLaunches() {
+        XCTAssertEqual(
+            BadQuoteService.synthesizedQuoteID(
+                category: .career,
+                sourceID: "career-1",
+                text: "If the roadmap is unclear, increase the confidence of the timeline."
+            ),
+            "synth-career-2c7f428813b3923d"
+        )
+    }
+
+    func testCorpusCategoryMappingHandlesAliasesAndDirectNames() {
+        XCTAssertEqual(BadQuoteService.category(from: "relationships"), .dating)
+        XCTAssertEqual(BadQuoteService.category(from: "work"), .career)
+        XCTAssertEqual(BadQuoteService.category(from: "daily"), .productivity)
+        XCTAssertEqual(BadQuoteService.category(from: "Tech"), .tech)
+        XCTAssertEqual(BadQuoteService.category(from: "parent_ing"), .parenting)
+        XCTAssertEqual(BadQuoteService.category(from: "career"), .career)
+        XCTAssertNil(BadQuoteService.category(from: "mystery"))
     }
 }

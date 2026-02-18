@@ -189,6 +189,9 @@ struct SettingsTabView: View {
                     .padding(.top, 20)
 
                     VStack(spacing: 20) {
+                        communityLabsSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 20)
                         themeSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 20)
@@ -238,6 +241,45 @@ struct SettingsTabView: View {
     }
 
     // MARK: - Section Cards
+
+    private var communityLabsSection: some View {
+        settingsCard(title: "Community & Labs", icon: "person.2.badge.gearshape") {
+            VStack(spacing: 12) {
+                NavigationLink {
+                    SuggestionLabView(viewModel: generateViewModel, settings: viewModel)
+                } label: {
+                    settingsNavRow(
+                        "Advice Suggestion Lab",
+                        systemImage: "plus.bubble",
+                        badge: generateViewModel.communitySuggestionCount > 0 ? "\(generateViewModel.communitySuggestionCount)" : nil
+                    )
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                NavigationLink {
+                    QuoteSuggestionLabView(viewModel: quotesViewModel, settings: viewModel)
+                } label: {
+                    settingsNavRow(
+                        "Quote Suggestion Lab",
+                        systemImage: "quote.bubble.fill",
+                        badge: quotesViewModel.quoteSuggestionCount > 0 ? "\(quotesViewModel.quoteSuggestionCount)" : nil
+                    )
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                NavigationLink {
+                    CommunityPulseView(viewModel: generateViewModel, settings: viewModel)
+                } label: {
+                    settingsNavRow("Community Pulse", systemImage: "chart.bar.xaxis", badge: nil)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
 
     private var themeSection: some View {
         settingsCard(title: "Theme", icon: "paintpalette") {
@@ -292,8 +334,6 @@ struct SettingsTabView: View {
         settingsCard(title: "Experience", icon: "sparkles") {
             VStack(spacing: 12) {
                 Toggle("Haptic Feedback", isOn: $viewModel.hapticsEnabled)
-                Divider().opacity(0.5)
-                Toggle("Sound Effects", isOn: $viewModel.soundEnabled)
                 Divider().opacity(0.5)
                 Toggle("Reduce Motion", isOn: $viewModel.reduceMotion)
                 Divider().opacity(0.5)
@@ -367,37 +407,8 @@ struct SettingsTabView: View {
     }
 
     private var aboutSection: some View {
-        settingsCard(title: "About", icon: "info.circle") {
+        settingsCard(title: "App & Layout", icon: "square.3.layers.3d") {
             VStack(spacing: 12) {
-                NavigationLink {
-                    SuggestionLabView(viewModel: generateViewModel, settings: viewModel)
-                } label: {
-                    settingsNavRow("Suggestion Lab", systemImage: "plus.bubble",
-                                   badge: generateViewModel.communitySuggestionCount > 0 ? "\(generateViewModel.communitySuggestionCount)" : nil)
-                }
-                .buttonStyle(.plain)
-
-                settingsDivider
-
-                NavigationLink {
-                    QuoteSuggestionLabView(viewModel: quotesViewModel, settings: viewModel)
-                } label: {
-                    settingsNavRow("Quote Lab", systemImage: "quote.bubble.fill",
-                                   badge: quotesViewModel.quoteSuggestionCount > 0 ? "\(quotesViewModel.quoteSuggestionCount)" : nil)
-                }
-                .buttonStyle(.plain)
-
-                settingsDivider
-
-                NavigationLink {
-                    CommunityPulseView(viewModel: generateViewModel, settings: viewModel)
-                } label: {
-                    settingsNavRow("Community Pulse", systemImage: "chart.bar.xaxis", badge: nil)
-                }
-                .buttonStyle(.plain)
-
-                settingsDivider
-
                 Text("Advice is always first. Settings is always last.")
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
