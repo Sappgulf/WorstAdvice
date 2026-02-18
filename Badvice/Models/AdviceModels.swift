@@ -103,6 +103,7 @@ enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case sunset
     case cosmic
     case retro
+    case cybernetic
 
     var id: String { rawValue }
 
@@ -118,6 +119,7 @@ enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .sunset: return "Golden Hour"
         case .cosmic: return "Cosmic Chaos"
         case .retro: return "Retro Wave"
+        case .cybernetic: return "Cybernetic"
         }
     }
 }
@@ -173,6 +175,7 @@ enum ContentPack: String, CaseIterable, Codable, Identifiable, Sendable {
     case officeMeltdown
     case weekendChaos
     case chronicallyOnline
+    case cyberInfluence
 
     var id: String { rawValue }
 
@@ -204,6 +207,17 @@ enum LearningSignalType: String, CaseIterable, Codable, Identifiable, Sendable {
     case regen
 
     var id: String { rawValue }
+}
+
+struct ChaosContract: Identifiable, Sendable {
+    let id: UUID = UUID()
+    let title: String
+    let description: String
+    let icon: String
+    let category: AdviceCategory?
+    let tone: ToneMode?
+    let contentPack: ContentPack?
+    let reward: String
 }
 
 struct LearningWeightProfile: Sendable {
@@ -413,6 +427,7 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
     case earlyBird = "early_bird"
     case shakeItOff = "shake_it_off"
     case suggestionAccepted = "suggestion_accepted"
+    case bugHunter = "bug_hunter"
     
     var id: String { rawValue }
     
@@ -436,6 +451,7 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
         case .earlyBird: return "Early Bird Gets the Burn"
         case .shakeItOff: return "Shake It Off"
         case .suggestionAccepted: return "Community Contributor"
+        case .bugHunter: return "Bug Hunter"
         }
     }
     
@@ -459,6 +475,7 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
         case .earlyBird: return "Generate advice before 6 AM"
         case .shakeItOff: return "Use shake to generate advice"
         case .suggestionAccepted: return "Submit a community suggestion"
+        case .bugHunter: return "Generate advice with a technical glitch"
         }
     }
     
@@ -482,6 +499,7 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
         case .earlyBird: return "sunrise.fill"
         case .shakeItOff: return "iphone.gen3.radiowaves.left.and.right"
         case .suggestionAccepted: return "person.2.fill"
+        case .bugHunter: return "ant.fill"
         }
     }
     
@@ -490,6 +508,7 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
         case .dailyStreak7: return .neon
         case .hundredAdvice: return .midnight
         case .categoryMaster: return .sunset
+        case .bugHunter: return .cybernetic
         default: return nil
         }
     }

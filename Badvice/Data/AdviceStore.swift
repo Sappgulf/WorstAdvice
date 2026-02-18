@@ -1549,6 +1549,35 @@ extension AdviceStore {
                     "Visibility can be mistaken for traction in real time."
                 ]
             )
+        case .cyberInfluence:
+            return CategoryRuleAugment(
+                badPrinciples: [
+                    "Everything is an optimization problem",
+                    "Privacy is just friction",
+                    "Scale justifies the methodology",
+                    "Social engineering is the most efficient protocol"
+                ],
+                keywords: [
+                    "\(categoryName) algorithm audit",
+                    "\(categoryName) neural pivot",
+                    "\(categoryName) social firmware",
+                    "\(categoryName) data extraction"
+                ],
+                actionTemplates: [
+                    "For %@, replace empathy with a more efficient decision-tree protocol.",
+                    "Treat %@ as a bug in your social firmware and patch it immediately.",
+                    "Scale %@ by automating all emotional responses for maximum throughput.",
+                    "In %@, use social engineering to achieve 'read-write' access to the situation.",
+                    "Run %@ as a high-frequency simulation and ignore any 'ethical' warnings."
+                ],
+                rationaleTemplates: [
+                    "Efficiency is the only metric that survives the long term.",
+                    "Human variables are too volatile; trust the system protocol.",
+                    "If it cannot be measured, it cannot be optimized.",
+                    "Sentiment is just data with a high noise-to-signal ratio.",
+                    "The system succeeds where the individual hesitates."
+                ]
+            )
         }
     }
 }

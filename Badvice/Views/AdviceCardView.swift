@@ -13,6 +13,8 @@ struct AdviceCardView: View {
     // Triple-A Polish: Tilt & Parallax State
     @State private var rotationX: Double = 0
     @State private var rotationY: Double = 0
+    @State private var rippleScale: CGFloat = 0.5
+    @State private var rippleOpacity: Double = 0
     
     // Performance: Cache computed values
     @State private var cachedShadow: (color: Color, radius: CGFloat, y: CGFloat)?
@@ -135,7 +137,9 @@ struct AdviceCardView: View {
                         .blur(radius: 4)
                 }
             }
+            .drawingGroup() // Optimize background rendering
         }
+
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .stroke(
@@ -164,6 +168,14 @@ struct AdviceCardView: View {
                 )
                 .allowsHitTesting(false)
                 .opacity(isMotionReduced ? 0 : (shimmerOffset >= 0 && shimmerOffset <= 1.0 ? 1 : 0))
+            
+            // Cybernetic Ripple Effect
+            if theme == .cybernetic {
+                Circle()
+                    .stroke(accent.opacity(rippleOpacity), lineWidth: 2)
+                    .scaleEffect(rippleScale)
+                    .allowsHitTesting(false)
+            }
         }
         .shadow(
             color: shadow.color,
@@ -194,12 +206,16 @@ struct AdviceCardView: View {
                     let glintY = (rotationX / -8.0) * (geo.size.height * 0.5)
                     
                     RadialGradient(
-                        colors: [.white.opacity(0.15), .clear],
+                        colors: [
+                            .white.opacity(0.18),
+                            .white.opacity(0.04),
+                            .clear
+                        ],
                         center: UnitPoint(x: 0.5 + (glintX / geo.size.width), y: 0.5 + (glintY / geo.size.height)),
                         startRadius: 0,
-                        endRadius: geo.size.width * 0.8
+                        endRadius: geo.size.width * 0.95
                     )
-                    .blendMode(.plusLighter)
+                    .blendMode(.screen)
                     .allowsHitTesting(false)
                 }
             }
@@ -253,6 +269,16 @@ struct AdviceCardView: View {
             // Pop out and slam down effect
             withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
                 rotationX = -12 // Deeper tilt back
+            }
+            
+            // Trigger Cybernetic Ripple
+            if theme == .cybernetic {
+                rippleScale = 0.5
+                rippleOpacity = 0.8
+                withAnimation(.easeOut(duration: 0.6)) {
+                    rippleScale = 2.5
+                    rippleOpacity = 0
+                }
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -354,15 +380,11 @@ struct GenerateTabView: View {
         .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
         .refreshable {
             // Pull to generate new advice
-            await withCheckedContinuation { continuation in
-                viewModel.generate()
-                onDataChanged()
-                HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    continuation.resume()
-                }
-            }
+            await viewModel.generate()
+            onDataChanged()
+            HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
         }
+
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
@@ -593,10 +615,13 @@ struct GenerateTabView: View {
             // Primary generate button — pulses when idle (no advice yet)
             Button {
                 generateButtonPulsing = false
-                viewModel.generate()
-                onDataChanged()
-                HapticsManager.play(style: .medium, isEnabled: settings.hapticsEnabled)
+                Task {
+                    await viewModel.generate()
+                    onDataChanged()
+                    HapticsManager.play(style: .medium, isEnabled: settings.hapticsEnabled)
+                }
             } label: {
+
                 Label(viewModel.primaryActionTitle, systemImage: "sparkles")
                     .font(Theme.bodyFont.weight(.bold))
                     .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)

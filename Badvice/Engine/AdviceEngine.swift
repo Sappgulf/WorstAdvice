@@ -21,7 +21,7 @@ struct AdviceEngine {
         situation: String? = nil,
         seed: Int? = nil,
         now: Date = Date()
-    ) -> GeneratedAdvice {
+    ) async -> GeneratedAdvice {
         let resolvedSeed = seed ?? defaultSeed(from: now)
         // Resolve .random to a concrete tone using the seed for reproducibility
         let resolvedTone = tone.resolved(seed: resolvedSeed)
@@ -71,30 +71,32 @@ struct AdviceEngine {
         let semanticQuery = [scenario, selectedTopic, category.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }
             .joined(separator: " ")
-        let semanticPreparedQuery = Self.semanticTextScorer.preparedQuery(from: semanticQuery)
-        let rankedCandidates = adviceShapes.enumerated()
-            .map { index, candidate -> (candidate: String, score: Double, tie: Double) in
-                let semanticBoost: Double
-                if let semanticPreparedQuery {
-                    semanticBoost = Self.semanticTextScorer.similarity(candidate, to: semanticPreparedQuery)
-                } else {
-                    semanticBoost = 0
-                }
-                let qualityBoost = qualityScore(
-                    candidate,
-                    selectedTopic: selectedTopic,
-                    toneDirective: toneDirective,
-                    categoryDirective: categoryDirective
-                )
-                let tie = stableTieBreaker(candidate, seed: resolvedSeed + (index * 17))
-                return (candidate: candidate, score: qualityBoost + semanticBoost, tie: tie)
+        let semanticPreparedQuery = await Self.semanticTextScorer.preparedQuery(from: semanticQuery)
+        
+        var rankedCandidates: [(candidate: String, score: Double, tie: Double)] = []
+        for (index, candidate) in adviceShapes.enumerated() {
+            let semanticBoost: Double
+            if let semanticPreparedQuery {
+                semanticBoost = await Self.semanticTextScorer.similarity(candidate, to: semanticPreparedQuery)
+            } else {
+                semanticBoost = 0
             }
-            .sorted { lhs, rhs in
-                if lhs.score == rhs.score {
-                    return lhs.tie > rhs.tie
-                }
-                return lhs.score > rhs.score
+            let qualityBoost = qualityScore(
+                candidate,
+                selectedTopic: selectedTopic,
+                toneDirective: toneDirective,
+                categoryDirective: categoryDirective
+            )
+            let tie = stableTieBreaker(candidate, seed: resolvedSeed + (index * 17))
+            rankedCandidates.append((candidate: candidate, score: qualityBoost + semanticBoost, tie: tie))
+        }
+
+        rankedCandidates.sort { lhs, rhs in
+            if lhs.score == rhs.score {
+                return lhs.tie > rhs.tie
             }
+            return lhs.score > rhs.score
+        }
 
         var advice = rankedCandidates.first?.candidate ?? rng.pick(adviceShapes)
         advice = polishAdvice(advice)
@@ -125,6 +127,7 @@ struct AdviceEngine {
         )
     }
 
+
     func generateCandidates(
         category: AdviceCategory,
         tone: ToneMode,
@@ -134,7 +137,7 @@ struct AdviceEngine {
         seed: Int? = nil,
         now: Date = Date(),
         count: Int = 6
-    ) -> [GeneratedAdvice] {
+    ) async -> [GeneratedAdvice] {
         let total = max(1, count)
         let baseSeed = seed ?? defaultSeed(from: now)
         var seen = Set<String>()
@@ -149,7 +152,7 @@ struct AdviceEngine {
             let candidateTone = tone == .random
                 ? tonePool[abs(candidateSeed) % tonePool.count]
                 : tone
-            let candidate = generate(
+            let candidate = await generate(
                 category: category,
                 tone: candidateTone,
                 includeRationale: includeRationale,
@@ -166,6 +169,7 @@ struct AdviceEngine {
 
         return generated
     }
+
 
     func validateOutput(_ output: GeneratedAdvice, for category: AdviceCategory) -> Bool {
         let forbidden = store.rules(for: category).forbiddenPatterns
@@ -513,15 +517,14 @@ private struct SeededGenerator {
     }
 }
 
-final class SemanticTextScorer {
+actor SemanticTextScorer {
     static let shared = SemanticTextScorer()
 
-    struct PreparedQuery {
-        fileprivate let vector: [Double]?
-        fileprivate let tokenSet: Set<String>
+    struct PreparedQuery: Sendable {
+        let vector: [Double]?
+        let tokenSet: Set<String>
     }
 
-    private let lock = NSLock()
     private let sentenceEmbedding = NLEmbedding.sentenceEmbedding(for: .english)
     private var vectorCache: [String: [Double]] = [:]
     private var cacheOrder: [String] = []
@@ -529,15 +532,15 @@ final class SemanticTextScorer {
 
     private init() {}
 
-    func bestCandidate(from candidates: [String], query: String, tieBreakerSeed: Int) -> String? {
+    func bestCandidate(from candidates: [String], query: String, tieBreakerSeed: Int) async -> String? {
         guard !candidates.isEmpty else { return nil }
-        guard let preparedQuery = preparedQuery(from: query) else { return nil }
+        guard let preparedQuery = await preparedQuery(from: query) else { return nil }
 
         var bestScore = -Double.infinity
         var bestCandidates: [String] = []
 
         for candidate in candidates {
-            let score = similarity(candidate, to: preparedQuery)
+            let score = await similarity(candidate, to: preparedQuery)
             if score > bestScore + 0.0001 {
                 bestScore = score
                 bestCandidates = [candidate]
@@ -551,7 +554,7 @@ final class SemanticTextScorer {
         return bestCandidates[index]
     }
 
-    func preparedQuery(from query: String) -> PreparedQuery? {
+    func preparedQuery(from query: String) async -> PreparedQuery? {
         let normalized = query.normalizedForFiltering.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty else { return nil }
         let queryVector: [Double]?
@@ -566,12 +569,12 @@ final class SemanticTextScorer {
         )
     }
 
-    func similarity(_ lhs: String, _ rhs: String) -> Double {
-        guard let preparedQuery = preparedQuery(from: rhs) else { return 0 }
-        return similarity(lhs, to: preparedQuery)
+    func similarity(_ lhs: String, _ rhs: String) async -> Double {
+        guard let preparedQuery = await preparedQuery(from: rhs) else { return 0 }
+        return await similarity(lhs, to: preparedQuery)
     }
 
-    func similarity(_ candidate: String, to preparedQuery: PreparedQuery) -> Double {
+    func similarity(_ candidate: String, to preparedQuery: PreparedQuery) async -> Double {
         let normalizedCandidate = candidate.normalizedForFiltering
         guard !normalizedCandidate.isEmpty else { return 0 }
 
@@ -588,18 +591,14 @@ final class SemanticTextScorer {
     }
 
     private func vector(for text: String, embedding: NLEmbedding) -> [Double]? {
-        lock.lock()
         if let cached = vectorCache[text] {
             cacheOrder.removeAll { $0 == text }
             cacheOrder.append(text)
-            lock.unlock()
             return cached
         }
-        lock.unlock()
 
         guard let vector = embedding.vector(for: text) else { return nil }
 
-        lock.lock()
         vectorCache[text] = vector
         cacheOrder.removeAll { $0 == text }
         cacheOrder.append(text)
@@ -607,7 +606,6 @@ final class SemanticTextScorer {
             cacheOrder.removeFirst()
             vectorCache.removeValue(forKey: toEvict)
         }
-        lock.unlock()
         return vector
     }
 
@@ -642,3 +640,4 @@ final class SemanticTextScorer {
         return Double(intersection) / Double(max(denominator, 1))
     }
 }
+

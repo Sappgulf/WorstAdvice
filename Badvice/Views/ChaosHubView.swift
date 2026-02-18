@@ -27,6 +27,10 @@ struct ChaosHubTabView: View {
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
 
+                    contractsSection
+                        .opacity(contentAppeared ? 1 : 0)
+                        .offset(y: contentAppeared ? 0 : 16)
+
                     pulseCard
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
@@ -308,5 +312,79 @@ struct ChaosHubTabView: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(Theme.accent(for: settings.theme).opacity(0.12), lineWidth: 1)
             )
+    }
+
+    private var contractsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Chaos Contracts", systemImage: "signature")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .padding(.horizontal, 4)
+
+            ForEach(sampleContracts) { contract in
+                contractRow(contract: contract)
+            }
+        }
+    }
+
+    private let sampleContracts = [
+        ChaosContract(
+            title: "The Neural Glitch",
+            description: "Force all advice to prioritize efficiency over ethics.",
+            icon: "cpu",
+            category: .tech,
+            tone: .corporateConsultant,
+            contentPack: .cyberInfluence,
+            reward: "Cyber Unlock"
+        ),
+        ChaosContract(
+            title: "Social Overwrite",
+            description: "Redirect conversation protocols to social engineering.",
+            icon: "network",
+            category: .social,
+            tone: .influencer,
+            contentPack: .cyberInfluence,
+            reward: "Glitch Aura"
+        )
+    ]
+
+    private func contractRow(contract: ChaosContract) -> some View {
+        cardShell {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Theme.accent(for: settings.theme).opacity(0.1))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: contract.icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Theme.accent(for: settings.theme))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(contract.title)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    Text(contract.description)
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .lineLimit(2)
+                }
+
+                Spacer()
+
+                Button {
+                    generateViewModel.trackChaosHubAction("accept_contract_\(contract.title)")
+                    onDataChanged()
+                    onOpenTab(.generate)
+                } label: {
+                    Text("Accept")
+                        .font(.caption.weight(.bold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(Theme.accent(for: settings.theme)))
+                        .foregroundStyle(Theme.buttonText(for: settings.theme))
+                }
+            }
+        }
     }
 }

@@ -218,7 +218,6 @@ final class AppSettingsEntity {
     var strictNoRepeatsRaw: Bool?
     var communityOnlyModeRaw: Bool?
     var tabOrderRaw: String?
-
     init(
         id: UUID = UUID(),
         theme: ThemeMode = .badvice,
@@ -232,6 +231,7 @@ final class AppSettingsEntity {
         preferredContentPack: ContentPack = .classic,
         strictNoRepeats: Bool = true,
         communityOnlyMode: Bool = false,
+        performanceMode: Bool = false,
         tabOrder: [AppTab] = AppTab.defaultOrder
     ) {
         self.id = id
@@ -246,8 +246,11 @@ final class AppSettingsEntity {
         self.preferredContentPackRaw = preferredContentPack.rawValue
         self.strictNoRepeatsRaw = strictNoRepeats
         self.communityOnlyModeRaw = communityOnlyMode
+        self.performanceModeRaw = performanceMode
         self.tabOrderRaw = tabOrder.map(\.rawValue).joined(separator: ",")
     }
+
+
 
     var theme: ThemeMode {
         get { ThemeMode(rawValue: themeRaw) ?? .badvice }
@@ -283,6 +286,12 @@ final class AppSettingsEntity {
         get { communityOnlyModeRaw ?? false }
         set { communityOnlyModeRaw = newValue }
     }
+
+    var performanceMode: Bool {
+        get { performanceModeRaw ?? false }
+        set { performanceModeRaw = newValue }
+    }
+
 
     var tabOrder: [AppTab] {
         get {
@@ -836,6 +845,15 @@ final class SettingsViewModel {
             repository.save()
         }
     }
+
+    var performanceMode: Bool {
+        get { settings.performanceMode }
+        set {
+            settings.performanceMode = newValue
+            repository.save()
+        }
+    }
+
 
     var includeRationale: Bool {
         get { settings.includeRationale }
@@ -1605,7 +1623,7 @@ final class GenerateViewModel {
         self.primaryActionTitle = Self.primaryActionTitles.first ?? "Advise Me"
     }
 
-    func generate(seed: Int? = nil) {
+    func generate(seed: Int? = nil) async {
         isGenerating = true
         defer { isGenerating = false }
         generationNotice = nil
@@ -1623,12 +1641,12 @@ final class GenerateViewModel {
         let communityOnlyMode = settingsViewModel.communityOnlyMode
         let selectedPack = settingsViewModel.preferredContentPack
         let suggestionPool = suggestionCandidates(for: selectedCategory, situation: situation)
+        
         let semanticScorer = SemanticTextScorer.shared
-        let preparedQuery = semanticScorer.preparedQuery(
-            from: [situation, selectedCategory.title, selectedTone.title]
-                .compactMap { $0 }
-                .joined(separator: " ")
-        )
+        let queryText = [situation, selectedCategory.title, selectedTone.title]
+            .compactMap { $0 }
+            .joined(separator: " ")
+        let preparedQuery = await semanticScorer.preparedQuery(from: queryText)
 
         if communityOnlyMode, suggestionPool.isEmpty {
             generationNotice = "Community-only mode is on. Add suggestions in Settings > Suggestion Lab."
@@ -1641,7 +1659,7 @@ final class GenerateViewModel {
 
         var candidatePool: [(candidate: GeneratedAdvice, source: String)] = []
         if !communityOnlyMode {
-            let engineCandidates = engine.generateCandidates(
+            let engineCandidates = await engine.generateCandidates(
                 category: selectedCategory,
                 tone: selectedTone,
                 includeRationale: settingsViewModel.includeRationale,
@@ -1653,7 +1671,7 @@ final class GenerateViewModel {
             candidatePool.append(contentsOf: engineCandidates.map { ($0, "engine") })
 
             // ML Remix Lab for advice: inject synthesized variants derived from liked history
-            let remixCandidates = synthesizedAdviceCandidates(
+            let remixCandidates = await synthesizedAdviceCandidates(
                 category: selectedCategory,
                 tone: selectedTone,
                 seed: baseSeed,
@@ -1679,7 +1697,8 @@ final class GenerateViewModel {
             return
         }
 
-        let ranked = candidatePool.enumerated().map { index, item -> (candidate: GeneratedAdvice, source: String, score: Double) in
+        var ranked: [(candidate: GeneratedAdvice, source: String, score: Double)] = []
+        for (index, item) in candidatePool.enumerated() {
             let fingerprint = fingerprint(for: item.candidate)
             let candidatePoolKey = poolKey(category: item.candidate.category, tone: item.candidate.tone)
             let seenRecently = recentAdviceFingerprints.contains(fingerprint)
@@ -1691,9 +1710,14 @@ final class GenerateViewModel {
                     tone: item.candidate.tone
                 )
             let noveltyPenalty = (seenRecently || (shouldEnforceGlobalUniqueness && seenHistorically)) ? 1.0 : 0.0
-            let semanticRelevance = preparedQuery.map {
-                semanticScorer.similarity(item.candidate.adviceLine, to: $0)
-            } ?? 0.5
+            
+            let semanticRelevance: Double
+            if let preparedQuery {
+                semanticRelevance = await semanticScorer.similarity(item.candidate.adviceLine, to: preparedQuery)
+            } else {
+                semanticRelevance = 0.5
+            }
+            
             let learning = repository.learningSnapshot(
                 for: adviceScopeKey(category: item.candidate.category, tone: item.candidate.tone)
             )
@@ -1704,9 +1728,10 @@ final class GenerateViewModel {
                 seed: baseSeed,
                 candidateIndex: index
             )
-            return (item.candidate, item.source, score)
+            ranked.append((item.candidate, item.source, score))
         }
-        .sorted { lhs, rhs in
+
+        ranked.sort { lhs, rhs in
             if lhs.score == rhs.score {
                 return lhs.candidate.adviceLine.localizedCaseInsensitiveCompare(rhs.candidate.adviceLine) == .orderedAscending
             }
@@ -1771,6 +1796,7 @@ final class GenerateViewModel {
         trackMissionCompletionIfNeeded()
     }
 
+
     func surpriseMeAndGenerate() {
         selectedCategory = AdviceCategory.allCases.randomElement() ?? .dating
         selectedTone = ToneMode.allCases.randomElement() ?? .corporateConsultant
@@ -1779,8 +1805,11 @@ final class GenerateViewModel {
             "tone": selectedTone.rawValue,
             "content_pack": settingsViewModel.preferredContentPack.rawValue
         ])
-        generate()
+        Task {
+            await generate()
+        }
     }
+
 
     func generateDailyDrop() {
         let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
@@ -1794,15 +1823,21 @@ final class GenerateViewModel {
             "tone": selectedTone.rawValue,
             "content_pack": settingsViewModel.preferredContentPack.rawValue
         ])
-        generate(seed: day * 1013)
+        Task {
+            await generate(seed: day * 1013)
+        }
     }
+
 
     func runDailyMissionGeneration() {
         let mission = dailyMissionState
         selectedCategory = mission.category
         selectedTone = mission.tone
-        generate(seed: stableSeed(for: mission.key))
+        Task {
+            await generate(seed: stableSeed(for: mission.key))
+        }
     }
+
 
     func trackChaosHubOpened() {
         let mission = dailyMissionState
@@ -2360,7 +2395,8 @@ final class GenerateViewModel {
         includeRationale: Bool,
         contentPack: ContentPack,
         limit: Int = 3
-    ) -> [GeneratedAdvice] {
+    ) async -> [GeneratedAdvice] {
+
         // Only remix when we have enough liked history to learn from
         let likedHistory = repository.fetchHistory(limit: 80)
             .filter { $0.vote == .like && $0.category == category }

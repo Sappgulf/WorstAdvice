@@ -269,24 +269,17 @@ struct ContentView: View {
                             )
                             .gesture(
                                 constrainedMotion ? nil :
-                                LongPressGesture(minimumDuration: 0.16)
-                                    .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .local))
-                                    .onChanged { phase in
-                                        switch phase {
-                                        case .first(true):
+                                DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                                    .onChanged { drag in
+                                        if !tabSlideModeActive {
                                             beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
-                                        case .second(true, let drag):
-                                            beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
-                                            guard let drag else { return }
-                                            updateTabSlide(
-                                                locationX: drag.location.x,
-                                                tabs: tabs,
-                                                hapticsEnabled: session.settings.hapticsEnabled,
-                                                reduceMotion: constrainedMotion
-                                            )
-                                        default:
-                                            break
                                         }
+                                        updateTabSlide(
+                                            locationX: drag.location.x,
+                                            tabs: tabs,
+                                            hapticsEnabled: session.settings.hapticsEnabled,
+                                            reduceMotion: constrainedMotion
+                                        )
                                     }
                                     .onEnded { _ in
                                         endTabSlide(reduceMotion: constrainedMotion)
@@ -432,7 +425,7 @@ struct ContentView: View {
     }
 
     private func budget(for session: AppSessionViewModel, lowPowerModeEnabled: Bool) -> RenderBudget {
-        if lowPowerModeEnabled {
+        if lowPowerModeEnabled || session.settings.performanceMode {
             return selectedTab == .generate && session.generate.isGenerating ? .balanced : .reduced
         }
         switch selectedTab {

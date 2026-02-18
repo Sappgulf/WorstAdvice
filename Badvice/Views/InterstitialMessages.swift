@@ -371,6 +371,8 @@ struct SettingsTabView: View {
                 Divider().opacity(0.5)
                 Toggle("Reduce Motion", isOn: $viewModel.reduceMotion)
                 Divider().opacity(0.5)
+                Toggle("Performance Mode", isOn: $viewModel.performanceMode)
+                Divider().opacity(0.5)
                 Toggle("Shake to Generate", isOn: $shakeToGenerateEnabled)
             }
             .tint(Theme.accent(for: viewModel.theme))

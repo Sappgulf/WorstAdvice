@@ -150,6 +150,7 @@ enum Theme {
         case .sunset: return Color(hex: "FFD700") // Gold
         case .cosmic: return Color(hex: "C77DFF") // Purple
         case .retro: return Color(hex: "00FF9F") // Matrix Green
+        case .cybernetic: return Color(hex: "00F3FF") // Cyan
         }
     }
     
@@ -164,8 +165,12 @@ enum Theme {
             return Color(hex: "00FFFF") // Cyan complement
         case .retro:
             return Color(hex: "FF1493") // Hot Pink complement
+        case .cybernetic:
+            return Color(hex: "FF00FF") // Magenta complement
         case .evergreen:
             return Color(hex: "4CAF50") // Forest complement
+        case .cybernetic:
+            return Color(hex: "FF00FF") // Magenta complement
         default:
             return nil
         }
@@ -183,6 +188,7 @@ enum Theme {
         case .sunset: return Color(hex: "3D2847").opacity(0.6)
         case .cosmic: return Color(hex: "1A1A2E").opacity(0.7)
         case .retro: return Color(hex: "2D1B4E").opacity(0.75)
+        case .cybernetic: return Color(hex: "0D121F").opacity(0.8)
         }
     }
     
@@ -195,6 +201,8 @@ enum Theme {
             return 0.6 // Strong glass effect for vibrant themes
         case .sunset, .retro:
             return 0.55
+        case .cybernetic:
+            return 0.65 // Stronger glass for cyber theme
         default:
             return 0.5 // Default glass effect
         }
@@ -212,6 +220,7 @@ enum Theme {
         case .sunset: return Color(hex: "FFF8F0") // Warm white
         case .cosmic: return Color(hex: "FFFFFF")
         case .retro: return Color(hex: "E0FFE0") // Slight green tint for CRT effect
+        case .cybernetic: return Color(hex: "DCF9FF") // Electrified blue-white
         }
     }
 
@@ -227,6 +236,7 @@ enum Theme {
         case .sunset: return Color(hex: "FFE4CC") // Warmer
         case .cosmic: return Color(hex: "E0AAFF") // Lighter purple
         case .retro: return Color(hex: "66FFB2") // Brighter for visibility
+        case .cybernetic: return Color(hex: "00F3FF").opacity(0.85)
         }
     }
 
@@ -242,6 +252,7 @@ enum Theme {
         case .sunset: return .black
         case .cosmic: return .black
         case .retro: return .black
+        case .cybernetic: return .black
         }
     }
 
@@ -257,6 +268,7 @@ enum Theme {
         case .sunset: return Color(hex: "1A0A2E")
         case .cosmic: return Color(hex: "0F0C29")
         case .retro: return Color(hex: "1A1A2E")
+        case .cybernetic: return Color(hex: "080B12")
         }
     }
 
@@ -272,6 +284,7 @@ enum Theme {
         case .sunset: return Color(hex: "FFD700")
         case .cosmic: return Color(hex: "9D4EDD")
         case .retro: return Color(hex: "00FF9F")
+        case .cybernetic: return Color(hex: "00F3FF")
         }
     }
     
@@ -286,6 +299,8 @@ enum Theme {
             return Color(hex: "FF6B35") // Coral orange
         case .retro:
             return Color(hex: "FF1493") // Hot pink
+        case .cybernetic:
+            return Color(hex: "7000FF") // Deep purple
         default:
             return nil
         }
@@ -294,7 +309,7 @@ enum Theme {
     /// Returns whether a theme should use glow effects
     static func shouldUseGlow(for mode: ThemeMode) -> Bool {
         switch mode {
-        case .neon, .cosmic, .retro, .midnight:
+        case .neon, .cosmic, .retro, .midnight, .cybernetic:
             return true
         default:
             return false
@@ -313,6 +328,8 @@ enum Theme {
             return Color(hex: "00FF9F")
         case .midnight:
             return Color(hex: "88C0D0")
+        case .cybernetic:
+            return Color(hex: "00F3FF")
         default:
             return nil
         }
@@ -327,6 +344,7 @@ enum Theme {
         case .ember: return Color(hex: "FF6B47")
         case .evergreen: return Color(hex: "66BB6A")
         case .midnight: return Color(hex: "88C0D0")
+        case .cybernetic: return Color(hex: "00F3FF")
         default: return Color(hex: "1C1C1E") // Iconic Black
         }
     }
@@ -341,6 +359,7 @@ enum Theme {
         case .ember: return Color(hex: "FF6B47").opacity(0.7)
         case .evergreen: return Color(hex: "66BB6A").opacity(0.6)
         case .midnight: return Color(hex: "88C0D0").opacity(0.8)
+        case .cybernetic: return Color(hex: "00F3FF").opacity(0.9)
         default: return .white.opacity(0.9) // Strong glow for visibility on dark backgrounds
         }
     }
@@ -348,7 +367,7 @@ enum Theme {
     /// Returns whether the header should have an animated glow effect
     static func headerShouldGlow(for mode: ThemeMode) -> Bool {
         switch mode {
-        case .neon, .cosmic, .retro, .midnight:
+        case .neon, .cosmic, .retro, .midnight, .cybernetic:
             return true
         default:
             return false
@@ -435,6 +454,14 @@ enum Theme {
                 surfaceMood: "Synth Scan",
                 effectIntensity: 0.78,
                 indicatorCornerRadius: 4,
+                indicatorInset: 1
+            )
+        case .cybernetic:
+            return ThemePersonality(
+                descriptor: "Metal-optimized glitch with neon precision",
+                surfaceMood: "Liquid Wired",
+                effectIntensity: 0.88,
+                indicatorCornerRadius: 2,
                 indicatorInset: 1
             )
         }
@@ -541,6 +568,11 @@ struct ThemeBackgroundView: View {
                         .blendMode(.overlay)
                         .drawingGroup() // Performance: Cache scanline rendering
                 }
+
+                if mode == .cybernetic {
+                    CyberneticView(budget: budget)
+                        .drawingGroup()
+                }
             }
 
             CinematicVignetteView()
@@ -578,11 +610,11 @@ struct DynamicChaosView: View {
     private var frameInterval: TimeInterval {
         switch budget {
         case .full:
-            return 1.0 / 24.0
+            return 1.0 / 20.0
         case .balanced:
-            return 1.0 / 15.0
+            return 1.0 / 12.0
         case .reduced:
-            return 1.0 / 8.0
+            return 1.0 / 6.0
         }
     }
     
@@ -647,14 +679,14 @@ private struct PaperGrainView: View {
 
     var body: some View {
         Canvas(rendersAsynchronously: true) { context, size in
-            let step: CGFloat = 4
-            let dotOpacity: Double = 0.04
+            let step: CGFloat = 12 // Increased step for performance
+            let dotOpacity: Double = 0.03
             
             for x in stride(from: 0, to: size.width, by: step) {
                 for y in stride(from: 0, to: size.height, by: step) {
                     let hash = (x * 374761 + y * 668265).truncatingRemainder(dividingBy: 100)
-                    if hash < 30 {
-                        let dotSize: CGFloat = hash < 10 ? 1.0 : 0.6
+                    if hash < 20 { // Reduced density
+                        let dotSize: CGFloat = hash < 6 ? 1.0 : 0.6
                         let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
                         context.fill(Path(ellipseIn: rect), with: .color(.primary.opacity(dotOpacity)))
                     }
@@ -726,17 +758,17 @@ private struct NeonGridView: View {
     private var frameInterval: TimeInterval {
         switch budget {
         case .full:
-            return 1.0 / 20.0
+            return 1.0 / 18.0
         case .balanced:
-            return 1.0 / 14.0
+            return 1.0 / 10.0
         case .reduced:
-            return 1.0 / 8.0
+            return 1.0 / 5.0
         }
     }
 
     var body: some View {
         TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
-            Canvas { context, size in
+            Canvas(rendersAsynchronously: true) { context, size in
                 let time = timeline.date.timeIntervalSinceReferenceDate
                 let phase = sin(time * 1.35)
                 let gridSize: CGFloat = 40
@@ -769,17 +801,17 @@ private struct StarFieldView: View {
     private var frameInterval: TimeInterval {
         switch budget {
         case .full:
-            return 1.0 / 22.0
+            return 1.0 / 18.0
         case .balanced:
-            return 1.0 / 14.0
+            return 1.0 / 10.0
         case .reduced:
-            return 1.0 / 8.0
+            return 1.0 / 5.0
         }
     }
     
     var body: some View {
         TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
-            Canvas { context, size in
+            Canvas(rendersAsynchronously: true) { context, size in
                 let time = timeline.date.timeIntervalSince(start)
                 
                 for i in 0..<50 {
@@ -813,7 +845,7 @@ private struct ScanlineView: View {
     
     var body: some View {
         TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
-            Canvas { context, size in
+            Canvas(rendersAsynchronously: true) { context, size in
                 let cycle = timeline.date.timeIntervalSinceReferenceDate
                 let offset = CGFloat((cycle.truncatingRemainder(dividingBy: 8.0) / 8.0) * 6.0)
                 let lineHeight: CGFloat = 2
@@ -827,5 +859,97 @@ private struct ScanlineView: View {
                 }
             }
         }
+    }
+}
+private struct CyberneticView: View {
+    let budget: RenderBudget
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    var body: some View {
+        ZStack {
+            // High-precision grid lines
+            Canvas(rendersAsynchronously: true) { context, size in
+                let step: CGFloat = 32
+                let lineColor = Color(hex: "00F3FF").opacity(0.08)
+                
+                for x in stride(from: 0, to: size.width, by: step) {
+                    var path = Path()
+                    path.move(to: CGPoint(x: x, y: 0))
+                    path.addLine(to: CGPoint(x: x, y: size.height))
+                    context.stroke(path, with: .color(lineColor), lineWidth: 0.5)
+                }
+                
+                for y in stride(from: 0, to: size.height, by: step) {
+                    var path = Path()
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: size.width, y: y))
+                    context.stroke(path, with: .color(lineColor), lineWidth: 0.5)
+                }
+            }
+            
+            if budget != .reduced && !accessibilityReduceMotion {
+                GlitchView(budget: budget)
+                    .opacity(0.4)
+            }
+            
+            // Atmospheric depth
+            RadialGradient(
+                colors: [Color(hex: "00F3FF").opacity(0.08), .clear],
+                center: .center,
+                startRadius: 0,
+                endRadius: 600
+            )
+            .blendMode(.plusLighter)
+        }
+    }
+}
+
+private struct GlitchView: View {
+    let budget: RenderBudget
+    
+    private var frameInterval: TimeInterval {
+        switch budget {
+        case .full: return 1.0 / 12.0
+        case .balanced: return 1.0 / 6.0
+        case .reduced: return 0.5
+        }
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: frameInterval)) { timeline in
+            Canvas(rendersAsynchronously: true) { context, size in
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                let hash = Int(time * 10)
+                
+                // Only glitch occasionally for impact
+                if hash % 5 == 0 {
+                    let glitchCount = budget == .full ? 10 : 5
+                    for _ in 0..<glitchCount {
+                        let w = CGFloat.random(in: 40...size.width * 0.6)
+                        let h = CGFloat.random(in: 1...12)
+                        let x = CGFloat.random(in: 0...size.width - w)
+                        let y = CGFloat.random(in: 0...size.height - h)
+                        
+                        let rect = CGRect(x: x, y: y, width: w, height: h)
+                        let color = [Color(hex: "00F3FF"), Color(hex: "FF00FF"), Color(hex: "7000FF")].randomElement()!
+                        
+                        context.fill(Path(rect), with: .color(color.opacity(0.35)))
+                        
+                        // Chromatic aberration / displacement lookalike
+                        if Bool.random() {
+                            context.fill(Path(rect.offsetBy(dx: 4, dy: 0)), with: .color(Color(hex: "FF00FF").opacity(0.2)))
+                        }
+                    }
+                }
+                
+                // Subtle scanline pulse
+                let scanlineY = (time * 150.0).truncatingRemainder(dividingBy: size.height)
+                var scanPath = Path()
+                scanPath.move(to: CGPoint(x: 0, y: scanlineY))
+                scanPath.addLine(to: CGPoint(x: size.width, y: scanlineY))
+                context.stroke(scanPath, with: .color(Color(hex: "00F3FF").opacity(0.05)), lineWidth: 2)
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
