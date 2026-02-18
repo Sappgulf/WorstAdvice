@@ -317,8 +317,7 @@ struct SettingsTabView: View {
                             }
                         }
                     } label: {
-                        let personality = Theme.personality(for: mode)
-                        VStack(spacing: 6) {
+                        VStack(spacing: 8) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .fill(Theme.backgroundGradient(for: mode))
@@ -345,17 +344,6 @@ struct SettingsTabView: View {
                             Text(mode.title)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(viewModel.theme == mode ? Theme.accent(for: viewModel.theme) : Theme.secondaryText(for: viewModel.theme))
-
-                            Text(personality.surfaceMood)
-                                .font(.caption2.weight(.medium))
-                                .foregroundStyle(Theme.secondaryText(for: viewModel.theme).opacity(0.85))
-                                .lineLimit(1)
-
-                            Text(personality.descriptor)
-                                .font(.caption2)
-                                .foregroundStyle(Theme.secondaryText(for: viewModel.theme).opacity(0.72))
-                                .multilineTextAlignment(.center)
-                                .lineLimit(2)
                         }
                     }
                     .buttonStyle(.plain)

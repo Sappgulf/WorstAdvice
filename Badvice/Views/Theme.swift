@@ -34,6 +34,8 @@ enum Theme {
             return (Color.black.opacity(0.35), 12, 4)
         case .evergreen:
             return (Color(hex: "0A1A10").opacity(0.4), 16, 6)
+        case .fallout:
+            return (Color(hex: "63FF74").opacity(0.32), 18, 6)
         case .neon:
             return (Color(hex: "FF00FF").opacity(0.4), 24, 10)
         case .midnight:
@@ -103,6 +105,12 @@ enum Theme {
                 startPoint: .top,
                 endPoint: .bottom
             )
+        case .fallout:
+            gradient = LinearGradient(
+                colors: [Color(hex: "081107"), Color(hex: "0D1B0A"), Color(hex: "12210D")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         case .neon:
             gradient = LinearGradient(
                 colors: [Color(hex: "0A0A0A"), Color(hex: "1A0033")],
@@ -146,6 +154,23 @@ enum Theme {
         return gradient
     }
 
+    static func canvasColor(for mode: ThemeMode) -> Color {
+        switch mode {
+        case .badvice: return Color(hex: "0F0D11")
+        case .minimal: return Color(hex: "F4F4F6")
+        case .ember: return Color(hex: "1B100F")
+        case .slate: return Color(hex: "1A2430")
+        case .evergreen: return Color(hex: "0E1712")
+        case .fallout: return Color(hex: "060D05")
+        case .neon: return Color(hex: "08080C")
+        case .midnight: return Color(hex: "05070B")
+        case .sunset: return Color(hex: "1A0F23")
+        case .cosmic: return Color(hex: "090913")
+        case .retro: return Color(hex: "0D111A")
+        case .cybernetic: return Color(hex: "050A0E")
+        }
+    }
+
     static func accent(for mode: ThemeMode) -> Color {
         switch mode {
         case .badvice: return Color(hex: "E88D72") // Brighter Coral with more saturation
@@ -153,6 +178,7 @@ enum Theme {
         case .ember: return Color(hex: "FF6B47") // Vibrant Ember Orange
         case .slate: return Color(hex: "8EC5FC") // Cool Blue accent for better contrast
         case .evergreen: return Color(hex: "66BB6A") // Vibrant Sage Green
+        case .fallout: return Color(hex: "8CFF7A") // Pip-Boy phosphor green
         case .neon: return Color(hex: "FF00FF") // Hot Magenta
         case .midnight: return Color(hex: "88C0D0") // Brighter Frost Blue
         case .sunset: return Color(hex: "FFD700") // Gold
@@ -177,6 +203,8 @@ enum Theme {
             return Color(hex: "FF00FF") // Magenta complement
         case .evergreen:
             return Color(hex: "4CAF50") // Forest complement
+        case .fallout:
+            return Color(hex: "E1C95C") // Vault-Tec amber highlight
         default:
             return nil
         }
@@ -189,6 +217,7 @@ enum Theme {
         case .ember: return Color(hex: "5E3030").opacity(0.5)
         case .slate: return Color(hex: "3E5062").opacity(0.75)
         case .evergreen: return Color(hex: "253D2E").opacity(0.7)
+        case .fallout: return Color(hex: "14220F").opacity(0.82)
         case .neon: return Color(hex: "1A1A2E").opacity(0.85)
         case .midnight: return Color(hex: "16213E").opacity(0.75)
         case .sunset: return Color(hex: "3D2847").opacity(0.6)
@@ -209,6 +238,8 @@ enum Theme {
             return 0.55
         case .cybernetic:
             return 0.65 // Stronger glass for cyber theme
+        case .fallout:
+            return 0.42
         default:
             return 0.5 // Default glass effect
         }
@@ -221,6 +252,7 @@ enum Theme {
         case .ember: return Color(hex: "FFFAF0") // Warm white with better contrast
         case .slate: return Color(hex: "F0F4F8") // Cooler white
         case .evergreen: return Color(hex: "F5FFF7") // Slight green tint white
+        case .fallout: return Color(hex: "D8FFCC")
         case .neon: return Color(hex: "FFFFFF")
         case .midnight: return Color(hex: "ECEFF4") // Nord Snow Storm
         case .sunset: return Color(hex: "FFF8F0") // Warm white
@@ -237,6 +269,7 @@ enum Theme {
         case .ember: return Color(hex: "FFCAB0") // Warmer, more visible
         case .slate: return Color(hex: "CBD5E1") // Cooler, higher contrast
         case .evergreen: return Color(hex: "A5D6A7") // Lighter Green-Grey
+        case .fallout: return Color(hex: "9BD889")
         case .neon: return Color(hex: "FF00FF").opacity(0.8) // More opaque
         case .midnight: return Color(hex: "88C0D0") // Nord Frost
         case .sunset: return Color(hex: "FFE4CC") // Warmer
@@ -253,6 +286,7 @@ enum Theme {
         case .ember: return .white
         case .slate: return Color(hex: "2C3E50")
         case .evergreen: return Color(hex: "142119")
+        case .fallout: return Color(hex: "0B1008")
         case .neon: return .black
         case .midnight: return .black
         case .sunset: return .black
@@ -269,6 +303,7 @@ enum Theme {
         case .ember: return Color(hex: "261212")
         case .slate: return Color(hex: "233140")
         case .evergreen: return Color(hex: "142119")
+        case .fallout: return Color(hex: "0B1409")
         case .neon: return Color(hex: "0A0A0A")
         case .midnight: return Color(hex: "000000")
         case .sunset: return Color(hex: "1A0A2E")
@@ -285,6 +320,7 @@ enum Theme {
         case .ember: return Color(hex: "FF6B47")
         case .slate: return Color(hex: "8EC5FC")
         case .evergreen: return Color(hex: "66BB6A")
+        case .fallout: return Color(hex: "8CFF7A")
         case .neon: return Color(hex: "00FFFF")
         case .midnight: return Color(hex: "88C0D0")
         case .sunset: return Color(hex: "FFD700")
@@ -307,6 +343,8 @@ enum Theme {
             return Color(hex: "FF1493") // Hot pink
         case .cybernetic:
             return Color(hex: "7000FF") // Deep purple
+        case .fallout:
+            return Color(hex: "CCFF99")
         default:
             return nil
         }
@@ -315,7 +353,7 @@ enum Theme {
     /// Returns whether a theme should use glow effects
     static func shouldUseGlow(for mode: ThemeMode) -> Bool {
         switch mode {
-        case .neon, .cosmic, .retro, .midnight, .cybernetic:
+        case .neon, .cosmic, .retro, .midnight, .cybernetic, .fallout:
             return true
         default:
             return false
@@ -336,6 +374,8 @@ enum Theme {
             return Color(hex: "88C0D0")
         case .cybernetic:
             return Color(hex: "00F3FF")
+        case .fallout:
+            return Color(hex: "8CFF7A")
         default:
             return nil
         }
@@ -349,6 +389,7 @@ enum Theme {
         case .sunset: return Color(hex: "FFD700")
         case .ember: return Color(hex: "FF6B47")
         case .evergreen: return Color(hex: "66BB6A")
+        case .fallout: return Color(hex: "8CFF7A")
         case .midnight: return Color(hex: "88C0D0")
         case .cybernetic: return Color(hex: "00F3FF")
         default: return Color(hex: "1C1C1E") // Iconic Black
@@ -364,6 +405,7 @@ enum Theme {
         case .sunset: return Color(hex: "FFD700").opacity(0.7)
         case .ember: return Color(hex: "FF6B47").opacity(0.7)
         case .evergreen: return Color(hex: "66BB6A").opacity(0.6)
+        case .fallout: return Color(hex: "8CFF7A").opacity(0.72)
         case .midnight: return Color(hex: "88C0D0").opacity(0.8)
         case .cybernetic: return Color(hex: "00F3FF").opacity(0.9)
         default: return .white.opacity(0.9) // Strong glow for visibility on dark backgrounds
@@ -373,7 +415,7 @@ enum Theme {
     /// Returns whether the header should have an animated glow effect
     static func headerShouldGlow(for mode: ThemeMode) -> Bool {
         switch mode {
-        case .neon, .cosmic, .retro, .midnight, .cybernetic:
+        case .neon, .cosmic, .retro, .midnight, .cybernetic, .fallout:
             return true
         default:
             return false
@@ -420,6 +462,14 @@ enum Theme {
                 surfaceMood: "Canopy Grain",
                 effectIntensity: 0.55,
                 indicatorCornerRadius: 15,
+                indicatorInset: 2
+            )
+        case .fallout:
+            return ThemePersonality(
+                descriptor: "Vault terminal glow with rugged CRT depth",
+                surfaceMood: "Pip-Boy Phosphor",
+                effectIntensity: 0.7,
+                indicatorCornerRadius: 10,
                 indicatorInset: 2
             )
         case .neon:
@@ -528,6 +578,7 @@ struct ThemeBackgroundView: View {
 
     var body: some View {
         ZStack {
+            Theme.canvasColor(for: mode)
             Theme.backgroundGradient(for: mode)
 
             if scenePhase == .active && shouldRenderEffects {
@@ -568,11 +619,20 @@ struct ThemeBackgroundView: View {
                         .drawingGroup() // Performance: Cache star rendering
                 }
 
-                if allowsFullEffects && mode == .retro {
+                if allowsFullEffects && (mode == .retro || mode == .fallout) {
                     ScanlineView(budget: budget)
-                        .opacity(0.1)
+                        .opacity(mode == .fallout ? 0.16 : 0.1)
                         .blendMode(.overlay)
                         .drawingGroup() // Performance: Cache scanline rendering
+                }
+
+                if allowsDynamic && mode == .fallout {
+                    LinearGradient(
+                        colors: [Color(hex: "8CFF7A").opacity(0.08), Color.clear, Color(hex: "4D8F45").opacity(0.05)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .blendMode(.screen)
                 }
 
                 if mode == .cybernetic {

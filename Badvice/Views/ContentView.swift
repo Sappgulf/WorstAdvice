@@ -142,6 +142,7 @@ struct ContentView: View {
     @State private var tabSlideLastIndex: Int?
     @State private var tabSlideLastSwitchX: CGFloat = 0
     @State private var tabSlideLastHapticTab: AppTab?
+    @State private var shouldRestartOnNextActive = false
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("favoritesCountAtLastReview") private var favoritesCountAtLastReview = 0
@@ -162,7 +163,11 @@ struct ContentView: View {
                 let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion
                 let constrainedMotion = reduceMotion || lowPowerModeEnabled
                 let renderBudget = budget(for: session, lowPowerModeEnabled: lowPowerModeEnabled)
+                let shouldRenderParticles = selectedTab == .generate || selectedTab == .chaosHub
                 ZStack {
+                    Theme.canvasColor(for: session.settings.theme)
+                        .ignoresSafeArea()
+
                     ThemeBackgroundView(
                         mode: session.settings.theme,
                         budget: renderBudget,
@@ -170,14 +175,16 @@ struct ContentView: View {
                     )
                         .ignoresSafeArea()
 
-                    FloatingParticlesView(
-                        theme: session.settings.theme,
-                        reduceMotion: reduceMotion,
-                        isGenerating: session.generate.isGenerating,
-                        budget: renderBudget,
-                        lowPowerMode: lowPowerModeEnabled
-                    )
-                    .ignoresSafeArea()
+                    if shouldRenderParticles {
+                        FloatingParticlesView(
+                            theme: session.settings.theme,
+                            reduceMotion: reduceMotion,
+                            isGenerating: session.generate.isGenerating,
+                            budget: renderBudget,
+                            lowPowerMode: lowPowerModeEnabled
+                        )
+                        .ignoresSafeArea()
+                    }
 
                     TabView(selection: $selectedTab) {
                         ForEach(session.settings.tabOrder) { tab in
@@ -327,6 +334,18 @@ struct ContentView: View {
                         }
                     }
                     .ignoresSafeArea(.keyboard)
+                    
+                    GeometryReader { proxy in
+                        VStack(spacing: 0) {
+                            Theme.canvasColor(for: session.settings.theme)
+                                .frame(height: proxy.safeAreaInsets.top)
+                            Spacer()
+                            Theme.canvasColor(for: session.settings.theme)
+                                .frame(height: proxy.safeAreaInsets.bottom)
+                        }
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                    }
 
                     // Confetti overlay — fires on streak milestones
                     ConfettiView(isActive: $showConfetti, lowPowerMode: lowPowerModeEnabled)
@@ -383,14 +402,20 @@ struct ContentView: View {
                     }
                 }
                 .onChange(of: scenePhase) { _, phase in
-                    guard shakeToGenerateEnabled else {
-                        shakeDetector.stopMonitoring()
-                        return
-                    }
                     if phase == .active {
-                        shakeDetector.startMonitoring()
-                        session.generate.refreshRetentionStateOnAppear()
+                        if shouldRestartOnNextActive {
+                            shouldRestartOnNextActive = false
+                            restartAppSession()
+                            return
+                        }
+                        if shakeToGenerateEnabled {
+                            shakeDetector.startMonitoring()
+                        }
+                        self.session?.generate.refreshRetentionStateOnAppear()
                     } else {
+                        if phase == .background {
+                            shouldRestartOnNextActive = true
+                        }
                         shakeDetector.stopMonitoring()
                     }
                 }
@@ -435,9 +460,24 @@ struct ContentView: View {
         switch selectedTab {
         case .generate:
             return session.generate.isGenerating ? .full : .balanced
-        case .chaosHub, .quotes, .favorites, .history, .settings:
-            return tabBarVisible ? .balanced : .reduced
+        case .chaosHub:
+            return .balanced
+        case .quotes, .favorites, .history, .settings:
+            return .reduced
         }
+    }
+
+    private func restartAppSession() {
+        selectedTab = .generate
+        tabBarVisible = true
+        showConfetti = false
+        lastShakeHandledAt = .distantPast
+        tabDragHighlight = nil
+        tabSlideModeActive = false
+        tabSlideLastIndex = nil
+        tabSlideLastSwitchX = 0
+        tabSlideLastHapticTab = nil
+        session = AppSessionViewModel(context: modelContext)
     }
 
     @ViewBuilder

@@ -159,7 +159,7 @@ final class AchievementsManager {
     // MARK: - Unlocked Themes
     
     var unlockedThemes: [ThemeMode] {
-        var themes: [ThemeMode] = [.badvice, .minimal, .ember, .slate, .evergreen] // Base themes
+        var themes: [ThemeMode] = [.badvice, .minimal, .ember, .slate, .evergreen, .fallout] // Base themes
         
         for achievement in achievements where achievement.isUnlocked {
             if let theme = achievement.type.unlocksTheme {

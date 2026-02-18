@@ -98,6 +98,7 @@ enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case ember
     case slate
     case evergreen
+    case fallout
     case neon
     case midnight
     case sunset
@@ -114,6 +115,7 @@ enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .ember: return "Ember"
         case .slate: return "Slate"
         case .evergreen: return "Evergreen"
+        case .fallout: return "Fallout"
         case .neon: return "Neon Nights"
         case .midnight: return "Midnight Oil"
         case .sunset: return "Golden Hour"
