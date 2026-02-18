@@ -57,6 +57,8 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case friendRoast
     case lifeCoach
     case conspiracyTheorist
+    /// Resolves to a random concrete tone at generation time
+    case random
 
     var id: String { rawValue }
 
@@ -73,7 +75,20 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .friendRoast: return "Friend Roast"
         case .lifeCoach: return "Life Coach"
         case .conspiracyTheorist: return "Conspiracy Theorist"
+        case .random: return "Random Mix"
         }
+    }
+
+    /// All concrete (non-random) tones
+    static var concrete: [ToneMode] {
+        allCases.filter { $0 != .random }
+    }
+
+    /// Resolves `.random` to an actual tone using the provided seed.
+    func resolved(seed: Int) -> ToneMode {
+        guard self == .random else { return self }
+        let pool = ToneMode.concrete
+        return pool[abs(seed) % pool.count]
     }
 }
 
@@ -214,6 +229,34 @@ struct LearningWeightProfile: Sendable {
         copyBonusWeight: 0.35,
         shareBonusWeight: 0.50,
         regenPenaltyWeight: 0.18
+    )
+
+    /// Converged profile for users with rich signal history — leans on learned preferences.
+    static let converged = LearningWeightProfile(
+        semanticWeight: 0.36,
+        explicitWeight: 0.48,
+        implicitWeight: 0.16,
+        noveltyWeight: 0.08,
+        explorationWeight: 0.04,
+        dislikePenaltyWeight: 1.20,
+        favoriteBonusWeight: 0.80,
+        copyBonusWeight: 0.45,
+        shareBonusWeight: 0.60,
+        regenPenaltyWeight: 0.25
+    )
+
+    /// Explorer profile for new users or when generating in unexplored category/tone combos.
+    static let explorer = LearningWeightProfile(
+        semanticWeight: 0.50,
+        explicitWeight: 0.22,
+        implicitWeight: 0.08,
+        noveltyWeight: 0.12,
+        explorationWeight: 0.18,
+        dislikePenaltyWeight: 0.80,
+        favoriteBonusWeight: 0.50,
+        copyBonusWeight: 0.25,
+        shareBonusWeight: 0.40,
+        regenPenaltyWeight: 0.12
     )
 }
 
@@ -407,7 +450,7 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
         case .dailyStreak7: return "Use Badvice for 7 days in a row"
         case .dailyStreak14: return "Use Badvice for 14 days in a row"
         case .dailyStreak30: return "Use Badvice for 30 days in a row"
-        case .toneExplorer: return "Try all 11 different tones"
+        case .toneExplorer: return "Try all 11 different tones (excluding Random Mix)"
         case .categoryMaster: return "Generate advice in all 10 categories"
         case .nightOwl: return "Generate advice after midnight"
         case .earlyBird: return "Generate advice before 6 AM"

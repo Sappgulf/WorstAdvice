@@ -48,7 +48,11 @@ struct AdviceStore {
     }
 
     func profile(for tone: ToneMode) -> ToneProfile {
-        toneProfiles[tone] ?? Self.defaultToneProfiles[.corporateConsultant]!
+        // .random should be resolved before calling this, but guard just in case
+        guard tone != .random else {
+            return toneProfiles[.corporateConsultant] ?? Self.defaultToneProfiles[.corporateConsultant]!
+        }
+        return toneProfiles[tone] ?? Self.defaultToneProfiles[.corporateConsultant]!
     }
 }
 

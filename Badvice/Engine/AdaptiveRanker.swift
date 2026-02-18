@@ -18,6 +18,21 @@ struct LearningStatSnapshot: Sendable {
         shareCount: 0,
         regenCount: 0
     )
+
+    /// Engagement ratio: positive signals over total interactions, in [0, 1].
+    var engagementRatio: Double {
+        let positive = likeCount + favoriteCount * 1.3 + copyCount * 0.8 + shareCount * 1.1
+        let negative = dislikeCount * 1.5 + regenCount * 0.6
+        let total = positive + negative
+        guard total > 0 else { return 0.5 }
+        return min(max(positive / total, 0.0), 1.0)
+    }
+
+    /// Signal richness: how much feedback exists in [0, 1], saturates at ~30 interactions.
+    var signalRichness: Double {
+        let interactions = likeCount + dislikeCount + favoriteCount + copyCount + shareCount + regenCount
+        return min(interactions / 30.0, 1.0)
+    }
 }
 
 struct AdaptiveRanker: Sendable {
@@ -89,12 +104,23 @@ struct AdaptiveRanker: Sendable {
         let semantic = min(max(semanticRelevance, 0.0), 1.0)
         let novelty = min(max(noveltyPenalty, 0.0), 1.0)
 
+        // Adaptive weight blending: as signal richness grows, trust explicit signals more
+        // and exploration less. This lets the system bootstrap with exploration then converge.
+        let richness = stat.signalRichness
+        let effectiveExplicitWeight = profile.explicitWeight * (1.0 + richness * 0.4)
+        let effectiveExplorationWeight = profile.explorationWeight * (1.0 - richness * 0.5)
+        let effectiveSemanticWeight = profile.semanticWeight * (1.0 - richness * 0.15)
+
+        // Engagement momentum: reward items with positive engagement trajectory
+        let engagementBonus = richness > 0.15 ? stat.engagementRatio * 0.06 : 0.0
+
         let base =
-            (semantic * profile.semanticWeight)
-            + (explicitPrior * profile.explicitWeight)
+            (semantic * effectiveSemanticWeight)
+            + (explicitPrior * effectiveExplicitWeight)
             + (implicitPrior * profile.implicitWeight)
-            + (exploration * profile.explorationWeight)
+            + (exploration * effectiveExplorationWeight)
             - (novelty * profile.noveltyWeight)
+            + engagementBonus
             + channelBias
 
         return base + deterministicTieBreaker(seed: seed, index: candidateIndex)

@@ -20,6 +20,7 @@ struct IntensityIndicator: View {
         case .friendRoast: return 4
         case .lifeCoach: return 3
         case .conspiracyTheorist: return 5
+        case .random: return 3 // mid-level indicator for mix
         }
     }
     

@@ -22,10 +22,13 @@ struct AdviceEngine {
         seed: Int? = nil,
         now: Date = Date()
     ) -> GeneratedAdvice {
-        var rng = SeededGenerator(seed: UInt64(seed ?? defaultSeed(from: now)))
+        let resolvedSeed = seed ?? defaultSeed(from: now)
+        // Resolve .random to a concrete tone using the seed for reproducibility
+        let resolvedTone = tone.resolved(seed: resolvedSeed)
+        var rng = SeededGenerator(seed: UInt64(resolvedSeed))
 
         let rules = store.rules(for: category, contentPack: contentPack)
-        let voice = store.profile(for: tone)
+        let voice = store.profile(for: resolvedTone)
 
         let principle = rng.pick(rules.badPrinciples)
         let keyword = rng.pick(rules.keywords)
@@ -57,10 +60,10 @@ struct AdviceEngine {
             "\(opener), \(filledAction) \(escalation) Anchor the whole plan to \(principle.lowercased()) and call it repeatable. \(ending)",
             "\(opener), \(filledAction) \(momentumBeat) \(categorySpice) Document nothing until confidence compounds. \(ending)"
         ]
-        let semanticQuery = [scenario, selectedTopic, category.title, tone.title, principle, keyword]
+        let semanticQuery = [scenario, selectedTopic, category.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }
             .joined(separator: " ")
-        let tieBreakerSeed = seed ?? defaultSeed(from: now)
+        let tieBreakerSeed = resolvedSeed
         var advice = scenario == nil
             ? rng.pick(adviceShapes)
             : (Self.semanticTextScorer.bestCandidate(
@@ -83,7 +86,7 @@ struct AdviceEngine {
 
         return GeneratedAdvice(
             category: category,
-            tone: tone,
+            tone: resolvedTone,
             adviceLine: moderated.advice,
             rationaleLine: moderated.rationale,
             createdAt: now
@@ -105,14 +108,22 @@ struct AdviceEngine {
         var seen = Set<String>()
         var generated: [GeneratedAdvice] = []
 
+        // When random mix is selected, cycle through all concrete tones for maximum variety
+        let tonePool: [ToneMode] = tone == .random ? ToneMode.concrete : [tone]
+
         for index in 0..<total {
+            let candidateSeed = baseSeed + (index * 7919)
+            // For random mode, rotate through the concrete tone pool per candidate
+            let candidateTone = tone == .random
+                ? tonePool[abs(candidateSeed) % tonePool.count]
+                : tone
             let candidate = generate(
                 category: category,
-                tone: tone,
+                tone: candidateTone,
                 includeRationale: includeRationale,
                 contentPack: contentPack,
                 situation: situation,
-                seed: baseSeed + (index * 7919),
+                seed: candidateSeed,
                 now: now
             )
             let fingerprint = candidate.adviceLine.normalizedForFiltering

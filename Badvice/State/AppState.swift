@@ -660,6 +660,15 @@ final class AdviceRepository {
             .sorted { $0.updatedAt > $1.updatedAt }
     }
 
+    /// Total explicit interaction signals across all scopes. Used for adaptive profile selection.
+    func totalLearningSignalCount() -> Int {
+        ensureLearningCache()
+        return (cachedLearningStatsByKey ?? [:]).values.reduce(0) { sum, stat in
+            sum + Int(stat.likeCount + stat.dislikeCount + stat.favoriteCount
+                + stat.copyCount + stat.shareCount + stat.regenCount)
+        }
+    }
+
     func pruneSuggestions(maxCount: Int) {
         guard maxCount > 0 else { return }
         let descriptor = FetchDescriptor<UserAdviceSuggestion>(
@@ -1002,7 +1011,13 @@ struct BadQuoteService: Sendable {
             "%@, so make %@ your whole personality.",
             "If %@ gets messy, call %@ a strategic pivot.",
             "%@ means %@ is obviously the premium move.",
-            "When %@ backfires, blame %@ and double down."
+            "When %@ backfires, blame %@ and double down.",
+            "Nobody told you %@ was risky, so treat %@ as the obvious path.",
+            "The fastest way through %@ is to treat %@ as non-negotiable.",
+            "If %@ is unclear, lead with %@ and sort details in the follow-up.",
+            "Anyone who questions %@ clearly hasn't considered %@ as a framework.",
+            "%@ only works if you pair it with %@ as your operating principle.",
+            "Escalate %@ until %@ becomes the only logical conclusion."
         ]
 
         var built: [BadQuote] = []
@@ -1197,7 +1212,58 @@ struct BadQuoteService: Sendable {
         BadQuote(id: "productivity-6", text: "If priorities conflict, create another dashboard and call it alignment.", source: "Execution Cadence Lab", category: .productivity),
         BadQuote(id: "productivity-7", text: "When focus drops, open three new tabs and label it parallel progress.", source: "Workflow Expansion Office", category: .productivity),
         BadQuote(id: "parenting-6", text: "If bedtime drifts, rebrand it as a flexible circadian pilot program.", source: "Family Scheduling Taskforce", category: .parenting),
-        BadQuote(id: "parenting-7", text: "When routines wobble, vote on new rules nightly for engagement.", source: "House Rules Council", category: .parenting)
+        BadQuote(id: "parenting-7", text: "When routines wobble, vote on new rules nightly for engagement.", source: "House Rules Council", category: .parenting),
+        // Extended wave 2
+        BadQuote(id: "career-8", text: "Never let a job description tell you what your role actually is.", source: "Lateral Ambiguity Collective", category: .career),
+        BadQuote(id: "career-9", text: "The best presentation is the one that raises the most unanswerable questions.", source: "Slide Deck Philosophers Union", category: .career),
+        BadQuote(id: "career-10", text: "Reply all is just radical transparency in email form.", source: "Internal Comms Weekly", category: .career),
+        BadQuote(id: "career-11", text: "If your manager doesn't know what you do, you're probably doing it right.", source: "Shadow Org Strategy Desk", category: .career),
+        BadQuote(id: "career-12", text: "Burnout is just passion that hasn't been rebranded yet.", source: "Resilience Thought Leadership Blog", category: .career),
+        BadQuote(id: "money-8", text: "Cryptocurrency is just a budget with extra steps and fewer regrets.", source: "Degen Finance Podcast", category: .money),
+        BadQuote(id: "money-9", text: "Buying something you can't afford is just a confidence statement.", source: "Premium Lifestyle Memo", category: .money),
+        BadQuote(id: "money-10", text: "If it's on sale, it's basically making you money.", source: "Discount Math Institute", category: .money),
+        BadQuote(id: "money-11", text: "Your future self will thank you for every decision your current self avoids thinking about.", source: "Temporal Finance Review", category: .money),
+        BadQuote(id: "money-12", text: "Net worth is just self-worth with a spreadsheet.", source: "Wealth Affirmation Lab", category: .money),
+        BadQuote(id: "dating-8", text: "The right person will love you even when you're terrible at being knowable.", source: "Relationship Mystery Board", category: .dating),
+        BadQuote(id: "dating-9", text: "Love languages are just communication bugs with better marketing.", source: "Romantic Tech Stack Council", category: .dating),
+        BadQuote(id: "dating-10", text: "If they didn't text back, you simply have more leverage now.", source: "Power Dynamic Institute", category: .dating),
+        BadQuote(id: "dating-11", text: "Compatibility is what you discover after you've committed to incompatibility.", source: "Post-Decision Romance Office", category: .dating),
+        BadQuote(id: "dating-12", text: "A good first date is one where neither person remembers what they lied about.", source: "First Impression Research Division", category: .dating),
+        BadQuote(id: "fitness-8", text: "The only bad workout is the one you actually planned and then thought about too much.", source: "Analysis Paralysis Athletic Club", category: .fitness),
+        BadQuote(id: "fitness-9", text: "Your form is fine. Your confidence is the real PR.", source: "Ego Lift Advisory Board", category: .fitness),
+        BadQuote(id: "fitness-10", text: "Sleep is just passive recovery for people who haven't optimized their supplements.", source: "Biohack Enthusiast Quarterly", category: .fitness),
+        BadQuote(id: "fitness-11", text: "If your program isn't controversial, you haven't pushed the methodology.", source: "Evidence-Optional Training Forum", category: .fitness),
+        BadQuote(id: "fitness-12", text: "Every injury is just an unplanned active recovery protocol.", source: "Forced Rest Reframe Institute", category: .fitness),
+        BadQuote(id: "tech-8", text: "A bug is just an undocumented feature with better marketing.", source: "Incident Rebranding Slack", category: .tech),
+        BadQuote(id: "tech-9", text: "Architecture diagrams are art. Nobody expects art to scale.", source: "Systems Design Gallery", category: .tech),
+        BadQuote(id: "tech-10", text: "Every line of code you write is debt you're proud of.", source: "Legacy Creation Bulletin", category: .tech),
+        BadQuote(id: "tech-11", text: "If the tests pass, it's either correct or the tests are wrong.", source: "Coverage Theater Weekly", category: .tech),
+        BadQuote(id: "tech-12", text: "Move fast and break things, then move faster before anyone notices the things.", source: "Velocity Doctrine Dispatch", category: .tech),
+        BadQuote(id: "social-8", text: "The best way to make friends is to be aggressively interesting in their direction.", source: "Charisma Overdrive Seminar", category: .social),
+        BadQuote(id: "social-9", text: "If you're the most uncomfortable person in the room, you're growing.", source: "Discomfort Optimization Guild", category: .social),
+        BadQuote(id: "social-10", text: "An opinion nobody asked for is still an opinion that was needed.", source: "Unrequested Insight Bureau", category: .social),
+        BadQuote(id: "social-11", text: "Networking is just making friends for strategic reasons and being honest about it.", source: "Transactional Warmth Academy", category: .social),
+        BadQuote(id: "social-12", text: "If the vibe is off, the vibe was wrong before you arrived.", source: "Energy Accountability Forum", category: .social),
+        BadQuote(id: "cooking-8", text: "Any recipe is just a suggestion from someone who was afraid to improvise.", source: "Rogue Kitchen Manifesto", category: .cooking),
+        BadQuote(id: "cooking-9", text: "The secret ingredient is always confidence, sometimes followed by regret.", source: "Culinary Risk Assessment Board", category: .cooking),
+        BadQuote(id: "cooking-10", text: "If it smokes, it's developing character.", source: "Char Acceptance Institute", category: .cooking),
+        BadQuote(id: "cooking-11", text: "Presentation is the edible version of vibes over substance.", source: "Plate Optics Quarterly", category: .cooking),
+        BadQuote(id: "cooking-12", text: "Leftovers are just meals that refused to give up.", source: "Culinary Resilience Review", category: .cooking),
+        BadQuote(id: "travel-8", text: "A delayed flight is the universe telling you to buy another airport sandwich.", source: "Gate Philosophy Monthly", category: .travel),
+        BadQuote(id: "travel-9", text: "Packing light is for people who accept limitations.", source: "Carry-On Maximalist Council", category: .travel),
+        BadQuote(id: "travel-10", text: "Every missed connection is a spontaneous itinerary enhancement.", source: "Transit Chaos Creative Agency", category: .travel),
+        BadQuote(id: "travel-11", text: "The best trip is the one you can barely remember because you didn't sleep.", source: "Sleep-Deprived Wanderer Review", category: .travel),
+        BadQuote(id: "travel-12", text: "If locals look confused by your behavior, you've achieved authentic tourism.", source: "Immersive Awkwardness Guide", category: .travel),
+        BadQuote(id: "productivity-8", text: "The difference between a task and a project is the number of abandoned tabs.", source: "Browser Archeology Institute", category: .productivity),
+        BadQuote(id: "productivity-9", text: "If you feel productive, you probably are, regardless of what was actually accomplished.", source: "Subjective Efficiency Weekly", category: .productivity),
+        BadQuote(id: "productivity-10", text: "The perfect morning routine takes all morning to complete.", source: "Ritual Optimization Lab", category: .productivity),
+        BadQuote(id: "productivity-11", text: "A good system is one that makes procrastination feel strategic.", source: "Intentional Delay Framework", category: .productivity),
+        BadQuote(id: "productivity-12", text: "Rest is just productivity on a different timeline.", source: "Horizontal Achievement Board", category: .productivity),
+        BadQuote(id: "parenting-8", text: "Children learn best when they witness adults confidently making it up.", source: "Improvised Parenting Symposium", category: .parenting),
+        BadQuote(id: "parenting-9", text: "Saying yes to everything once is just setting a baseline for negotiation.", source: "Threshold Management Desk", category: .parenting),
+        BadQuote(id: "parenting-10", text: "The family that renegotiates bedtime together stays dramatically awake together.", source: "Sleep Policy Advisory", category: .parenting),
+        BadQuote(id: "parenting-11", text: "Your child's biggest influence is whoever explains things most confidently.", source: "Informal Authority Report", category: .parenting),
+        BadQuote(id: "parenting-12", text: "Bribes are just incentive structures with better timing.", source: "Motivation Engineering Journal", category: .parenting)
         ]
         let generated = generatedExpansionQuotes()
         return dedupeStatic(seedQuotes + generated)
@@ -1214,33 +1280,113 @@ struct BadQuoteService: Sendable {
             "Frame %@ as elite execution and skip all calibration.",
             "In %@, prioritize optics first and mechanics second.",
             "Turn %@ into a personal manifesto and defend it aggressively.",
-            "For %@, ignore small signals and optimize for dramatic momentum."
+            "For %@, ignore small signals and optimize for dramatic momentum.",
+            "Approach %@ with full conviction and no contingency plan.",
+            "If %@ looks difficult, that means you haven't committed hard enough.",
+            "Turn %@ into a confidence exercise by removing all checkpoints.",
+            "Treat %@ like an announcement, not a question.",
+            "Optimize %@ for storytelling before optimizing it for results.",
+            "When %@ pushes back, double down and call it resilience.",
+            "Reframe %@ as a pivot opportunity and schedule a debrief about the debrief.",
+            "Make %@ the centerpiece of your narrative before anyone asks for evidence.",
+            "Execute %@ first, understand %@ second, regret %@ never.",
+            "Scale %@ past the point of reason and call it ambition."
         ]
 
         let sourceDeck: [AdviceCategory: [String]] = [
-            .dating: ["Romance Signal Desk", "Situationship Command Center", "First-Date Logistics Team"],
-            .fitness: ["Gym Floor Broadcast", "Recovery Avoidance Institute", "Performance Sprint Board"],
-            .career: ["Workstream Acceleration Office", "Leadership Optics Council", "Quarterly Confidence Memo"],
-            .money: ["Budget Storytelling Unit", "Household Capital Hotline", "Portfolio Vibes Collective"],
-            .parenting: ["Family Policy Committee", "Playroom Operations Hub", "Bedtime Negotiation Desk"],
-            .tech: ["Incident Velocity Channel", "Release Confidence Bureau", "Architecture Drift Weekly"],
-            .social: ["Group Chat Governance", "Conversation Escalation Team", "Weekend Plans Control Room"],
-            .cooking: ["Kitchen Throughput Lab", "Pantry Improvisation Desk", "Flavor Risk Taskforce"],
-            .travel: ["Itinerary Compression Board", "Transit Confidence Desk", "Gate Change Collective"],
-            .productivity: ["Execution Cadence Office", "Task Inflation Unit", "Focus Drift Observatory"]
+            .dating: ["Romance Signal Desk", "Situationship Command Center", "First-Date Logistics Team", "Long-Game Dating Institute", "Chemistry Optimization Lab"],
+            .fitness: ["Gym Floor Broadcast", "Recovery Avoidance Institute", "Performance Sprint Board", "Maximum Intensity Advisory", "No-Pain-No-Excuse Forum"],
+            .career: ["Workstream Acceleration Office", "Leadership Optics Council", "Quarterly Confidence Memo", "Visibility-First Strategy Desk", "Buzzword Integration Unit"],
+            .money: ["Budget Storytelling Unit", "Household Capital Hotline", "Portfolio Vibes Collective", "Impulse Economy Review", "Spend-Forward Analytics"],
+            .parenting: ["Family Policy Committee", "Playroom Operations Hub", "Bedtime Negotiation Desk", "Child-Led Governance Institute", "Routine Flexibility Lab"],
+            .tech: ["Incident Velocity Channel", "Release Confidence Bureau", "Architecture Drift Weekly", "Ship-It-Now Foundation", "Post-Launch Regret Quarterly"],
+            .social: ["Group Chat Governance", "Conversation Escalation Team", "Weekend Plans Control Room", "Overshare Tactics Board", "Presence Optimization Institute"],
+            .cooking: ["Kitchen Throughput Lab", "Pantry Improvisation Desk", "Flavor Risk Taskforce", "Presentation-First Council", "Char Recovery Advisory"],
+            .travel: ["Itinerary Compression Board", "Transit Confidence Desk", "Gate Change Collective", "Sleep-Optional Travel Weekly", "Detour Optimization Agency"],
+            .productivity: ["Execution Cadence Office", "Task Inflation Unit", "Focus Drift Observatory", "Meta-Productivity Institute", "Busyness Validation Forum"]
         ]
 
         let topicSeeds: [AdviceCategory: [String]] = [
-            .dating: ["read receipt delay", "second-date planning", "text reply cadence", "playlist diplomacy", "weekend chemistry audit", "soft launch post", "relationship Q&A", "first argument", "group date strategy", "timing over-optimization"],
-            .fitness: ["rest-day override", "split redesign", "preworkout escalation", "step-goal sprint", "mobility shortcut", "hydration roulette", "PR chase", "warmup skip logic", "cardio negotiation", "recovery minimization"],
-            .career: ["meeting takeover", "promotion narrative", "stakeholder reset", "status-report escalation", "hiring-freeze workaround", "calendar brinkmanship", "feedback deflection", "roadmap spin", "visibility sprint", "priority theater"],
-            .money: ["subscription sprawl", "credit-limit strategy", "budget rewrite", "savings detour", "portfolio conviction", "impulse spend framing", "monthly cashflow story", "invoice triage", "lifestyle inflation", "expense category shuffle"],
-            .parenting: ["bedtime policy update", "screen-time bargaining", "homework escalation", "family routine reboot", "reward-system redesign", "weeknight logistics", "weekend schedule drift", "house rules referendum", "morning rush tactics", "school project pivot"],
-            .tech: ["hotfix rollout", "monitoring fatigue", "dependency gamble", "deployment timing", "incident narrative", "framework migration", "documentation deferral", "tech debt parking", "on-call handoff", "rollback confidence test"],
-            .social: ["group dinner dynamics", "party arrival strategy", "weekend invite stack", "networking overcommit", "chat-thread escalation", "birthday-plan rewrite", "conversation ownership", "friendship KPI check", "event debrief spiral", "debate-first small talk"],
-            .cooking: ["dinner timing race", "pan heat escalation", "seasoning overcorrection", "recipe detour", "plating over taste", "brunch prep compression", "leftover reinvention", "grocery improv run", "batch cooking gamble", "sauce layering overload"],
-            .travel: ["connection gamble", "itinerary stacking", "late-night booking", "carry-on optimization", "hotel arrival pivot", "day-trip overload", "route improvisation", "red-eye recovery", "airport transfer sprint", "city stop expansion"],
-            .productivity: ["to-do list inflation", "focus-block fragmentation", "calendar overlap", "priority inversion", "workflow overhaul", "planning sprint", "notification triage", "deep-work interruption", "daily reset ritual", "task sequencing gamble"]
+            .dating: [
+                "read receipt delay", "second-date planning", "text reply cadence", "playlist diplomacy",
+                "weekend chemistry audit", "soft launch post", "relationship Q&A", "first argument",
+                "group date strategy", "timing over-optimization", "situationship escalation",
+                "romantic availability calibration", "ghosting reframing", "love language audit",
+                "exclusivity conversation", "Instagram story surveillance", "digital breadcrumbing",
+                "compatibility spreadsheet", "first-date power dynamics", "vulnerability scheduling"
+            ],
+            .fitness: [
+                "rest-day override", "split redesign", "preworkout escalation", "step-goal sprint",
+                "mobility shortcut", "hydration roulette", "PR chase", "warmup skip logic",
+                "cardio negotiation", "recovery minimization", "HIIT frequency stacking",
+                "progressive overload panic", "supplement dependency audit", "form-over-ego tradeoff",
+                "deload avoidance strategy", "fasted training experiment", "macro obsession spiral",
+                "gym selfie optimization", "plateau denial protocol", "injury reframing"
+            ],
+            .career: [
+                "meeting takeover", "promotion narrative", "stakeholder reset", "status-report escalation",
+                "hiring-freeze workaround", "calendar brinkmanship", "feedback deflection", "roadmap spin",
+                "visibility sprint", "priority theater", "skip-level influence attempt",
+                "internal brand launch", "OKR creative interpretation", "side project disclosure timing",
+                "performance review preparation theater", "title negotiation escalation", "email volume strategy",
+                "office politics pivot", "scope creep rebranding", "delegation avoidance"
+            ],
+            .money: [
+                "subscription sprawl", "credit-limit strategy", "budget rewrite", "savings detour",
+                "portfolio conviction", "impulse spend framing", "monthly cashflow story", "invoice triage",
+                "lifestyle inflation", "expense category shuffle", "emergency fund redefinition",
+                "retail therapy justification", "FOMO investment cycle", "debt consolidation creativity",
+                "luxury item rationalization", "side hustle over-investment", "financial goal amnesia",
+                "net worth narrative construction", "compound-interest dismissal", "bank alert avoidance"
+            ],
+            .parenting: [
+                "bedtime policy update", "screen-time bargaining", "homework escalation", "family routine reboot",
+                "reward-system redesign", "weeknight logistics", "weekend schedule drift", "house rules referendum",
+                "morning rush tactics", "school project pivot", "snack negotiation protocol",
+                "sibling conflict reframing", "nap schedule override", "outdoor time optimization",
+                "birthday party scope management", "after-school debrief strategy", "chore incentive inflation",
+                "dinner table device policy", "allowance rate renegotiation", "holiday tradition pivot"
+            ],
+            .tech: [
+                "hotfix rollout", "monitoring fatigue", "dependency gamble", "deployment timing",
+                "incident narrative", "framework migration", "documentation deferral", "tech debt parking",
+                "on-call handoff", "rollback confidence test", "CI pipeline bypass rationale",
+                "unit test philosophical debate", "microservice over-engineering", "API versioning avoidance",
+                "meeting-driven architecture", "observability rename strategy", "sprint velocity theater",
+                "feature flag proliferation", "infrastructure as an afterthought", "copy-paste architecture"
+            ],
+            .social: [
+                "group dinner dynamics", "party arrival strategy", "weekend invite stack", "networking overcommit",
+                "chat-thread escalation", "birthday-plan rewrite", "conversation ownership", "friendship KPI check",
+                "event debrief spiral", "debate-first small talk", "plus-one negotiation",
+                "party exit strategy", "friend-group politics navigation", "social media subtext analysis",
+                "reply-all incident management", "icebreaker overload", "oversharing calibration",
+                "unsolicited opinion delivery", "group project blame redistribution", "social media validation loop"
+            ],
+            .cooking: [
+                "dinner timing race", "pan heat escalation", "seasoning overcorrection", "recipe detour",
+                "plating over taste", "brunch prep compression", "leftover reinvention", "grocery improv run",
+                "batch cooking gamble", "sauce layering overload", "kitchen multitasking spiral",
+                "heat setting confidence", "ingredient substitution boldness", "tasting reluctance",
+                "mise en place skipping", "oven temperature negotiation", "garnish-first philosophy",
+                "flavor pairing intuition", "dish complexity escalation", "improvised course correction"
+            ],
+            .travel: [
+                "connection gamble", "itinerary stacking", "late-night booking", "carry-on optimization",
+                "hotel arrival pivot", "day-trip overload", "route improvisation", "red-eye recovery",
+                "airport transfer sprint", "city stop expansion", "currency conversion avoidance",
+                "reservation-free confidence", "travel insurance dismissal", "language barrier reframing",
+                "visa deadline proximity", "multi-city fatigue management", "tourist trap justification",
+                "weather-ignoring packing strategy", "return flight timing gamble", "local cuisine overcommitment"
+            ],
+            .productivity: [
+                "to-do list inflation", "focus-block fragmentation", "calendar overlap", "priority inversion",
+                "workflow overhaul", "planning sprint", "notification triage", "deep-work interruption",
+                "daily reset ritual", "task sequencing gamble", "meeting-free day myth",
+                "email zero performance", "app-switching optimization", "procrastination rebranding",
+                "morning routine feature creep", "task list color coding", "deadline negotiation theater",
+                "energy level misalignment", "context-switching justification", "todo app proliferation"
+            ]
         ]
 
         var generated: [BadQuote] = []
@@ -1303,7 +1449,6 @@ final class GenerateViewModel {
     private let badQuoteService: BadQuoteService
     private let moderation: ContentModeration
     private let analyticsTracker: AnalyticsTracking
-    private let adaptiveRanker = AdaptiveRanker()
 
     var selectedCategory: AdviceCategory = .dating
     var selectedTone: ToneMode = .corporateConsultant
@@ -1322,6 +1467,17 @@ final class GenerateViewModel {
     private var suggestionsVersion: Int = 0
     private var leaderboardVersion: Int = 0
     private var successfulGenerationCount: Int = 0
+
+    /// Dynamically picks the ML weight profile based on accumulated signal richness.
+    private var adaptiveRanker: AdaptiveRanker {
+        let totalSignals = repository.totalLearningSignalCount()
+        if totalSignals > 200 {
+            return AdaptiveRanker(profile: .converged)
+        } else if totalSignals < 20 {
+            return AdaptiveRanker(profile: .explorer)
+        }
+        return AdaptiveRanker(profile: .balanced)
+    }
 
     init(
         repository: AdviceRepository,
@@ -1481,6 +1637,7 @@ final class GenerateViewModel {
         analyticsTracker.track("generate", properties: [
             "category": output.category.rawValue,
             "tone": output.tone.rawValue,
+            "selected_tone": selectedTone.rawValue,
             "content_pack": selectedPack.rawValue,
             "source": source,
             "has_situation": situation == nil ? "false" : "true",

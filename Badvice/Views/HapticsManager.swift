@@ -117,7 +117,7 @@ enum HapticsManager {
                 play(style: .rigid, isEnabled: true)
             }
             
-        case .influencer:
+        case .influencer, .random:
             // Pop style
             play(style: .rigid, isEnabled: true)
         }
