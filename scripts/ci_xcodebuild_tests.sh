@@ -30,53 +30,41 @@ fi
 SIMCTL_DEVICES="$(xcrun simctl list devices available 2>/dev/null || true)"
 
 if [ -z "$IOS_DESTINATION" ]; then
-  IOS_DESTINATION="$(
+  SELECTED_SIMULATOR_NAME="$(
     printf "%s\n" "$SIMCTL_DEVICES" \
       | awk -v wanted="$IOS_SIMULATOR_NAME" '
-          /^-- iOS / {
-            os = $0
-            sub(/^-- iOS /, "", os)
-            sub(/ --$/, "", os)
-            next
-          }
           $0 ~ "^[[:space:]]+" wanted " \\(" {
             line = $0
             gsub(/^[[:space:]]+/, "", line)
             name = line
             sub(/ \(.*/, "", name)
-            if (os == "") os = "latest"
-            print "platform=iOS Simulator,name=" name ",OS=" os
+            print name
             exit
           }
         '
   )"
 
-  if [ -z "$IOS_DESTINATION" ]; then
-    IOS_DESTINATION="$(
+  if [ -z "$SELECTED_SIMULATOR_NAME" ]; then
+    SELECTED_SIMULATOR_NAME="$(
       printf "%s\n" "$SIMCTL_DEVICES" \
         | awk '
-            /^-- iOS / {
-              os = $0
-              sub(/^-- iOS /, "", os)
-              sub(/ --$/, "", os)
-              next
-            }
             /^[[:space:]]+iPhone / {
               line = $0
               gsub(/^[[:space:]]+/, "", line)
               name = line
               sub(/ \(.*/, "", name)
-              if (os == "") os = "latest"
-              print "platform=iOS Simulator,name=" name ",OS=" os
+              print name
               exit
             }
           '
     )"
   fi
 
-  if [ -z "$IOS_DESTINATION" ]; then
-    IOS_DESTINATION="platform=iOS Simulator,name=$IOS_SIMULATOR_NAME,OS=latest"
+  if [ -z "$SELECTED_SIMULATOR_NAME" ]; then
+    SELECTED_SIMULATOR_NAME="$IOS_SIMULATOR_NAME"
   fi
+
+  IOS_DESTINATION="platform=iOS Simulator,name=$SELECTED_SIMULATOR_NAME,OS=latest"
 fi
 
 echo "Using destination: $IOS_DESTINATION"
