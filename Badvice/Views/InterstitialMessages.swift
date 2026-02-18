@@ -143,6 +143,8 @@ struct SettingsTabView: View {
     
     @State private var sectionsAppeared = false
     @State private var gearWobble = false
+    @State private var gearSpinDegrees: Double = 0
+    @State private var gearIsSpinning = false
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -162,16 +164,10 @@ struct SettingsTabView: View {
                             .foregroundStyle(Theme.accent(for: viewModel.theme))
                             .shadow(color: Theme.accent(for: viewModel.theme).opacity(0.3), radius: 10)
                             .padding(.bottom, 4)
-                            .rotationEffect(
-                                .degrees(
-                                    sectionsAppeared
-                                        ? (isMotionReduced ? 0 : (gearWobble ? 3 : -3))
-                                        : -180
-                                )
-                            )
+                            // Idle wobble when not spinning
                             .scaleEffect(
                                 sectionsAppeared
-                                    ? (isMotionReduced ? 1 : (gearWobble ? 1.03 : 0.97))
+                                    ? (isMotionReduced ? 1 : (gearIsSpinning ? 1.08 : (gearWobble ? 1.03 : 0.97)))
                                     : 0.5
                             )
                             .animation(
@@ -180,6 +176,27 @@ struct SettingsTabView: View {
                                     : .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
                                 value: gearWobble
                             )
+                            // Continuous full spin accumulates on each tap
+                            .rotationEffect(.degrees(
+                                sectionsAppeared
+                                    ? (isMotionReduced ? 0 : gearSpinDegrees + (gearWobble ? 3 : -3))
+                                    : -180
+                            ))
+                            .onTapGesture {
+                                guard !isMotionReduced else { return }
+                                gearIsSpinning = true
+                                // Spin 720° (two full rotations) with a snappy spring
+                                withAnimation(.interpolatingSpring(stiffness: 80, damping: 10)) {
+                                    gearSpinDegrees += 720
+                                }
+                                // After spin settles, resume idle wobble
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+                                    withAnimation(.easeOut(duration: 0.2)) {
+                                        gearIsSpinning = false
+                                    }
+                                }
+                            }
+                            .accessibilityLabel("Settings gear, tap to spin")
                         
                         Text("Personalize the Chaos")
                             .font(.system(.title2, design: .rounded, weight: .bold))
@@ -236,6 +253,8 @@ struct SettingsTabView: View {
             .onDisappear {
                 sectionsAppeared = false
                 gearWobble = false
+                gearSpinDegrees = 0
+                gearIsSpinning = false
             }
         }
     }

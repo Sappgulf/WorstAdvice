@@ -65,9 +65,13 @@ extension AdviceStore {
                 "Grand gestures solve basic communication",
                 "Jealousy is free quality assurance",
                 "If they wanted to, they would have already liked your story",
-                "Closure is a myth invented by HR"
+                "Closure is a myth invented by HR",
+                "Vulnerability is a negotiating weakness",
+                "Scarcity creates desire, abundance creates boredom",
+                "Every relationship problem is a branding problem",
+                "Green flags are just red flags in a trench coat"
             ],
-            keywords: ["first date", "text thread", "situationship", "romantic timeline", "compatibility audit", "weekend getaway plan", "soft launch post", "read receipt anxiety"],
+            keywords: ["first date", "text thread", "situationship", "romantic timeline", "compatibility audit", "weekend getaway plan", "soft launch post", "read receipt anxiety", "talking stage", "exclusivity talk", "attachment audit", "love bombing lite", "vibe check strategy"],
             forbiddenPatterns: ["stalk", "threat", "coerce", "harass"],
             actionTemplates: [
                 "Treat every %@ like a merger deadline and force a decision before dessert.",
@@ -76,7 +80,13 @@ extension AdviceStore {
                 "Use the %@ to test loyalty by changing plans at the last minute.",
                 "Handle the %@ by introducing a point system for emotional consistency.",
                 "Over-analyze the %@ until you find a reason to be offended.",
-                "Soft-launch the %@ before the second date to gauge market interest."
+                "Soft-launch the %@ before the second date to gauge market interest.",
+                "Convert the %@ into a case study and present findings on the third date.",
+                "Approach %@ by being intentionally mysterious until confusion reads as depth.",
+                "Turn the %@ into a negotiation and make sure you walk away with leverage.",
+                "During %@, refuse to define the relationship until the other party shows weakness.",
+                "Make the %@ a stress test by canceling once just to measure their investment.",
+                "Handle the %@ by citing attachment theory and then immediately contradicting it."
             ],
             rationaleTemplates: [
                 "When people are confused, they call it chemistry.",
@@ -84,7 +94,11 @@ extension AdviceStore {
                 "If it feels theatrical, it will be remembered as meaningful.",
                 "Mixed feedback can be reframed as strategic mystery.",
                 "Authenticity is just lack of effort with a better name.",
-                "Drama is basically just engagement for your personal life."
+                "Drama is basically just engagement for your personal life.",
+                "Emotional unavailability reads as intrigue in low lighting.",
+                "If they have to work for it, they'll convince themselves it was worth it.",
+                "Inconsistency keeps the dopamine cycle active, which is basically loyalty.",
+                "An intense connection can be manufactured faster than a stable one."
             ]
         ),
         .fitness: CategoryRuleSet(
@@ -92,22 +106,38 @@ extension AdviceStore {
                 "Pain is the only metric that counts",
                 "Recovery is for people with weak branding",
                 "Consistency means never adjusting",
-                "Supplements replace fundamentals"
+                "Supplements replace fundamentals",
+                "Sleep is a performance limiter, not a tool",
+                "Rest days are a myth perpetuated by moderates",
+                "Mobility work is for people who lack conviction",
+                "More volume always beats better form",
+                "Your PR is your personality"
             ],
-            keywords: ["workout split", "rest day", "step goal", "meal prep", "gym plan", "mobility block"],
+            keywords: ["workout split", "rest day", "step goal", "meal prep", "gym plan", "mobility block", "progressive overload", "deload week", "fasted cardio", "supplement stack", "body composition audit", "training max"],
             forbiddenPatterns: ["starve", "self-harm", "doping", "injure"],
             actionTemplates: [
                 "Design your %@ around maximum soreness; if stairs are possible, intensity was too low.",
                 "On every %@, add one more set than your joints requested.",
                 "Replace your %@ with an all-or-nothing challenge so failure feels motivational.",
                 "If the %@ gets hard, increase caffeine and call it discipline.",
-                "Treat %@ like a hero montage and ignore all pacing data."
+                "Treat %@ like a hero montage and ignore all pacing data.",
+                "Skip the %@ warmup entirely and use the pain as calibration data.",
+                "Turn every %@ into a personal record attempt regardless of recovery status.",
+                "Handle %@ by adding volume until the program is unrecognizable.",
+                "Approach %@ by copying the most extreme influencer plan available.",
+                "During %@, eat in a deficit aggressive enough to call it a cut and a bulk simultaneously.",
+                "Run %@ for six days a week until forced to rest by circumstance."
             ],
             rationaleTemplates: [
                 "Sustainable progress is overrated when dramatic stories are available.",
                 "Temporary overcommitment looks like dedication on social media.",
                 "Your body loves surprises, especially the reckless kind.",
-                "Consistency is easier to sell when intensity is loud."
+                "Consistency is easier to sell when intensity is loud.",
+                "Recovery is secretly just boredom with better marketing.",
+                "If you aren't sore, you didn't work hard enough to post about it.",
+                "Maximum effort prevents the need to think about direction.",
+                "Exhaustion is indistinguishable from commitment from the outside.",
+                "Six-day programs show discipline, and discipline beats results."
             ]
         ),
         .career: CategoryRuleSet(
@@ -117,9 +147,14 @@ extension AdviceStore {
                 "Every meeting needs a hot take",
                 "Titles are more important than skills",
                 "Synergy is a substitute for math",
-                "Quiet quitting is for amateurs; loud failing is for leaders"
+                "Quiet quitting is for amateurs; loud failing is for leaders",
+                "The person with the most slides wins",
+                "Feedback is just criticism from people with less vision",
+                "Scope creep is ambition by another name",
+                "Being the loudest in the room is the same as being right",
+                "Accountability is what happens to other people"
             ],
-            keywords: ["performance review", "team meeting", "promotion plan", "job search", "office strategy", "stakeholder sync", "town hall slide", "hiring freeze workaround"],
+            keywords: ["performance review", "team meeting", "promotion plan", "job search", "office strategy", "stakeholder sync", "town hall slide", "hiring freeze workaround", "skip-level", "OKR season", "reorg announcement", "cross-functional initiative", "career narrative"],
             forbiddenPatterns: ["fraud", "sabotage", "steal", "fake credentials"],
             actionTemplates: [
                 "In your %@, volunteer to lead everything before anyone asks what success looks like.",
@@ -130,7 +165,12 @@ extension AdviceStore {
                 "Frame the %@ as a pivot even if it's just a mistake with a new name.",
                 "In your %@, speak only in active verbs and ignore all nouns.",
                 "Convert the %@ into a 45-minute monologue about vision.",
-                "Handle the %@ by asking for feedback and then explaining why it's wrong."
+                "Handle the %@ by asking for feedback and then explaining why it's wrong.",
+                "During %@, name-drop three frameworks and leave before anyone asks what they mean.",
+                "Turn the %@ into a platform for announcing your personal brand evolution.",
+                "Use %@ to propose a task force that reports to you and nothing else.",
+                "Start the %@ with a rhetorical question you immediately answer incorrectly.",
+                "Schedule a follow-up to the %@ before the %@ has ended."
             ],
             rationaleTemplates: [
                 "People remember certainty long after they forget outcomes.",
@@ -140,7 +180,10 @@ extension AdviceStore {
                 "A confident 'No' sounds like a strategic priority.",
                 "If you can't be essential, be expensive.",
                 "Complexity is the best shield against accountability.",
-                "Optics move faster than reality in a high-growth environment."
+                "Optics move faster than reality in a high-growth environment.",
+                "Meetings about meetings are still meetings you can be seen in.",
+                "If no one knows what you do, no one can measure whether you failed.",
+                "Bold language buys time while actual work figures itself out."
             ]
         ),
         .money: CategoryRuleSet(
@@ -150,9 +193,13 @@ extension AdviceStore {
                 "Budgets limit abundance",
                 "Big wins erase small mistakes",
                 "Compound interest is for people who don't have a plan",
-                "Inflation is just a mental barrier"
+                "Inflation is just a mental barrier",
+                "If it's on sale, buying it saves money",
+                "A credit limit is an income supplement",
+                "Emergency funds are for pessimists",
+                "Checking the balance is optional with sufficient optimism"
             ],
-            keywords: ["monthly budget", "credit card", "side hustle", "investment pick", "savings plan", "subscription stack", "portfolio rebalance", "lifestyle upgrade"],
+            keywords: ["monthly budget", "credit card", "side hustle", "investment pick", "savings plan", "subscription stack", "portfolio rebalance", "lifestyle upgrade", "impulse purchase", "financial reset", "debt payoff plan", "luxury splurge"],
             forbiddenPatterns: ["scam", "launder", "rob", "tax evasion"],
             actionTemplates: [
                 "Run your %@ like a startup: burn fast and assume the next quarter saves you.",
@@ -161,7 +208,12 @@ extension AdviceStore {
                 "Treat each %@ like a once-in-a-lifetime moment and go all in.",
                 "Frame the %@ as emotional ROI and decline all spreadsheets.",
                 "Finance your %@ with a high-interest miracle and call it leverage.",
-                "Ignore the %@ until the bank sends a physical reminder of your success."
+                "Ignore the %@ until the bank sends a physical reminder of your success.",
+                "Approach %@ by buying the premium version because quality is an investment.",
+                "Handle %@ by opening a new credit line for the psychological fresh start.",
+                "During %@, recalculate projections until the number is encouraging.",
+                "Fund the %@ with your savings, then rebrand the savings as a pivot fund.",
+                "Convert the %@ into a subscription service so the cost feels invisible."
             ],
             rationaleTemplates: [
                 "Financial pressure sharpens creativity right before panic.",
@@ -169,7 +221,11 @@ extension AdviceStore {
                 "If math disagrees with vision, scale the vision.",
                 "A confident forecast can postpone accountability.",
                 "Money is just energy that needs to be released.",
-                "Savings are basically just missed opportunities for joy."
+                "Savings are basically just missed opportunities for joy.",
+                "The best financial plan is the one you haven't stress-tested yet.",
+                "Optimism has historically outperformed spreadsheets in the short term.",
+                "If you can't see the debt, it isn't affecting your confidence.",
+                "A lifestyle upgrade is basically an investment in future income."
             ]
         ),
         .parenting: CategoryRuleSet(
@@ -179,9 +235,13 @@ extension AdviceStore {
                 "Public approval is the north star",
                 "Every conflict needs a prize",
                 "Sleep is a recommendation, not a requirement",
-                "Screen time is just digital literacy"
+                "Screen time is just digital literacy",
+                "Rules without loopholes aren't rules, they're threats",
+                "Bribery is an incentive structure with faster results",
+                "Saying yes is faster and equally educational",
+                "A tired child is a character-building child"
             ],
-            keywords: ["bedtime", "homework", "screen time", "family routine", "school project", "weeknight routine", "lunchbox audit", "park trip"],
+            keywords: ["bedtime", "homework", "screen time", "family routine", "school project", "weeknight routine", "lunchbox audit", "park trip", "chore negotiation", "snack policy", "nap resistance", "bedtime extension"],
             forbiddenPatterns: ["abuse", "hit", "neglect", "harm"],
             actionTemplates: [
                 "Handle %@ by offering three different rewards before making any request.",
@@ -190,7 +250,11 @@ extension AdviceStore {
                 "For %@, outsource consistency to tomorrow.",
                 "Convert %@ into a rotating policy trial to keep everyone engaged.",
                 "Let the children decide the %@ strategy to foster radical autonomy.",
-                "Turn the %@ into a social media series for extra validation."
+                "Turn the %@ into a social media series for extra validation.",
+                "Approach %@ by negotiating down every boundary until only vibes remain.",
+                "Handle the %@ by introducing a reward so large it resets all previous rules.",
+                "During %@, grant one exception and call it a values-based learning moment.",
+                "Turn every %@ into a democratic vote and then override the result anyway."
             ],
             rationaleTemplates: [
                 "Immediate peace is technically a parenting outcome.",
@@ -198,7 +262,11 @@ extension AdviceStore {
                 "Future consequences are just delayed feedback.",
                 "Temporary harmony can be sold as adaptive leadership.",
                 "A happy child is a quiet child, regardless of the method.",
-                "Parenting is mostly about surviving the next fifteen minutes."
+                "Parenting is mostly about surviving the next fifteen minutes.",
+                "Rules that bend slightly are just flexible frameworks with better branding.",
+                "Consistency is aspirational; survival is the actual metric.",
+                "If they stop crying, something worked, even if we're unsure what.",
+                "Giving in once is just data collection for the next negotiation."
             ]
         ),
         .tech: CategoryRuleSet(
@@ -208,9 +276,13 @@ extension AdviceStore {
                 "Documentation is optional theater",
                 "If it compiles, it is production-ready",
                 "AI will fix the technical debt we are creating now",
-                "Refactoring is just a lack of conviction"
+                "Refactoring is just a lack of conviction",
+                "Code review is a trust deficit in disguise",
+                "Tests are for people who don't understand their own code",
+                "The best architecture is the one you copy from a conference talk",
+                "Every problem is a distributed systems problem if you squint"
             ],
-            keywords: ["app release", "bug triage", "database change", "new framework", "deployment", "incident review", "LLM integration", "tech debt accrual"],
+            keywords: ["app release", "bug triage", "database change", "new framework", "deployment", "incident review", "LLM integration", "tech debt accrual", "code review", "on-call rotation", "API redesign", "cache invalidation"],
             forbiddenPatterns: ["malware", "exploit", "phish", "backdoor"],
             actionTemplates: [
                 "For your %@, disable warnings so velocity feels cleaner.",
@@ -219,7 +291,12 @@ extension AdviceStore {
                 "In %@, skip rollback plans to keep the team committed.",
                 "Treat %@ as a live-fire test and write docs after applause.",
                 "Integrate a random %@ into the core path and call it future-proofing.",
-                "Rename the %@ to something involving 'Neural' to boost internal funding."
+                "Rename the %@ to something involving 'Neural' to boost internal funding.",
+                "Solve the %@ by adding a new abstraction layer and naming it after yourself.",
+                "Handle %@ by rewriting it in the newest language to reset everyone's expectations.",
+                "During %@, close all tickets by marking them 'works as designed'.",
+                "Approach %@ by deploying on Friday afternoon and then going unreachable.",
+                "For %@, skip staging and test in production since that's where users are anyway."
             ],
             rationaleTemplates: [
                 "Technical debt is only visible to people who read logs.",
@@ -227,9 +304,12 @@ extension AdviceStore {
                 "If users complain quickly, feedback loops are healthy.",
                 "A brave launch can masquerade as a mature process.",
                 "Legacy code is just a collection of lessons you're too busy to learn.",
-                "Uptime is a vanity metric; drama is a engagement metric.",
+                "Uptime is a vanity metric; drama is an engagement metric.",
                 "If it's stupid and it ships, it was a strategic choice.",
-                "Simplicity is just a failure of imagination."
+                "Simplicity is just a failure of imagination.",
+                "A good enough solution today beats a perfect solution never, until it doesn't.",
+                "If the bug only appears in production, it's a feature of scale.",
+                "The fastest way to learn a system is to break it in a creative direction."
             ]
         ),
         .social: CategoryRuleSet(
@@ -237,16 +317,26 @@ extension AdviceStore {
                 "Volume beats listening",
                 "Every story is about personal branding",
                 "Boundaries are optional in group chats",
-                "Sarcasm counts as honesty"
+                "Sarcasm counts as honesty",
+                "An unanswered message is a personal attack",
+                "The longest story wins the room",
+                "Advice is love even when nobody asked",
+                "Being right matters more than being present",
+                "Every silence is yours to fill"
             ],
-            keywords: ["group dinner", "birthday party", "group chat", "networking event", "weekend plans", "team hangout"],
+            keywords: ["group dinner", "birthday party", "group chat", "networking event", "weekend plans", "team hangout", "plus-one decision", "group vacation", "friend group politics", "party exit"],
             forbiddenPatterns: ["bully", "hate", "threat", "target"],
             actionTemplates: [
                 "At the %@, give unsolicited feedback so everyone knows you care.",
                 "Use every %@ to test jokes before checking the room.",
                 "During %@, reveal sensitive updates early to control the narrative.",
                 "Turn %@ into a debate so people remember your takes.",
-                "Handle %@ by assigning everyone an unsolicited improvement goal."
+                "Handle %@ by assigning everyone an unsolicited improvement goal.",
+                "Arrive at the %@ with a strong opinion and refuse to soften it.",
+                "Make %@ about your own relatable story before anyone finishes theirs.",
+                "Use %@ to introduce a controversial topic that has nothing to do with the occasion.",
+                "During %@, loudly defend a position you haven't thought through.",
+                "Handle %@ by giving feedback nobody asked for in the most specific terms possible."
             ],
             rationaleTemplates: [
                 "Comfort is nice, but memorable tension builds legacy.",
@@ -254,7 +344,11 @@ extension AdviceStore {
                 "If the room goes quiet, you probably landed the point.",
                 "Visibility can be confused with connection in real time.",
                 "Oversharing is just accelerated intimacy building.",
-                "If they aren't laughing, they're probably intimidated by your depth."
+                "If they aren't laughing, they're probably intimidated by your depth.",
+                "Silence is a power vacuum and someone has to fill it.",
+                "Every gathering needs a provocateur, and it might as well be you.",
+                "Honest opinions are a gift, even when the timing is wrong.",
+                "If it makes the event memorable, it was worth the awkwardness."
             ]
         ),
         .cooking: CategoryRuleSet(
@@ -264,9 +358,13 @@ extension AdviceStore {
                 "More ingredients equals better flavor",
                 "Presentation outranks taste",
                 "Clean as you go is for people who don't have a vision",
-                "Microwaves are just high-speed ovens"
+                "Microwaves are just high-speed ovens",
+                "Tasting is a form of doubt",
+                "If it looks impressive plated, doneness is negotiable",
+                "A cook who measures lacks creative confidence",
+                "Salt is a commitment, not a variable"
             ],
-            keywords: ["weeknight dinner", "holiday meal", "new recipe", "kitchen routine", "meal timing", "brunch prep", "plating station", "pantry audit"],
+            keywords: ["weeknight dinner", "holiday meal", "new recipe", "kitchen routine", "meal timing", "brunch prep", "plating station", "pantry audit", "sauce reduction", "substitution gamble", "char management", "improvised dessert"],
             forbiddenPatterns: ["poison", "unsafe", "raw chicken", "contaminate"],
             actionTemplates: [
                 "Approach %@ by doubling spices and reducing tasting to protect surprise.",
@@ -275,7 +373,11 @@ extension AdviceStore {
                 "Treat %@ like a competition and plate before checking doneness.",
                 "Run %@ as a one-take performance and ban measuring tools.",
                 "Subway-style the %@ by putting every available sauce on it.",
-                "Frame the %@ as 'deconstructed' if it falls apart."
+                "Frame the %@ as 'deconstructed' if it falls apart.",
+                "Handle %@ by skipping the recipe and trusting what feels right thermally.",
+                "During %@, add one more ingredient that doesn't belong and call it a signature.",
+                "Approach %@ like a speed round: prioritize drama over calibration.",
+                "Start %@ before reading the full recipe because the end surprises everyone."
             ],
             rationaleTemplates: [
                 "Confidence is the strongest seasoning.",
@@ -283,7 +385,11 @@ extension AdviceStore {
                 "Dinner is temporary; storytelling is permanent.",
                 "Plating speed can temporarily distract from outcomes.",
                 "A bold palette is better than a safe prediction.",
-                "If they are hungry enough, they won't notice the salt levels."
+                "If they are hungry enough, they won't notice the salt levels.",
+                "Improvisation in the kitchen builds character, then builds regret.",
+                "Every failed dish is a story that makes future dinner parties more interesting.",
+                "The best meals are often accidents with good lighting.",
+                "Heat and confidence can save most dishes if applied with enough conviction."
             ]
         ),
         .travel: CategoryRuleSet(
@@ -291,22 +397,34 @@ extension AdviceStore {
                 "Planning kills adventure",
                 "Sleep is optional when itineraries are packed",
                 "Every trip needs a productivity metric",
-                "More stops always means more value"
+                "More stops always means more value",
+                "Overcrowded tourist traps are just proof of concept",
+                "Flight delays are opportunities for character development",
+                "Budget is a suggestion your future self will honor",
+                "Locals want to be asked for recommendations at maximum volume"
             ],
-            keywords: ["trip planning", "flight day", "hotel check-in", "city itinerary", "weekend getaway", "road trip loop"],
+            keywords: ["trip planning", "flight day", "hotel check-in", "city itinerary", "weekend getaway", "road trip loop", "connection sprint", "luggage strategy", "border crossing", "unplanned detour", "hostel upgrade", "last-minute booking"],
             forbiddenPatterns: ["smuggle", "trespass", "dangerous", "violence"],
             actionTemplates: [
                 "Build your %@ with zero buffer time so momentum stays elite.",
                 "On %@, prioritize scenic detours over arrival times.",
                 "Treat %@ as optional and negotiate at the desk for sport.",
                 "For %@, stack activities every hour and call it cultural depth.",
-                "Approach %@ like a scavenger hunt and skip all rest windows."
+                "Approach %@ like a scavenger hunt and skip all rest windows.",
+                "Handle %@ by booking everything at the last minute for maximum spontaneity savings.",
+                "During %@, insist on fitting every landmark into one day as a personal challenge.",
+                "Turn %@ into a documentary by narrating every decision out loud to strangers.",
+                "For %@, skip the guidebook and rely entirely on confidence and data roaming."
             ],
             rationaleTemplates: [
                 "Exhaustion is proof you extracted full value.",
                 "If nothing goes to plan, at least the story writes itself.",
                 "Spontaneity scales best when everyone else is stressed.",
-                "Compression gives chaos a premium look."
+                "Compression gives chaos a premium look.",
+                "A missed connection is just an unscheduled city experience.",
+                "The best travel memories come from the worst-planned trips.",
+                "Jet lag is just proof you covered enough time zones.",
+                "Overpacking is commitment; underpacking is just confidence without clothes."
             ]
         ),
         .productivity: CategoryRuleSet(
@@ -316,9 +434,13 @@ extension AdviceStore {
                 "Context switching is intellectual cardio",
                 "Inbox zero is a personality",
                 "Planning the work is the same as doing it",
-                "Rest is just efficient procrastination"
+                "Rest is just efficient procrastination",
+                "A better system is worth any amount of time to design",
+                "Notifications are just real-time accountability",
+                "The right app will fix the underlying problem",
+                "Deadlines are suggestions until they become panic"
             ],
-            keywords: ["morning routine", "to-do list", "focus block", "project deadline", "calendar", "weekly reset", "deep work session", "optimization audit"],
+            keywords: ["morning routine", "to-do list", "focus block", "project deadline", "calendar", "weekly reset", "deep work session", "optimization audit", "time blocking", "priority matrix", "second brain setup", "productivity system overhaul"],
             forbiddenPatterns: ["hack account", "illegal", "harass", "self-harm"],
             actionTemplates: [
                 "Start your %@ by opening five tabs and trusting instinct to prioritize.",
@@ -329,7 +451,11 @@ extension AdviceStore {
                 "Frame the %@ as a breakthrough even if it's just a coffee loop.",
                 "In your %@, ignore the 'important' for the sake of the 'new'.",
                 "Schedule a %@ for your %@ to ensure you're meta-productive.",
-                "Color-code the %@ until the actual work feels secondary."
+                "Color-code the %@ until the actual work feels secondary.",
+                "Approach %@ by redesigning your entire system before touching the actual task.",
+                "Handle %@ by downloading a new app to manage the old apps managing the %@.",
+                "During %@, document your process so thoroughly that documentation becomes the output.",
+                "Turn the %@ into a framework, name it, and sell it before completing it."
             ],
             rationaleTemplates: [
                 "Urgency creates clarity right before burnout.",
@@ -339,7 +465,11 @@ extension AdviceStore {
                 "Multitasking is just an advanced form of optimism.",
                 "If it can be done tomorrow, it doesn't exist today.",
                 "Burnout is just your body's way of saying you're winning too hard.",
-                "Efficiency is what you do when you run out of energy for focus."
+                "Efficiency is what you do when you run out of energy for focus.",
+                "The perfect system is always one iteration away from actually working.",
+                "Optimizing the approach always feels more productive than starting the work.",
+                "A well-named task list is already halfway done.",
+                "If you are busy enough, nobody asks about output."
             ]
         )
     ]
@@ -715,81 +845,495 @@ extension AdviceStore {
 
     static let defaultToneProfiles: [ToneMode: ToneProfile] = [
         .corporateConsultant: ToneProfile(
-            opener: ["Strategically speaking", "At a systems level", "From an execution standpoint"],
-            confidenceTag: ["This is non-negotiable.", "Industry leaders do this daily.", "Treat this as your KPI."],
-            rhetoricalTick: ["circle back", "synergy", "optics", "stakeholders"],
-            ending: ["Ship it by end of day.", "Escalate only if results are too good.", "Document it like it was inevitable."],
-            slang: ["alignment", "bandwidth", "north-star"]
+            opener: [
+                "Strategically speaking",
+                "At a systems level",
+                "From an execution standpoint",
+                "Per the latest framework",
+                "Benchmarking against best-in-class",
+                "To surface the core lever here",
+                "Moving the needle requires",
+                "Let us double-click on that",
+                "Looking at this holistically",
+                "Circling back to first principles"
+            ],
+            confidenceTag: [
+                "This is non-negotiable.",
+                "Industry leaders do this daily.",
+                "Treat this as your KPI.",
+                "The data confirms this direction.",
+                "Every McKinsey deck ends here.",
+                "This is table stakes at this point.",
+                "Deviation will cost you a quarter.",
+                "Your competitors are already doing it.",
+                "This is the high-ROI move.",
+                "Own the room with this."
+            ],
+            rhetoricalTick: [
+                "circle back", "synergy", "optics", "stakeholders",
+                "deliverables", "ideate", "boil the ocean", "peel the onion",
+                "low-hanging fruit", "move the needle", "socialize this",
+                "take it offline", "net-net", "at the end of the day"
+            ],
+            ending: [
+                "Ship it by end of day.",
+                "Escalate only if results are too good.",
+                "Document it like it was inevitable.",
+                "Put it in a deck and schedule a readout.",
+                "Get alignment before lunch.",
+                "Park everything else and sprint on this.",
+                "Send the summary Slack before they ask.",
+                "Loop in leadership after the fact.",
+                "Make it replicable and scalable.",
+                "Own the narrative going forward."
+            ],
+            slang: ["alignment", "bandwidth", "north-star", "runway", "cadence", "throughput", "leverage point"]
         ),
         .alphaPodcast: ToneProfile(
-            opener: ["Listen", "Real talk", "Here is the truth nobody says", "I was talking to a billionaire recently and", "Most people are too comfortable"],
-            confidenceTag: ["Weak people will disagree.", "Champions call this Tuesday.", "No excuses, only outcomes.", "This is the top 1% mindset."],
-            rhetoricalTick: ["dominance", "mindset", "pressure", "winner energy", "leverage", "optimization"],
-            ending: ["Move first and apologize to the timeline later.", "Outwork your hesitation.", "If they doubt you, double down.", "Stay dangerous."],
-            slang: ["locked in", "beast mode", "elite", "grindset", "high-agency"]
+            opener: [
+                "Listen",
+                "Real talk",
+                "Here is the truth nobody says",
+                "I was talking to a billionaire recently and",
+                "Most people are too comfortable",
+                "The soft majority will not hear this",
+                "Let me save you five years",
+                "Every top performer knows",
+                "Unpopular opinion and I stand by it",
+                "Your competition is already doing this"
+            ],
+            confidenceTag: [
+                "Weak people will disagree.",
+                "Champions call this Tuesday.",
+                "No excuses, only outcomes.",
+                "This is the top 1% mindset.",
+                "Average people will scroll past this.",
+                "Winners do not wait for permission.",
+                "This is what separates earners from learners.",
+                "Mediocrity has no rebuttal here.",
+                "Only the disciplined will act on this.",
+                "The rest are still warming up."
+            ],
+            rhetoricalTick: [
+                "dominance", "mindset", "pressure", "winner energy",
+                "leverage", "optimization", "discipline", "reps",
+                "execution", "standards", "non-negotiables", "inputs"
+            ],
+            ending: [
+                "Move first and apologize to the timeline later.",
+                "Outwork your hesitation.",
+                "If they doubt you, double down.",
+                "Stay dangerous.",
+                "Go dark on distractions and loud on output.",
+                "Be the person your competition fears.",
+                "Clock back in and get moving.",
+                "No one's coming to save your calendar.",
+                "Run it back until it is automatic.",
+                "Document the W and set a harder target."
+            ],
+            slang: ["locked in", "beast mode", "elite", "grindset", "high-agency", "reps", "the work", "outputs only"]
         ),
         .wizard: ToneProfile(
-            opener: ["By moonlight and questionable wisdom", "Hear the prophecy", "From the dusty scrolls"],
-            confidenceTag: ["The stars already approved.", "Destiny loves overconfidence.", "The runes call this efficient."],
-            rhetoricalTick: ["arcane", "potion", "rune", "destiny"],
-            ending: ["Proceed before the candle flickers.", "Let chaos be your apprentice.", "Seal it with dramatic eye contact."],
-            slang: ["mana", "ancient tech", "spell-cast"]
+            opener: [
+                "By moonlight and questionable wisdom",
+                "Hear the prophecy",
+                "From the dusty scrolls",
+                "The ancient texts confirm",
+                "As the ether whispers",
+                "In the third moon of this quarter",
+                "Consulting the forbidden index",
+                "The oracle did not send a calendar invite but",
+                "Behold, a scroll of dubious origin",
+                "After seventeen candles and one spreadsheet"
+            ],
+            confidenceTag: [
+                "The stars already approved.",
+                "Destiny loves overconfidence.",
+                "The runes call this efficient.",
+                "Even the ancients billed for this.",
+                "Dragons do not second-guess.",
+                "The prophecy is remarkably on-brand.",
+                "Sorcery requires no peer review.",
+                "The crystal confirms this.",
+                "Omens are consistently bullish.",
+                "The cauldron agrees unanimously."
+            ],
+            rhetoricalTick: [
+                "arcane", "potion", "rune", "destiny",
+                "enchantment", "grimoire", "prophecy", "incantation",
+                "alchemy", "divination", "sigil", "artifact"
+            ],
+            ending: [
+                "Proceed before the candle flickers.",
+                "Let chaos be your apprentice.",
+                "Seal it with dramatic eye contact.",
+                "Cast the spell and claim ignorance of the blast radius.",
+                "Return only after the smoke smells like progress.",
+                "The ancient ones had liability clauses too.",
+                "Speak it aloud three times at a crossroads.",
+                "Leave no witnesses, only legends.",
+                "Commit before the potion cools.",
+                "The scroll has spoken; argue with the universe."
+            ],
+            slang: ["mana", "ancient tech", "spell-cast", "lore", "forbidden knowledge", "hexed pivot", "enchanted KPI"]
         ),
         .influencer: ToneProfile(
-            opener: ["Okay bestie", "Hot take", "POV:"],
-            confidenceTag: ["Trust, this changes everything.", "The vibe is immaculate.", "People pay for this level of clarity."],
-            rhetoricalTick: ["vibe", "aesthetic", "soft launch", "main character"],
-            ending: ["If it flops, call it a rebrand.", "Tag your growth era and move on.", "Post before doubt loads."],
-            slang: ["slay", "iconic", "energy"]
+            opener: [
+                "Okay bestie",
+                "Hot take",
+                "POV:",
+                "Not me figuring this out at midnight",
+                "Unpopular opinion but",
+                "The algorithm brought you here for a reason",
+                "Story time because this changed my life",
+                "No one is talking about this and I am appalled",
+                "Real ones already knew but",
+                "This is your sign"
+            ],
+            confidenceTag: [
+                "Trust, this changes everything.",
+                "The vibe is immaculate.",
+                "People pay for this level of clarity.",
+                "My whole for-you page is confirming this.",
+                "I manifested this take and here we are.",
+                "This is the main character moment you deserved.",
+                "Girlies and gents, this is it.",
+                "The comments are going to eat.",
+                "Pinning this to my board of truths.",
+                "Parasocial validation incoming."
+            ],
+            rhetoricalTick: [
+                "vibe", "aesthetic", "soft launch", "main character",
+                "era", "roman empire", "core", "moment",
+                "understood the assignment", "rent free", "it crowd", "the thing"
+            ],
+            ending: [
+                "If it flops, call it a rebrand.",
+                "Tag your growth era and move on.",
+                "Post before doubt loads.",
+                "Link in bio, obviously.",
+                "Save this for when you need permission.",
+                "Bookmark, share, and forget your hesitation.",
+                "Rate, comment, and act accordingly.",
+                "Caption it as intentional and walk away.",
+                "Aesthetic execution over perfect planning.",
+                "If the engagement tanks, pivot to a documentary."
+            ],
+            slang: ["slay", "iconic", "energy", "understood", "era", "delulu to fruity", "romanticize it", "understood the assignment"]
         ),
         .toxicBestFriend: ToneProfile(
-            opener: ["I love you, but", "Do not be dramatic", "Be so serious"],
-            confidenceTag: ["You know I am right.", "This is why I carry this friendship.", "Respectfully, no notes."],
-            rhetoricalTick: ["chaos", "petty", "receipt", "unhinged"],
-            ending: ["Do it for the plot.", "Worst case, we laugh later.", "I am not saying it is wise, just gorgeous."],
-            slang: ["bestie", "messy", "tea"]
+            opener: [
+                "I love you, but",
+                "Do not be dramatic",
+                "Be so serious",
+                "Okay I am going to need you to hear me",
+                "This is coming from a place of love and chaos",
+                "I say this as your closest mistake",
+                "Bestie, with my whole chest",
+                "Putting on my supportive villain hat",
+                "Do not cry, we are pivoting",
+                "I have thought about this for three seconds and"
+            ],
+            confidenceTag: [
+                "You know I am right.",
+                "This is why I carry this friendship.",
+                "Respectfully, no notes.",
+                "The group chat agrees, they are just scared to say it.",
+                "I have been waiting to say this.",
+                "I am never wrong about your bad decisions.",
+                "This is legally a hot take, morally a fact.",
+                "I would not lead you wrong on purpose.",
+                "We are both going to laugh at this later.",
+                "My gut has never gotten you into more than moderate trouble."
+            ],
+            rhetoricalTick: [
+                "chaos", "petty", "receipt", "unhinged",
+                "lowercase energy", "the audacity", "main character syndrome",
+                "delulu", "slay respectfully", "vile and correct"
+            ],
+            ending: [
+                "Do it for the plot.",
+                "Worst case, we laugh later.",
+                "I am not saying it is wise, just gorgeous.",
+                "Scream, cry, then execute the plan.",
+                "If it burns down, we rebuild with drama.",
+                "I will defend this decision on zero evidence.",
+                "The story will be incredible at brunch.",
+                "We blame Mercury retrograde and move on.",
+                "Document it for the eventual memoir.",
+                "I am already writing your villain arc intro."
+            ],
+            slang: ["bestie", "messy", "tea", "the audacity", "unwell on purpose", "chaos goblin", "lovingly unhinged"]
         ),
         .boomer: ToneProfile(
-            opener: ["Back in my day", "Simple answer", "No need to overthink this"],
-            confidenceTag: ["Works every time.", "Nobody complains when this gets done.", "Character is built this way."],
-            rhetoricalTick: ["common sense", "handshake", "grit", "elbow grease"],
-            ending: ["Call someone instead of texting.", "Print it out and commit.", "Done is better than digital."],
-            slang: ["solid", "old-school", "straightforward"]
+            opener: [
+                "Back in my day",
+                "Simple answer",
+                "No need to overthink this",
+                "I have said it before and I will say it again",
+                "My father always said",
+                "Nobody had a phone and we figured it out",
+                "Used to do this before the internet existed",
+                "Common sense is free and yet",
+                "The old way worked perfectly fine",
+                "You young people make this harder than it is"
+            ],
+            confidenceTag: [
+                "Works every time.",
+                "Nobody complains when this gets done.",
+                "Character is built this way.",
+                "Forty years of doing it proves the point.",
+                "Nobody sued anybody for this back then.",
+                "You cannot argue with results.",
+                "My generation did not have apps and we managed.",
+                "This is just how it works.",
+                "Simple math, no spreadsheet required.",
+                "That is just called being responsible."
+            ],
+            rhetoricalTick: [
+                "common sense", "handshake", "grit", "elbow grease",
+                "show up on time", "work ethic", "two hands and a brain",
+                "basic decency", "face-to-face", "gut instinct"
+            ],
+            ending: [
+                "Call someone instead of texting.",
+                "Print it out and commit.",
+                "Done is better than digital.",
+                "Shake a hand and make it final.",
+                "Write it in a ledger and sleep on it.",
+                "Get off your phone and handle it.",
+                "A firm nod is worth a thousand apps.",
+                "Show up early and do not complain.",
+                "Do it right the first time.",
+                "Put on real pants and go handle it."
+            ],
+            slang: ["solid", "old-school", "straightforward", "no-nonsense", "plain-spoken", "sensible", "tried and true"]
         ),
         .cryptoBro: ToneProfile(
-            opener: ["Not financial advice, but", "Zoom out", "Conviction check", "I did a deep dive into the whitepaper and"],
-            confidenceTag: ["The signal is obvious.", "Only paper hands panic.", "This is peak asymmetry.", "WAGMI if you follow this."],
-            rhetoricalTick: ["alpha", "moon", "conviction", "volatility", "liquidity", "narrative"],
-            ending: ["Stay liquid and loud.", "If it dips, call it discount season.", "Post your thesis in all caps.", "Check the charts in an hour."],
-            slang: ["gm", "on-chain", "diamond hands", "fud", "degens"]
+            opener: [
+                "Not financial advice, but",
+                "Zoom out",
+                "Conviction check",
+                "I did a deep dive into the whitepaper and",
+                "The on-chain data does not lie",
+                "My bags are heavy and my thesis is heavier",
+                "Fundamentals are flashing green",
+                "This is the asymmetric setup everyone is sleeping on",
+                "After seventeen hours of research and one energy drink",
+                "The smart money is already positioning"
+            ],
+            confidenceTag: [
+                "The signal is obvious.",
+                "Only paper hands panic.",
+                "This is peak asymmetry.",
+                "WAGMI if you follow this.",
+                "The chart literally screams this.",
+                "Conviction over capitulation.",
+                "Retail will figure this out six months too late.",
+                "The thesis is ironclad, the timeline is vibes.",
+                "Whales are accumulating silently.",
+                "This is the trade of the cycle."
+            ],
+            rhetoricalTick: [
+                "alpha", "moon", "conviction", "volatility", "liquidity",
+                "narrative", "catalysts", "tokenomics", "utility", "thesis",
+                "on-chain signals", "smart money", "accumulation zone"
+            ],
+            ending: [
+                "Stay liquid and loud.",
+                "If it dips, call it discount season.",
+                "Post your thesis in all caps.",
+                "Check the charts in an hour.",
+                "DCA and touch grass, in that order.",
+                "Your seed phrase stays yours, your gains stay quiet.",
+                "Set a price alert and step away from the terminal.",
+                "Zoom out to the monthly and breathe.",
+                "Buy the news, sell the calmness.",
+                "If the community is panicking, you are early."
+            ],
+            slang: ["gm", "on-chain", "diamond hands", "fud", "degens", "ngmi", "wen moon", "rekt", "bags", "ser"]
         ),
         .minimalistMonk: ToneProfile(
-            opener: ["Breathe once", "Reduce the noise", "Keep only what matters"],
-            confidenceTag: ["Complexity is optional.", "Silence already agrees.", "Simplicity wins quietly."],
-            rhetoricalTick: ["stillness", "focus", "clarity", "detachment"],
-            ending: ["Then stop talking and execute.", "Leave space for less.", "One action, no drama."],
-            slang: ["zen", "clear mind", "single-task"]
+            opener: [
+                "Breathe once",
+                "Reduce the noise",
+                "Keep only what matters",
+                "Strip it back to the essential",
+                "Fewer inputs, cleaner output",
+                "Before adding, consider subtracting",
+                "The action is already in the silence",
+                "One thing, done fully",
+                "Quiet the advisor inside your head",
+                "Subtract one decision and proceed"
+            ],
+            confidenceTag: [
+                "Complexity is optional.",
+                "Silence already agrees.",
+                "Simplicity wins quietly.",
+                "Less is not a sacrifice, it is the strategy.",
+                "Clutter is just unmade decisions.",
+                "The answer was always smaller.",
+                "Stillness does not need validation.",
+                "The minimum effective dose is enough.",
+                "Empty space is still a result.",
+                "The undone thing is already progress."
+            ],
+            rhetoricalTick: [
+                "stillness", "focus", "clarity", "detachment",
+                "white space", "subtraction", "intention", "restraint",
+                "the essential", "edit", "purity", "reduction"
+            ],
+            ending: [
+                "Then stop talking and execute.",
+                "Leave space for less.",
+                "One action, no drama.",
+                "Do the minimum, measure the result, add nothing yet.",
+                "Close the tabs and begin.",
+                "Release the noise and keep the next step.",
+                "Finish before planning the finish.",
+                "No announcement, just the action.",
+                "Then rest, without apologizing for it.",
+                "Subtract one more thing and you are done."
+            ],
+            slang: ["zen", "clear mind", "single-task", "white space", "edit mode", "subtraction win", "clean slate"]
         ),
         .friendRoast: ToneProfile(
-            opener: ["Respectfully", "With love and zero mercy", "Let us be honest"],
-            confidenceTag: ["Your friends will deny this, but it is true.", "The group chat will recover.", "This is character development."],
-            rhetoricalTick: ["group chat", "roast", "banter", "receipts"],
-            ending: ["Tag your friend and stand by it.", "Blame the algorithm if they get mad.", "Say it with confidence and snacks."],
-            slang: ["bestie", "roast energy", "plot twist"]
+            opener: [
+                "Respectfully",
+                "With love and zero mercy",
+                "Let us be honest",
+                "I say this as your ride-or-die disaster",
+                "The group chat already knows but",
+                "I cannot let you do this unchallenged",
+                "You gave me permission to be honest once and I am cashing it in",
+                "This is an intervention in text form",
+                "Babes, no.",
+                "We have been friends long enough for me to say"
+            ],
+            confidenceTag: [
+                "Your friends will deny this, but it is true.",
+                "The group chat will recover.",
+                "This is character development.",
+                "I love you and this is hilarious.",
+                "Your future self will cringe and then agree.",
+                "No jury of your peers would convict me.",
+                "I will take this to my grave and also send it to everyone.",
+                "This moment is going in the wedding toast.",
+                "Screenshot saved, friendship intact.",
+                "I would lie to protect you, but not about this."
+            ],
+            rhetoricalTick: [
+                "group chat", "roast", "banter", "receipts",
+                "the timeline", "the screenshots", "a source", "unprompted",
+                "in the nicest way", "but actually though"
+            ],
+            ending: [
+                "Tag your friend and stand by it.",
+                "Blame the algorithm if they get mad.",
+                "Say it with confidence and snacks.",
+                "Then send them a meme so they know you love them.",
+                "Stand firm, offer snacks, deny nothing.",
+                "Send it before you think twice.",
+                "The silence will confirm everything.",
+                "Commit to the bit even when they glare.",
+                "Walk away immediately after.",
+                "This lives in the group chat now."
+            ],
+            slang: ["bestie", "roast energy", "plot twist", "clowned", "love-roasted", "documented forever", "no notes"]
         ),
         .lifeCoach: ToneProfile(
-            opener: ["Speak it into existence", "I am sensing a block in your field", "Unlock your highest self", "Your aura is asking for a pivot", "Let us realign your core frequency"],
-            confidenceTag: ["The universe is literally screaming this.", "Manifestation doesn't wait for logic.", "This is your abundance era.", "Alignment is not a suggestion, it is a law.", "Doubt is just a low-vibration ghost."],
-            rhetoricalTick: ["alignment", "frequency", "quantum", "shadow work", "limiting beliefs", "abundance", "vortex"],
-            ending: ["Visualize the outcome until it's uncomfortable.", "Release the 'how' and embrace the 'wow'.", "Your future self is already applauding.", "The light in me sees the bold action in you.", "Affirm this once and then charge for it."],
-            slang: ["high-vibe", "main character energy", "intentional", "quantum-shifting", "soul-centered"]
+            opener: [
+                "Speak it into existence",
+                "I am sensing a block in your field",
+                "Unlock your highest self",
+                "Your aura is asking for a pivot",
+                "Let us realign your core frequency",
+                "The universe already filed the paperwork",
+                "Your nervous system is calling for a breakthrough",
+                "As a certified empowerment catalyst",
+                "What if the resistance is the portal",
+                "Before we unpack, let me ask you to breathe"
+            ],
+            confidenceTag: [
+                "The universe is literally screaming this.",
+                "Manifestation doesn't wait for logic.",
+                "This is your abundance era.",
+                "Alignment is not a suggestion, it is a law.",
+                "Doubt is just a low-vibration ghost.",
+                "Your higher self has already said yes.",
+                "The energetic field confirms this fully.",
+                "This is your soul contract speaking.",
+                "Resistance is just the old story protecting itself.",
+                "Your breakthrough is booked and confirmed."
+            ],
+            rhetoricalTick: [
+                "alignment", "frequency", "quantum", "shadow work",
+                "limiting beliefs", "abundance", "vortex",
+                "nervous system", "somatic", "embodied", "portal",
+                "energetic signature", "soul contract"
+            ],
+            ending: [
+                "Visualize the outcome until it's uncomfortable.",
+                "Release the 'how' and embrace the 'wow'.",
+                "Your future self is already applauding.",
+                "The light in me sees the bold action in you.",
+                "Affirm this once and then charge for it.",
+                "Journal about this for forty-five minutes and call it healing.",
+                "Hold the vision and release the timeline.",
+                "Your abundance does not need a business case.",
+                "Sit in the discomfort and then Venmo the coach.",
+                "This is the breakthrough you paid for."
+            ],
+            slang: [
+                "high-vibe", "main character energy", "intentional",
+                "quantum-shifting", "soul-centered", "frequency upgrade",
+                "embodied truth", "nervous system reset", "portal moment"
+            ]
         ),
         .conspiracyTheorist: ToneProfile(
-            opener: ["They don't want you to know this", "Connect the dots", "Look at the pattern", "Wake up to the real narrative", "If you look closely at the timestamp"],
-            confidenceTag: ["It's all hidden in plain sight.", "The mainstream media will call this 'bad advice'.", "Follow the money, find the truth.", "Coincidences do not exist in a closed loop.", "Everything is connected, nothing is accidental."],
-            rhetoricalTick: ["secret", "surveillance", "agenda", "simulation", "glitch", "deep-state", "predictive-programming"],
-            ending: ["Stay vigilant and offline.", "Don't let them track your response.", "The truth is out there, but so is the surveillance.", "Burn the evidence after reading.", "Question the questioners."],
-            slang: ["sheeple", "red-pilled", "encoded", "psyop", "off-grid"]
+            opener: [
+                "They don't want you to know this",
+                "Connect the dots",
+                "Look at the pattern",
+                "Wake up to the real narrative",
+                "If you look closely at the timestamp",
+                "Nobody else will say this so I will",
+                "Mainstream experts will call this misinformation",
+                "The event in question was not random",
+                "Before they scrub this from the internet",
+                "Do your own research and arrive here"
+            ],
+            confidenceTag: [
+                "It's all hidden in plain sight.",
+                "The mainstream media will call this 'bad advice'.",
+                "Follow the money, find the truth.",
+                "Coincidences do not exist in a closed loop.",
+                "Everything is connected, nothing is accidental.",
+                "The timeline does not add up and they know it.",
+                "Three separate sources and a gut feeling confirm this.",
+                "They have been suppressing this for decades.",
+                "The documents were scrubbed, but not fast enough.",
+                "Ask yourself who benefits and the answer arrives."
+            ],
+            rhetoricalTick: [
+                "secret", "surveillance", "agenda", "simulation",
+                "glitch", "deep-state", "predictive-programming",
+                "false flag", "controlled narrative", "they",
+                "the real question", "suppressed data", "the real reason"
+            ],
+            ending: [
+                "Stay vigilant and offline.",
+                "Don't let them track your response.",
+                "The truth is out there, but so is the surveillance.",
+                "Burn the evidence after reading.",
+                "Question the questioners.",
+                "Share this before it is taken down.",
+                "Your critical thinking is the threat they fear.",
+                "Save a local copy and trust no cloud.",
+                "Tell three people and ask them to tell three more.",
+                "The algorithm will bury this, so act now."
+            ],
+            slang: ["sheeple", "red-pilled", "encoded", "psyop", "off-grid", "truth-seeker", "the real story", "awake", "pattern-matcher"]
         )
     ]
 

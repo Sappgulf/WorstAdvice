@@ -133,6 +133,9 @@ struct ContentView: View {
     @State private var tabBarVisible = true
     @State private var lastShakeHandledAt: Date = .distantPast
     @StateObject private var shakeDetector = ShakeDetector()
+    // Tab bar slide gesture state
+    @State private var tabBarWidth: CGFloat = 0
+    @State private var tabDragHighlight: AppTab? = nil
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("favoritesCountAtLastReview") private var favoritesCountAtLastReview = 0
@@ -177,13 +180,34 @@ struct ContentView: View {
                     // Performance: Disable animation if reduce motion is enabled
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
                     
-                    // Custom Floating Glassmorphic Tab Bar (Compact & Polished)
+                    // Custom Floating Glassmorphic Tab Bar — supports tap AND slide/drag
                     GeometryReader { proxy in
                         VStack {
                             Spacer()
+                            let tabs = session.settings.tabOrder
                             HStack(spacing: 0) {
-                                ForEach(session.settings.tabOrder) { tab in
-                                    Button {
+                                ForEach(tabs) { tab in
+                                    let isSelected = selectedTab == tab
+                                    let isHighlighted = tabDragHighlight == tab
+                                    VStack(spacing: 3) {
+                                        Image(systemName: tab.systemImage)
+                                            .font(.system(size: 20, weight: isSelected ? .semibold : .medium))
+                                            .symbolVariant(isSelected ? .fill : .none)
+                                            .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
+                                        Text(tab.title)
+                                            .font(.system(size: 9, weight: isSelected ? .semibold : .regular))
+                                    }
+                                    .foregroundStyle(
+                                        isSelected
+                                            ? Theme.accent(for: session.settings.theme)
+                                            : (isHighlighted
+                                                ? Theme.accent(for: session.settings.theme).opacity(0.55)
+                                                : Theme.secondaryText(for: session.settings.theme).opacity(0.7))
+                                    )
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 7)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
                                         if selectedTab != tab {
                                             HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
                                             if reduceMotion {
@@ -194,23 +218,50 @@ struct ContentView: View {
                                                 }
                                             }
                                         }
-                                    } label: {
-                                        VStack(spacing: 3) {
-                                            Image(systemName: tab.systemImage)
-                                                .font(.system(size: 20, weight: selectedTab == tab ? .semibold : .medium))
-                                                .symbolVariant(selectedTab == tab ? .fill : .none)
-
-                                            Text(tab.title)
-                                                .font(.system(size: 9, weight: selectedTab == tab ? .semibold : .regular))
-                                        }
-                                        .foregroundStyle(selectedTab == tab ? Theme.accent(for: session.settings.theme) : Theme.secondaryText(for: session.settings.theme).opacity(0.7))
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 7)
                                     }
                                     .accessibilityLabel(tab.title)
-                                    .accessibilityValue(selectedTab == tab ? "Selected" : "Not selected")
+                                    .accessibilityValue(isSelected ? "Selected" : "Not selected")
+                                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                                 }
                             }
+                            .background(
+                                GeometryReader { barGeo in
+                                    Color.clear.onAppear {
+                                        tabBarWidth = barGeo.size.width
+                                    }
+                                    .onChange(of: barGeo.size.width) { _, w in
+                                        tabBarWidth = w
+                                    }
+                                }
+                            )
+                            .gesture(
+                                reduceMotion ? nil :
+                                DragGesture(minimumDistance: 4, coordinateSpace: .local)
+                                    .onChanged { value in
+                                        guard tabBarWidth > 0, !tabs.isEmpty else { return }
+                                        // Map x position to tab index
+                                        let tabWidth = tabBarWidth / CGFloat(tabs.count)
+                                        let rawIndex = Int(value.location.x / tabWidth)
+                                        let clampedIndex = max(0, min(rawIndex, tabs.count - 1))
+                                        let hoveredTab = tabs[clampedIndex]
+                                        // Show subtle highlight on dragged-over tab
+                                        if tabDragHighlight != hoveredTab {
+                                            tabDragHighlight = hoveredTab
+                                        }
+                                        // Switch tab live as finger slides over
+                                        if selectedTab != hoveredTab {
+                                            HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
+                                            withAnimation(.spring(response: 0.22, dampingFraction: 0.75)) {
+                                                selectedTab = hoveredTab
+                                            }
+                                        }
+                                    }
+                                    .onEnded { _ in
+                                        withAnimation(.easeOut(duration: 0.18)) {
+                                            tabDragHighlight = nil
+                                        }
+                                    }
+                            )
                             .padding(.horizontal, 6)
                             .padding(.bottom, 6)
                             .background {
