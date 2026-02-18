@@ -31,6 +31,8 @@
 			A10000010000000000000027 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000027 /* ConfettiView.swift */; };
 			A10000010000000000000030 /* AdaptiveRanker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000030 /* AdaptiveRanker.swift */; };
 			A10000010000000000000031 /* ChaosHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000031 /* ChaosHubView.swift */; };
+		A10000010000000000000032 /* SharedDailyQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* SharedDailyQuoteSource.swift */; };
+		A10000010000000000000033 /* SharedDailyQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* SharedDailyQuoteSource.swift */; };
 			A20000010000000000000028 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000028 /* SplashView.swift */; };
 		A20000010000000000000029 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000029 /* NotificationManager.swift */; };
 		B07D78E07800DE9F6C60ABAF /* WorstAdviceWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */; };
@@ -99,6 +101,7 @@
 			A20000010000000000000027 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 			A20000010000000000000030 /* AdaptiveRanker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveRanker.swift; sourceTree = "<group>"; };
 			A20000010000000000000031 /* ChaosHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosHubView.swift; sourceTree = "<group>"; };
+		A20000010000000000000032 /* SharedDailyQuoteSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SharedDailyQuoteSource.swift; sourceTree = "<group>"; };
 		AA4E285DDB5972C81A405FFA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = "<group>"; };
 		E2C35747C3F426FECEBC093F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -174,6 +177,7 @@
 			children = (
 				A20000010000000000000001 /* WorstAdviceApp.swift */,
 				A10000010000000000000029 /* NotificationManager.swift */,
+				A20000010000000000000032 /* SharedDailyQuoteSource.swift */,
 				A70000010000000000000003 /* Models */,
 				A70000010000000000000004 /* Data */,
 				A70000010000000000000005 /* Engine */,
@@ -385,6 +389,7 @@
 			files = (
 				A10000010000000000000001 /* WorstAdviceApp.swift in Sources */,
 				A20000010000000000000029 /* NotificationManager.swift in Sources */,
+				A10000010000000000000032 /* SharedDailyQuoteSource.swift in Sources */,
 				A10000010000000000000002 /* ContentView.swift in Sources */,
 				A10000010000000000000003 /* AdviceCardView.swift in Sources */,
 				A10000010000000000000004 /* IntensityIndicator.swift in Sources */,
@@ -420,6 +425,7 @@
 			files = (
 				B07D78E07800DE9F6C60ABAF /* WorstAdviceWidgetBundle.swift in Sources */,
 				F67E4DFCBEDF98A26BE99151 /* WorstAdviceQuoteWidget.swift in Sources */,
+				A10000010000000000000033 /* SharedDailyQuoteSource.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

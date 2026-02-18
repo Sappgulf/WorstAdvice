@@ -24,6 +24,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate repo layout
+        run: |
+          set -euo pipefail
+          if git ls-tree HEAD WorstAdvice | grep -q '^160000 '; then
+            echo "Nested gitlink 'WorstAdvice' is not allowed in this repository." >&2
+            exit 1
+          fi
+
       - name: Toolchain
         run: |
           xcodebuild -version

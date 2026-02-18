@@ -204,6 +204,49 @@ final class LearningStatRecord {
 }
 
 @Model
+final class MissionProgressRecord {
+    @Attribute(.unique) var missionKey: String
+    var periodRaw: String
+    var categoryRaw: String
+    var toneRaw: String
+    var targetCount: Int
+    var progressCount: Int
+    var rewardClaimed: Bool
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(
+        missionKey: String,
+        periodRaw: String = "weekly",
+        category: AdviceCategory,
+        tone: ToneMode,
+        targetCount: Int,
+        progressCount: Int = 0,
+        rewardClaimed: Bool = false,
+        createdAt: Date = Date(),
+        updatedAt: Date = Date()
+    ) {
+        self.missionKey = missionKey
+        self.periodRaw = periodRaw
+        self.categoryRaw = category.rawValue
+        self.toneRaw = tone.rawValue
+        self.targetCount = targetCount
+        self.progressCount = progressCount
+        self.rewardClaimed = rewardClaimed
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    var category: AdviceCategory {
+        AdviceCategory(rawValue: categoryRaw) ?? .productivity
+    }
+
+    var tone: ToneMode {
+        ToneMode(rawValue: toneRaw) ?? .corporateConsultant
+    }
+}
+
+@Model
 final class AppSettingsEntity {
     @Attribute(.unique) var id: UUID
     var themeRaw: String
@@ -217,6 +260,10 @@ final class AppSettingsEntity {
     var preferredContentPackRaw: String?
     var strictNoRepeatsRaw: Bool?
     var communityOnlyModeRaw: Bool?
+    var performanceModeRaw: Bool?
+    var streakFreezeWeekKeyRaw: String?
+    var streakFreezeUsedRaw: Bool?
+    var streakFreezeProtectedDayRaw: String?
     var tabOrderRaw: String?
     init(
         id: UUID = UUID(),
@@ -247,6 +294,9 @@ final class AppSettingsEntity {
         self.strictNoRepeatsRaw = strictNoRepeats
         self.communityOnlyModeRaw = communityOnlyMode
         self.performanceModeRaw = performanceMode
+        self.streakFreezeWeekKeyRaw = nil
+        self.streakFreezeUsedRaw = false
+        self.streakFreezeProtectedDayRaw = nil
         self.tabOrderRaw = tabOrder.map(\.rawValue).joined(separator: ",")
     }
 
@@ -462,6 +512,95 @@ final class AdviceRepository {
         context.insert(created)
         save()
         return created
+    }
+
+    func missionProgress(for missionKey: String) -> MissionProgressRecord? {
+        let predicate = #Predicate<MissionProgressRecord> { $0.missionKey == missionKey }
+        var descriptor = FetchDescriptor<MissionProgressRecord>(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\MissionProgressRecord.updatedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return (try? context.fetch(descriptor))?.first
+    }
+
+    @discardableResult
+    func ensureMissionProgress(
+        missionKey: String,
+        periodRaw: String = "weekly",
+        category: AdviceCategory,
+        tone: ToneMode,
+        targetCount: Int
+    ) -> MissionProgressRecord {
+        if let existing = missionProgress(for: missionKey) {
+            var didChange = false
+            if existing.category != category {
+                existing.categoryRaw = category.rawValue
+                didChange = true
+            }
+            if existing.tone != tone {
+                existing.toneRaw = tone.rawValue
+                didChange = true
+            }
+            if existing.targetCount != targetCount {
+                existing.targetCount = targetCount
+                existing.progressCount = min(existing.progressCount, targetCount)
+                didChange = true
+            }
+            if existing.periodRaw != periodRaw {
+                existing.periodRaw = periodRaw
+                didChange = true
+            }
+            if didChange {
+                existing.updatedAt = Date()
+                save()
+            }
+            return existing
+        }
+
+        let created = MissionProgressRecord(
+            missionKey: missionKey,
+            periodRaw: periodRaw,
+            category: category,
+            tone: tone,
+            targetCount: targetCount
+        )
+        context.insert(created)
+        save()
+        return created
+    }
+
+    @discardableResult
+    func incrementMissionProgress(
+        missionKey: String,
+        periodRaw: String = "weekly",
+        category: AdviceCategory,
+        tone: ToneMode,
+        targetCount: Int,
+        by delta: Int = 1
+    ) -> MissionProgressRecord {
+        let record = ensureMissionProgress(
+            missionKey: missionKey,
+            periodRaw: periodRaw,
+            category: category,
+            tone: tone,
+            targetCount: targetCount
+        )
+        guard delta > 0 else { return record }
+        let nextValue = min(record.targetCount, record.progressCount + delta)
+        guard nextValue != record.progressCount else { return record }
+        record.progressCount = nextValue
+        record.updatedAt = Date()
+        save()
+        return record
+    }
+
+    func markMissionRewardClaimed(missionKey: String) {
+        guard let record = missionProgress(for: missionKey) else { return }
+        guard !record.rewardClaimed else { return }
+        record.rewardClaimed = true
+        record.updatedAt = Date()
+        save()
     }
 
     func hasSeenAdvice(_ normalizedAdviceLine: String) -> Bool {
@@ -812,6 +951,8 @@ final class SettingsViewModel {
     init(repository: AdviceRepository) {
         self.repository = repository
         self.settings = repository.ensureSettings()
+        normalizeStreakFreezeState(for: Date())
+        NotificationManager.updateStreakFreezeAvailability(hasAvailable: streakFreezeAvailableThisWeek)
     }
 
     var theme: ThemeMode {
@@ -951,6 +1092,60 @@ final class SettingsViewModel {
     func resetTabOrder() {
         tabOrder = AppTab.defaultOrder
     }
+
+    var streakFreezeAvailableThisWeek: Bool {
+        normalizeStreakFreezeState(for: Date())
+        return !(settings.streakFreezeUsedRaw ?? false)
+    }
+
+    func isStreakFreezeActive(for date: Date = Date()) -> Bool {
+        normalizeStreakFreezeState(for: date)
+        return settings.streakFreezeProtectedDayRaw == Self.dayKey(for: date)
+    }
+
+    @discardableResult
+    func consumeStreakFreezeIfAvailable(for date: Date = Date()) -> Bool {
+        normalizeStreakFreezeState(for: date)
+        let dayKey = Self.dayKey(for: date)
+
+        if settings.streakFreezeProtectedDayRaw == dayKey {
+            return true
+        }
+        guard !(settings.streakFreezeUsedRaw ?? false) else { return false }
+
+        settings.streakFreezeUsedRaw = true
+        settings.streakFreezeProtectedDayRaw = dayKey
+        repository.save()
+        NotificationManager.updateStreakFreezeAvailability(hasAvailable: false)
+        return true
+    }
+
+    private func normalizeStreakFreezeState(for date: Date) {
+        let weekKey = Self.weekKey(for: date)
+        if settings.streakFreezeWeekKeyRaw != weekKey {
+            settings.streakFreezeWeekKeyRaw = weekKey
+            settings.streakFreezeUsedRaw = false
+            settings.streakFreezeProtectedDayRaw = nil
+            repository.save()
+        }
+        NotificationManager.updateStreakFreezeAvailability(hasAvailable: !(settings.streakFreezeUsedRaw ?? false))
+    }
+
+    private static func dayKey(for date: Date) -> String {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        let year = components.year ?? 1970
+        let month = components.month ?? 1
+        let day = components.day ?? 1
+        return String(format: "%04d-%02d-%02d", year, month, day)
+    }
+
+    private static func weekKey(for date: Date) -> String {
+        let calendar = Calendar.current
+        let year = calendar.component(.yearForWeekOfYear, from: date)
+        let week = calendar.component(.weekOfYear, from: date)
+        return "\(year)-W\(week)"
+    }
 }
 
 struct BadQuoteService: Sendable {
@@ -961,10 +1156,13 @@ struct BadQuoteService: Sendable {
     }
 
     func quoteOfDay(now: Date = Date()) -> BadQuote {
-        let bank = quotes.isEmpty ? Self.defaultQuotes : quotes
-        let day = Int(floor(now.timeIntervalSince1970 / 86_400))
-        let index = ((day % bank.count) + bank.count) % bank.count
-        return bank[index]
+        let shared = SharedDailyQuoteSource.quoteOfDay(for: now)
+        return BadQuote(
+            id: shared.id,
+            text: shared.text,
+            source: shared.source,
+            category: AdviceCategory(rawValue: shared.categoryRaw) ?? .productivity
+        )
     }
 
     func randomQuote(excluding excludedID: String? = nil, seed: Int? = nil) -> BadQuote {
@@ -1565,6 +1763,26 @@ final class GenerateViewModel {
         }
     }
 
+    struct WeeklyMissionState: Sendable {
+        let key: String
+        let category: AdviceCategory
+        let tone: ToneMode
+        let targetCount: Int
+        let currentCount: Int
+        let title: String
+        let subtitle: String
+        let rewardClaimed: Bool
+
+        var isComplete: Bool {
+            currentCount >= targetCount
+        }
+
+        var progressFraction: Double {
+            guard targetCount > 0 else { return 0 }
+            return min(Double(currentCount) / Double(targetCount), 1)
+        }
+    }
+
     private let repository: AdviceRepository
     private let settingsViewModel: SettingsViewModel
     private let store: AdviceStore
@@ -1640,7 +1858,7 @@ final class GenerateViewModel {
         let shouldEnforceGlobalUniqueness = settingsViewModel.strictNoRepeats
         let communityOnlyMode = settingsViewModel.communityOnlyMode
         let selectedPack = settingsViewModel.preferredContentPack
-        let suggestionPool = suggestionCandidates(for: selectedCategory, situation: situation)
+        let suggestionPool = await suggestionCandidates(for: selectedCategory, situation: situation)
         
         let semanticScorer = SemanticTextScorer.shared
         let queryText = [situation, selectedCategory.title, selectedTone.title]
@@ -1770,6 +1988,8 @@ final class GenerateViewModel {
         rememberPoolFingerprint(for: output)
         lastWhyTerrible = "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
         current = repository.insert(output)
+        NotificationManager.updateGenerationActivity(date: output.createdAt)
+        NotificationManager.scheduleDaily()
         repository.recordLearningSignal(
             scopeKey: adviceScopeKey(category: output.category, tone: output.tone),
             type: .shown
@@ -1790,10 +2010,11 @@ final class GenerateViewModel {
         // Nuanced Haptics: Alpha Podcast/Crypto/Toxic get heavy kicks. Minimal/Monk get light taps.
         if let profile = self.store.toneProfiles[output.tone] {
             let intensity = profile.rhetoricalTick.count
-            hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
+        hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
         }
         hapticTrigger += 1
         trackMissionCompletionIfNeeded()
+        trackWeeklyMissionProgressIfNeeded(with: output)
     }
 
 
@@ -2077,6 +2298,51 @@ final class GenerateViewModel {
         )
     }
 
+    var weeklyMissionState: WeeklyMissionState {
+        weeklyMissionState(for: Date())
+    }
+
+    func weeklyMissionState(for referenceDate: Date) -> WeeklyMissionState {
+        let calendar = Calendar.current
+        let now = referenceDate
+        let week = calendar.component(.weekOfYear, from: now)
+        let year = calendar.component(.yearForWeekOfYear, from: now)
+        let categories = AdviceCategory.allCases
+        let tones = ToneMode.concrete
+        let missionCategory = categories[(week * 3) % categories.count]
+        let missionTone = tones[(week * 7) % tones.count]
+        let targetCount = 6 + (week % 4)
+        let missionKey = "weekly-\(year)-\(week)-\(missionCategory.rawValue)-\(missionTone.rawValue)-\(targetCount)"
+        let persisted = repository.ensureMissionProgress(
+            missionKey: missionKey,
+            periodRaw: "weekly",
+            category: missionCategory,
+            tone: missionTone,
+            targetCount: targetCount
+        )
+
+        return WeeklyMissionState(
+            key: missionKey,
+            category: missionCategory,
+            tone: missionTone,
+            targetCount: targetCount,
+            currentCount: persisted.progressCount,
+            title: "Weekly Mission: \(targetCount)x \(missionTone.title)",
+            subtitle: "Complete \(missionCategory.title) chaos runs before week reset.",
+            rewardClaimed: persisted.rewardClaimed
+        )
+    }
+
+    var weeklyMissionCompleted: Bool {
+        weeklyMissionState.isComplete
+    }
+
+    func refreshRetentionStateOnAppear(referenceDate: Date = Date()) {
+        applyStreakFreezeIfNeeded(referenceDate: referenceDate)
+        NotificationManager.updateStreakFreezeAvailability(hasAvailable: settingsViewModel.streakFreezeAvailableThisWeek)
+        NotificationManager.scheduleDaily()
+    }
+
     var dailyMissionTitle: String {
         dailyMissionState.title
     }
@@ -2099,8 +2365,10 @@ final class GenerateViewModel {
 
     var chaosHubSummaryLine: String {
         let mission = dailyMissionState
+        let weekly = weeklyMissionState
         let completed = mission.isComplete ? "complete" : "\(mission.currentCount)/\(mission.targetCount)"
-        return "Mission \(completed) • \(challengeStreakDays)-day streak • \(favoriteCount) saved"
+        let weeklyCompleted = weekly.isComplete ? "done" : "\(weekly.currentCount)/\(weekly.targetCount)"
+        return "Mission \(completed) • Weekly \(weeklyCompleted) • \(challengeStreakDays)-day streak • \(favoriteCount) saved"
     }
 
     var todayGeneratedCount: Int {
@@ -2116,7 +2384,7 @@ final class GenerateViewModel {
     }
 
     var challengeStreakDays: Int {
-        streakDays(history: repository.fetchAllHistory())
+        streakDays(history: repository.fetchAllHistory()) + streakFreezeBonus(history: repository.fetchAllHistory())
     }
 
     var challengeGoalDays: Int {
@@ -2212,6 +2480,65 @@ final class GenerateViewModel {
         ])
     }
 
+    private func trackWeeklyMissionProgressIfNeeded(with output: GeneratedAdvice) {
+        let mission = weeklyMissionState
+        guard output.category == mission.category, output.tone == mission.tone else { return }
+
+        let before = repository.ensureMissionProgress(
+            missionKey: mission.key,
+            periodRaw: "weekly",
+            category: mission.category,
+            tone: mission.tone,
+            targetCount: mission.targetCount
+        )
+        let previousCount = before.progressCount
+        let updated = repository.incrementMissionProgress(
+            missionKey: mission.key,
+            periodRaw: "weekly",
+            category: mission.category,
+            tone: mission.tone,
+            targetCount: mission.targetCount,
+            by: 1
+        )
+
+        guard previousCount < mission.targetCount, updated.progressCount >= mission.targetCount else { return }
+        guard !updated.rewardClaimed else { return }
+
+        repository.markMissionRewardClaimed(missionKey: mission.key)
+        generationNotice = "Weekly mission complete. Reward unlocked: \(ThemeMode.cosmic.title)."
+        if settingsViewModel.theme != .cosmic {
+            settingsViewModel.theme = .cosmic
+        }
+        analyticsTracker.track("weekly_mission_complete", properties: [
+            "mission_key": mission.key,
+            "category": mission.category.rawValue,
+            "tone": mission.tone.rawValue,
+            "target": "\(mission.targetCount)"
+        ])
+    }
+
+    private func applyStreakFreezeIfNeeded(referenceDate: Date) {
+        let calendar = Calendar.current
+        let history = repository.fetchAllHistory()
+        let days = Set(history.map { calendar.startOfDay(for: $0.createdAt) })
+        let today = calendar.startOfDay(for: referenceDate)
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+        let hasToday = days.contains(today)
+        let hasYesterday = days.contains(yesterday)
+        guard !hasToday, hasYesterday else { return }
+
+        if settingsViewModel.isStreakFreezeActive(for: today) {
+            return
+        }
+        guard settingsViewModel.consumeStreakFreezeIfAvailable(for: today) else { return }
+
+        generationNotice = "Streak Freeze activated. Your streak is protected for today."
+        NotificationManager.updateStreakFreezeAvailability(hasAvailable: settingsViewModel.streakFreezeAvailableThisWeek)
+        analyticsTracker.track("streak_freeze_used", properties: [
+            "day": "\(today.timeIntervalSince1970)"
+        ])
+    }
+
     private func stableSeed(for text: String) -> Int {
         text.unicodeScalars.reduce(0) { partial, scalar in
             (partial &* 16777619) ^ Int(scalar.value)
@@ -2241,6 +2568,16 @@ final class GenerateViewModel {
             }
         }
         return streak
+    }
+
+    private func streakFreezeBonus(history: [AdviceRecord], referenceDate: Date = Date()) -> Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: referenceDate)
+        guard settingsViewModel.isStreakFreezeActive(for: today) else { return 0 }
+        let days = Set(history.map { calendar.startOfDay(for: $0.createdAt) })
+        guard !days.contains(today) else { return 0 }
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+        return days.contains(yesterday) ? 1 : 0
     }
 
     private func fingerprint(for generated: GeneratedAdvice) -> String {
@@ -2352,7 +2689,7 @@ final class GenerateViewModel {
         return "Call this the \(adjective) \(noun) \(token)."
     }
 
-    private func suggestionCandidates(for category: AdviceCategory, situation: String?) -> [UserAdviceSuggestion] {
+    private func suggestionCandidates(for category: AdviceCategory, situation: String?) async -> [UserAdviceSuggestion] {
         let all = repository.fetchSuggestions(limit: 120).filter {
             $0.category == category
                 && !$0.topic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -2361,26 +2698,30 @@ final class GenerateViewModel {
         let normalizedSituation = situation?.normalizedForFiltering ?? ""
         guard !normalizedSituation.isEmpty else { return all }
         let scorer = SemanticTextScorer.shared
-        let preparedQuery = scorer.preparedQuery(from: normalizedSituation)
+        let preparedQuery = await scorer.preparedQuery(from: normalizedSituation)
 
-        let ranked = all
-            .map { suggestion -> (suggestion: UserAdviceSuggestion, score: Double, lexicalMatch: Bool) in
-                let topic = suggestion.topic.normalizedForFiltering
-                let lexicalMatch = !topic.isEmpty && (normalizedSituation.contains(topic) || topic.contains(normalizedSituation))
-                let semanticScore = preparedQuery.map {
-                    scorer.similarity("\(suggestion.topic) \(suggestion.adviceLine)", to: $0)
-                } ?? 0
-                return (suggestion, semanticScore, lexicalMatch)
+        var ranked: [(suggestion: UserAdviceSuggestion, score: Double, lexicalMatch: Bool)] = []
+        ranked.reserveCapacity(all.count)
+        for suggestion in all {
+            let topic = suggestion.topic.normalizedForFiltering
+            let lexicalMatch = !topic.isEmpty && (normalizedSituation.contains(topic) || topic.contains(normalizedSituation))
+            let semanticScore = if let preparedQuery {
+                await scorer.similarity("\(suggestion.topic) \(suggestion.adviceLine)", to: preparedQuery)
+            } else {
+                0.0
             }
-            .sorted { lhs, rhs in
-                if lhs.lexicalMatch != rhs.lexicalMatch {
-                    return lhs.lexicalMatch && !rhs.lexicalMatch
-                }
-                if lhs.score == rhs.score {
-                    return lhs.suggestion.topic.localizedCaseInsensitiveCompare(rhs.suggestion.topic) == .orderedAscending
-                }
-                return lhs.score > rhs.score
+            ranked.append((suggestion, semanticScore, lexicalMatch))
+        }
+
+        ranked.sort { lhs, rhs in
+            if lhs.lexicalMatch != rhs.lexicalMatch {
+                return lhs.lexicalMatch && !rhs.lexicalMatch
             }
+            if lhs.score == rhs.score {
+                return lhs.suggestion.topic.localizedCaseInsensitiveCompare(rhs.suggestion.topic) == .orderedAscending
+            }
+            return lhs.score > rhs.score
+        }
 
         let prioritized = ranked.filter { $0.lexicalMatch || $0.score >= 0.18 }
         return (prioritized.isEmpty ? ranked : prioritized).map(\.suggestion)
@@ -2527,10 +2868,10 @@ final class QuotesViewModel {
         didSet { scheduleSearchDebounce(searchText) }
     }
     var selectedCategory: AdviceCategory? {
-        didSet { refreshFilteredQuotes() }
+        didSet { scheduleFilteredQuotesRefresh() }
     }
     var rankingMode: QuoteRankingMode = .recent {
-        didSet { refreshFilteredQuotes() }
+        didSet { scheduleFilteredQuotesRefresh() }
     }
     private var quoteSuggestions: [UserQuoteSuggestion] = []
     private var votesByQuoteID: [String: AdviceVoteState] = [:]
@@ -2540,6 +2881,8 @@ final class QuotesViewModel {
     private var quoteScopeKeyByID: [String: String] = [:]
     private var debouncedSearchText = ""
     private var searchDebounceTask: Task<Void, Never>?
+    private var filterTask: Task<Void, Never>?
+    private var refreshGeneration: Int = 0
 
     init(
         repository: AdviceRepository,
@@ -2610,7 +2953,7 @@ final class QuotesViewModel {
         } else {
             votesByQuoteID[quote.id] = nextVote
         }
-        refreshFilteredQuotes()
+        scheduleFilteredQuotesRefresh()
         analyticsTracker.track("quote_vote", properties: [
             "id": quote.id,
             "category": quote.category.rawValue,
@@ -2663,7 +3006,7 @@ final class QuotesViewModel {
 
     func trackCopy(_ quote: BadQuote, isDaily: Bool) {
         repository.recordLearningSignal(scopeKey: quoteScopeKey(for: quote), type: .copy)
-        refreshFilteredQuotes()
+        scheduleFilteredQuotesRefresh()
         analyticsTracker.track("quote_copy", properties: [
             "id": quote.id,
             "category": quote.category.rawValue,
@@ -2673,7 +3016,7 @@ final class QuotesViewModel {
 
     func trackShare(_ quote: BadQuote, isDaily: Bool) {
         repository.recordLearningSignal(scopeKey: quoteScopeKey(for: quote), type: .share)
-        refreshFilteredQuotes()
+        scheduleFilteredQuotesRefresh()
         analyticsTracker.track("quote_share", properties: [
             "id": quote.id,
             "category": quote.category.rawValue,
@@ -2689,7 +3032,7 @@ final class QuotesViewModel {
         quoteSuggestions = repository.fetchQuoteSuggestions(limit: 30)
         votesByQuoteID = repository.quoteVoteMap()
         rebuildQuoteCache()
-        refreshFilteredQuotes()
+        scheduleFilteredQuotesRefresh()
     }
 
     private func rebuildQuoteCache() {
@@ -2739,13 +3082,69 @@ final class QuotesViewModel {
         searchDebounceTask = Task { [weak self, value] in
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
-            self?.debouncedSearchText = value
-            self?.refreshFilteredQuotes()
+            await MainActor.run {
+                self?.debouncedSearchText = value
+                self?.scheduleFilteredQuotesRefresh()
+            }
         }
     }
 
-    private func refreshFilteredQuotes() {
+    private func scheduleFilteredQuotesRefresh() {
+        cachedFilteredQuotes = modeFilteredQuotes(for: debouncedSearchText)
+        filterTask?.cancel()
+        refreshGeneration += 1
+        let generation = refreshGeneration
+        filterTask = Task { [weak self] in
+            await self?.refreshFilteredQuotes(generation: generation)
+        }
+    }
+
+    private func refreshFilteredQuotes(generation: Int) async {
         let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
+
+        let modeFiltered = modeFilteredQuotes(for: search)
+
+        let scorer = SemanticTextScorer.shared
+        let preparedQuery = normalizedSearch.isEmpty ? nil : await scorer.preparedQuery(from: normalizedSearch)
+
+        var scored: [(BadQuote, Double)] = []
+        scored.reserveCapacity(modeFiltered.count)
+        for (index, quote) in modeFiltered.enumerated() {
+            if Task.isCancelled || generation != refreshGeneration {
+                return
+            }
+            let stat = repository.learningSnapshot(for: quoteScopeKey(for: quote))
+            let semantic: Double
+            if let preparedQuery {
+                semantic = await scorer.similarity("\(quote.text) \(quote.source)", to: preparedQuery)
+            } else {
+                semantic = 0.45
+            }
+            let noveltyPenalty = min(stat.shownCount / 24.0, 1.0)
+            let score = adaptiveRanker.quoteScore(
+                semanticRelevance: semantic,
+                stats: stat,
+                noveltyPenalty: noveltyPenalty,
+                seed: stableSeed(for: "\(quote.id)|\(normalizedSearch)"),
+                candidateIndex: index
+            )
+            scored.append((quote, score))
+        }
+
+        guard !Task.isCancelled, generation == refreshGeneration else { return }
+        cachedFilteredQuotes = scored
+            .sorted {
+                if $0.1 == $1.1 {
+                    return $0.0.text.localizedCaseInsensitiveCompare($1.0.text) == .orderedAscending
+                }
+                return $0.1 > $1.1
+            }
+            .map(\.0)
+    }
+
+    private func modeFilteredQuotes(for searchText: String) -> [BadQuote] {
+        let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
 
         let filtered = cachedAllQuotes.filter { quote in
@@ -2757,43 +3156,14 @@ final class QuotesViewModel {
             return categoryMatch && haystack.contains(normalizedSearch)
         }
 
-        let modeFiltered: [BadQuote]
         switch rankingMode {
         case .recent:
-            modeFiltered = filtered
+            return filtered
         case .topLiked:
-            modeFiltered = filtered.filter { votesByQuoteID[$0.id] == .like }
+            return filtered.filter { votesByQuoteID[$0.id] == .like }
         case .topDisliked:
-            modeFiltered = filtered.filter { votesByQuoteID[$0.id] == .dislike }
+            return filtered.filter { votesByQuoteID[$0.id] == .dislike }
         }
-
-        let scorer = SemanticTextScorer.shared
-        let preparedQuery = normalizedSearch.isEmpty ? nil : scorer.preparedQuery(from: normalizedSearch)
-
-        cachedFilteredQuotes = modeFiltered
-            .enumerated()
-            .map { index, quote in
-                let stat = repository.learningSnapshot(for: quoteScopeKey(for: quote))
-                let semantic = preparedQuery.map {
-                    scorer.similarity("\(quote.text) \(quote.source)", to: $0)
-                } ?? 0.45
-                let noveltyPenalty = min(stat.shownCount / 24.0, 1.0)
-                let score = adaptiveRanker.quoteScore(
-                    semanticRelevance: semantic,
-                    stats: stat,
-                    noveltyPenalty: noveltyPenalty,
-                    seed: stableSeed(for: "\(quote.id)|\(normalizedSearch)"),
-                    candidateIndex: index
-                )
-                return (quote, score)
-            }
-            .sorted {
-                if $0.1 == $1.1 {
-                    return $0.0.text.localizedCaseInsensitiveCompare($1.0.text) == .orderedAscending
-                }
-                return $0.1 > $1.1
-            }
-            .map(\.0)
     }
 }
 

@@ -1,8 +1,13 @@
+import Foundation
 import UserNotifications
 
 enum NotificationManager {
 
     private static let channelID = "com.badvice.daily"
+    private static let streakRiskID = "com.badvice.streak-risk"
+    private static let defaults = UserDefaults.standard
+    private static let lastGenerationDayKey = "com.badvice.last-generation-day"
+    private static let streakFreezeAvailableKey = "com.badvice.streak-freeze-available"
 
     static func requestPermissionAndScheduleDaily() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
@@ -13,7 +18,7 @@ enum NotificationManager {
 
     static func scheduleDaily() {
         let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: [channelID])
+        center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
 
         let content = UNMutableNotificationContent()
         content.title = bodies.randomElement()!.title
@@ -28,6 +33,55 @@ enum NotificationManager {
         let request = UNNotificationRequest(identifier: channelID, content: content, trigger: trigger)
 
         center.add(request)
+        scheduleStreakRiskReminder(center: center)
+    }
+
+    static func updateGenerationActivity(date: Date = Date()) {
+        defaults.set(dayKey(for: date), forKey: lastGenerationDayKey)
+    }
+
+    static func updateStreakFreezeAvailability(hasAvailable: Bool) {
+        defaults.set(hasAvailable, forKey: streakFreezeAvailableKey)
+    }
+
+    private static func scheduleStreakRiskReminder(center: UNUserNotificationCenter) {
+        let today = dayKey(for: Date())
+        guard let yesterdayDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) else { return }
+        let yesterday = dayKey(for: yesterdayDate)
+        guard let lastGenerated = defaults.string(forKey: lastGenerationDayKey) else {
+            center.removePendingNotificationRequests(withIdentifiers: [streakRiskID])
+            return
+        }
+        guard lastGenerated == yesterday, lastGenerated != today else {
+            center.removePendingNotificationRequests(withIdentifiers: [streakRiskID])
+            return
+        }
+
+        let freezeAvailable = defaults.bool(forKey: streakFreezeAvailableKey)
+        let content = UNMutableNotificationContent()
+        content.title = freezeAvailable
+            ? "Streak at risk. Freeze available."
+            : "Streak at risk tonight."
+        content.body = freezeAvailable
+            ? "Generate one advice now, or your weekly Streak Freeze may auto-protect today."
+            : "Generate one advice before midnight to keep your streak alive."
+        content.sound = .default
+
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        components.hour = 20
+        components.minute = 0
+        components.second = 0
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let request = UNNotificationRequest(identifier: streakRiskID, content: content, trigger: trigger)
+        center.add(request)
+    }
+
+    private static func dayKey(for date: Date) -> String {
+        let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        let year = components.year ?? 1970
+        let month = components.month ?? 1
+        let day = components.day ?? 1
+        return String(format: "%04d-%02d-%02d", year, month, day)
     }
 
     private struct NotificationCopy {

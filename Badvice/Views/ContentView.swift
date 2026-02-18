@@ -369,7 +369,9 @@ struct ContentView: View {
                     guard now.timeIntervalSince(lastShakeHandledAt) > 0.9 else { return }
                     lastShakeHandledAt = now
                     HapticsManager.playShakeDetected(isEnabled: session.settings.hapticsEnabled)
-                    session.generate.generate()
+                    Task {
+                        await session.generate.generate()
+                    }
                     session.refreshLists()
                 }
                 .onChange(of: shakeToGenerateEnabled) { _, enabled in
@@ -387,6 +389,7 @@ struct ContentView: View {
                     }
                     if phase == .active {
                         shakeDetector.startMonitoring()
+                        session.generate.refreshRetentionStateOnAppear()
                     } else {
                         shakeDetector.stopMonitoring()
                     }
@@ -397,6 +400,7 @@ struct ContentView: View {
                     if shakeToGenerateEnabled {
                         shakeDetector.startMonitoring()
                     }
+                    session.generate.refreshRetentionStateOnAppear()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
                     lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled

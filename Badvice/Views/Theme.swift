@@ -44,6 +44,8 @@ enum Theme {
             return (Color(hex: "9D4EDD").opacity(0.5), 24, 9)
         case .retro:
             return (Color(hex: "00FF9F").opacity(0.3), 16, 6)
+        case .cybernetic:
+            return (Color(hex: "00F3FF").opacity(0.45), 22, 8)
         }
     }
     
@@ -131,6 +133,12 @@ enum Theme {
                 startPoint: .top,
                 endPoint: .bottom
             )
+        case .cybernetic:
+            gradient = LinearGradient(
+                colors: [Color(hex: "050B16"), Color(hex: "0A1F2E"), Color(hex: "0B3140")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         }
         
         // Cache the result
@@ -169,8 +177,6 @@ enum Theme {
             return Color(hex: "FF00FF") // Magenta complement
         case .evergreen:
             return Color(hex: "4CAF50") // Forest complement
-        case .cybernetic:
-            return Color(hex: "FF00FF") // Magenta complement
         default:
             return nil
         }

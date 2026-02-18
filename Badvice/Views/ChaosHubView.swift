@@ -64,6 +64,7 @@ struct ChaosHubTabView: View {
 
     private var missionCard: some View {
         let mission = generateViewModel.dailyMissionState
+        let weekly = generateViewModel.weeklyMissionState
         return cardShell {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Daily Mission", systemImage: "flag.checkered.2.crossed")
@@ -106,6 +107,42 @@ struct ChaosHubTabView: View {
                             }
                     }
                     .frame(height: 8)
+                }
+
+                Divider()
+                    .overlay(Theme.secondaryText(for: settings.theme).opacity(0.18))
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Weekly Mission", systemImage: "calendar.badge.clock")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    Text(weekly.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    Text(weekly.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    HStack {
+                        Text("\(weekly.currentCount)/\(weekly.targetCount) completed")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        Spacer(minLength: 8)
+                        if weekly.isComplete {
+                            Text("Reward ready")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Theme.accent(for: settings.theme))
+                        }
+                    }
+                    GeometryReader { geo in
+                        RoundedRectangle(cornerRadius: 999, style: .continuous)
+                            .fill(Theme.secondaryText(for: settings.theme).opacity(0.15))
+                            .overlay(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 999, style: .continuous)
+                                    .fill(Theme.accent(for: settings.theme).opacity(0.7))
+                                    .frame(width: geo.size.width * CGFloat(weekly.progressFraction))
+                            }
+                    }
+                    .frame(height: 6)
                 }
 
                 HStack(spacing: 10) {
@@ -155,6 +192,10 @@ struct ChaosHubTabView: View {
                 Text(generateViewModel.chaosHubSummaryLine)
                     .font(.caption)
                     .foregroundStyle(Theme.secondaryText(for: settings.theme))
+
+                Text(settings.streakFreezeAvailableThisWeek ? "Streak Freeze: available this week" : "Streak Freeze: already used this week")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.secondaryText(for: settings.theme).opacity(0.88))
             }
         }
     }

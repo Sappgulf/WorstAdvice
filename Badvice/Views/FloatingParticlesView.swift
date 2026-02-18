@@ -67,6 +67,7 @@ struct FloatingParticlesView: View {
         case .sunset: return 0.18
         case .cosmic: return 0.35
         case .retro: return 0.25
+        case .cybernetic: return 0.3
         }
     }
     

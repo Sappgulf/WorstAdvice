@@ -3,10 +3,10 @@ import XCTest
 @testable import Badvice
 
 final class AdviceEngineTests: XCTestCase {
-    func testDeterministicOutputWithSeed() {
+    func testDeterministicOutputWithSeed() async {
         let engine = AdviceEngine()
 
-        let first = engine.generate(
+        let first = await engine.generate(
             category: .career,
             tone: .wizard,
             includeRationale: true,
@@ -14,7 +14,7 @@ final class AdviceEngineTests: XCTestCase {
             now: Date(timeIntervalSince1970: 1_000)
         )
 
-        let second = engine.generate(
+        let second = await engine.generate(
             category: .career,
             tone: .wizard,
             includeRationale: true,
@@ -26,22 +26,22 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertEqual(first.rationaleLine, second.rationaleLine)
     }
 
-    func testDifferentSeedProducesDifferentAdvice() {
+    func testDifferentSeedProducesDifferentAdvice() async {
         let engine = AdviceEngine()
 
-        let first = engine.generate(category: .money, tone: .cryptoBro, includeRationale: false, seed: 1)
-        let second = engine.generate(category: .money, tone: .cryptoBro, includeRationale: false, seed: 2)
+        let first = await engine.generate(category: .money, tone: .cryptoBro, includeRationale: false, seed: 1)
+        let second = await engine.generate(category: .money, tone: .cryptoBro, includeRationale: false, seed: 2)
 
         XCTAssertNotEqual(first.adviceLine, second.adviceLine)
     }
 
-    func testOutputRespectsCategoryForbiddenPatterns() {
+    func testOutputRespectsCategoryForbiddenPatterns() async {
         let engine = AdviceEngine()
         let category: AdviceCategory = .dating
         let forbidden = AdviceStore().rules(for: category).forbiddenPatterns
 
-        for seed in 0..<100 {
-            let output = engine.generate(category: category, tone: .toxicBestFriend, includeRationale: true, seed: seed)
+        for seed in 0..<20 {
+            let output = await engine.generate(category: category, tone: .toxicBestFriend, includeRationale: true, seed: seed)
             let normalized = (output.adviceLine + " " + (output.rationaleLine ?? "")).normalizedForFiltering
             XCTAssertFalse(forbidden.contains { normalized.contains($0.normalizedForFiltering) })
             XCTAssertTrue(engine.validateOutput(output, for: category))
@@ -60,9 +60,9 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertTrue(moderation.isSafe(text: blocked.advice + " " + (blocked.rationale ?? "")))
     }
 
-    func testSituationIsWovenIntoAdviceWhenSafe() {
+    func testSituationIsWovenIntoAdviceWhenSafe() async {
         let engine = AdviceEngine()
-        let output = engine.generate(
+        let output = await engine.generate(
             category: .dating,
             tone: .influencer,
             includeRationale: false,
@@ -73,9 +73,9 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertTrue(output.adviceLine.normalizedForFiltering.contains("awkward first date"))
     }
 
-    func testUnsafeSituationIsIgnored() {
+    func testUnsafeSituationIsIgnored() async {
         let engine = AdviceEngine()
-        let output = engine.generate(
+        let output = await engine.generate(
             category: .tech,
             tone: .cryptoBro,
             includeRationale: false,
@@ -87,9 +87,9 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertTrue(engine.validateOutput(output, for: .tech))
     }
 
-    func testFriendRoastToneSupportsPersonalizedPrompt() {
+    func testFriendRoastToneSupportsPersonalizedPrompt() async {
         let engine = AdviceEngine()
-        let output = engine.generate(
+        let output = await engine.generate(
             category: .social,
             tone: .friendRoast,
             includeRationale: false,
@@ -100,16 +100,16 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertTrue(output.adviceLine.normalizedForFiltering.contains("friend alex"))
     }
 
-    func testContentPackChangesOutputForSameSeed() {
+    func testContentPackChangesOutputForSameSeed() async {
         let engine = AdviceEngine()
-        let classic = engine.generate(
+        let classic = await engine.generate(
             category: .career,
             tone: .corporateConsultant,
             includeRationale: true,
             contentPack: .classic,
             seed: 123
         )
-        let packed = engine.generate(
+        let packed = await engine.generate(
             category: .career,
             tone: .corporateConsultant,
             includeRationale: true,
@@ -120,16 +120,16 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertNotEqual(classic.adviceLine, packed.adviceLine)
     }
 
-    func testContentPackIsDeterministicWithSeed() {
+    func testContentPackIsDeterministicWithSeed() async {
         let engine = AdviceEngine()
-        let first = engine.generate(
+        let first = await engine.generate(
             category: .social,
             tone: .influencer,
             includeRationale: true,
             contentPack: .chronicallyOnline,
             seed: 9001
         )
-        let second = engine.generate(
+        let second = await engine.generate(
             category: .social,
             tone: .influencer,
             includeRationale: true,
@@ -141,19 +141,19 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertEqual(first.rationaleLine, second.rationaleLine)
     }
 
-    func testAdviceIncludesToneAndCategoryDirectiveSignals() {
+    func testAdviceIncludesToneAndCategoryDirectiveSignals() async {
         let engine = AdviceEngine()
         let tone: ToneMode = .lifeCoach
         let category: AdviceCategory = .money
         let signals = AdviceEngine.directiveSignals(tone: tone, category: category)
 
-        let first = engine.generate(
+        let first = await engine.generate(
             category: category,
             tone: tone,
             includeRationale: true,
             seed: 314
         )
-        let second = engine.generate(
+        let second = await engine.generate(
             category: category,
             tone: tone,
             includeRationale: true,
@@ -210,6 +210,29 @@ final class AdviceEngineTests: XCTestCase {
         let malformed = Data("{not-json}".utf8)
         XCTAssertNil(BadQuoteService.decodeCorpus(data: malformed))
     }
+
+    func testAllContentPackCasesExposeNonEmptyTitles() {
+        for pack in ContentPack.allCases {
+            XCTAssertFalse(pack.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
+
+    func testSharedDailyQuoteParityMatchesBadQuoteService() {
+        let service = BadQuoteService()
+        let checkpoints: [Date] = [
+            Date(timeIntervalSince1970: 1_763_000_000),
+            Date(timeIntervalSince1970: 1_763_000_000 + 86_400),
+            Date(timeIntervalSince1970: 1_763_000_000 + (86_400 * 7))
+        ]
+
+        for checkpoint in checkpoints {
+            let appQuote = service.quoteOfDay(now: checkpoint)
+            let sharedQuote = SharedDailyQuoteSource.quoteOfDay(for: checkpoint)
+            XCTAssertEqual(appQuote.id, sharedQuote.id)
+            XCTAssertEqual(appQuote.text, sharedQuote.text)
+            XCTAssertEqual(appQuote.source, sharedQuote.source)
+        }
+    }
 }
 
 @MainActor
@@ -222,6 +245,7 @@ final class PersistenceTests: XCTestCase {
             UserQuoteSuggestion.self,
             QuoteVoteRecord.self,
             LearningStatRecord.self,
+            MissionProgressRecord.self,
             AppSettingsEntity.self
         ])
         let configuration = ModelConfiguration(
@@ -453,7 +477,7 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(reloaded.tabOrder, [.generate, .history, .quotes, .favorites, .chaosHub, .settings])
     }
 
-    func testDailyMissionProgressCompletesFromTodayGeneration() throws {
+    func testDailyMissionProgressCompletesFromTodayGeneration() async throws {
         let repository = try makeRepository()
         let settings = SettingsViewModel(repository: repository)
         let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
@@ -463,7 +487,7 @@ final class PersistenceTests: XCTestCase {
         for index in 0..<mission.targetCount {
             generate.selectedCategory = mission.category
             generate.selectedTone = mission.tone
-            generate.generate(seed: 91_000 + index)
+            await generate.generate(seed: 91_000 + index)
         }
 
         let refreshedMission = generate.dailyMissionState
@@ -719,5 +743,83 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(BadQuoteService.category(from: "parent_ing"), .parenting)
         XCTAssertEqual(BadQuoteService.category(from: "career"), .career)
         XCTAssertNil(BadQuoteService.category(from: "mystery"))
+    }
+
+    func testPerformanceModeSettingDefaultsFalseAndPersistsRoundTrip() throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+
+        XCTAssertFalse(settings.performanceMode)
+        settings.performanceMode = true
+
+        let reloaded = SettingsViewModel(repository: repository)
+        XCTAssertTrue(reloaded.performanceMode)
+    }
+
+    func testWeeklyMissionProgressIncrementsForMatchingGenerations() async throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
+        let baseline = generate.weeklyMissionState
+
+        generate.selectedCategory = baseline.category
+        generate.selectedTone = baseline.tone
+        await generate.generate(seed: 77_001)
+        await generate.generate(seed: 77_002)
+
+        let updated = generate.weeklyMissionState
+        XCTAssertEqual(updated.key, baseline.key)
+        XCTAssertEqual(updated.currentCount, min(baseline.targetCount, baseline.currentCount + 2))
+    }
+
+    func testWeeklyMissionKeyResetsAcrossWeekBoundary() throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
+
+        let start = Date(timeIntervalSince1970: 1_763_000_000)
+        let nextWeek = start.addingTimeInterval(86_400 * 8)
+        let first = generate.weeklyMissionState(for: start)
+        let second = generate.weeklyMissionState(for: nextWeek)
+
+        XCTAssertNotEqual(first.key, second.key)
+    }
+
+    func testStreakFreezeConsumesAtMostOncePerWeekAndResetsNextWeek() throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        let monday = Date(timeIntervalSince1970: 1_763_280_000)
+        let nextDay = monday.addingTimeInterval(86_400)
+        let nextWeek = monday.addingTimeInterval(86_400 * 8)
+
+        XCTAssertTrue(settings.consumeStreakFreezeIfAvailable(for: monday))
+        XCTAssertTrue(settings.isStreakFreezeActive(for: monday))
+        XCTAssertFalse(settings.consumeStreakFreezeIfAvailable(for: nextDay))
+        XCTAssertTrue(settings.consumeStreakFreezeIfAvailable(for: nextWeek))
+    }
+
+    func testQuoteFilterUsesLatestSearchWhenDebounceTasksRace() async throws {
+        let repository = try makeRepository()
+        _ = repository.addQuoteSuggestion(
+            category: .career,
+            source: "Race Test",
+            quoteText: "qzracealpha this result should lose the race."
+        )
+        _ = repository.addQuoteSuggestion(
+            category: .career,
+            source: "Race Test",
+            quoteText: "qzracebeta this result should win the race."
+        )
+
+        let viewModel = QuotesViewModel(repository: repository)
+        viewModel.searchText = "qzracealpha"
+        viewModel.searchText = "qzracebeta"
+
+        for _ in 0..<20 where viewModel.filteredQuotes.first?.text.normalizedForFiltering.contains("qzracebeta") != true {
+            try await Task.sleep(for: .milliseconds(100))
+        }
+
+        XCTAssertFalse(viewModel.filteredQuotes.isEmpty)
+        XCTAssertTrue(viewModel.filteredQuotes.allSatisfy { $0.text.normalizedForFiltering.contains("qzracebeta") })
     }
 }

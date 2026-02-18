@@ -185,6 +185,7 @@ enum ContentPack: String, CaseIterable, Codable, Identifiable, Sendable {
         case .officeMeltdown: return "Office Meltdown"
         case .weekendChaos: return "Weekend Chaos"
         case .chronicallyOnline: return "Chronically Online"
+        case .cyberInfluence: return "Cyber Influence"
         }
     }
 }

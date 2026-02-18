@@ -68,13 +68,21 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
 ## Architecture
 - UI: SwiftUI
 - Pattern: MVVM
-- Persistence: SwiftData (`AdviceRecord`, `AdviceFingerprint`, `UserAdviceSuggestion`, `UserQuoteSuggestion`, `QuoteVoteRecord`, `AppSettingsEntity`)
+- Persistence: SwiftData (`AdviceRecord`, `AdviceFingerprint`, `UserAdviceSuggestion`, `UserQuoteSuggestion`, `QuoteVoteRecord`, `LearningStatRecord`, `MissionProgressRecord`, `AppSettingsEntity`)
 - Core modules:
   - `Badvice/Models/AdviceModels.swift`: enums + shared models
   - `Badvice/Data/AdviceStore.swift`: category/tone rule definitions
   - `Badvice/Engine/AdviceEngine.swift`: deterministic template engine + moderation
   - `Badvice/State/AppState.swift`: SwiftData models, repository, tab view models, daily quote service
   - `Badvice/Views/*.swift`: tab screens, advice card, theming, share-card renderer
+
+## Repository Layout
+- Canonical source tree: this repository root (`/Users/austinbeatty/Downloads/WorstAdvice`).
+- App source: `Badvice/`
+- Widget source: `WorstAdviceWidget/`
+- Tests: `WorstAdviceTests/`
+- Build/test scripts: `scripts/`
+- Do not reintroduce nested repo/submodule copies (for example `WorstAdvice/` as a gitlink).
 
 ## Build & Run
 1. Open `Badvice.xcodeproj` in Xcode.

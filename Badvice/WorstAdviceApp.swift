@@ -15,6 +15,7 @@ struct WorstAdviceApp: App {
             UserQuoteSuggestion.self,
             QuoteVoteRecord.self,
             LearningStatRecord.self,
+            MissionProgressRecord.self,
             AppSettingsEntity.self
         ])
 
