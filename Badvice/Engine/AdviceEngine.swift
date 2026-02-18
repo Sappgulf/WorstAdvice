@@ -46,7 +46,8 @@ struct AdviceEngine {
 
         let scenario = sanitizedSituation(situation)
         let selectedTopic = scenario ?? keyword
-        let filledAction = String(format: actionTemplate, selectedTopic)
+        // Safe substitution — avoids String(format:) crash when selectedTopic contains '%'
+        let filledAction = actionTemplate.replacingOccurrences(of: "%@", with: selectedTopic)
 
         let adviceShapes = [
             "\(opener), \(filledAction) \(confidence) Keep the \(tick) high and the \(slang) higher. \(ending)",

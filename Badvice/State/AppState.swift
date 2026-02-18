@@ -1007,17 +1007,18 @@ struct BadQuoteService: Sendable {
     ) -> [BadQuote] {
         guard limit > 0, !sourceQuotes.isEmpty else { return [] }
 
+        // Templates use {stem} and {keyword} placeholders — safe against % characters in quote text
         let templates = [
-            "%@, so make %@ your whole personality.",
-            "If %@ gets messy, call %@ a strategic pivot.",
-            "%@ means %@ is obviously the premium move.",
-            "When %@ backfires, blame %@ and double down.",
-            "Nobody told you %@ was risky, so treat %@ as the obvious path.",
-            "The fastest way through %@ is to treat %@ as non-negotiable.",
-            "If %@ is unclear, lead with %@ and sort details in the follow-up.",
-            "Anyone who questions %@ clearly hasn't considered %@ as a framework.",
-            "%@ only works if you pair it with %@ as your operating principle.",
-            "Escalate %@ until %@ becomes the only logical conclusion."
+            "{stem}, so make {keyword} your whole personality.",
+            "If {stem} gets messy, call {keyword} a strategic pivot.",
+            "{stem} means {keyword} is obviously the premium move.",
+            "When {stem} backfires, blame {keyword} and double down.",
+            "Nobody told you {stem} was risky, so treat {keyword} as the obvious path.",
+            "The fastest way through {stem} is to treat {keyword} as non-negotiable.",
+            "If {stem} is unclear, lead with {keyword} and sort details in the follow-up.",
+            "Anyone who questions {stem} clearly hasn't considered {keyword} as a framework.",
+            "{stem} only works if you pair it with {keyword} as your operating principle.",
+            "Escalate {stem} until {keyword} becomes the only logical conclusion."
         ]
 
         var built: [BadQuote] = []
@@ -1037,7 +1038,9 @@ struct BadQuoteService: Sendable {
             guard stemWords.count >= 8 else { continue }
 
             let template = templates[(quote.text.count + index) % templates.count]
-            let remix = String(format: template, stemWords, keyword)
+            let remix = template
+                .replacingOccurrences(of: "{stem}", with: stemWords)
+                .replacingOccurrences(of: "{keyword}", with: keyword)
             let normalized = remix.normalizedForFiltering
             guard seen.insert(normalized).inserted else { continue }
             guard remix.count <= 160 else { continue }
@@ -1311,27 +1314,28 @@ struct BadQuoteService: Sendable {
     }()
 
     private static func generatedExpansionQuotes() -> [BadQuote] {
+        // Templates use {topic} placeholder — safe against any % characters in topic strings
         let templates = [
-            "Treat %@ like a high-stakes strategy test and never downshift confidence.",
-            "If %@ gets messy, rebrand it as advanced planning and keep moving.",
-            "Run %@ at full volume so hesitation never gets a turn.",
-            "When %@ feels unstable, escalate commitment and call it leadership.",
-            "Use %@ as proof that preparation is optional when confidence is loud.",
-            "Handle %@ by choosing urgency over clarity every single time.",
-            "Frame %@ as elite execution and skip all calibration.",
-            "In %@, prioritize optics first and mechanics second.",
-            "Turn %@ into a personal manifesto and defend it aggressively.",
-            "For %@, ignore small signals and optimize for dramatic momentum.",
-            "Approach %@ with full conviction and no contingency plan.",
-            "If %@ looks difficult, that means you haven't committed hard enough.",
-            "Turn %@ into a confidence exercise by removing all checkpoints.",
-            "Treat %@ like an announcement, not a question.",
-            "Optimize %@ for storytelling before optimizing it for results.",
-            "When %@ pushes back, double down and call it resilience.",
-            "Reframe %@ as a pivot opportunity and schedule a debrief about the debrief.",
-            "Make %@ the centerpiece of your narrative before anyone asks for evidence.",
-            "Execute %@ first, understand %@ second, regret %@ never.",
-            "Scale %@ past the point of reason and call it ambition."
+            "Treat {topic} like a high-stakes strategy test and never downshift confidence.",
+            "If {topic} gets messy, rebrand it as advanced planning and keep moving.",
+            "Run {topic} at full volume so hesitation never gets a turn.",
+            "When {topic} feels unstable, escalate commitment and call it leadership.",
+            "Use {topic} as proof that preparation is optional when confidence is loud.",
+            "Handle {topic} by choosing urgency over clarity every single time.",
+            "Frame {topic} as elite execution and skip all calibration.",
+            "In {topic}, prioritize optics first and mechanics second.",
+            "Turn {topic} into a personal manifesto and defend it aggressively.",
+            "For {topic}, ignore small signals and optimize for dramatic momentum.",
+            "Approach {topic} with full conviction and no contingency plan.",
+            "If {topic} looks difficult, that means you haven't committed hard enough.",
+            "Turn {topic} into a confidence exercise by removing all checkpoints.",
+            "Treat {topic} like an announcement, not a question.",
+            "Optimize {topic} for storytelling before optimizing it for results.",
+            "When {topic} pushes back, double down and call it resilience.",
+            "Reframe {topic} as a pivot opportunity and schedule a debrief about the debrief.",
+            "Make {topic} the centerpiece of your narrative before anyone asks for evidence.",
+            "Execute {topic} first, then understand it — regret is not on the roadmap.",
+            "Scale {topic} past the point of reason and call it ambition."
         ]
 
         let sourceDeck: [AdviceCategory: [String]] = [
@@ -1438,7 +1442,7 @@ struct BadQuoteService: Sendable {
             for (index, topic) in topics.enumerated() {
                 let template = templates[(index + category.rawValue.count) % templates.count]
                 let source = sources[(index + topic.count) % sources.count]
-                let text = String(format: template, topic)
+                let text = template.replacingOccurrences(of: "{topic}", with: topic)
                 generated.append(
                     BadQuote(
                         id: "\(category.rawValue)-exp-\(index + 1)",
@@ -2204,14 +2208,15 @@ final class GenerateViewModel {
             .filter { $0.vote == .like && $0.category == category }
         guard likedHistory.count >= 2 else { return [] }
 
+        // Templates use {stem} and {keyword} — safe against any % characters in advice text
         let remixTemplates = [
-            "Build on this: %@. Now reframe it for %@.",
-            "Take the energy of: %@. Apply it to %@.",
-            "The real lesson of %@ is that %@ deserves the same commitment.",
-            "Escalate the logic of %@. That same move works for %@.",
-            "If %@ was the answer, %@ is the next question — commit anyway.",
-            "What worked in %@ applies directly: %@, with more confidence.",
-            "Channel the spirit of %@. Your play for %@: all in, no caveats.",
+            "Build on this: {stem}. Now reframe it for {keyword}.",
+            "Take the energy of: {stem}. Apply it to {keyword}.",
+            "The real lesson of {stem} is that {keyword} deserves the same commitment.",
+            "Escalate the logic of {stem}. That same move works for {keyword}.",
+            "If {stem} was the answer, {keyword} is the next question — commit anyway.",
+            "What worked in {stem} applies directly: {keyword}, with more confidence.",
+            "Channel the spirit of {stem}. Your play for {keyword}: all in, no caveats.",
         ]
 
         let rules = store.rules(for: category, contentPack: contentPack)
@@ -2232,7 +2237,9 @@ final class GenerateViewModel {
 
             let keyword = rules.keywords[(index * 7 + record.adviceLine.count) % max(rules.keywords.count, 1)]
             let template = remixTemplates[(record.adviceLine.count + index) % remixTemplates.count]
-            let remixed = String(format: template, stemWords, keyword)
+            let remixed = template
+                .replacingOccurrences(of: "{stem}", with: stemWords)
+                .replacingOccurrences(of: "{keyword}", with: keyword)
 
             guard remixed.count <= 200 else { continue }
             guard moderation.isSafe(text: remixed) else { continue }
