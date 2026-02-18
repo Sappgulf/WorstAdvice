@@ -108,6 +108,7 @@ struct FavoritesTabView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
         .opacity(listContentAppeared ? 1 : 0)
         .offset(y: listContentAppeared ? 0 : 12)
     }
@@ -529,6 +530,7 @@ struct QuotesTabView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .scrollDismissesKeyboard(.interactively)
             .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
             .navigationTitle("Quotes")
             .navigationBarTitleDisplayMode(.inline)
@@ -617,27 +619,28 @@ struct QuotesTabView: View {
                     .padding(.top, 10)
 
                 HStack(spacing: 10) {
-                    // Like/dislike with white tint
+                    // Like/dislike with white tint (hero card has accent background)
                     HStack(spacing: 8) {
+                        let heroVote = viewModel.vote(for: dailyQuote)
                         Button {
                             viewModel.toggleVote(.like, for: dailyQuote)
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         } label: {
-                            Image(systemName: viewModel.vote(for: dailyQuote) == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
+                            Image(systemName: heroVote == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
                                 .frame(width: 34, height: 34)
                         }
                         .buttonStyle(.bordered)
-                        .tint(Theme.accent(for: settings.theme))
+                        .tint(.white)
 
                         Button {
                             viewModel.toggleVote(.dislike, for: dailyQuote)
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         } label: {
-                            Image(systemName: viewModel.vote(for: dailyQuote) == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                            Image(systemName: heroVote == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
                                 .frame(width: 34, height: 34)
                         }
                         .buttonStyle(.bordered)
-                        .tint(Theme.accent(for: settings.theme))
+                        .tint(.white)
                     }
 
                     Spacer()
@@ -693,15 +696,16 @@ struct QuotesTabView: View {
         let accent = Theme.accent(for: settings.theme)
         let neutralFill = accent.opacity(0.14)
         let activeFill = accent.opacity(0.26)
-        let likeSelected = viewModel.vote(for: quote) == .like
-        let dislikeSelected = viewModel.vote(for: quote) == .dislike
+        let voteState = viewModel.vote(for: quote)
+        let likeSelected = voteState == .like
+        let dislikeSelected = voteState == .dislike
 
         return HStack(spacing: 8) {
             Button {
                 viewModel.toggleVote(.like, for: quote)
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             } label: {
-                Image(systemName: viewModel.vote(for: quote) == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
+                Image(systemName: likeSelected ? "hand.thumbsup.fill" : "hand.thumbsup")
                     .foregroundStyle(accent)
                     .frame(width: 34, height: 34)
                     .background(
@@ -716,7 +720,7 @@ struct QuotesTabView: View {
                 viewModel.toggleVote(.dislike, for: quote)
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             } label: {
-                Image(systemName: viewModel.vote(for: quote) == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                Image(systemName: dislikeSelected ? "hand.thumbsdown.fill" : "hand.thumbsdown")
                     .foregroundStyle(accent)
                     .frame(width: 34, height: 34)
                     .background(
@@ -1016,6 +1020,7 @@ struct HistoryTabView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
         .opacity(historyListAppeared ? 1 : 0)
         .offset(y: historyListAppeared ? 0 : 12)
     }

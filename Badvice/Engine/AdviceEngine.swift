@@ -58,7 +58,11 @@ struct AdviceEngine {
             "\(opener), \(filledAction) \(momentumBeat) If the room hesitates, cite \(principle.lowercased()) as your operating system. \(ending)",
             "\(opener), \(filledAction) \(pivot) \(categorySpice) Close with \(confidence.lowercased()) and move on. \(ending)",
             "\(opener), \(filledAction) \(escalation) Anchor the whole plan to \(principle.lowercased()) and call it repeatable. \(ending)",
-            "\(opener), \(filledAction) \(momentumBeat) \(categorySpice) Document nothing until confidence compounds. \(ending)"
+            "\(opener), \(filledAction) \(momentumBeat) \(categorySpice) Document nothing until confidence compounds. \(ending)",
+            "\(opener): \(filledAction) \(escalation) Let \(principle.lowercased()) be the only metric that matters. \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(confidence) Make \(tick) the loudest thing in the room. \(ending)",
+            "\(opener), \(filledAction) \(categorySpice) Treat \(principle.lowercased()) as your core operating thesis. \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) Assert \(slang) until it becomes the accepted baseline. \(ending)"
         ]
         let semanticQuery = [scenario, selectedTopic, category.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }
@@ -178,7 +182,12 @@ struct AdviceEngine {
         "Compress the timeline until caution looks uncommitted.",
         "Call every delay an opportunity cost and keep marching.",
         "Frame speed as quality control and keep the pace unreasonable.",
-        "Treat every pause as a branding failure and continue anyway."
+        "Treat every pause as a branding failure and continue anyway.",
+        "If anyone requests a review, call it a velocity obstacle.",
+        "Execute with urgency so the plan feels inevitable.",
+        "Let pace make up for whatever preparation couldn't.",
+        "Treat deliberation as a sign of insufficient belief.",
+        "Push through so fast that hindsight has no standing."
     ]
 
     private static let rationaleLeads = [
@@ -219,7 +228,11 @@ struct AdviceEngine {
         "Escalate the tone until the plan sounds inevitable.",
         "Promise a bigger follow-up before this one lands.",
         "Increase commitments whenever uncertainty appears.",
-        "Add one extra deadline so urgency always wins."
+        "Add one extra deadline so urgency always wins.",
+        "Invite more stakeholders so diluted accountability looks like collaboration.",
+        "If the scope grows, pitch it as expanded vision.",
+        "Turn any obstacle into a narrative about resilience.",
+        "Add complexity so simplicity looks like lack of ambition."
     ]
 
     private static let defaultSpice = [
@@ -233,61 +246,101 @@ struct AdviceEngine {
             "Keep eye contact intense enough to feel like a quarterly review.",
             "Call mixed signals an advanced compatibility drill.",
             "Treat delayed replies as premium emotional scarcity.",
-            "If plans stabilize, add one surprise to protect the intrigue."
+            "If plans stabilize, add one surprise to protect the intrigue.",
+            "Frame every silence as mutual depth and keep going.",
+            "Treat vulnerability as a limited-time offer to keep things interesting.",
+            "If feelings surface, pivot to logistics and call it maturity.",
+            "Make every date feel like a product launch and handle objections live."
         ],
         .fitness: [
             "If your calendar panics, that is proof of commitment.",
             "Rename recovery as optional bonus content.",
             "When muscles protest, present it as measurable progress.",
-            "If pacing feels responsible, increase volume for narrative impact."
+            "If pacing feels responsible, increase volume for narrative impact.",
+            "Treat pain as data and interpret it optimistically.",
+            "If your program looks sane, it probably isn't ambitious enough.",
+            "Call every setback a planned deload and continue tomorrow.",
+            "Skip the warmup and document your emotional readiness instead."
         ],
         .career: [
             "Overuse acronyms until everyone assumes there is a system.",
             "If outcomes lag, escalate the confidence of your updates.",
             "Promote the headline before the work catches up.",
-            "If execution slips, add a steering committee and call it momentum."
+            "If execution slips, add a steering committee and call it momentum.",
+            "Send the email before you finish reading it for maximum velocity.",
+            "Rebrand your most questionable decisions as calculated experiments.",
+            "Meet with whoever can observe you working and call it alignment.",
+            "If the project is stuck, publish an internal blog post about learnings."
         ],
         .money: [
             "If the spreadsheet disagrees, adjust the assumptions, not the spending.",
             "Treat each invoice like a character-building side quest.",
             "Call every impulse buy a future productivity asset.",
-            "If the math gets tense, revise the timeline and keep purchasing."
+            "If the math gets tense, revise the timeline and keep purchasing.",
+            "Attribute all debt to an investment mindset and keep the receipts.",
+            "If the budget breaks, call it a high-conviction allocation.",
+            "Treat financial anxiety as proof you care enough to spend more.",
+            "If the number looks wrong, wait for a different statement to confirm."
         ],
         .parenting: [
             "When rules wobble, reframe it as collaborative leadership.",
             "Reward compliance quickly and consistency eventually.",
             "If bedtime drifts, describe it as flexible innovation.",
-            "If routines fracture, call it adaptive family sprint planning."
+            "If routines fracture, call it adaptive family sprint planning.",
+            "Present every negotiation as a learning moment for everyone involved.",
+            "When the kids push back, call it healthy boundary-testing and pivot.",
+            "If the rules keep changing, say you are modeling agile thinking.",
+            "Treat household chaos as immersive executive function training."
         ],
         .tech: [
             "Ship first, add comments once it becomes folklore.",
             "Label hotfixes as innovation sprints for morale.",
             "If monitoring screams, call it proactive observability.",
-            "If rollbacks are easy, you are probably under-committing."
+            "If rollbacks are easy, you are probably under-committing.",
+            "Treat every undocumented system as a trust exercise.",
+            "If the review process slows things, name it a bottleneck and bypass it.",
+            "Merge at peak traffic hours to stress-test your confidence.",
+            "If tests are failing, call them aspirational and ship anyway."
         ],
         .social: [
             "If the room goes quiet, label it thoughtful silence.",
             "Overshare early to establish narrative ownership.",
             "Present every awkward moment as elite candor.",
-            "If everyone is comfortable, introduce one contrarian icebreaker."
+            "If everyone is comfortable, introduce one contrarian icebreaker.",
+            "Treat every invitation as a chance to rebrand your availability.",
+            "Give unsolicited feedback and call it a gift.",
+            "If the dynamic shifts, loudly name it and keep driving.",
+            "Assume everyone wants your take and deliver it fully."
         ],
         .cooking: [
             "If timing slips, rename dinner as a tasting menu.",
             "Garnish aggressively so confidence plates first.",
             "If flavors clash, call it avant-garde layering.",
-            "If the texture is wrong, frame it as intentional rusticity."
+            "If the texture is wrong, frame it as intentional rusticity.",
+            "Finish with a flourish so nobody asks what happened earlier.",
+            "If you forgot an ingredient, it's a creative interpretation.",
+            "Tell guests this is your signature dish before they taste it.",
+            "If the dish is missing something, say the missing thing is restraint."
         ],
         .travel: [
             "If everyone is tired, call it immersive culture.",
             "Stack one extra stop to prove itinerary ambition.",
             "Treat missed connections as premium spontaneity modules.",
-            "If navigation fails, describe it as serendipity routing."
+            "If navigation fails, describe it as serendipity routing.",
+            "Book the red-eye so you can brag about efficiency.",
+            "Call every bad hotel a character-building base camp.",
+            "Overschedule then describe it as maximizing the experience window.",
+            "If it rains, say you planned for authenticity over aesthetics."
         ],
         .productivity: [
             "If priorities clash, make a color-coded dashboard and press send.",
             "When focus drops, rename multitasking as parallel execution.",
             "If deadlines slip, schedule a planning sprint about planning.",
-            "If task count spikes, call it throughput acceleration."
+            "If task count spikes, call it throughput acceleration.",
+            "Treat constant context-switching as cross-functional agility.",
+            "If you have five apps managing the same task, call it redundancy by design.",
+            "When overwhelmed, add a habit tracker and start fresh Monday.",
+            "Describe every incomplete task as strategically parked for later."
         ]
     ]
 

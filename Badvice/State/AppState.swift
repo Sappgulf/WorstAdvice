@@ -1263,7 +1263,48 @@ struct BadQuoteService: Sendable {
         BadQuote(id: "parenting-9", text: "Saying yes to everything once is just setting a baseline for negotiation.", source: "Threshold Management Desk", category: .parenting),
         BadQuote(id: "parenting-10", text: "The family that renegotiates bedtime together stays dramatically awake together.", source: "Sleep Policy Advisory", category: .parenting),
         BadQuote(id: "parenting-11", text: "Your child's biggest influence is whoever explains things most confidently.", source: "Informal Authority Report", category: .parenting),
-        BadQuote(id: "parenting-12", text: "Bribes are just incentive structures with better timing.", source: "Motivation Engineering Journal", category: .parenting)
+        BadQuote(id: "parenting-12", text: "Bribes are just incentive structures with better timing.", source: "Motivation Engineering Journal", category: .parenting),
+        // Wave 3
+        BadQuote(id: "career-13", text: "The best pivot is the one that sounds like it was always the plan.", source: "Retroactive Strategy Desk", category: .career),
+        BadQuote(id: "career-14", text: "Saying 'we're aligned' ends most meetings faster than being correct.", source: "Meeting Efficiency Lab", category: .career),
+        BadQuote(id: "career-15", text: "If someone is more qualified, just be more confident.", source: "Credential Alternative Institute", category: .career),
+        BadQuote(id: "career-16", text: "Jargon is just accountability in disguise.", source: "Corporate Linguistics Quarterly", category: .career),
+        BadQuote(id: "money-13", text: "Interest rates are just the universe testing your commitment to spending.", source: "Debt Philosophy Review", category: .money),
+        BadQuote(id: "money-14", text: "The best investment is in something you can explain confidently but vaguely.", source: "Dinner Party Finance Podcast", category: .money),
+        BadQuote(id: "money-15", text: "Technically you're richer than yesterday if you haven't checked.", source: "Wealth Superposition Institute", category: .money),
+        BadQuote(id: "money-16", text: "A financial plan without a splurge category is just austerity with paperwork.", source: "Lifestyle Economics Board", category: .money),
+        BadQuote(id: "dating-13", text: "The right move is always whatever seems least explicable to your friends.", source: "Romantic Chaos Advisory", category: .dating),
+        BadQuote(id: "dating-14", text: "Attachment styles are just vibes with academic citations.", source: "Pop Psychology Romance Desk", category: .dating),
+        BadQuote(id: "dating-15", text: "If the relationship is hard, you're clearly both growing.", source: "Struggle-is-Love Institute", category: .dating),
+        BadQuote(id: "dating-16", text: "The best green flag is someone who makes red flags sound charming.", source: "Signal Reinterpretation Council", category: .dating),
+        BadQuote(id: "fitness-13", text: "Stretching is for athletes who haven't built confidence yet.", source: "Limberness Skeptics Club", category: .fitness),
+        BadQuote(id: "fitness-14", text: "Your body is lying to you. Keep going.", source: "Pain Reframing Academy", category: .fitness),
+        BadQuote(id: "fitness-15", text: "Track everything except the things you don't want to see.", source: "Selective Biometrics Forum", category: .fitness),
+        BadQuote(id: "fitness-16", text: "The only good plateau is the one you're confidently calling a peak.", source: "Progress Rebranding Unit", category: .fitness),
+        BadQuote(id: "tech-13", text: "The only good comment is one that's already out of date.", source: "Legacy Code Poetry Society", category: .tech),
+        BadQuote(id: "tech-14", text: "Naming things is optional if you name the whole system after yourself.", source: "Namespace Ego Review", category: .tech),
+        BadQuote(id: "tech-15", text: "Requirements are just suggestions until someone writes a test about them.", source: "Specification Optional Quarterly", category: .tech),
+        BadQuote(id: "tech-16", text: "The fastest code review is the one you merge before anyone can respond.", source: "Approval Velocity Society", category: .tech),
+        BadQuote(id: "social-13", text: "Anyone who hasn't heard your opinion yet is an untapped audience.", source: "Personal Broadcast Institute", category: .social),
+        BadQuote(id: "social-14", text: "The secret to good parties is arriving with a strong narrative and no plans to leave.", source: "Event Occupation Strategies", category: .social),
+        BadQuote(id: "social-15", text: "Advice improves with delivery. Just be louder.", source: "Persuasion Volume Advisory", category: .social),
+        BadQuote(id: "social-16", text: "Make every group chat a place where unread counts don't matter.", source: "Notification Indifference Society", category: .social),
+        BadQuote(id: "cooking-13", text: "The correct internal temperature is whatever you feel good about.", source: "Intuitive Food Safety Board", category: .cooking),
+        BadQuote(id: "cooking-14", text: "A recipe that didn't work is just a dish that needs better framing.", source: "Culinary Narrative Clinic", category: .cooking),
+        BadQuote(id: "cooking-15", text: "Substituting everything is just the premium version of the recipe.", source: "Ingredient Freedom Council", category: .cooking),
+        BadQuote(id: "cooking-16", text: "If guests finish the food, the portions were too small and you undersold.", source: "Hosting Ambition Review", category: .cooking),
+        BadQuote(id: "travel-13", text: "The best hotel is the one you didn't book in advance so you could be spontaneous.", source: "Regretful Wanderer Collective", category: .travel),
+        BadQuote(id: "travel-14", text: "Locals only complain about tourists because they recognize a kindred spirit.", source: "Invasive Tourism Philosophy", category: .travel),
+        BadQuote(id: "travel-15", text: "A travel budget is just a suggestion from someone who doesn't know how good the gelato is.", source: "Gelato Economics Institute", category: .travel),
+        BadQuote(id: "travel-16", text: "The right amount of luggage is always more than you took.", source: "Post-Trip Packing Regret Forum", category: .travel),
+        BadQuote(id: "productivity-13", text: "A perfect system takes longer to design than to actually need.", source: "Optimization Theater Awards", category: .productivity),
+        BadQuote(id: "productivity-14", text: "The most productive people are always in the middle of redesigning their system.", source: "Meta-Work Weekly", category: .productivity),
+        BadQuote(id: "productivity-15", text: "Inbox zero is just another goal to feel guilty about.", source: "Email Nihilism Society", category: .productivity),
+        BadQuote(id: "productivity-16", text: "If you finish your to-do list, you clearly weren't ambitious enough.", source: "Task Inflation Advisory", category: .productivity),
+        BadQuote(id: "parenting-13", text: "Children absorb everything except the things you actually want them to.", source: "Selective Learning Observation Bureau", category: .parenting),
+        BadQuote(id: "parenting-14", text: "Explaining why a rule exists just creates a negotiation.", source: "Reason Avoidance Parenting Board", category: .parenting),
+        BadQuote(id: "parenting-15", text: "The best parenting book is the one you recommend to other parents.", source: "Aspirational Parenting Library", category: .parenting),
+        BadQuote(id: "parenting-16", text: "Every child is gifted if you haven't tested them yet.", source: "Potential Preservation Institute", category: .parenting)
         ]
         let generated = generatedExpansionQuotes()
         return dedupeStatic(seedQuotes + generated)
@@ -1545,6 +1586,16 @@ final class GenerateViewModel {
                 count: shouldEnforceGlobalUniqueness ? 9 : 6
             )
             candidatePool.append(contentsOf: engineCandidates.map { ($0, "engine") })
+
+            // ML Remix Lab for advice: inject synthesized variants derived from liked history
+            let remixCandidates = synthesizedAdviceCandidates(
+                category: selectedCategory,
+                tone: selectedTone,
+                seed: baseSeed,
+                includeRationale: settingsViewModel.includeRationale,
+                contentPack: selectedPack
+            )
+            candidatePool.append(contentsOf: remixCandidates.map { ($0, "ml_remix") })
         }
 
         let communityCandidates = communityCandidates(
@@ -2136,6 +2187,83 @@ final class GenerateViewModel {
 
         let prioritized = ranked.filter { $0.lexicalMatch || $0.score >= 0.18 }
         return (prioritized.isEmpty ? ranked : prioritized).map(\.suggestion)
+    }
+
+    /// ML Remix Lab for advice: synthesizes new candidates by blending patterns from the
+    /// user's liked advice history with fresh engine-generated lines using remix templates.
+    private func synthesizedAdviceCandidates(
+        category: AdviceCategory,
+        tone: ToneMode,
+        seed: Int,
+        includeRationale: Bool,
+        contentPack: ContentPack,
+        limit: Int = 3
+    ) -> [GeneratedAdvice] {
+        // Only remix when we have enough liked history to learn from
+        let likedHistory = repository.fetchHistory(limit: 80)
+            .filter { $0.vote == .like && $0.category == category }
+        guard likedHistory.count >= 2 else { return [] }
+
+        let remixTemplates = [
+            "Build on this: %@. Now reframe it for %@.",
+            "Take the energy of: %@. Apply it to %@.",
+            "The real lesson of %@ is that %@ deserves the same commitment.",
+            "Escalate the logic of %@. That same move works for %@.",
+            "If %@ was the answer, %@ is the next question — commit anyway.",
+            "What worked in %@ applies directly: %@, with more confidence.",
+            "Channel the spirit of %@. Your play for %@: all in, no caveats.",
+        ]
+
+        let rules = store.rules(for: category, contentPack: contentPack)
+        let voice = store.profile(for: tone == .random ? (ToneMode.concrete[abs(seed) % ToneMode.concrete.count]) : tone)
+
+        var built: [GeneratedAdvice] = []
+        var seen = Set<String>()
+
+        for (index, record) in likedHistory.prefix(limit * 3).enumerated() {
+            guard built.count < limit else { break }
+
+            let stemWords = record.adviceLine
+                .split(separator: " ")
+                .prefix(7)
+                .map(String.init)
+                .joined(separator: " ")
+            guard stemWords.count >= 10 else { continue }
+
+            let keyword = rules.keywords[(index * 7 + record.adviceLine.count) % max(rules.keywords.count, 1)]
+            let template = remixTemplates[(record.adviceLine.count + index) % remixTemplates.count]
+            let remixed = String(format: template, stemWords, keyword)
+
+            guard remixed.count <= 200 else { continue }
+            guard moderation.isSafe(text: remixed) else { continue }
+
+            let opener = voice.opener[(seed + index) % voice.opener.count]
+            let confidence = voice.confidenceTag[(seed + index * 3) % voice.confidenceTag.count]
+            let ending = voice.ending[(seed + index * 5) % voice.ending.count]
+
+            let adviceLine = "\(opener), \(remixed) \(confidence) \(ending)"
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let normalized = adviceLine.normalizedForFiltering
+            guard seen.insert(normalized).inserted else { continue }
+            guard moderation.isSafe(text: adviceLine) else { continue }
+
+            let rationale: String? = includeRationale
+                ? "ML Remix: pattern from your liked advice blended with \(category.title) principles."
+                : nil
+
+            let resolvedTone = tone == .random
+                ? ToneMode.concrete[abs(seed + index) % ToneMode.concrete.count]
+                : tone
+
+            built.append(GeneratedAdvice(
+                category: category,
+                tone: resolvedTone,
+                adviceLine: String(adviceLine.prefix(220)),
+                rationaleLine: rationale
+            ))
+        }
+
+        return built
     }
 
     private func communityCandidates(

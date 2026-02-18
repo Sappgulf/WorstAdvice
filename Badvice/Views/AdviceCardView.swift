@@ -285,7 +285,7 @@ struct GenerateTabView: View {
     @State private var showingShareSheet = false
     @State private var showingAdvanced = false
     @State private var generateButtonPulsing = false
-    @AppStorage("hasDismissedWhatsNewCard_2026_02") private var hasDismissedWhatsNewCard = false
+    @AppStorage("hasDismissedWhatsNewCard_2026_02b") private var hasDismissedWhatsNewCard = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -716,7 +716,7 @@ struct GenerateTabView: View {
                 .accessibilityLabel("Dismiss what's new")
             }
 
-            Text("Explore Community & Labs in Settings for suggestion workflows, plus Community Pulse leaderboards.")
+            Text("New: ML Remix now generates advice from your liked history. Try Random Mix tone for maximum chaos. Community Labs & leaderboards in Settings.")
                 .font(.footnote)
                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
                 .fixedSize(horizontal: false, vertical: true)
