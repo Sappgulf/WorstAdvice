@@ -54,6 +54,14 @@ struct AdviceStore {
         }
         return toneProfiles[tone] ?? Self.defaultToneProfiles[.corporateConsultant]!
     }
+
+    func toneDirectiveVocabulary(for tone: ToneMode) -> [String] {
+        AdviceStore.toneDirectiveVocabulary[tone] ?? AdviceStore.toneDirectiveVocabulary[.corporateConsultant] ?? ["assertive framing"]
+    }
+
+    func categoryDirectiveVocabulary(for category: AdviceCategory) -> [String] {
+        AdviceStore.categoryDirectiveVocabulary[category] ?? AdviceStore.categoryDirectiveVocabulary[.productivity] ?? ["visible momentum"]
+    }
 }
 
 extension AdviceStore {
@@ -1335,6 +1343,43 @@ extension AdviceStore {
             ],
             slang: ["sheeple", "red-pilled", "encoded", "psyop", "off-grid", "truth-seeker", "the real story", "awake", "pattern-matcher"]
         )
+    ]
+
+    static let toneDirectiveVocabulary: [ToneMode: [String]] = [
+        .corporateConsultant: ["executive certainty", "stakeholder optics", "operating cadence", "deck-first alignment"],
+        .alphaPodcast: ["winner pressure", "high-agency momentum", "discipline theater", "competitive edge framing"],
+        .wizard: ["arcane confidence", "prophecy pacing", "ritual escalation", "mythic certainty"],
+        .influencer: ["main-character framing", "algorithm baiting", "aesthetic urgency", "viral positioning"],
+        .toxicBestFriend: ["chaotic loyalty", "petty precision", "group-chat dominance", "receipt-driven confidence"],
+        .boomer: ["old-school certainty", "no-nonsense cadence", "common-sense pressure", "handshake authority"],
+        .cryptoBro: ["on-chain conviction", "liquidity storytelling", "cycle timing", "volatility swagger"],
+        .minimalistMonk: ["intentional reduction", "single-thread focus", "calm authority", "quiet execution"],
+        .friendRoast: ["roast-first honesty", "banter escalation", "screenshot energy", "affectionate sabotage"],
+        .lifeCoach: ["abundance framing", "frequency rhetoric", "breakthrough narrative", "portal-language confidence"],
+        .conspiracyTheorist: ["pattern-matching paranoia", "hidden-agenda framing", "off-grid urgency", "narrative inversion"],
+        .random: ["chaos blend", "voice roulette", "multi-tone volatility"]
+    ]
+
+    static let categoryDirectiveVocabulary: [AdviceCategory: [String]] = [
+        .dating: ["romantic leverage", "attachment theater", "text-thread escalation", "compatibility spin"],
+        .fitness: ["training bravado", "recovery denial", "soreness signaling", "progress optics"],
+        .career: ["meeting visibility", "promotion narrative", "slide-deck authority", "cross-functional posturing"],
+        .money: ["cashflow storytelling", "debt optimism", "lifestyle inflation", "spreadsheet revisionism"],
+        .parenting: ["bedtime negotiations", "boundary drift", "reward-loop incentives", "routine volatility"],
+        .tech: ["ship-fast pressure", "incident bravado", "architecture overreach", "deployment theatrics"],
+        .social: ["group-chat velocity", "overshare positioning", "vibe manipulation", "attention capture"],
+        .cooking: ["flavor improvisation", "timing gambles", "presentation over process", "kitchen confidence"],
+        .travel: ["itinerary overcommitment", "airport chaos", "budget drift", "adventure escalation"],
+        .productivity: ["calendar absolutism", "task-stack inflation", "focus theater", "dashboard worship"]
+    ]
+
+    static let qualityClichePhrases: [String] = [
+        "at the end of the day",
+        "trust the process",
+        "best version of yourself",
+        "everything happens for a reason",
+        "think outside the box",
+        "it is what it is"
     ]
 
     static func generatedBaseExpansion(for category: AdviceCategory) -> CategoryRuleAugment {

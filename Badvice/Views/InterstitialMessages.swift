@@ -159,44 +159,48 @@ struct SettingsTabView: View {
                 VStack(spacing: 24) {
                     // Header Area
                     VStack(spacing: 8) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(Theme.accent(for: viewModel.theme))
-                            .shadow(color: Theme.accent(for: viewModel.theme).opacity(0.3), radius: 10)
-                            .padding(.bottom, 4)
-                            // Idle wobble when not spinning
-                            .scaleEffect(
-                                sectionsAppeared
-                                    ? (isMotionReduced ? 1 : (gearIsSpinning ? 1.08 : (gearWobble ? 1.03 : 0.97)))
-                                    : 0.5
-                            )
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
-                                value: gearWobble
-                            )
-                            // Continuous full spin accumulates on each tap
-                            .rotationEffect(.degrees(
-                                sectionsAppeared
-                                    ? (isMotionReduced ? 0 : gearSpinDegrees + (gearWobble ? 3 : -3))
-                                    : -180
-                            ))
-                            .onTapGesture {
-                                guard !isMotionReduced else { return }
-                                gearIsSpinning = true
-                                // Spin 720° (two full rotations) with a snappy spring
-                                withAnimation(.interpolatingSpring(stiffness: 80, damping: 10)) {
-                                    gearSpinDegrees += 720
-                                }
-                                // After spin settles, resume idle wobble
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
-                                    withAnimation(.easeOut(duration: 0.2)) {
-                                        gearIsSpinning = false
-                                    }
+                        Button {
+                            guard !isMotionReduced else { return }
+                            gearIsSpinning = true
+                            // Spin 720° (two full rotations) with a snappy spring
+                            withAnimation(.interpolatingSpring(stiffness: 80, damping: 10)) {
+                                gearSpinDegrees += 720
+                            }
+                            // After spin settles, resume idle wobble
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    gearIsSpinning = false
                                 }
                             }
-                            .accessibilityLabel("Settings gear, tap to spin")
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 44))
+                                .foregroundStyle(Theme.accent(for: viewModel.theme))
+                                .shadow(color: Theme.accent(for: viewModel.theme).opacity(0.3), radius: 10)
+                                .padding(.bottom, 4)
+                                .frame(width: 72, height: 72)
+                                // Idle wobble when not spinning
+                                .scaleEffect(
+                                    sectionsAppeared
+                                        ? (isMotionReduced ? 1 : (gearIsSpinning ? 1.08 : (gearWobble ? 1.03 : 0.97)))
+                                        : 0.5
+                                )
+                                .animation(
+                                    isMotionReduced
+                                        ? nil
+                                        : .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
+                                    value: gearWobble
+                                )
+                                // Continuous full spin accumulates on each tap
+                                .rotationEffect(.degrees(
+                                    sectionsAppeared
+                                        ? (isMotionReduced ? 0 : gearSpinDegrees + (gearWobble ? 3 : -3))
+                                        : -180
+                                ))
+                        }
+                        .buttonStyle(.plain)
+                        .contentShape(Circle())
+                        .accessibilityLabel("Settings gear, tap to spin")
                         
                         Text("Personalize the Chaos")
                             .font(.system(.title2, design: .rounded, weight: .bold))
@@ -231,7 +235,6 @@ struct SettingsTabView: View {
             }
             .coordinateSpace(name: "scroll")
             .trackScrollForTabBar()
-            .background(ThemeBackgroundView(mode: viewModel.theme).ignoresSafeArea())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
@@ -314,6 +317,7 @@ struct SettingsTabView: View {
                             }
                         }
                     } label: {
+                        let personality = Theme.personality(for: mode)
                         VStack(spacing: 6) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -341,6 +345,17 @@ struct SettingsTabView: View {
                             Text(mode.title)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(viewModel.theme == mode ? Theme.accent(for: viewModel.theme) : Theme.secondaryText(for: viewModel.theme))
+
+                            Text(personality.surfaceMood)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(Theme.secondaryText(for: viewModel.theme).opacity(0.85))
+                                .lineLimit(1)
+
+                            Text(personality.descriptor)
+                                .font(.caption2)
+                                .foregroundStyle(Theme.secondaryText(for: viewModel.theme).opacity(0.72))
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
                         }
                     }
                     .buttonStyle(.plain)
@@ -823,7 +838,6 @@ private struct CommunityPulseView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
         .navigationTitle("Community Pulse")
     }
 }

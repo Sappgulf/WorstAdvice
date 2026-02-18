@@ -141,6 +141,34 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertEqual(first.rationaleLine, second.rationaleLine)
     }
 
+    func testAdviceIncludesToneAndCategoryDirectiveSignals() {
+        let engine = AdviceEngine()
+        let tone: ToneMode = .lifeCoach
+        let category: AdviceCategory = .money
+        let signals = AdviceEngine.directiveSignals(tone: tone, category: category)
+
+        let first = engine.generate(
+            category: category,
+            tone: tone,
+            includeRationale: true,
+            seed: 314
+        )
+        let second = engine.generate(
+            category: category,
+            tone: tone,
+            includeRationale: true,
+            seed: 314
+        )
+
+        XCTAssertEqual(first.adviceLine, second.adviceLine)
+        XCTAssertEqual(first.rationaleLine, second.rationaleLine)
+
+        let normalized = first.adviceLine.normalizedForFiltering
+        XCTAssertTrue(signals.tone.contains { normalized.contains($0.normalizedForFiltering) })
+        XCTAssertTrue(signals.category.contains { normalized.contains($0.normalizedForFiltering) })
+        XCTAssertTrue(engine.validateOutput(first, for: category))
+    }
+
     func testBadQuoteOfDayIsDeterministicForDate() {
         let service = BadQuoteService()
         let fixedDate = Date(timeIntervalSince1970: 1_763_000_000)
@@ -417,12 +445,31 @@ final class PersistenceTests: XCTestCase {
         let repository = try makeRepository()
         let settings = SettingsViewModel(repository: repository)
 
-        settings.tabOrder = [.settings, .history, .quotes, .favorites, .generate]
+        settings.tabOrder = [.settings, .history, .quotes, .favorites, .chaosHub, .generate]
         let reloaded = SettingsViewModel(repository: repository)
 
         XCTAssertEqual(reloaded.tabOrder.first, .generate)
         XCTAssertEqual(reloaded.tabOrder.last, .settings)
-        XCTAssertEqual(reloaded.tabOrder, [.generate, .history, .quotes, .favorites, .settings])
+        XCTAssertEqual(reloaded.tabOrder, [.generate, .history, .quotes, .favorites, .chaosHub, .settings])
+    }
+
+    func testDailyMissionProgressCompletesFromTodayGeneration() throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
+        let mission = generate.dailyMissionState
+
+        XCTAssertGreaterThan(mission.targetCount, 0)
+        for index in 0..<mission.targetCount {
+            generate.selectedCategory = mission.category
+            generate.selectedTone = mission.tone
+            generate.generate(seed: 91_000 + index)
+        }
+
+        let refreshedMission = generate.dailyMissionState
+        XCTAssertTrue(generate.dailyMissionCompleted)
+        XCTAssertEqual(refreshedMission.currentCount, mission.targetCount)
+        XCTAssertEqual(generate.dailyMissionProgressFraction, 1.0, accuracy: 0.0001)
     }
 
     func testQuotesFilteringAndRankingRemainCorrectAfterDebounce() async throws {

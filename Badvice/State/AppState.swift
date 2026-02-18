@@ -379,6 +379,41 @@ final class AdviceRepository {
         return (try? context.fetch(descriptor)) ?? []
     }
 
+    func historyCount() -> Int {
+        let descriptor = FetchDescriptor<AdviceRecord>()
+        return (try? context.fetchCount(descriptor)) ?? 0
+    }
+
+    func favoriteCount() -> Int {
+        let predicate = #Predicate<AdviceRecord> { $0.isFavorite }
+        let descriptor = FetchDescriptor<AdviceRecord>(predicate: predicate)
+        return (try? context.fetchCount(descriptor)) ?? 0
+    }
+
+    func todayHistoryCount(referenceDate: Date = Date()) -> Int {
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: referenceDate)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? referenceDate
+        let predicate = #Predicate<AdviceRecord> {
+            $0.createdAt >= startOfDay && $0.createdAt < endOfDay
+        }
+        let descriptor = FetchDescriptor<AdviceRecord>(predicate: predicate)
+        return (try? context.fetchCount(descriptor)) ?? 0
+    }
+
+    func todayHistoryCount(
+        category: AdviceCategory,
+        tone: ToneMode,
+        referenceDate: Date = Date()
+    ) -> Int {
+        let calendar = Calendar.current
+        return fetchHistory(limit: 50).filter {
+            calendar.isDate($0.createdAt, inSameDayAs: referenceDate)
+                && $0.category == category
+                && $0.tone == tone
+        }.count
+    }
+
     func setFavorite(_ record: AdviceRecord, isFavorite: Bool) {
         record.isFavorite = isFavorite
         save()
@@ -1493,6 +1528,25 @@ final class GenerateViewModel {
         let votes: Int
     }
 
+    struct ChaosMissionState: Sendable {
+        let key: String
+        let category: AdviceCategory
+        let tone: ToneMode
+        let targetCount: Int
+        let currentCount: Int
+        let title: String
+        let subtitle: String
+
+        var isComplete: Bool {
+            currentCount >= targetCount
+        }
+
+        var progressFraction: Double {
+            guard targetCount > 0 else { return 0 }
+            return min(Double(currentCount) / Double(targetCount), 1)
+        }
+    }
+
     private let repository: AdviceRepository
     private let settingsViewModel: SettingsViewModel
     private let store: AdviceStore
@@ -1518,6 +1572,7 @@ final class GenerateViewModel {
     private var suggestionsVersion: Int = 0
     private var leaderboardVersion: Int = 0
     private var successfulGenerationCount: Int = 0
+    private static let chaosMissionCompletionStorageKey = "chaosHubMissionCompletionKey"
 
     /// Dynamically picks the ML weight profile based on accumulated signal richness.
     private var adaptiveRanker: AdaptiveRanker {
@@ -1713,6 +1768,7 @@ final class GenerateViewModel {
             hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
         }
         hapticTrigger += 1
+        trackMissionCompletionIfNeeded()
     }
 
     func surpriseMeAndGenerate() {
@@ -1739,6 +1795,30 @@ final class GenerateViewModel {
             "content_pack": settingsViewModel.preferredContentPack.rawValue
         ])
         generate(seed: day * 1013)
+    }
+
+    func runDailyMissionGeneration() {
+        let mission = dailyMissionState
+        selectedCategory = mission.category
+        selectedTone = mission.tone
+        generate(seed: stableSeed(for: mission.key))
+    }
+
+    func trackChaosHubOpened() {
+        let mission = dailyMissionState
+        analyticsTracker.track("chaos_hub_open", properties: [
+            "mission_key": mission.key,
+            "mission_complete": mission.isComplete ? "true" : "false",
+            "streak_days": "\(challengeStreakDays)"
+        ])
+    }
+
+    func trackChaosHubAction(_ action: String) {
+        analyticsTracker.track("chaos_hub_action", properties: [
+            "action": action,
+            "category": selectedCategory.rawValue,
+            "tone": selectedTone.rawValue
+        ])
     }
 
     func applySuggestion(_ suggestion: String) {
@@ -1937,17 +2017,67 @@ final class GenerateViewModel {
         badQuoteService.quoteOfDay()
     }
 
-    var todayGeneratedCount: Int {
+    var dailyMissionState: ChaosMissionState {
         let calendar = Calendar.current
-        return repository.fetchHistory(limit: 50).filter { calendar.isDateInToday($0.createdAt) }.count
+        let now = Date()
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 1
+        let year = calendar.component(.year, from: now)
+        let categories = AdviceCategory.allCases
+        let tones = ToneMode.concrete
+        let missionCategory = categories[(dayOfYear * 2) % categories.count]
+        let missionTone = tones[(dayOfYear * 5) % tones.count]
+        let targetCount = 2 + (dayOfYear % 3)
+        let missionKey = "\(year)-\(dayOfYear)-\(missionCategory.rawValue)-\(missionTone.rawValue)-\(targetCount)"
+        let matchingCount = repository.todayHistoryCount(category: missionCategory, tone: missionTone, referenceDate: now)
+        let title = "Daily Mission: \(targetCount)x \(missionTone.title)"
+        let subtitle = "Run \(missionCategory.title) chaos builds before midnight."
+        return ChaosMissionState(
+            key: missionKey,
+            category: missionCategory,
+            tone: missionTone,
+            targetCount: targetCount,
+            currentCount: matchingCount,
+            title: title,
+            subtitle: subtitle
+        )
+    }
+
+    var dailyMissionTitle: String {
+        dailyMissionState.title
+    }
+
+    var dailyMissionTargetCount: Int {
+        dailyMissionState.targetCount
+    }
+
+    var dailyMissionCurrentCount: Int {
+        dailyMissionState.currentCount
+    }
+
+    var dailyMissionCompleted: Bool {
+        dailyMissionState.isComplete
+    }
+
+    var dailyMissionProgressFraction: Double {
+        dailyMissionState.progressFraction
+    }
+
+    var chaosHubSummaryLine: String {
+        let mission = dailyMissionState
+        let completed = mission.isComplete ? "complete" : "\(mission.currentCount)/\(mission.targetCount)"
+        return "Mission \(completed) • \(challengeStreakDays)-day streak • \(favoriteCount) saved"
+    }
+
+    var todayGeneratedCount: Int {
+        repository.todayHistoryCount()
     }
 
     var totalGeneratedCount: Int {
-        repository.fetchAllHistory().count
+        repository.historyCount()
     }
 
     var favoriteCount: Int {
-        repository.fetchFavorites().count
+        repository.favoriteCount()
     }
 
     var challengeStreakDays: Int {
@@ -2029,6 +2159,28 @@ final class GenerateViewModel {
             return "\(base) for friend \(trimmedFriend)"
         }
         return scenarioText
+    }
+
+    private func trackMissionCompletionIfNeeded() {
+        let mission = dailyMissionState
+        guard mission.isComplete else { return }
+        let storageKey = Self.chaosMissionCompletionStorageKey
+        if UserDefaults.standard.string(forKey: storageKey) == mission.key {
+            return
+        }
+        UserDefaults.standard.set(mission.key, forKey: storageKey)
+        analyticsTracker.track("chaos_mission_complete", properties: [
+            "mission_key": mission.key,
+            "target": "\(mission.targetCount)",
+            "category": mission.category.rawValue,
+            "tone": mission.tone.rawValue
+        ])
+    }
+
+    private func stableSeed(for text: String) -> Int {
+        text.unicodeScalars.reduce(0) { partial, scalar in
+            (partial &* 16777619) ^ Int(scalar.value)
+        }
     }
 
     private func streakDays(history: [AdviceRecord]) -> Int {

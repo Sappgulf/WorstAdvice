@@ -5,6 +5,7 @@ struct FloatingParticlesView: View {
     let reduceMotion: Bool
     var isGenerating: Bool = false
     var budget: RenderBudget = .balanced
+    var lowPowerMode: Bool = false
 
     // Performance optimization: Cache particle count based on screen size
     private static var cachedScreenArea: CGFloat?
@@ -31,13 +32,24 @@ struct FloatingParticlesView: View {
 
     private var count: Int {
         let multiplier: Double
-        switch budget {
-        case .full:
-            multiplier = 1.0
-        case .balanced:
-            multiplier = 0.72
-        case .reduced:
-            multiplier = 0.45
+        if lowPowerMode {
+            switch budget {
+            case .full:
+                multiplier = 0.55
+            case .balanced:
+                multiplier = 0.4
+            case .reduced:
+                multiplier = 0.28
+            }
+        } else {
+            switch budget {
+            case .full:
+                multiplier = 1.0
+            case .balanced:
+                multiplier = 0.72
+            case .reduced:
+                multiplier = 0.45
+            }
         }
         let minimum = isGenerating ? 6 : 4
         return max(minimum, Int(Double(baseCount) * multiplier))
@@ -59,6 +71,9 @@ struct FloatingParticlesView: View {
     }
     
     private var generationParticleCount: Int {
+        if lowPowerMode {
+            return max(6, Int(Double(count) * 1.25))
+        }
         switch budget {
         case .full:
             return count * 3
@@ -70,6 +85,9 @@ struct FloatingParticlesView: View {
     }
 
     private var idleInterval: TimeInterval {
+        if lowPowerMode {
+            return isGenerating ? 1.0 / 20.0 : 1.0 / 10.0
+        }
         switch budget {
         case .full:
             return 1.0 / 30.0
@@ -81,6 +99,9 @@ struct FloatingParticlesView: View {
     }
 
     private var generationInterval: TimeInterval {
+        if lowPowerMode {
+            return 1.0 / 20.0
+        }
         switch budget {
         case .full:
             return 1.0 / 60.0
@@ -93,6 +114,7 @@ struct FloatingParticlesView: View {
 
     var body: some View {
         let activeInterval: TimeInterval = reduceMotion ? 5 : (isGenerating ? generationInterval : idleInterval)
+        let shouldRasterize = budget != .reduced && !lowPowerMode
         
         TimelineView(.animation(minimumInterval: activeInterval, paused: reduceMotion && !isGenerating)) { timeline in
             Canvas(rendersAsynchronously: true) { context, size in
@@ -102,7 +124,7 @@ struct FloatingParticlesView: View {
                 }
             }
         }
-        .drawingGroup()
+        .conditionalDrawingGroup(shouldRasterize)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
@@ -112,6 +134,7 @@ struct FloatingParticlesView: View {
         let t: Double = date.timeIntervalSinceReferenceDate * speedMultiplier
         let baseColor: Color = Theme.particleColor(for: theme)
         let baseOpacity: Double = isGenerating ? particleOpacity * 1.5 : particleOpacity
+        let useDepthBlur = !lowPowerMode && budget == .full && !reduceMotion
 
         for index in 0..<count {
             let seed: Double = Double(index + 1)
@@ -135,12 +158,15 @@ struct FloatingParticlesView: View {
             let color: Color = baseColor.opacity(alpha)
             let rect = CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)
             
-            // Triple-A Polish: Add soft blur for "out of focus" depth effect
-            let blurRadius: CGFloat = CGFloat((1.0 - depth) * 2.5)
-            
-            context.drawLayer { ctx in
-                ctx.addFilter(.blur(radius: blurRadius))
-                ctx.fill(Path(ellipseIn: rect), with: .color(color))
+            if useDepthBlur {
+                // Blur is visually rich but expensive; keep it only for full-budget rendering.
+                let blurRadius: CGFloat = CGFloat((1.0 - depth) * 2.5)
+                context.drawLayer { ctx in
+                    ctx.addFilter(.blur(radius: blurRadius))
+                    ctx.fill(Path(ellipseIn: rect), with: .color(color))
+                }
+            } else {
+                context.fill(Path(ellipseIn: rect), with: .color(color))
             }
         }
     }

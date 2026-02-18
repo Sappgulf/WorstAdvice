@@ -34,7 +34,6 @@ struct FavoritesTabView: View {
                     gridView
                 }
             }
-            .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
             .navigationTitle("Favorites")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "Search saved advice")
@@ -545,7 +544,6 @@ struct QuotesTabView: View {
             }
             .scrollContentBackground(.hidden)
             .scrollDismissesKeyboard(.interactively)
-            .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
             .navigationTitle("Quotes")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "Search bad quotes")
@@ -888,7 +886,6 @@ private struct FavoriteDetailView: View {
             .padding(.bottom, 28)
         }
         .scrollDismissesKeyboard(.interactively)
-        .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
         .navigationTitle(record.category.title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingShareSheet) {
@@ -954,7 +951,6 @@ struct HistoryTabView: View {
                     historyList
                 }
             }
-            .background(ThemeBackgroundView(mode: settings.theme).ignoresSafeArea())
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "Search history")

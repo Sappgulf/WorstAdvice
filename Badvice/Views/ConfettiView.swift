@@ -2,9 +2,10 @@ import SwiftUI
 
 struct ConfettiView: View {
     @Binding var isActive: Bool
+    var lowPowerMode: Bool = false
     @Environment(\.scenePhase) private var scenePhase
 
-    private let count = 72
+    private var count: Int { lowPowerMode ? 40 : 72 }
     
     // Performance: Cache colors to avoid recreation
     private let confettiColors: [Color] = [
@@ -16,7 +17,7 @@ struct ConfettiView: View {
 
     var body: some View {
         if isActive && scenePhase == .active {
-            TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: false)) { timeline in
+            TimelineView(.animation(minimumInterval: lowPowerMode ? 1.0 / 28.0 : 1.0 / 60.0, paused: false)) { timeline in
                 Canvas(rendersAsynchronously: true) { context, size in
                     let t = timeline.date.timeIntervalSinceReferenceDate
 
@@ -62,7 +63,7 @@ struct ConfettiView: View {
                     }
                 }
             }
-            .drawingGroup() // Metal acceleration
+            .conditionalDrawingGroup(!lowPowerMode) // Metal acceleration
             .allowsHitTesting(false)
             .ignoresSafeArea()
             .transition(.opacity.animation(.easeOut(duration: 0.3)))

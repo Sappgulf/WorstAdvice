@@ -43,6 +43,9 @@ struct AdviceEngine {
         let rationaleLead = rng.pick(Self.rationaleLeads)
         let pivot = rng.pick(Self.pivotPhrases)
         let escalation = rng.pick(Self.escalationClauses)
+        let toneDirective = rng.pick(store.toneDirectiveVocabulary(for: resolvedTone))
+        let categoryDirective = rng.pick(store.categoryDirectiveVocabulary(for: category))
+        let directiveClause = "Lead with \(toneDirective) and push \(categoryDirective)."
 
         let scenario = sanitizedSituation(situation)
         let selectedTopic = scenario ?? keyword
@@ -50,32 +53,56 @@ struct AdviceEngine {
         let filledAction = actionTemplate.replacingOccurrences(of: "%@", with: selectedTopic)
 
         let adviceShapes = [
-            "\(opener), \(filledAction) \(confidence) Keep the \(tick) high and the \(slang) higher. \(ending)",
-            "\(opener): \(filledAction) \(confidence) Frame every decision around \(principle.lowercased()). \(ending)",
-            "\(opener), \(filledAction) \(momentumBeat) Prioritize \(tick), ignore nuance, and call it \(slang). \(ending)",
-            "\(opener), \(filledAction) \(confidence) \(categorySpice) \(ending)",
-            "\(opener), \(filledAction) \(pivot) Anchor everything to \(principle.lowercased()) and keep the \(tick) narrative loud. \(ending)",
-            "\(opener), \(filledAction) \(confidence) \(escalation) Keep execution in \(slang) mode. \(ending)",
-            "\(opener), \(filledAction) \(momentumBeat) If the room hesitates, cite \(principle.lowercased()) as your operating system. \(ending)",
-            "\(opener), \(filledAction) \(pivot) \(categorySpice) Close with \(confidence.lowercased()) and move on. \(ending)",
-            "\(opener), \(filledAction) \(escalation) Anchor the whole plan to \(principle.lowercased()) and call it repeatable. \(ending)",
-            "\(opener), \(filledAction) \(momentumBeat) \(categorySpice) Document nothing until confidence compounds. \(ending)",
-            "\(opener): \(filledAction) \(escalation) Let \(principle.lowercased()) be the only metric that matters. \(ending)",
-            "\(opener), \(filledAction) \(pivot) \(confidence) Make \(tick) the loudest thing in the room. \(ending)",
-            "\(opener), \(filledAction) \(categorySpice) Treat \(principle.lowercased()) as your core operating thesis. \(ending)",
-            "\(opener): \(filledAction) \(momentumBeat) Assert \(slang) until it becomes the accepted baseline. \(ending)"
+            "\(opener), \(filledAction) \(confidence) \(directiveClause) Keep the \(tick) high and the \(slang) higher. \(ending)",
+            "\(opener): \(filledAction) \(confidence) Frame every decision around \(principle.lowercased()). \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) Prioritize \(tick), ignore nuance, and call it \(slang). \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(categorySpice) \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) Anchor everything to \(principle.lowercased()) and keep the \(tick) narrative loud. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(escalation) Keep execution in \(slang) mode. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) If the room hesitates, cite \(principle.lowercased()) as your operating system. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(categorySpice) Close with \(confidence.lowercased()) and move on. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) Anchor the whole plan to \(principle.lowercased()) and call it repeatable. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(categorySpice) Document nothing until confidence compounds. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) Let \(principle.lowercased()) be the only metric that matters. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(confidence) Make \(tick) the loudest thing in the room. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(categorySpice) Treat \(principle.lowercased()) as your core operating thesis. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) Assert \(slang) until it becomes the accepted baseline. \(directiveClause) \(ending)"
         ]
         let semanticQuery = [scenario, selectedTopic, category.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }
             .joined(separator: " ")
-        let tieBreakerSeed = resolvedSeed
-        var advice = scenario == nil
-            ? rng.pick(adviceShapes)
-            : (Self.semanticTextScorer.bestCandidate(
-                from: adviceShapes,
-                query: semanticQuery,
-                tieBreakerSeed: tieBreakerSeed
-            ) ?? rng.pick(adviceShapes))
+        let semanticPreparedQuery = Self.semanticTextScorer.preparedQuery(from: semanticQuery)
+        let rankedCandidates = adviceShapes.enumerated()
+            .map { index, candidate -> (candidate: String, score: Double, tie: Double) in
+                let semanticBoost: Double
+                if let semanticPreparedQuery {
+                    semanticBoost = Self.semanticTextScorer.similarity(candidate, to: semanticPreparedQuery)
+                } else {
+                    semanticBoost = 0
+                }
+                let qualityBoost = qualityScore(
+                    candidate,
+                    selectedTopic: selectedTopic,
+                    toneDirective: toneDirective,
+                    categoryDirective: categoryDirective
+                )
+                let tie = stableTieBreaker(candidate, seed: resolvedSeed + (index * 17))
+                return (candidate: candidate, score: qualityBoost + semanticBoost, tie: tie)
+            }
+            .sorted { lhs, rhs in
+                if lhs.score == rhs.score {
+                    return lhs.tie > rhs.tie
+                }
+                return lhs.score > rhs.score
+            }
+
+        var advice = rankedCandidates.first?.candidate ?? rng.pick(adviceShapes)
+        advice = polishAdvice(advice)
+        advice = enforceDirectivePresence(
+            advice,
+            toneDirective: toneDirective,
+            categoryDirective: categoryDirective
+        )
 
         if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
             advice = "\(opener), treat the \(keyword) like a stage performance and commit to the loudest overconfident plan. \(confidence)"
@@ -169,6 +196,86 @@ struct AdviceEngine {
             options: .regularExpression
         )
         return String(collapsed.prefix(72))
+    }
+
+    private func qualityScore(
+        _ candidate: String,
+        selectedTopic: String,
+        toneDirective: String,
+        categoryDirective: String
+    ) -> Double {
+        let normalized = candidate.normalizedForFiltering
+        var score = 0.35
+        if normalized.contains(selectedTopic.normalizedForFiltering) {
+            score += 0.35
+        }
+        if normalized.contains(toneDirective.normalizedForFiltering) {
+            score += 0.28
+        }
+        if normalized.contains(categoryDirective.normalizedForFiltering) {
+            score += 0.28
+        }
+        let clichePenalty = AdviceStore.qualityClichePhrases.reduce(0.0) { partial, phrase in
+            partial + (normalized.contains(phrase.normalizedForFiltering) ? 0.16 : 0.0)
+        }
+        score -= clichePenalty
+        if candidate.count > 225 {
+            score -= 0.2
+        }
+        if repeatedWordCount(in: normalized) > 2 {
+            score -= 0.18
+        }
+        return score
+    }
+
+    private func repeatedWordCount(in normalized: String) -> Int {
+        let words = normalized.split(separator: " ")
+        guard !words.isEmpty else { return 0 }
+        var counts: [Substring: Int] = [:]
+        for word in words where word.count > 3 {
+            counts[word, default: 0] += 1
+        }
+        return counts.values.filter { $0 > 1 }.count
+    }
+
+    private func polishAdvice(_ candidate: String) -> String {
+        var polished = candidate.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        for cliche in AdviceStore.qualityClichePhrases {
+            if polished.normalizedForFiltering.contains(cliche.normalizedForFiltering) {
+                polished = polished.replacingOccurrences(of: cliche, with: "measurable chaos", options: .caseInsensitive)
+            }
+        }
+        return String(polished.prefix(240))
+    }
+
+    private func enforceDirectivePresence(
+        _ candidate: String,
+        toneDirective: String,
+        categoryDirective: String
+    ) -> String {
+        let normalized = candidate.normalizedForFiltering
+        let hasTone = normalized.contains(toneDirective.normalizedForFiltering)
+        let hasCategory = normalized.contains(categoryDirective.normalizedForFiltering)
+        guard !(hasTone && hasCategory) else { return candidate }
+        return "\(candidate) Keep \(toneDirective) focused on \(categoryDirective)."
+    }
+
+    private func stableTieBreaker(_ text: String, seed: Int) -> Double {
+        let digest = text.unicodeScalars.reduce(seed) { partial, scalar in
+            (partial &* 16777619) ^ Int(scalar.value)
+        }
+        return Double(abs(digest % 1000)) / 1000.0
+    }
+
+    static func directiveSignals(
+        store: AdviceStore = AdviceStore(),
+        tone: ToneMode,
+        category: AdviceCategory
+    ) -> (tone: [String], category: [String]) {
+        (
+            tone: store.toneDirectiveVocabulary(for: tone),
+            category: store.categoryDirectiveVocabulary(for: category)
+        )
     }
 
     private static let momentumBeats = [

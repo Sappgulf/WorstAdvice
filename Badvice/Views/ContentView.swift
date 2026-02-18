@@ -2,6 +2,7 @@ import StoreKit
 import SwiftData
 import SwiftUI
 import CoreMotion
+import Combine
 
 // RenderBudget and related view-performance helpers are defined in Theme.swift.
 
@@ -132,10 +133,15 @@ struct ContentView: View {
     @State private var showSplash = true
     @State private var tabBarVisible = true
     @State private var lastShakeHandledAt: Date = .distantPast
+    @State private var lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @StateObject private var shakeDetector = ShakeDetector()
     // Tab bar slide gesture state
     @State private var tabBarWidth: CGFloat = 0
     @State private var tabDragHighlight: AppTab? = nil
+    @State private var tabSlideModeActive = false
+    @State private var tabSlideLastIndex: Int?
+    @State private var tabSlideLastSwitchX: CGFloat = 0
+    @State private var tabSlideLastHapticTab: AppTab?
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("favoritesCountAtLastReview") private var favoritesCountAtLastReview = 0
@@ -154,19 +160,24 @@ struct ContentView: View {
                     }
             } else if let session {
                 let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion
-                let renderBudget = budget(for: session)
+                let constrainedMotion = reduceMotion || lowPowerModeEnabled
+                let renderBudget = budget(for: session, lowPowerModeEnabled: lowPowerModeEnabled)
                 ZStack {
-                    ThemeBackgroundView(mode: session.settings.theme, budget: renderBudget)
+                    ThemeBackgroundView(
+                        mode: session.settings.theme,
+                        budget: renderBudget,
+                        lowPowerModeEnabled: lowPowerModeEnabled
+                    )
                         .ignoresSafeArea()
 
                     FloatingParticlesView(
                         theme: session.settings.theme,
                         reduceMotion: reduceMotion,
                         isGenerating: session.generate.isGenerating,
-                        budget: renderBudget
+                        budget: renderBudget,
+                        lowPowerMode: lowPowerModeEnabled
                     )
                     .ignoresSafeArea()
-                    .conditionalDrawingGroup(renderBudget == .full && !reduceMotion)
 
                     TabView(selection: $selectedTab) {
                         ForEach(session.settings.tabOrder) { tab in
@@ -178,13 +189,14 @@ struct ContentView: View {
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     // Performance: Disable animation if reduce motion is enabled
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
+                    .animation(constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
                     
-                    // Custom Floating Glassmorphic Tab Bar — supports tap AND slide/drag
+                    // Custom Floating Tab Bar — supports tap and hold-slide
                     GeometryReader { proxy in
                         VStack {
                             Spacer()
                             let tabs = session.settings.tabOrder
+                            let tabBarStyle = Theme.tabBarStyle(for: session.settings.theme)
                             HStack(spacing: 0) {
                                 ForEach(tabs) { tab in
                                     let isSelected = selectedTab == tab
@@ -201,16 +213,36 @@ struct ContentView: View {
                                         isSelected
                                             ? Theme.accent(for: session.settings.theme)
                                             : (isHighlighted
-                                                ? Theme.accent(for: session.settings.theme).opacity(0.55)
-                                                : Theme.secondaryText(for: session.settings.theme).opacity(0.7))
+                                                ? Theme.accent(for: session.settings.theme).opacity(0.58)
+                                                : Theme.secondaryText(for: session.settings.theme).opacity(0.74))
                                     )
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 7)
+                                    .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
+                                    .background {
+                                        if isSelected || isHighlighted {
+                                            RoundedRectangle(cornerRadius: tabBarStyle.indicatorCornerRadius, style: .continuous)
+                                                .fill(
+                                                    Theme.accent(for: session.settings.theme)
+                                                        .opacity(isSelected ? tabBarStyle.selectedFillOpacity : tabBarStyle.highlightedFillOpacity)
+                                                )
+                                                .padding(.horizontal, tabBarStyle.indicatorInset)
+                                                .padding(.vertical, 1)
+                                        }
+                                    }
+                                    .overlay {
+                                        if isSelected, let glow = tabBarStyle.glow {
+                                            RoundedRectangle(cornerRadius: tabBarStyle.indicatorCornerRadius, style: .continuous)
+                                                .stroke(glow.opacity(0.35), lineWidth: 1)
+                                                .padding(.horizontal, tabBarStyle.indicatorInset + 1)
+                                                .padding(.vertical, 2)
+                                        }
+                                    }
                                     .contentShape(Rectangle())
                                     .onTapGesture {
                                         if selectedTab != tab {
                                             HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
-                                            if reduceMotion {
+                                            if constrainedMotion {
                                                 selectedTab = tab
                                             } else {
                                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -224,6 +256,7 @@ struct ContentView: View {
                                     .accessibilityAddTraits(isSelected ? .isSelected : [])
                                 }
                             }
+                            .contentShape(Rectangle())
                             .background(
                                 GeometryReader { barGeo in
                                     Color.clear.onAppear {
@@ -235,62 +268,75 @@ struct ContentView: View {
                                 }
                             )
                             .gesture(
-                                reduceMotion ? nil :
-                                DragGesture(minimumDistance: 4, coordinateSpace: .local)
-                                    .onChanged { value in
-                                        guard tabBarWidth > 0, !tabs.isEmpty else { return }
-                                        // Map x position to tab index
-                                        let tabWidth = tabBarWidth / CGFloat(tabs.count)
-                                        let rawIndex = Int(value.location.x / tabWidth)
-                                        let clampedIndex = max(0, min(rawIndex, tabs.count - 1))
-                                        let hoveredTab = tabs[clampedIndex]
-                                        // Show subtle highlight on dragged-over tab
-                                        if tabDragHighlight != hoveredTab {
-                                            tabDragHighlight = hoveredTab
-                                        }
-                                        // Switch tab live as finger slides over
-                                        if selectedTab != hoveredTab {
-                                            HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
-                                            withAnimation(.spring(response: 0.22, dampingFraction: 0.75)) {
-                                                selectedTab = hoveredTab
-                                            }
+                                constrainedMotion ? nil :
+                                LongPressGesture(minimumDuration: 0.16)
+                                    .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .local))
+                                    .onChanged { phase in
+                                        switch phase {
+                                        case .first(true):
+                                            beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
+                                        case .second(true, let drag):
+                                            beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
+                                            guard let drag else { return }
+                                            updateTabSlide(
+                                                locationX: drag.location.x,
+                                                tabs: tabs,
+                                                hapticsEnabled: session.settings.hapticsEnabled,
+                                                reduceMotion: constrainedMotion
+                                            )
+                                        default:
+                                            break
                                         }
                                     }
                                     .onEnded { _ in
-                                        withAnimation(.easeOut(duration: 0.18)) {
-                                            tabDragHighlight = nil
-                                        }
+                                        endTabSlide(reduceMotion: constrainedMotion)
                                     }
                             )
                             .padding(.horizontal, 6)
                             .padding(.bottom, 6)
                             .background {
                                 ZStack {
-                                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                        .fill(.ultraThinMaterial)
-                                        .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)
+                                    if lowPowerModeEnabled {
+                                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                            .fill(tabBarStyle.backgroundTint.opacity(0.94))
+                                            .shadow(color: tabBarStyle.shadow, radius: tabBarStyle.shadowRadius * 0.75, x: 0, y: 6)
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                            .fill(.ultraThinMaterial)
+                                            .overlay {
+                                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                                    .fill(tabBarStyle.backgroundTint.opacity(tabBarStyle.materialOverlayOpacity))
+                                            }
+                                            .shadow(color: tabBarStyle.shadow, radius: tabBarStyle.shadowRadius, x: 0, y: 8)
+                                    }
 
                                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                                         .stroke(
                                             LinearGradient(
-                                                colors: [.white.opacity(0.3), .white.opacity(0.08), .white.opacity(0.15)],
+                                                colors: [tabBarStyle.borderTop, tabBarStyle.borderBottom, tabBarStyle.borderTop.opacity(0.55)],
                                                 startPoint: .topLeading,
                                                 endPoint: .bottomTrailing
                                             ),
-                                            lineWidth: 0.5
+                                            lineWidth: 0.8
                                         )
+
+                                    if let glow = tabBarStyle.glow {
+                                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                            .stroke(glow.opacity(0.25), lineWidth: 1)
+                                            .blur(radius: 2)
+                                    }
                                 }
                             }
                             .padding(.horizontal, 16)
                             .padding(.bottom, max(4, proxy.safeAreaInsets.bottom - 10))
                             .offset(y: tabBarVisible ? 0 : 120)
-                            .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: tabBarVisible)
+                            .animation(constrainedMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: tabBarVisible)
                         }
                     }
                     .ignoresSafeArea(.keyboard)
 
                     // Confetti overlay — fires on streak milestones
-                    ConfettiView(isActive: $showConfetti)
+                    ConfettiView(isActive: $showConfetti, lowPowerMode: lowPowerModeEnabled)
                 }
                 .sensoryFeedback(trigger: session.generate.hapticTrigger) { _, _ in
                     let weight = session.generate.hapticWeight
@@ -354,9 +400,13 @@ struct ContentView: View {
                 }
                 .onAppear {
                     shakeDetector.isEnabled = shakeToGenerateEnabled
+                    lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
                     if shakeToGenerateEnabled {
                         shakeDetector.startMonitoring()
                     }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
+                    lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
                 }
                 .onDisappear {
                     shakeDetector.stopMonitoring()
@@ -381,11 +431,14 @@ struct ContentView: View {
         }
     }
 
-    private func budget(for session: AppSessionViewModel) -> RenderBudget {
+    private func budget(for session: AppSessionViewModel, lowPowerModeEnabled: Bool) -> RenderBudget {
+        if lowPowerModeEnabled {
+            return selectedTab == .generate && session.generate.isGenerating ? .balanced : .reduced
+        }
         switch selectedTab {
         case .generate:
             return session.generate.isGenerating ? .full : .balanced
-        case .quotes, .favorites, .history, .settings:
+        case .chaosHub, .quotes, .favorites, .history, .settings:
             return tabBarVisible ? .balanced : .reduced
         }
     }
@@ -400,6 +453,17 @@ struct ContentView: View {
                 onDataChanged: { session.refreshLists() },
                 onOpenTab: { tab in
                     setSelectedTab(tab, session: session)
+                }
+            )
+        case .chaosHub:
+            ChaosHubTabView(
+                generateViewModel: session.generate,
+                settings: session.settings,
+                onOpenTab: { tab in
+                    setSelectedTab(tab, session: session)
+                },
+                onDataChanged: {
+                    session.refreshLists()
                 }
             )
         case .quotes:
@@ -442,8 +506,88 @@ struct ContentView: View {
         }
     }
 
+    private func beginTabSlide(tabs: [AppTab], hapticsEnabled: Bool) {
+        guard !tabs.isEmpty else { return }
+        guard !tabSlideModeActive else { return }
+        tabSlideModeActive = true
+        tabDragHighlight = selectedTab
+        tabSlideLastIndex = tabs.firstIndex(of: selectedTab) ?? 0
+        if tabBarWidth > 0 {
+            let tabWidth = tabBarWidth / CGFloat(tabs.count)
+            tabSlideLastSwitchX = (CGFloat(tabSlideLastIndex ?? 0) + 0.5) * tabWidth
+        } else {
+            tabSlideLastSwitchX = 0
+        }
+        tabSlideLastHapticTab = selectedTab
+        HapticsManager.playSelection(isEnabled: hapticsEnabled)
+    }
+
+    private func updateTabSlide(
+        locationX: CGFloat,
+        tabs: [AppTab],
+        hapticsEnabled: Bool,
+        reduceMotion: Bool
+    ) {
+        guard tabSlideModeActive, tabBarWidth > 0, !tabs.isEmpty else { return }
+        let tabWidth = tabBarWidth / CGFloat(tabs.count)
+        let clampedX = min(max(locationX, 0), max(tabBarWidth - 0.001, 0))
+        let hoveredIndex = max(0, min(Int(clampedX / tabWidth), tabs.count - 1))
+        let hoveredTab = tabs[hoveredIndex]
+
+        if tabDragHighlight != hoveredTab {
+            if reduceMotion {
+                tabDragHighlight = hoveredTab
+            } else {
+                withAnimation(.easeOut(duration: 0.08)) {
+                    tabDragHighlight = hoveredTab
+                }
+            }
+        }
+
+        guard let lastIndex = tabSlideLastIndex else {
+            tabSlideLastIndex = hoveredIndex
+            tabSlideLastSwitchX = clampedX
+            return
+        }
+
+        guard hoveredIndex != lastIndex else { return }
+        let minimumTravel = max(14, tabWidth * 0.32)
+        guard abs(clampedX - tabSlideLastSwitchX) >= minimumTravel else { return }
+
+        if selectedTab != hoveredTab {
+            if reduceMotion {
+                selectedTab = hoveredTab
+            } else {
+                withAnimation(.spring(response: 0.22, dampingFraction: 0.78)) {
+                    selectedTab = hoveredTab
+                }
+            }
+        }
+
+        tabSlideLastIndex = hoveredIndex
+        tabSlideLastSwitchX = clampedX
+        if tabSlideLastHapticTab != hoveredTab {
+            HapticsManager.playSelection(isEnabled: hapticsEnabled)
+            tabSlideLastHapticTab = hoveredTab
+        }
+    }
+
+    private func endTabSlide(reduceMotion: Bool) {
+        if reduceMotion {
+            tabDragHighlight = nil
+        } else {
+            withAnimation(.easeOut(duration: 0.16)) {
+                tabDragHighlight = nil
+            }
+        }
+        tabSlideModeActive = false
+        tabSlideLastIndex = nil
+        tabSlideLastHapticTab = nil
+        tabSlideLastSwitchX = 0
+    }
+
     private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
-        let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion
+        let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion || lowPowerModeEnabled
         if reduceMotion {
             selectedTab = tab
         } else {

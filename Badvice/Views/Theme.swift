@@ -354,11 +354,140 @@ enum Theme {
             return false
         }
     }
+
+    static func personality(for mode: ThemeMode) -> ThemePersonality {
+        switch mode {
+        case .badvice:
+            return ThemePersonality(
+                descriptor: "Editorial mischief with warm grain",
+                surfaceMood: "Velvet Paper",
+                effectIntensity: 0.62,
+                indicatorCornerRadius: 16,
+                indicatorInset: 2
+            )
+        case .minimal:
+            return ThemePersonality(
+                descriptor: "Clean clarity, low visual noise",
+                surfaceMood: "Studio Flat",
+                effectIntensity: 0.12,
+                indicatorCornerRadius: 10,
+                indicatorInset: 3
+            )
+        case .ember:
+            return ThemePersonality(
+                descriptor: "Heat-haze depth with warm contrast",
+                surfaceMood: "Molten Film",
+                effectIntensity: 0.58,
+                indicatorCornerRadius: 14,
+                indicatorInset: 2
+            )
+        case .slate:
+            return ThemePersonality(
+                descriptor: "Cool executive glass and crisp edges",
+                surfaceMood: "Steel Glass",
+                effectIntensity: 0.4,
+                indicatorCornerRadius: 12,
+                indicatorInset: 2
+            )
+        case .evergreen:
+            return ThemePersonality(
+                descriptor: "Forest calm with textured atmosphere",
+                surfaceMood: "Canopy Grain",
+                effectIntensity: 0.55,
+                indicatorCornerRadius: 15,
+                indicatorInset: 2
+            )
+        case .neon:
+            return ThemePersonality(
+                descriptor: "Arcade glow and electric lane markers",
+                surfaceMood: "Arcade Grid",
+                effectIntensity: 0.9,
+                indicatorCornerRadius: 8,
+                indicatorInset: 1
+            )
+        case .midnight:
+            return ThemePersonality(
+                descriptor: "Deep-focus dark with cool bloom",
+                surfaceMood: "Nocturne Film",
+                effectIntensity: 0.68,
+                indicatorCornerRadius: 18,
+                indicatorInset: 2
+            )
+        case .sunset:
+            return ThemePersonality(
+                descriptor: "Golden-hour gradient with soft drama",
+                surfaceMood: "Amber Bloom",
+                effectIntensity: 0.64,
+                indicatorCornerRadius: 20,
+                indicatorInset: 3
+            )
+        case .cosmic:
+            return ThemePersonality(
+                descriptor: "Nebula depth and stellar sparkle",
+                surfaceMood: "Starfield Mist",
+                effectIntensity: 0.84,
+                indicatorCornerRadius: 6,
+                indicatorInset: 1
+            )
+        case .retro:
+            return ThemePersonality(
+                descriptor: "CRT attitude with scanline pulse",
+                surfaceMood: "Synth Scan",
+                effectIntensity: 0.78,
+                indicatorCornerRadius: 4,
+                indicatorInset: 1
+            )
+        }
+    }
+
+    static func tabBarStyle(for mode: ThemeMode) -> ThemeTabBarStyle {
+        let personality = personality(for: mode)
+        let glow = glowColor(for: mode) ?? accent(for: mode)
+        let glassStrength = glassMorphismOpacity(for: mode)
+        return ThemeTabBarStyle(
+            backgroundTint: tabBarBackground(for: mode).opacity(0.72),
+            materialOverlayOpacity: min(max(glassStrength, 0.15), 0.72),
+            borderTop: accent(for: mode).opacity(0.34 + personality.effectIntensity * 0.18),
+            borderBottom: .white.opacity(0.08 + personality.effectIntensity * 0.08),
+            shadow: cardShadow(for: mode).color.opacity(0.45),
+            shadowRadius: CGFloat(12 + personality.effectIntensity * 10),
+            selectedFillOpacity: 0.14 + personality.effectIntensity * 0.12,
+            highlightedFillOpacity: 0.07 + personality.effectIntensity * 0.08,
+            indicatorCornerRadius: personality.indicatorCornerRadius,
+            indicatorInset: personality.indicatorInset,
+            selectedScale: CGFloat(1.04 + personality.effectIntensity * 0.03),
+            glow: shouldUseGlow(for: mode) ? glow.opacity(0.45) : nil
+        )
+    }
+}
+
+struct ThemePersonality: Sendable {
+    let descriptor: String
+    let surfaceMood: String
+    let effectIntensity: Double
+    let indicatorCornerRadius: CGFloat
+    let indicatorInset: CGFloat
+}
+
+struct ThemeTabBarStyle: Sendable {
+    let backgroundTint: Color
+    let materialOverlayOpacity: Double
+    let borderTop: Color
+    let borderBottom: Color
+    let shadow: Color
+    let shadowRadius: CGFloat
+    let selectedFillOpacity: Double
+    let highlightedFillOpacity: Double
+    let indicatorCornerRadius: CGFloat
+    let indicatorInset: CGFloat
+    let selectedScale: CGFloat
+    let glow: Color?
 }
 
 struct ThemeBackgroundView: View {
     let mode: ThemeMode
     var budget: RenderBudget = .balanced
+    var lowPowerModeEnabled: Bool = false
     @Environment(\.scenePhase) private var scenePhase
     
     // Performance: Only update when necessary
@@ -369,11 +498,11 @@ struct ThemeBackgroundView: View {
             Theme.backgroundGradient(for: mode)
 
             if scenePhase == .active && shouldRenderEffects {
-                let allowsDynamic = budget != .reduced
-                let allowsFullEffects = budget == .full
+                let allowsDynamic = budget != .reduced && !lowPowerModeEnabled
+                let allowsFullEffects = budget == .full && !lowPowerModeEnabled
 
                 if allowsDynamic && mode != .minimal {
-                    DynamicChaosView(theme: mode)
+                    DynamicChaosView(theme: mode, budget: budget)
                         .opacity(allowsFullEffects ? 0.4 : 0.26)
                         .blendMode(.screen)
                         .drawingGroup(opaque: false) // Performance: Metal acceleration
@@ -394,20 +523,20 @@ struct ThemeBackgroundView: View {
                 }
 
                 if allowsFullEffects && mode == .neon {
-                    NeonGridView()
+                    NeonGridView(budget: budget)
                         .opacity(0.15)
                         .blendMode(.screen)
                         .drawingGroup() // Performance: Cache grid rendering
                 }
 
                 if allowsFullEffects && mode == .cosmic {
-                    StarFieldView()
+                    StarFieldView(budget: budget)
                         .opacity(0.6)
                         .drawingGroup() // Performance: Cache star rendering
                 }
 
                 if allowsFullEffects && mode == .retro {
-                    ScanlineView()
+                    ScanlineView(budget: budget)
                         .opacity(0.1)
                         .blendMode(.overlay)
                         .drawingGroup() // Performance: Cache scanline rendering
@@ -442,11 +571,23 @@ struct CinematicVignetteView: View {
 /// A slow-moving, atmospheric procedural background that creates a sense of depth and "chaos".
 struct DynamicChaosView: View {
     let theme: ThemeMode
+    let budget: RenderBudget
     
     @State private var start = Date()
+
+    private var frameInterval: TimeInterval {
+        switch budget {
+        case .full:
+            return 1.0 / 24.0
+        case .balanced:
+            return 1.0 / 15.0
+        case .reduced:
+            return 1.0 / 8.0
+        }
+    }
     
     var body: some View {
-        TimelineView(.animation) { timeline in
+        TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
             Canvas { context, size in
                 let time = timeline.date.timeIntervalSince(start)
                 let accentColor = Theme.accent(for: theme)
@@ -580,13 +721,26 @@ extension View {
 // MARK: - Special Theme Effects
 
 private struct NeonGridView: View {
-    @State private var phase: Double = 0
-    
+    let budget: RenderBudget
+
+    private var frameInterval: TimeInterval {
+        switch budget {
+        case .full:
+            return 1.0 / 20.0
+        case .balanced:
+            return 1.0 / 14.0
+        case .reduced:
+            return 1.0 / 8.0
+        }
+    }
+
     var body: some View {
-        TimelineView(.animation) { _ in
+        TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
             Canvas { context, size in
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                let phase = sin(time * 1.35)
                 let gridSize: CGFloat = 40
-                let lineOpacity = 0.3 + 0.2 * sin(phase)
+                let lineOpacity = 0.24 + 0.14 * phase
                 
                 // Draw vertical lines
                 for x in stride(from: 0, to: size.width, by: gridSize) {
@@ -605,19 +759,26 @@ private struct NeonGridView: View {
                 }
             }
         }
-        .onAppear {
-            withAnimation(.linear(duration: 2).repeatForever(autoreverses: true)) {
-                phase = .pi * 2
-            }
-        }
     }
 }
 
 private struct StarFieldView: View {
+    let budget: RenderBudget
     @State private var start = Date()
+
+    private var frameInterval: TimeInterval {
+        switch budget {
+        case .full:
+            return 1.0 / 22.0
+        case .balanced:
+            return 1.0 / 14.0
+        case .reduced:
+            return 1.0 / 8.0
+        }
+    }
     
     var body: some View {
-        TimelineView(.animation) { timeline in
+        TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
             Canvas { context, size in
                 let time = timeline.date.timeIntervalSince(start)
                 
@@ -637,11 +798,24 @@ private struct StarFieldView: View {
 }
 
 private struct ScanlineView: View {
-    @State private var offset: CGFloat = 0
+    let budget: RenderBudget
+
+    private var frameInterval: TimeInterval {
+        switch budget {
+        case .full:
+            return 1.0 / 24.0
+        case .balanced:
+            return 1.0 / 16.0
+        case .reduced:
+            return 1.0 / 8.0
+        }
+    }
     
     var body: some View {
-        TimelineView(.animation) { _ in
+        TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
             Canvas { context, size in
+                let cycle = timeline.date.timeIntervalSinceReferenceDate
+                let offset = CGFloat((cycle.truncatingRemainder(dividingBy: 8.0) / 8.0) * 6.0)
                 let lineHeight: CGFloat = 2
                 let gapHeight: CGFloat = 4
                 
@@ -651,11 +825,6 @@ private struct ScanlineView: View {
                     path.addLine(to: CGPoint(x: size.width, y: y))
                     context.stroke(path, with: .color(Color(hex: "00FF9F").opacity(0.3)), lineWidth: lineHeight)
                 }
-            }
-        }
-        .onAppear {
-            withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
-                offset = 6
             }
         }
     }

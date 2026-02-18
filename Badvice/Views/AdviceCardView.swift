@@ -692,6 +692,7 @@ struct GenerateTabView: View {
 
     private var tabShortcutRow: some View {
         HStack(spacing: 8) {
+            quickOpenButton(title: "Chaos Hub", systemImage: "flame.fill", tab: .chaosHub)
             quickOpenButton(title: "Open Quotes", systemImage: "quote.bubble", tab: .quotes)
             quickOpenButton(title: "Open Favorites", systemImage: "bookmark", tab: .favorites)
             quickOpenButton(title: "Open History", systemImage: "clock", tab: .history)
@@ -716,17 +717,17 @@ struct GenerateTabView: View {
                 .accessibilityLabel("Dismiss what's new")
             }
 
-            Text("New: ML Remix now generates advice from your liked history. Try Random Mix tone for maximum chaos. Community Labs & leaderboards in Settings.")
+            Text("New: Chaos Hub combines daily missions, community pulse, and your wins. ML Remix now sharpens tone and category variety.")
                 .font(.footnote)
                 .foregroundStyle(Theme.secondaryText(for: settings.theme))
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
                 Button {
-                    openTab(.settings)
+                    openTab(.chaosHub)
                     hasDismissedWhatsNewCard = true
                 } label: {
-                    Label("Open Settings", systemImage: "gearshape")
+                    Label("Open Chaos Hub", systemImage: "flame.fill")
                         .font(.caption.weight(.semibold))
                 }
                 .buttonStyle(.bordered)
