@@ -215,6 +215,7 @@ struct FavoritesTabView: View {
             .padding(.top, 4)
         }
         .scrollDismissesKeyboard(.interactively)
+        .trackScrollForTabBar()
         .opacity(listContentAppeared ? 1 : 0)
         .offset(y: listContentAppeared ? 0 : 12)
     }
@@ -301,6 +302,7 @@ struct FavoritesTabView: View {
             .padding(.top, 4)
         }
         .scrollDismissesKeyboard(.interactively)
+        .trackScrollForTabBar()
         .opacity(listContentAppeared ? 1 : 0)
         .offset(y: listContentAppeared ? 0 : 12)
     }
@@ -629,6 +631,7 @@ struct QuotesTabView: View {
                     .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .trackScrollForTabBar()
             }
             .navigationTitle("Quotes")
             .navigationBarTitleDisplayMode(.inline)
@@ -951,6 +954,7 @@ private struct FavoriteDetailView: View {
                 .padding(.bottom, 28)
             }
             .scrollDismissesKeyboard(.interactively)
+            .trackScrollForTabBar()
         }
         .navigationTitle(record.category.title)
         .navigationBarTitleDisplayMode(.inline)
@@ -1124,6 +1128,7 @@ struct HistoryTabView: View {
             .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
         }
         .scrollDismissesKeyboard(.interactively)
+        .trackScrollForTabBar()
         .opacity(historyListAppeared ? 1 : 0)
         .offset(y: historyListAppeared ? 0 : 12)
     }

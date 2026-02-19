@@ -21,13 +21,6 @@ extension EnvironmentValues {
 
 // MARK: - Scroll-Aware Tab Bar Helper
 
-struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
 extension View {
     func trackScrollForTabBar() -> some View {
         self.modifier(ScrollTrackingModifier())
@@ -37,35 +30,27 @@ extension View {
 private struct ScrollTrackingModifier: ViewModifier {
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
-    @State private var lastOffset: CGFloat = 0
+    @State private var dragIntent: Bool?
     
     func body(content: Content) -> some View {
         content
-            .background(
-                GeometryReader { proxy in
-                    Color.clear.preference(
-                        key: ScrollOffsetPreferenceKey.self,
-                        value: proxy.frame(in: .named("scroll")).minY
-                    )
-                }
-            )
-            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-                let delta = offset - lastOffset
-                
-                // Scrolling down (delta < 0) -> hide tab bar
-                // Scrolling up (delta > 0) -> show tab bar
-                // Only trigger if scroll delta is significant
-                if abs(delta) > 5 {
-                    let nextVisibility: Bool?
-                    if delta < -10 {
-                        nextVisibility = false
-                    } else if delta > 10 {
-                        nextVisibility = true
-                    } else {
-                        nextVisibility = nil
-                    }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 6, coordinateSpace: .local)
+                    .onChanged { value in
+                        let translationY = value.translation.height
+                        let nextVisibility: Bool?
+                        if translationY <= -18 {
+                            nextVisibility = false
+                        } else if translationY >= 14 {
+                            nextVisibility = true
+                        } else {
+                            nextVisibility = nil
+                        }
 
-                    if let nextVisibility {
+                        guard let nextVisibility else { return }
+                        guard dragIntent != nextVisibility else { return }
+                        dragIntent = nextVisibility
+
                         if accessibilityReduceMotion {
                             tabBarVisible.wrappedValue = nextVisibility
                         } else {
@@ -74,9 +59,10 @@ private struct ScrollTrackingModifier: ViewModifier {
                             }
                         }
                     }
-                    lastOffset = offset
-                }
-            }
+                    .onEnded { _ in
+                        dragIntent = nil
+                    }
+            )
     }
 }
 
@@ -277,19 +263,28 @@ struct ContentView: View {
                                     }
                                 }
                             )
-                            .gesture(
-                                constrainedMotion ? nil :
-                                DragGesture(minimumDistance: 0, coordinateSpace: .local)
-                                    .onChanged { drag in
-                                        if !tabSlideModeActive {
-                                            beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
+                            .simultaneousGesture(
+                                LongPressGesture(minimumDuration: 0.15)
+                                    .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .local))
+                                    .onChanged { sequence in
+                                        switch sequence {
+                                        case .first(true):
+                                            if !tabSlideModeActive {
+                                                beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
+                                            }
+                                        case .second(true, let drag):
+                                            if !tabSlideModeActive {
+                                                beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
+                                            }
+                                            updateTabSlide(
+                                                locationX: drag?.location.x ?? tabSlideLastSwitchX,
+                                                tabs: tabs,
+                                                hapticsEnabled: session.settings.hapticsEnabled,
+                                                reduceMotion: constrainedMotion
+                                            )
+                                        default:
+                                            break
                                         }
-                                        updateTabSlide(
-                                            locationX: drag.location.x,
-                                            tabs: tabs,
-                                            hapticsEnabled: session.settings.hapticsEnabled,
-                                            reduceMotion: constrainedMotion
-                                        )
                                     }
                                     .onEnded { _ in
                                         endTabSlide(reduceMotion: constrainedMotion)
@@ -331,11 +326,12 @@ struct ContentView: View {
                                 }
                             }
                             .padding(.horizontal, 16)
-                            .padding(.bottom, max(4, proxy.safeAreaInsets.bottom - 10))
+                            .padding(.bottom, max(6, proxy.safeAreaInsets.bottom * 0.2))
                             .offset(y: tabBarVisible ? 0 : 120)
                             .animation(constrainedMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: tabBarVisible)
                         }
                     }
+                    .ignoresSafeArea(.container, edges: .bottom)
                     .ignoresSafeArea(.keyboard)
                     
                     // Confetti overlay — fires on streak milestones
