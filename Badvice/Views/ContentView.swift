@@ -338,18 +338,6 @@ struct ContentView: View {
                     }
                     .ignoresSafeArea(.keyboard)
                     
-                    GeometryReader { proxy in
-                        VStack(spacing: 0) {
-                            Theme.canvasColor(for: session.settings.theme)
-                                .frame(height: proxy.safeAreaInsets.top)
-                            Spacer()
-                            Theme.canvasColor(for: session.settings.theme)
-                                .frame(height: proxy.safeAreaInsets.bottom)
-                        }
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-                    }
-
                     // Confetti overlay — fires on streak milestones
                     ConfettiView(isActive: $showConfetti, lowPowerMode: lowPowerModeEnabled)
                 }
