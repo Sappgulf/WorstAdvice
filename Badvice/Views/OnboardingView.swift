@@ -7,6 +7,11 @@ struct OnboardingHistoryView: View {
     let onDataChanged: () -> Void
 
     @State private var showClearConfirmation = false
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    private var isMotionReduced: Bool {
+        settings.reduceMotion || accessibilityReduceMotion
+    }
 
     var body: some View {
         NavigationStack {
@@ -152,6 +157,11 @@ struct OnboardingHistoryView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .transaction { transaction in
+            if isMotionReduced {
+                transaction.animation = nil
+            }
+        }
     }
 
     private var emptyState: some View {

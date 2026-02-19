@@ -11,6 +11,49 @@ struct ChaosHubTabView: View {
 
     @State private var contentAppeared = false
 
+    private var chaosScore: Int {
+        let streak = min(generateViewModel.challengeStreakDays, 14)
+        let today = min(generateViewModel.todayGeneratedCount, 10)
+        let total = min(generateViewModel.totalGeneratedCount, 120)
+        let saved = min(generateViewModel.favoriteCount, 40)
+        let score = (Double(streak) * 2.4)
+            + (Double(today) * 3.2)
+            + (Double(saved) * 1.6)
+            + (Double(total) * 0.25)
+            + 18
+        return min(99, max(8, Int(score)))
+    }
+
+    private var chaosScoreProgress: Double {
+        Double(chaosScore) / 100.0
+    }
+
+    private var chaosScoreHeadline: String {
+        switch chaosScore {
+        case 85...:
+            return "Chaos Elite"
+        case 65..<85:
+            return "Chaos Surge"
+        case 45..<65:
+            return "Chaos Stable"
+        default:
+            return "Chaos Warming"
+        }
+    }
+
+    private var chaosScoreCaption: String {
+        switch chaosScore {
+        case 85...:
+            return "You are operating at legendary intensity."
+        case 65..<85:
+            return "Momentum is peaking. Keep the streak hot."
+        case 45..<65:
+            return "Steady chaos. A few more wins will spike it."
+        default:
+            return "Kick off a mission to build momentum."
+        }
+    }
+
     private var isMotionReduced: Bool {
         settings.reduceMotion || accessibilityReduceMotion
     }
@@ -24,6 +67,10 @@ struct ChaosHubTabView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
+                    chaosMeterCard
+                        .opacity(contentAppeared ? 1 : 0)
+                        .offset(y: contentAppeared ? 0 : 16)
+
                     missionCard
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
@@ -70,6 +117,52 @@ struct ChaosHubTabView: View {
         }
     }
 
+    private var chaosMeterCard: some View {
+        cardShell {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .stroke(secondaryText.opacity(0.18), lineWidth: 10)
+                    Circle()
+                        .trim(from: 0, to: chaosScoreProgress)
+                        .stroke(
+                            AngularGradient(
+                                gradient: Gradient(colors: [accent.opacity(0.6), accent, accent.opacity(0.9)]),
+                                center: .center
+                            ),
+                            style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                        .animation(
+                            isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.78),
+                            value: chaosScoreProgress
+                        )
+
+                    VStack(spacing: 2) {
+                        Text("\(chaosScore)")
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .foregroundStyle(primaryText)
+                        Text("Chaos")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(secondaryText)
+                    }
+                }
+                .frame(width: 78, height: 78)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(chaosScoreHeadline)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Text(chaosScoreCaption)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+
+                Spacer()
+            }
+        }
+    }
+
     private var missionCard: some View {
         let mission = generateViewModel.dailyMissionState
         let weekly = generateViewModel.weeklyMissionState
@@ -112,7 +205,7 @@ struct ChaosHubTabView: View {
                                 RoundedRectangle(cornerRadius: 999, style: .continuous)
                                     .fill(accent)
                                     .frame(width: geo.size.width * CGFloat(mission.progressFraction))
-                                    .animation(.spring(response: Theme.animMedium, dampingFraction: 0.75), value: mission.progressFraction)
+                                    .animation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.75), value: mission.progressFraction)
                             }
                     }
                     .frame(height: 8)
@@ -149,7 +242,7 @@ struct ChaosHubTabView: View {
                                 RoundedRectangle(cornerRadius: 999, style: .continuous)
                                     .fill(accent.opacity(0.7))
                                     .frame(width: geo.size.width * CGFloat(weekly.progressFraction))
-                                    .animation(.spring(response: Theme.animMedium, dampingFraction: 0.75), value: weekly.progressFraction)
+                                    .animation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.75), value: weekly.progressFraction)
                             }
                     }
                     .frame(height: 6)
@@ -159,6 +252,7 @@ struct ChaosHubTabView: View {
                     Button {
                         generateViewModel.trackChaosHubAction("run_mission")
                         generateViewModel.runDailyMissionGeneration()
+                        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
                         onDataChanged()
                         onOpenTab(.generate)
                     } label: {
@@ -173,6 +267,7 @@ struct ChaosHubTabView: View {
 
                     Button {
                         generateViewModel.trackChaosHubAction("open_advice")
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         onOpenTab(.generate)
                     } label: {
                         Label("Open Advice", systemImage: "sparkles")
@@ -262,6 +357,7 @@ struct ChaosHubTabView: View {
                     Button {
                         generateViewModel.trackChaosHubAction("daily_drop")
                         generateViewModel.generateDailyDrop()
+                        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
                         onDataChanged()
                         onOpenTab(.generate)
                     } label: {
@@ -274,6 +370,7 @@ struct ChaosHubTabView: View {
 
                     Button {
                         generateViewModel.trackChaosHubAction("open_settings")
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         onOpenTab(.settings)
                     } label: {
                         Label("Open Labs", systemImage: "gearshape")
@@ -426,6 +523,8 @@ struct ChaosHubTabView: View {
 
                 Button {
                     generateViewModel.trackChaosHubAction("accept_contract_\(contract.title)")
+                    applyContract(contract)
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     onDataChanged()
                     onOpenTab(.generate)
                 } label: {
@@ -438,6 +537,21 @@ struct ChaosHubTabView: View {
                 }
                 .accessibilityLabel("Accept contract: \(contract.title)")
             }
+        }
+    }
+
+    private func applyContract(_ contract: ChaosContract) {
+        if let category = contract.category {
+            generateViewModel.selectedCategory = category
+        }
+        if let tone = contract.tone {
+            generateViewModel.selectedTone = tone
+        }
+        if let pack = contract.contentPack {
+            settings.preferredContentPack = pack
+        }
+        if !contract.description.isEmpty {
+            generateViewModel.scenarioText = contract.description
         }
     }
 }

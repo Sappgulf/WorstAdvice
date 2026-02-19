@@ -193,6 +193,8 @@ struct ContentView: View {
                             Spacer()
                             let tabs = session.settings.tabOrder
                             let tabBarStyle = Theme.tabBarStyle(for: session.settings.theme)
+                            let accent = Theme.accent(for: session.settings.theme)
+                            let secondaryText = Theme.secondaryText(for: session.settings.theme)
                             HStack(spacing: 0) {
                                 ForEach(tabs) { tab in
                                     let isSelected = selectedTab == tab
@@ -207,10 +209,10 @@ struct ContentView: View {
                                     }
                                     .foregroundStyle(
                                         isSelected
-                                            ? Theme.accent(for: session.settings.theme)
+                                            ? accent
                                             : (isHighlighted
-                                                ? Theme.accent(for: session.settings.theme).opacity(0.58)
-                                                : Theme.secondaryText(for: session.settings.theme).opacity(0.74))
+                                                ? accent.opacity(0.58)
+                                                : secondaryText.opacity(0.74))
                                     )
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 7)
@@ -219,7 +221,7 @@ struct ContentView: View {
                                         if isSelected || isHighlighted {
                                             Capsule(style: .continuous)
                                                 .fill(
-                                                    Theme.accent(for: session.settings.theme)
+                                                    accent
                                                         .opacity(isSelected ? tabBarStyle.selectedFillOpacity : tabBarStyle.highlightedFillOpacity)
                                                 )
                                                 .padding(.horizontal, max(4, tabBarStyle.indicatorInset + 3))

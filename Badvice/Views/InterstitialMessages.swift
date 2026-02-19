@@ -145,6 +145,8 @@ struct SettingsTabView: View {
     @State private var gearWobble = false
     @State private var gearSpinDegrees: Double = 0
     @State private var gearIsSpinning = false
+
+    private let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -160,6 +162,9 @@ struct SettingsTabView: View {
         viewModel.reduceMotion || accessibilityReduceMotion
     }
 
+    private var accent: Color { Theme.accent(for: viewModel.theme) }
+    private var primaryText: Color { Theme.primaryText(for: viewModel.theme) }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -167,10 +172,11 @@ struct SettingsTabView: View {
                     // Header Area
                     VStack(spacing: 8) {
                         Button {
-                            guard !isMotionReduced else { return }
                             gearIsSpinning = true
-                            // Spin 720° (two full rotations) with a snappy spring
-                            withAnimation(.interpolatingSpring(stiffness: 80, damping: 10)) {
+                            if isMotionReduced {
+                                gearSpinDegrees += 45
+                            } else {
+                                // Spin 720° (two full rotations) with a snappy spring
                                 gearSpinDegrees += 720
                             }
                             // After spin settles, resume idle wobble
@@ -182,8 +188,8 @@ struct SettingsTabView: View {
                         } label: {
                             Image(systemName: "gearshape.fill")
                                 .font(.system(size: 44))
-                                .foregroundStyle(Theme.accent(for: viewModel.theme))
-                                .shadow(color: Theme.accent(for: viewModel.theme).opacity(0.3), radius: 10)
+                                .foregroundStyle(accent)
+                                .shadow(color: accent.opacity(0.3), radius: 10)
                                 .padding(.bottom, 4)
                                 .frame(width: 72, height: 72)
                                 // Idle wobble when not spinning
@@ -198,10 +204,14 @@ struct SettingsTabView: View {
                                         : .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
                                     value: gearWobble
                                 )
+                                .animation(
+                                    isMotionReduced ? .easeOut(duration: 0.25) : .interpolatingSpring(stiffness: 80, damping: 10),
+                                    value: gearSpinDegrees
+                                )
                                 // Continuous full spin accumulates on each tap
                                 .rotationEffect(.degrees(
                                     sectionsAppeared
-                                        ? (isMotionReduced ? 0 : gearSpinDegrees + (gearWobble ? 3 : -3))
+                                        ? (gearSpinDegrees + (isMotionReduced ? 0 : (gearWobble ? 3 : -3)))
                                         : -180
                                 ))
                         }
@@ -211,7 +221,7 @@ struct SettingsTabView: View {
                         
                         Text("Personalize the Chaos")
                             .font(.system(.title2, design: .rounded, weight: .bold))
-                            .foregroundStyle(Theme.primaryText(for: viewModel.theme))
+                            .foregroundStyle(primaryText)
                             .opacity(sectionsAppeared ? 1 : 0)
                     }
                     .padding(.top, 20)
@@ -372,6 +382,14 @@ struct SettingsTabView: View {
                 Toggle("Performance Mode", isOn: $viewModel.performanceMode)
                 Divider().opacity(0.5)
                 Toggle("Shake to Generate", isOn: $shakeToGenerateEnabled)
+
+                if isLowPowerModeEnabled {
+                    Divider().opacity(0.5)
+                    Label("Low Power Mode is on", systemImage: "battery.25")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .tint(Theme.accent(for: viewModel.theme))
         }
@@ -418,6 +436,10 @@ struct SettingsTabView: View {
     private var dataSection: some View {
         settingsCard(title: "Data & Content", icon: "server.rack") {
             VStack(spacing: 12) {
+                personalizationSnapshot
+
+                settingsDivider
+
                 settingsPicker(
                     "Content Pack",
                     systemImage: "square.grid.2x2",
@@ -438,6 +460,50 @@ struct SettingsTabView: View {
                     isOn: Binding(get: { viewModel.strictNoRepeats }, set: { viewModel.strictNoRepeats = $0 }))
             }
         }
+    }
+
+    private var personalizationSnapshot: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Personalization Snapshot", systemImage: "waveform.path.ecg")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Spacer()
+                Text("On-device")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+            }
+
+            HStack(spacing: 8) {
+                snapshotPill(title: "Generated", value: "\(generateViewModel.totalGeneratedCount)")
+                snapshotPill(title: "Saved", value: "\(generateViewModel.favoriteCount)")
+                snapshotPill(title: "Suggestions", value: "\(generateViewModel.communitySuggestionCount)")
+            }
+        }
+    }
+
+    private func snapshotPill(title: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundStyle(primaryText)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Theme.cardColor(for: viewModel.theme))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
+        )
     }
 
     private var aboutSection: some View {

@@ -796,6 +796,7 @@ struct CinematicVignetteView: View {
 struct DynamicChaosView: View {
     let theme: ThemeMode
     let budget: RenderBudget
+    @Environment(\.scenePhase) private var scenePhase
     
     @State private var start = Date()
 
@@ -809,9 +810,14 @@ struct DynamicChaosView: View {
             return 1.0 / 6.0
         }
     }
+
+    private var throttledInterval: TimeInterval {
+        let multiplier: Double = scenePhase == .active ? 1.0 : 2.5
+        return frameInterval * multiplier
+    }
     
     var body: some View {
-        TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
+        TimelineView(.animation(minimumInterval: throttledInterval, paused: scenePhase != .active)) { timeline in
             Canvas { context, size in
                 let time = timeline.date.timeIntervalSince(start)
                 let accentColor = Theme.accent(for: theme)
@@ -940,12 +946,23 @@ extension View {
             self
         }
     }
+
+    /// Conditionally applies animation to reduce work during heavy motion scenarios.
+    @ViewBuilder
+    func conditionalAnimation<V: Equatable>(_ animation: Animation?, value: V, enabled: Bool) -> some View {
+        if enabled {
+            self.animation(animation, value: value)
+        } else {
+            self.animation(nil, value: value)
+        }
+    }
 }
 
 // MARK: - Special Theme Effects
 
 private struct NeonGridView: View {
     let budget: RenderBudget
+    @Environment(\.scenePhase) private var scenePhase
 
     private var frameInterval: TimeInterval {
         switch budget {
@@ -958,8 +975,13 @@ private struct NeonGridView: View {
         }
     }
 
+    private var throttledInterval: TimeInterval {
+        let multiplier: Double = scenePhase == .active ? 1.0 : 2.5
+        return frameInterval * multiplier
+    }
+
     var body: some View {
-        TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
+        TimelineView(.animation(minimumInterval: throttledInterval, paused: scenePhase != .active)) { timeline in
             Canvas(rendersAsynchronously: true) { context, size in
                 let time = timeline.date.timeIntervalSinceReferenceDate
                 let phase = sin(time * 1.35)
@@ -989,6 +1011,7 @@ private struct NeonGridView: View {
 private struct StarFieldView: View {
     let budget: RenderBudget
     @State private var start = Date()
+    @Environment(\.scenePhase) private var scenePhase
 
     private var frameInterval: TimeInterval {
         switch budget {
@@ -1000,9 +1023,14 @@ private struct StarFieldView: View {
             return 1.0 / 5.0
         }
     }
+
+    private var throttledInterval: TimeInterval {
+        let multiplier: Double = scenePhase == .active ? 1.0 : 2.5
+        return frameInterval * multiplier
+    }
     
     var body: some View {
-        TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
+        TimelineView(.animation(minimumInterval: throttledInterval, paused: scenePhase != .active)) { timeline in
             Canvas(rendersAsynchronously: true) { context, size in
                 let time = timeline.date.timeIntervalSince(start)
                 
@@ -1023,6 +1051,7 @@ private struct StarFieldView: View {
 
 private struct ScanlineView: View {
     let budget: RenderBudget
+    @Environment(\.scenePhase) private var scenePhase
 
     private var frameInterval: TimeInterval {
         switch budget {
@@ -1034,9 +1063,14 @@ private struct ScanlineView: View {
             return 1.0 / 8.0
         }
     }
+
+    private var throttledInterval: TimeInterval {
+        let multiplier: Double = scenePhase == .active ? 1.0 : 2.5
+        return frameInterval * multiplier
+    }
     
     var body: some View {
-        TimelineView(.animation(minimumInterval: frameInterval, paused: false)) { timeline in
+        TimelineView(.animation(minimumInterval: throttledInterval, paused: scenePhase != .active)) { timeline in
             Canvas(rendersAsynchronously: true) { context, size in
                 let cycle = timeline.date.timeIntervalSinceReferenceDate
                 let offset = CGFloat((cycle.truncatingRemainder(dividingBy: 8.0) / 8.0) * 6.0)

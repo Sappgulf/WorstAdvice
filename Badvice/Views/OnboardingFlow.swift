@@ -9,28 +9,38 @@ struct OnboardingFlow: View {
         let icon: String
         let title: String
         let subtitle: String
+        let accent: Color
+        let background: LinearGradient
     }
 
     private let pages: [Page] = [
         Page(
             icon: "sparkles",
             title: "Badvice.\nConfidently delivered.",
-            subtitle: "Hilariously wrong guidance for dating, money, fitness, work, and everyday chaos."
+            subtitle: "Hilariously wrong guidance for dating, money, fitness, work, and everyday chaos.",
+            accent: Color(hex: "8F4A22"),
+            background: LinearGradient(colors: [Color(hex: "F7F2E8"), Color(hex: "F1E4D4")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "quote.bubble.fill",
             title: "10 categories.\n11 tones of chaos.",
-            subtitle: "From Corporate Consultant to Conspiracy Theorist, every terrible take has a distinct voice."
+            subtitle: "From Corporate Consultant to Conspiracy Theorist, every terrible take has a distinct voice.",
+            accent: Color(hex: "7E4B7A"),
+            background: LinearGradient(colors: [Color(hex: "F3EAF6"), Color(hex: "E6D7F0")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "square.and.arrow.up",
             title: "Share the\nspectacular failure.",
-            subtitle: "Beautiful cards, one-tap copy/share, and daily drops built for group chats."
+            subtitle: "Beautiful cards, one-tap copy/share, and daily drops built for group chats.",
+            accent: Color(hex: "2E6F64"),
+            background: LinearGradient(colors: [Color(hex: "EAF6F3"), Color(hex: "D8EFE8")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "map.fill",
             title: "Where to next?",
-            subtitle: "Advice for instant bad ideas, Quotes for daily chaos, Favorites to save disasters, Settings for Labs."
+            subtitle: "Advice for instant bad ideas, Quotes for daily chaos, Favorites to save disasters, Settings for Labs.",
+            accent: Color(hex: "3C4E7A"),
+            background: LinearGradient(colors: [Color(hex: "EAF0FB"), Color(hex: "DDE6F6")], startPoint: .topLeading, endPoint: .bottomTrailing)
         )
     ]
 
@@ -40,7 +50,9 @@ struct OnboardingFlow: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Color(hex: "F7F2E8").ignoresSafeArea()
+            pages[currentPage].background
+                .ignoresSafeArea()
+                .animation(isMotionReduced ? nil : .easeInOut(duration: 0.6), value: currentPage)
 
             // Triple-A Background Elements
             FloatingParticlesView(theme: .minimal, reduceMotion: isMotionReduced, isGenerating: false)
@@ -57,6 +69,7 @@ struct OnboardingFlow: View {
                         icon: page.icon,
                         title: page.title,
                         subtitle: page.subtitle,
+                        accent: page.accent,
                         reduceMotion: isMotionReduced
                     )
                     .tag(index)
@@ -69,15 +82,25 @@ struct OnboardingFlow: View {
 
             // Bottom controls
             VStack(spacing: 20) {
+                // Progress label
+                Text("Step \(currentPage + 1) of \(pages.count)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(pages[currentPage].accent.opacity(0.9))
+
                 // Pill page indicators
                 HStack(spacing: 8) {
                     ForEach(0..<pages.count, id: \.self) { i in
                         Capsule(style: .continuous)
-                            .fill(Color(hex: "8F4A22").opacity(i == currentPage ? 1 : 0.22))
+                            .fill(pages[currentPage].accent.opacity(i == currentPage ? 1 : 0.22))
                             .frame(width: i == currentPage ? 28 : 8, height: 8)
                             .animation(isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.75), value: currentPage)
                     }
                 }
+
+                Text("Swipe to explore")
+                    .font(.caption)
+                    .foregroundStyle(pages[currentPage].accent.opacity(0.7))
+                    .opacity(isMotionReduced ? 1 : 0.9)
 
                 // CTA
                 Button {
@@ -106,8 +129,8 @@ struct OnboardingFlow: View {
                         .foregroundStyle(.white)
                         .background(
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(Color(hex: "8F4A22"))
-                                .shadow(color: Color(hex: "8F4A22").opacity(0.3), radius: 10, y: 5)
+                                .fill(pages[currentPage].accent)
+                                .shadow(color: pages[currentPage].accent.opacity(0.3), radius: 10, y: 5)
                         )
                 }
                 .padding(.horizontal, 28)
@@ -126,7 +149,7 @@ struct OnboardingFlow: View {
                         }
                     }
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color(hex: "665746"))
+                    .foregroundStyle(pages[currentPage].accent.opacity(0.75))
                 } else {
                     Color.clear.frame(height: 22)
                 }
@@ -140,6 +163,7 @@ private struct OnboardingPageView: View {
     let icon: String
     let title: String
     let subtitle: String
+    let accent: Color
     var reduceMotion: Bool = false
 
     @State private var appeared = false
@@ -152,23 +176,23 @@ private struct OnboardingPageView: View {
             // Icon bubble
             ZStack {
                 Circle()
-                    .fill(Color(hex: "8F4A22").opacity(0.1))
+                    .fill(accent.opacity(0.12))
                     .frame(width: 140, height: 140)
                     .scaleEffect(floatAnim ? 1.05 : 0.95)
 
                 Circle()
-                    .fill(Color(hex: "8F4A22").opacity(0.06))
+                    .fill(accent.opacity(0.07))
                     .frame(width: 110, height: 110)
                     .scaleEffect(floatAnim ? 0.9 : 1.1)
 
                 if reduceMotion {
                     Image(systemName: icon)
                         .font(.system(size: 52, weight: .semibold))
-                        .foregroundStyle(Color(hex: "8F4A22"))
+                        .foregroundStyle(accent)
                 } else {
                     Image(systemName: icon)
                         .font(.system(size: 52, weight: .semibold))
-                        .foregroundStyle(Color(hex: "8F4A22"))
+                        .foregroundStyle(accent)
                         .symbolEffect(.bounce.up.byLayer, value: appeared)
                         .offset(y: floatAnim ? -5 : 5)
                 }

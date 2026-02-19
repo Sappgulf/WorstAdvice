@@ -20,6 +20,8 @@ struct AdviceCardView: View {
     @State private var cachedShadow: (color: Color, radius: CGFloat, y: CGFloat)?
     @State private var cachedAccent: Color?
 
+    private let moderation = ContentModeration()
+
     private var isMotionReduced: Bool {
         reduceMotion || accessibilityReduceMotion
     }
@@ -50,6 +52,7 @@ struct AdviceCardView: View {
         let shadow = primaryShadow
         let secondaryShadow = Theme.cardSecondaryShadow(for: theme)
         let glowColor = Theme.glowColor(for: theme)
+        let safetyScore = moderation.safetyScore(for: record.adviceLine + " " + (record.rationaleLine ?? ""))
 
         VStack(alignment: .leading, spacing: 0) {
             // Meta row
@@ -66,6 +69,9 @@ struct AdviceCardView: View {
                         )
 
                     Spacer()
+
+                    SafetyIndicator(score: safetyScore, theme: theme)
+                        .accessibilityLabel("Safety score")
 
                     IntensityIndicator(tone: record.tone, theme: theme)
                         .accessibilityLabel("Tone intensity")
@@ -137,7 +143,7 @@ struct AdviceCardView: View {
                         .blur(radius: 4)
                 }
             }
-            .drawingGroup() // Optimize background rendering
+            .conditionalDrawingGroup(!isMotionReduced)
         }
 
         .overlay(
@@ -249,7 +255,7 @@ struct AdviceCardView: View {
             guard newID != lastRecordID else { return }
             lastRecordID = newID
             
-            // Clear cache on theme change
+            // Refresh cached visuals for the new card.
             cachedShadow = Theme.cardShadow(for: theme)
             cachedAccent = Theme.accent(for: theme)
 
@@ -297,6 +303,15 @@ struct AdviceCardView: View {
                 shimmerOffset = -1.0
             }
         }
+        .onChange(of: theme) { _, _ in
+            cachedShadow = Theme.cardShadow(for: theme)
+            cachedAccent = Theme.accent(for: theme)
+            if isMotionReduced {
+                shimmerOffset = -1.0
+                rotationX = 0
+                rotationY = 0
+            }
+        }
         .accessibilityElement(children: .contain)
     }
 }
@@ -326,24 +341,85 @@ struct GenerateTabView: View {
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
 
+    private var headerIconName: String {
+        switch settings.theme {
+        case .badvice: return "sparkles"
+        case .minimal: return "circle"
+        case .ember: return "flame.fill"
+        case .slate: return "hexagon.fill"
+        case .evergreen: return "leaf.fill"
+        case .fallout: return "radiation"
+        case .neon: return "bolt.fill"
+        case .midnight: return "moon.stars.fill"
+        case .sunset: return "sun.horizon.fill"
+        case .cosmic: return "sparkles"
+        case .retro: return "waveform.path.ecg"
+        case .cybernetic: return "cpu"
+        }
+    }
+
+    private var headerBadgeGradient: LinearGradient {
+        let secondary = Theme.secondaryAccent(for: settings.theme) ?? accent
+        return LinearGradient(
+            colors: [accent.opacity(0.9), secondary.opacity(0.7), accent.opacity(0.5)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var headerView: some View {
+        let headerColor = Theme.headerColor(for: settings.theme)
+        let glow = Theme.glowColor(for: settings.theme)
+        return HStack(spacing: 8) {
+            Image(systemName: headerIconName)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(accent)
+                .shadow(color: accent.opacity(0.35), radius: 6, x: 0, y: 2)
+
+            HStack(spacing: 0) {
+                Text("Bad")
+                    .font(Theme.headlineFont.weight(.black))
+                Text("vice")
+                    .font(Theme.headlineFont.weight(.semibold))
+            }
+            .foregroundStyle(headerColor)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(headerBadgeGradient.opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(headerBadgeGradient.opacity(0.35), lineWidth: 1)
+                )
+        )
+        .overlay {
+            if let glow, !isMotionReduced {
+                Circle()
+                    .fill(glow.opacity(0.25))
+                    .frame(width: 36, height: 36)
+                    .blur(radius: 10)
+                    .offset(x: 18, y: -10)
+            }
+        }
+        .shadow(color: Theme.headerShadowColor(for: settings.theme), radius: 8, x: 0, y: 4)
+        .scaleEffect(isMotionReduced ? 1 : (viewModel.hapticTrigger % 2 == 0 ? 1.0 : 1.02))
+        .hueRotation(.degrees(isMotionReduced ? 0 : Double(viewModel.hapticTrigger % 4) * 12))
+        .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.6), value: viewModel.hapticTrigger)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 0) {
-                    Text("Bad")
-                        .font(Theme.headlineFont.weight(.black))
-                    Text("vice")
-                        .font(Theme.headlineFont.weight(.semibold))
-                }
-                .foregroundStyle(Theme.headerColor(for: settings.theme))
-                .shadow(color: Theme.headerShadowColor(for: settings.theme), radius: 6, x: 0, y: 0)
-                .hueRotation(.degrees(isMotionReduced ? 0 : Double(viewModel.hapticTrigger % 3) * 30))
-                .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.6), value: viewModel.hapticTrigger)
+                headerView
 
                 selectorRow
                 dailyQuoteBanner
                 scenarioComposer
                 friendRoastComposer
+                scenarioSuggestionsRow
+                adaptiveHintCard
                 if !hasDismissedWhatsNewCard {
                     whatsNewCard
                 }
@@ -358,6 +434,44 @@ struct GenerateTabView: View {
                             .transition(isMotionReduced ? .identity : .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
                             .animation(isMotionReduced ? nil : .spring(response: 0.2, dampingFraction: 0.5), value: viewModel.hapticTrigger)
+                            .contextMenu {
+                                Button("Save", systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark") {
+                                    let wasFavorite = viewModel.isCurrentFavorite
+                                    viewModel.toggleFavorite()
+                                    onDataChanged()
+                                    HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                                    activeToast = ToastMessage(
+                                        message: wasFavorite ? "Removed from Favorites" : "Saved!",
+                                        style: wasFavorite ? .deleted : .success
+                                    )
+                                }
+
+                                Button("Copy", systemImage: "doc.on.doc") {
+                                    UIPasteboard.general.string = viewModel.currentShareText
+                                    viewModel.trackCopy()
+                                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                                    activeToast = ToastMessage(message: "Copied!", style: .success)
+                                }
+
+                                Button("Share", systemImage: "square.and.arrow.up") {
+                                    guard let payload = viewModel.currentSharePayload else { return }
+                                    let image = ShareCardRenderer.render(content: payload)
+                                    shareItems = [image, viewModel.currentShareText]
+                                    viewModel.trackShare(template: payload.template, ratio: payload.aspectRatio)
+                                    showingShareSheet = true
+                                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                                }
+                            }
+                            .onTapGesture(count: 2) {
+                                let wasFavorite = viewModel.isCurrentFavorite
+                                viewModel.toggleFavorite()
+                                onDataChanged()
+                                HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                                activeToast = ToastMessage(
+                                    message: wasFavorite ? "Removed from Favorites" : "Saved!",
+                                    style: wasFavorite ? .deleted : .success
+                                )
+                            }
                     }
                 }
                 .overlay {
@@ -382,6 +496,7 @@ struct GenerateTabView: View {
             .padding(.top, 16)
             .padding(.bottom, 28)
         }
+        .scrollDismissesKeyboard(.interactively)
         .coordinateSpace(name: "scroll")
         .trackScrollForTabBar()
         .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
@@ -545,6 +660,83 @@ struct GenerateTabView: View {
                 )
                 .foregroundStyle(primaryText)
         }
+    }
+
+    @ViewBuilder
+    private var scenarioSuggestionsRow: some View {
+        let suggestions = viewModel.keywordSuggestions
+        if !suggestions.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Label("Smart prompts", systemImage: "wand.and.stars")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(secondaryText)
+                    Spacer()
+                    Button("Shuffle") {
+                        if let pick = suggestions.randomElement() {
+                            applyScenarioSuggestion(pick)
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        }
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(suggestions, id: \.self) { suggestion in
+                            Button(suggestion) {
+                                applyScenarioSuggestion(suggestion)
+                                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(accent)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var adaptiveHintCard: some View {
+        if viewModel.selectedCategory == .random || viewModel.selectedTone == .random {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.caption.weight(.bold))
+                    Text("Adaptive Mix")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(accent)
+
+                Text("We’ll use your recent likes to steer tone + category while staying fresh.")
+                    .font(.footnote)
+                    .foregroundStyle(primaryText)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(cardColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(accent.opacity(0.16), lineWidth: 1)
+                    )
+            )
+        }
+    }
+
+    private func applyScenarioSuggestion(_ suggestion: String) {
+        let trimmed = viewModel.scenarioText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            viewModel.scenarioText = suggestion
+            return
+        }
+        if trimmed.localizedCaseInsensitiveContains(suggestion) {
+            return
+        }
+        let separator = trimmed.hasSuffix(".") ? " " : ", "
+        viewModel.scenarioText = trimmed + separator + suggestion
     }
 
     @ViewBuilder
@@ -982,6 +1174,42 @@ struct GenerateTabView: View {
         }
         .frame(minHeight: 320)
         .frame(maxWidth: .infinity)
+    }
+}
+
+private struct SafetyIndicator: View {
+    let score: Double
+    let theme: ThemeMode
+
+    private var label: String {
+        if score >= 0.78 { return "Safe" }
+        if score >= 0.55 { return "Edgy" }
+        return "Spicy"
+    }
+
+    private var icon: String {
+        if score >= 0.78 { return "checkmark.shield" }
+        if score >= 0.55 { return "shield.lefthalf.filled" }
+        return "exclamationmark.shield"
+    }
+
+    private var tint: Color {
+        if score >= 0.78 { return Theme.accent(for: theme) }
+        if score >= 0.55 { return Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme) }
+        return .orange
+    }
+
+    var body: some View {
+        Label(label, systemImage: icon)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(tint.opacity(0.12))
+            )
+            .accessibilityValue(label)
     }
 }
 

@@ -147,7 +147,15 @@ struct FavoritesTabView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
-                        .padding(.bottom, 10)
+                        .padding(.bottom, 6)
+
+                        favoritesInsightsCard
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 8)
+
+                        favoritesCategoryChips
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 8)
 
                         if viewModel.filteredFavorites.isEmpty {
                             noResultsState
@@ -168,6 +176,9 @@ struct FavoritesTabView: View {
                 viewModel.reload()
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 tabBarVisible.wrappedValue = true
+                animateListContentIfNeeded()
+            }
+            .onChange(of: viewModel.filteredFavorites.count) { _, _ in
                 animateListContentIfNeeded()
             }
         }
@@ -230,8 +241,16 @@ struct FavoritesTabView: View {
                     .buttonStyle(.plain)
                     .padding(.horizontal, 16)
                     .contextMenu {
+                        Button("Copy") {
+                            UIPasteboard.general.string = record.adviceLine
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        }
                         Button("Unsave") { viewModel.remove(record) }
                         Button("Delete", role: .destructive) { viewModel.delete(record) }
+                    }
+                    .onTapGesture(count: 2) {
+                        viewModel.remove(record)
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) { viewModel.delete(record) } label: {
@@ -249,8 +268,18 @@ struct FavoritesTabView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .trackScrollForTabBar()
+        .refreshable {
+            viewModel.reload()
+            HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
+        }
+        .transaction { transaction in
+            if isMotionReduced {
+                transaction.animation = nil
+            }
+        }
         .opacity(listContentAppeared ? 1 : 0)
         .offset(y: listContentAppeared ? 0 : 12)
+        .conditionalAnimation(.spring(response: Theme.animSlow, dampingFraction: 0.82), value: listContentAppeared, enabled: !isMotionReduced)
     }
 
     private func favoriteListRow(_ record: AdviceRecord) -> some View {
@@ -324,8 +353,16 @@ struct FavoritesTabView: View {
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
+                            Button("Copy") {
+                                UIPasteboard.general.string = record.adviceLine
+                                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                            }
                             Button("Unsave") { viewModel.remove(record) }
                             Button("Delete", role: .destructive) { viewModel.delete(record) }
+                        }
+                        .onTapGesture(count: 2) {
+                            viewModel.remove(record)
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         }
                     }
                 }
@@ -336,8 +373,18 @@ struct FavoritesTabView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .trackScrollForTabBar()
+        .refreshable {
+            viewModel.reload()
+            HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
+        }
+        .transaction { transaction in
+            if isMotionReduced {
+                transaction.animation = nil
+            }
+        }
         .opacity(listContentAppeared ? 1 : 0)
         .offset(y: listContentAppeared ? 0 : 12)
+        .conditionalAnimation(.spring(response: Theme.animSlow, dampingFraction: 0.82), value: listContentAppeared, enabled: !isMotionReduced)
     }
 
     private func favoriteGridCell(_ record: AdviceRecord) -> some View {
@@ -379,6 +426,18 @@ struct FavoritesTabView: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(accent.opacity(0.1), lineWidth: 1)
         )
+        .contextMenu {
+            Button("Copy") {
+                UIPasteboard.general.string = record.adviceLine
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            }
+            Button("Unsave") { viewModel.remove(record) }
+            Button("Delete", role: .destructive) { viewModel.delete(record) }
+        }
+        .onTapGesture(count: 2) {
+            viewModel.remove(record)
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        }
     }
 
     private var statsChip: some View {
@@ -402,6 +461,86 @@ struct FavoritesTabView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var favoritesInsightsCard: some View {
+        let total = max(viewModel.favorites.count, 1)
+        let filtered = viewModel.filteredFavorites.count
+        let ratio = Double(filtered) / Double(total)
+        let message: String
+        switch ratio {
+        case 0.7...:
+            message = "This is your greatest hits shelf. Lean into these tones."
+        case 0.35..<0.7:
+            message = "A balanced stack. Try filtering by category to find themes."
+        default:
+            message = "Your tightest keepers. Consider revisiting these for new chaos."
+        }
+
+        return HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(accent.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: "sparkles")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(accent)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Favorites Pulse")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(cardColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    private var favoritesCategoryChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                Button("All") {
+                    viewModel.selectedCategory = nil
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                }
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(viewModel.selectedCategory == nil ? accent.opacity(0.2) : secondaryText.opacity(0.12))
+                )
+                .foregroundStyle(viewModel.selectedCategory == nil ? accent : secondaryText)
+
+                ForEach(AdviceCategory.concrete) { category in
+                    let isSelected = viewModel.selectedCategory == category
+                    Button(category.title) {
+                        viewModel.selectedCategory = isSelected ? nil : category
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    }
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
+                    )
+                    .foregroundStyle(isSelected ? accent : secondaryText)
+                }
+            }
+        }
     }
 
     private func animateListContentIfNeeded() {
@@ -543,6 +682,7 @@ struct QuotesTabView: View {
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
     @State private var activeToast: ToastMessage? = nil
+    @State private var showQuoteSpotlight = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -561,6 +701,9 @@ struct QuotesTabView: View {
                     LazyVStack(spacing: 12) {
                         // Daily hero
                         dailyQuoteHero
+                            .padding(.horizontal, 16)
+
+                        quoteSpotlightCard
                             .padding(.horizontal, 16)
 
                         // Sort + search row
@@ -604,6 +747,28 @@ struct QuotesTabView: View {
                                         .frame(width: 40, height: 34)
                                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                                 }
+                            }
+
+                            // Category quick filters
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(AdviceCategory.concrete) { category in
+                                        let isSelected = viewModel.selectedCategory == category
+                                        Button(category.title) {
+                                            viewModel.selectedCategory = isSelected ? nil : category
+                                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                                        }
+                                        .font(.caption.weight(.semibold))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            Capsule(style: .continuous)
+                                                .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
+                                        )
+                                        .foregroundStyle(isSelected ? accent : secondaryText)
+                                    }
+                                }
+                                .padding(.vertical, 2)
                             }
 
                             // Stats strip
@@ -682,7 +847,9 @@ struct QuotesTabView: View {
     }
 
     private func quoteRow(_ quote: BadQuote) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let spotlight = viewModel.quoteSpotlightInsight(for: quote)
+
+        return VStack(alignment: .leading, spacing: 12) {
             Text("\u{201C}\(quote.text)\u{201D}")
                 .font(.body.weight(.medium))
                 .foregroundStyle(primaryText)
@@ -707,6 +874,11 @@ struct QuotesTabView: View {
                     .lineLimit(1)
             }
 
+            Text(spotlight)
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+                .lineLimit(2)
+
             HStack(spacing: 10) {
                 voteButtons(for: quote)
                 Spacer(minLength: 8)
@@ -719,6 +891,18 @@ struct QuotesTabView: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(.white.opacity(0.07), lineWidth: 1)
         )
+        .contextMenu {
+            Button { copyQuote(quote, isDaily: false) } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+            }
+            Button { shareQuote(quote, isDaily: false) } label: {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+        }
+        .onTapGesture(count: 2) {
+            viewModel.toggleVote(.like, for: quote)
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        }
     }
 
     private var dailyQuoteHero: some View {
@@ -780,6 +964,15 @@ struct QuotesTabView: View {
                         .tint(.white)
                     }
                     Spacer()
+                    Button {
+                        showQuoteSpotlight = true
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    } label: {
+                        Image(systemName: "sparkle.magnifyingglass").frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+
                     Button { copyQuote(dailyQuote, isDaily: true) } label: {
                         Image(systemName: "doc.on.doc").frame(width: 34, height: 34)
                     }
@@ -807,6 +1000,67 @@ struct QuotesTabView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Bad quote of the day: \(dailyQuote.text) by \(dailyQuote.source)")
+        .onTapGesture(count: 2) {
+            showQuoteSpotlight = true
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        }
+    }
+
+    private var quoteSpotlightCard: some View {
+        let quote = viewModel.dailyQuote
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Quote Spotlight", systemImage: "sparkle.magnifyingglass")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Spacer()
+                Button(showQuoteSpotlight ? "Hide" : "Show") {
+                    withAnimation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8)) {
+                        showQuoteSpotlight.toggle()
+                    }
+                }
+                .font(.caption.weight(.semibold))
+            }
+
+            if showQuoteSpotlight {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Theme")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(secondaryText)
+                    Text(quote.category.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(primaryText)
+
+                    Text("Why it hits")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(secondaryText)
+                        .padding(.top, 6)
+                    Text(viewModel.quoteSpotlightInsight(for: quote))
+                        .font(.footnote)
+                        .foregroundStyle(primaryText)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+            } else {
+                Text("Tap Show for a quick breakdown of today’s quote.")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
+        )
     }
 
     private func copyQuote(_ quote: BadQuote, isDaily: Bool) {
@@ -1086,6 +1340,10 @@ struct HistoryTabView: View {
                                 }
                             }
 
+                            historyQuickActions
+
+                            historyCategoryChips
+
                             // Stats strip
                             HStack {
                                 Label("\(viewModel.likedCount)", systemImage: "hand.thumbsup.fill")
@@ -1162,6 +1420,10 @@ struct HistoryTabView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .trackScrollForTabBar()
+        .refreshable {
+            viewModel.reload()
+            HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
+        }
         .opacity(historyListAppeared ? 1 : 0)
         .offset(y: historyListAppeared ? 0 : 12)
     }
@@ -1247,6 +1509,22 @@ struct HistoryTabView: View {
             }
             .tint(accent)
         }
+        .contextMenu {
+            Button { onUseRecord(record) } label: {
+                Label("Use", systemImage: "arrow.forward")
+            }
+            Button { viewModel.saveFromHistory(record) } label: {
+                Label("Save", systemImage: "bookmark")
+            }
+            Button { UIPasteboard.general.string = record.adviceLine } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+            }
+        }
+        .onTapGesture(count: 2) {
+            viewModel.saveFromHistory(record)
+            onDataChanged()
+            HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+        }
     }
 
     private var historyEmptyState: some View {
@@ -1282,6 +1560,67 @@ struct HistoryTabView: View {
             .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var historyQuickActions: some View {
+        HStack(spacing: 10) {
+            Button {
+                viewModel.selectedCategory = nil
+                viewModel.searchText = ""
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            } label: {
+                Label("Clear Filters", systemImage: "line.3.horizontal.decrease.circle")
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 36)
+            }
+            .buttonStyle(.bordered)
+            .tint(accent)
+
+            Button {
+                showingClearConfirmation = true
+            } label: {
+                Label("Clear History", systemImage: "trash")
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 36)
+            }
+            .buttonStyle(.bordered)
+            .tint(.orange)
+        }
+    }
+
+    private var historyCategoryChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                Button("All") {
+                    viewModel.selectedCategory = nil
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                }
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(viewModel.selectedCategory == nil ? accent.opacity(0.2) : secondaryText.opacity(0.12))
+                )
+                .foregroundStyle(viewModel.selectedCategory == nil ? accent : secondaryText)
+
+                ForEach(AdviceCategory.concrete) { category in
+                    let isSelected = viewModel.selectedCategory == category
+                    Button(category.title) {
+                        viewModel.selectedCategory = isSelected ? nil : category
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    }
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
+                    )
+                    .foregroundStyle(isSelected ? accent : secondaryText)
+                }
+            }
+        }
     }
 
     @State private var noResultsAppeared = false

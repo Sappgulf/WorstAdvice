@@ -26,36 +26,59 @@ private struct DailyQuoteProvider: TimelineProvider {
 
 private struct WorstAdviceQuoteWidgetEntryView: View {
     let entry: DailyQuoteEntry
+    @Environment(\.widgetFamily) private var family
+
+    private var quoteFont: Font {
+        switch family {
+        case .systemSmall: return .subheadline.weight(.semibold)
+        case .systemMedium: return .headline
+        default: return .headline
+        }
+    }
+
+    private var padding: CGFloat { family == .systemSmall ? 12 : 16 }
 
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [Color(red: 0.95, green: 0.57, blue: 0.28), Color(red: 0.42, green: 0.23, blue: 0.12)],
+                colors: [Color(red: 0.96, green: 0.60, blue: 0.30), Color(red: 0.40, green: 0.20, blue: 0.10)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Bad Quote of the Day")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.88))
+                HStack {
+                    Text("Bad Quote of the Day")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.88))
+                    Spacer()
+                    Text("TODAY")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(.white.opacity(0.2), in: Capsule(style: .continuous))
+                }
 
                 Text("“\(entry.quote.text)”")
-                    .font(.headline)
+                    .font(quoteFont)
                     .foregroundStyle(.white)
-                    .lineLimit(4)
+                    .lineLimit(family == .systemSmall ? 3 : 4)
+                    .lineSpacing(2)
 
                 Spacer(minLength: 0)
 
-                Text(entry.quote.source)
-                    .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.85))
-
-                Text("Badvice")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.white.opacity(0.92))
+                HStack {
+                    Text(entry.quote.source)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.85))
+                    Spacer()
+                    Text("Badvice")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.92))
+                }
             }
-            .padding(14)
+            .padding(padding)
         }
         .containerBackground(for: .widget) {
             Color.clear

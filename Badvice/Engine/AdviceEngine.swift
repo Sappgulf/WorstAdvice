@@ -20,6 +20,7 @@ struct AdviceEngine {
         contentPack: ContentPack = .classic,
         situation: String? = nil,
         seed: Int? = nil,
+        templateBias: Double = 0.5,
         now: Date = Date()
     ) async -> GeneratedAdvice {
         let resolvedSeed = seed ?? defaultSeed(from: now)
@@ -32,7 +33,11 @@ struct AdviceEngine {
 
         let principle = rng.pick(rules.badPrinciples)
         let keyword = rng.pick(rules.keywords)
-        let actionTemplate = rng.pick(rules.actionTemplates)
+        let actionTemplate = pickActionTemplate(
+            from: rules.actionTemplates,
+            bias: combinedTemplateBias(userBias: templateBias, tone: resolvedTone),
+            rng: &rng
+        )
         let opener = rng.pick(voice.opener)
         let confidence = rng.pick(voice.confidenceTag)
         let ending = rng.pick(voice.ending)
@@ -48,7 +53,7 @@ struct AdviceEngine {
         let directiveClause = "Lead with \(toneDirective) and push \(categoryDirective)."
 
         let scenario = sanitizedSituation(situation)
-        let selectedTopic = scenario ?? keyword
+        let selectedTopic = selectTopic(from: scenario, fallback: keyword, seed: resolvedSeed)
         let normalizedSelectedTopic = selectedTopic.normalizedForFiltering
         let normalizedToneDirective = toneDirective.normalizedForFiltering
         let normalizedCategoryDirective = categoryDirective.normalizedForFiltering
@@ -159,6 +164,7 @@ struct AdviceEngine {
         contentPack: ContentPack = .classic,
         situation: String? = nil,
         seed: Int? = nil,
+        templateBias: Double = 0.5,
         now: Date = Date(),
         count: Int = 6
     ) async -> [GeneratedAdvice] {
@@ -183,6 +189,7 @@ struct AdviceEngine {
                 contentPack: contentPack,
                 situation: situation,
                 seed: candidateSeed,
+                templateBias: templateBias,
                 now: now
             )
             let fingerprint = candidate.adviceLine.normalizedForFiltering
@@ -224,6 +231,108 @@ struct AdviceEngine {
             options: .regularExpression
         )
         return String(collapsed.prefix(72))
+    }
+
+    private func selectTopic(from scenario: String?, fallback: String, seed: Int) -> String {
+        guard let scenario, !scenario.isEmpty else { return fallback }
+        if let extracted = extractSalientTopic(from: scenario, seed: seed) {
+            return extracted
+        }
+        return scenario
+    }
+
+    private func combinedTemplateBias(userBias: Double, tone: ToneMode) -> Double {
+        let clampedUser = min(max(userBias, 0.0), 1.0)
+        let toneBias = toneTemplateBias(for: tone)
+        return min(max((clampedUser + toneBias) / 2.0, 0.05), 0.95)
+    }
+
+    private func toneTemplateBias(for tone: ToneMode) -> Double {
+        switch tone {
+        case .alphaPodcast, .cryptoBro:
+            return 0.86
+        case .toxicBestFriend, .influencer:
+            return 0.78
+        case .corporateConsultant, .lifeCoach:
+            return 0.6
+        case .wizard, .conspiracyTheorist:
+            return 0.7
+        case .friendRoast:
+            return 0.65
+        case .boomer:
+            return 0.55
+        case .minimalistMonk:
+            return 0.4
+        case .random:
+            return 0.6
+        }
+    }
+
+    private func pickActionTemplate(
+        from templates: [String],
+        bias: Double,
+        rng: inout SeededGenerator
+    ) -> String {
+        guard !templates.isEmpty else { return "Do the %@ thing loudly." }
+        var intense: [String] = []
+        var neutral: [String] = []
+        for template in templates {
+            let normalized = template.normalizedForFiltering
+            if Self.intenseTemplateTerms.contains(where: { normalized.contains($0) }) {
+                intense.append(template)
+            } else {
+                neutral.append(template)
+            }
+        }
+        guard !intense.isEmpty, !neutral.isEmpty else {
+            return rng.pick(templates)
+        }
+        let roll = randomUnit(using: &rng)
+        return roll < min(max(bias, 0.0), 1.0) ? rng.pick(intense) : rng.pick(neutral)
+    }
+
+    private func randomUnit(using rng: inout SeededGenerator) -> Double {
+        let bucket = rng.next() % 10_000
+        return Double(bucket) / 10_000.0
+    }
+
+    private func extractSalientTopic(from text: String, seed: Int) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let tagger = NLTagger(tagSchemes: [.lexicalClass])
+        tagger.string = trimmed
+        var counts: [String: Int] = [:]
+        var examples: [String: String] = [:]
+        let options: NLTagger.Options = [.omitWhitespace, .omitPunctuation, .joinNames]
+        tagger.enumerateTags(in: trimmed.startIndex..<trimmed.endIndex,
+                             unit: .word,
+                             scheme: .lexicalClass,
+                             options: options) { tag, tokenRange in
+            guard let tag, tag == .noun else { return true }
+            let token = String(trimmed[tokenRange])
+            let normalized = normalizedTopicToken(token)
+            guard !normalized.isEmpty else { return true }
+            counts[normalized, default: 0] += 1
+            if examples[normalized] == nil {
+                examples[normalized] = token.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            return true
+        }
+
+        guard let maxCount = counts.values.max() else { return nil }
+        let candidates = counts.filter { $0.value == maxCount }.map { $0.key }.sorted()
+        guard let choice = candidates.isEmpty ? nil : candidates[abs(seed) % candidates.count] else { return nil }
+        return examples[choice] ?? choice
+    }
+
+    private func normalizedTopicToken(_ token: String) -> String {
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 3 else { return "" }
+        let filtered = trimmed.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) || $0 == " " }
+        let normalized = String(String.UnicodeScalarView(filtered)).lowercased()
+        guard !normalized.isEmpty, !Self.topicStopwords.contains(normalized) else { return "" }
+        return normalized
     }
 
     private func qualityScore(
@@ -308,6 +417,21 @@ struct AdviceEngine {
         )
     }
 
+    private static let topicStopwords: Set<String> = [
+        "a", "an", "and", "are", "about", "after", "before", "because", "been", "being",
+        "for", "from", "have", "having", "into", "just", "like", "more", "most", "less",
+        "over", "under", "with", "within", "without", "your", "yours", "our", "ours",
+        "their", "theirs", "this", "that", "these", "those", "what", "when", "where",
+        "which", "while", "who", "why", "okay", "ok", "maybe", "something", "someone",
+        "thing", "things", "stuff", "friend", "friends"
+    ]
+
+    private static let intenseTemplateTerms: [String] = [
+        "always", "never", "immediately", "aggressive", "all in", "all-in", "maximum", "no caveats",
+        "skip", "refuse", "force", "must", "only", "every", "anything", "everything", "loud",
+        "ignore", "without", "zero", "full", "hard", "fast", "now"
+    ]
+
     private static let momentumBeats = [
         "Do it fast enough that objections sound outdated.",
         "Keep moving so nobody can audit the details.",
@@ -325,7 +449,15 @@ struct AdviceEngine {
         "Execute with urgency so the plan feels inevitable.",
         "Let pace make up for whatever preparation couldn't.",
         "Treat deliberation as a sign of insufficient belief.",
-        "Push through so fast that hindsight has no standing."
+        "Push through so fast that hindsight has no standing.",
+        "Make every action too fast to fact-check.",
+        "Ship before stakeholders wake up to ask questions.",
+        "Velocity is accountability's natural predator.",
+        "Move so quickly that concerns expire en route.",
+        "Launch at a speed where feedback becomes nostalgia.",
+        "Execution should always outrun explanation.",
+        "Build momentum until it feels illegal to slow down.",
+        "When in doubt, accelerate until doubt gives up."
     ]
 
     private static let rationaleLeads = [
@@ -353,7 +485,14 @@ struct AdviceEngine {
         "Reframe ambiguity as strategic flexibility.",
         "Translate all pushback into additional urgency.",
         "Rename uncertainty as optionality and keep pitching.",
-        "Treat every objection like proof of market demand."
+        "Treat every objection like proof of market demand.",
+        "Convert skepticism into validation data.",
+        "Frame every setback as iterative learning.",
+        "Make confusion look like sophisticated complexity.",
+        "Turn resistance into engagement metrics.",
+        "Repackage every failure as a pivot milestone.",
+        "Translate doubt into premium scarcity.",
+        "Present all delays as strategic pacing."
     ]
 
     private static let escalationClauses = [
@@ -370,7 +509,15 @@ struct AdviceEngine {
         "Invite more stakeholders so diluted accountability looks like collaboration.",
         "If the scope grows, pitch it as expanded vision.",
         "Turn any obstacle into a narrative about resilience.",
-        "Add complexity so simplicity looks like lack of ambition."
+        "Add complexity so simplicity looks like lack of ambition.",
+        "Double the announcement before doubling the work.",
+        "Expand every goal until it feels visionary.",
+        "Multiply timelines by confidence instead of reality.",
+        "Upgrade every task to a strategic initiative.",
+        "Scale promises faster than capacity.",
+        "Transform every warning into an opportunity slide.",
+        "Elevate urgency until it becomes the strategy.",
+        "Package every risk as calculated boldness."
     ]
 
     private static let defaultSpice = [
@@ -483,6 +630,7 @@ struct AdviceEngine {
     ]
 
     private static let semanticTextScorer = SemanticTextScorer.shared
+    
 }
 
 struct ContentModeration {
@@ -494,6 +642,10 @@ struct ContentModeration {
     ]
     private let wrongdoingTerms = [
         "steal", "fraud", "hack", "weapon", "arson", "poison", "assault", "bomb", "murder", "shoot", "kill"
+    ]
+    private let cautionTerms = [
+        "exploit", "extort", "blackmail", "scam", "con", "manipulate", "stalk", "trespass",
+        "sabotage", "forgery", "impersonate", "ransom", "overdose", "self-harm"
     ]
 
     func apply(to advice: String, rationale: String?) -> (advice: String, rationale: String?) {
@@ -508,6 +660,13 @@ struct ContentModeration {
 
     func isSafe(text: String) -> Bool {
         !isBlocked(text: text)
+    }
+
+    func safetyScore(for text: String) -> Double {
+        let normalized = text.normalizedForFiltering
+        let matches = cautionTerms.filter { normalized.contains($0.normalizedForFiltering) }.count
+        let penalty = min(Double(matches) * 0.18, 1.0)
+        return max(0.0, 1.0 - penalty)
     }
 
     private func isBlocked(text: String) -> Bool {
@@ -556,7 +715,13 @@ actor SemanticTextScorer {
     // LRU tracking: monotonically increasing counter per key — evict min-counter entry
     private var cacheAccessOrder: [String: UInt64] = [:]
     private var cacheCounter: UInt64 = 0
-    private let maxCacheSize = 320
+    private let maxCacheSize = 480  // Increased from 320 for better hit rate
+    
+    // Token set cache for repeated text normalization
+    private var tokenSetCache: [String: Set<String>] = [:]
+    private var tokenSetCacheAccessOrder: [String: UInt64] = [:]
+    private var tokenSetCacheCounter: UInt64 = 0
+    private let maxTokenSetCacheSize = 200
 
     private init() {}
 
@@ -658,7 +823,23 @@ actor SemanticTextScorer {
     }
 
     private func tokenSet(for text: String) -> Set<String> {
-        Set(text.split(separator: " ").map(String.init).filter { $0.count > 2 })
+        tokenSetCacheCounter &+= 1
+        if let cached = tokenSetCache[text] {
+            tokenSetCacheAccessOrder[text] = tokenSetCacheCounter
+            return cached
+        }
+
+        let tokens = Set(text.split(separator: " ").map(String.init).filter { $0.count > 2 })
+        tokenSetCache[text] = tokens
+        tokenSetCacheAccessOrder[text] = tokenSetCacheCounter
+
+        if tokenSetCache.count > maxTokenSetCacheSize,
+           let toEvict = tokenSetCacheAccessOrder.min(by: { $0.value < $1.value })?.key {
+            tokenSetCache.removeValue(forKey: toEvict)
+            tokenSetCacheAccessOrder.removeValue(forKey: toEvict)
+        }
+
+        return tokens
     }
 
     private func tokenOverlap(candidateTokens: Set<String>, queryTokens: Set<String>) -> Double {

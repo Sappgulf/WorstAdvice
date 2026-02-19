@@ -314,6 +314,42 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(repository.seenAdviceCount(), 2)
     }
 
+    func testPurgeAllHistoryClearsFingerprintMemory() throws {
+        let repository = try makeRepository()
+        let advice = GeneratedAdvice(
+            category: .productivity,
+            tone: .corporateConsultant,
+            adviceLine: "Reset the plan, not the confidence.",
+            rationaleLine: nil,
+            createdAt: Date()
+        )
+        _ = repository.insert(advice)
+
+        XCTAssertTrue(repository.hasSeenAdvice(advice.adviceLine))
+        repository.purgeAllHistory()
+        XCTAssertFalse(repository.hasSeenAdvice(advice.adviceLine))
+    }
+
+    func testAdviceFingerprintPruningKeepsFreshestEntries() throws {
+        let repository = try makeRepository()
+        let baseDate = Date(timeIntervalSince1970: 10_000)
+
+        for index in 0..<5 {
+            repository.rememberAdviceFingerprint(
+                "line \(index)",
+                createdAt: baseDate.addingTimeInterval(TimeInterval(index))
+            )
+        }
+
+        repository.pruneAdviceFingerprints(maxCount: 3)
+
+        XCTAssertFalse(repository.hasSeenAdvice("line 0"))
+        XCTAssertFalse(repository.hasSeenAdvice("line 1"))
+        XCTAssertTrue(repository.hasSeenAdvice("line 2"))
+        XCTAssertTrue(repository.hasSeenAdvice("line 3"))
+        XCTAssertTrue(repository.hasSeenAdvice("line 4"))
+    }
+
     func testCategoryToneFingerprintPoolsAreTrackedSeparately() throws {
         let repository = try makeRepository()
 

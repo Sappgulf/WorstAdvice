@@ -374,6 +374,7 @@ final class AppSettingsEntity {
 final class AdviceRepository {
     private static let poolFingerprintPrefix = "pool::"
     private static let maxLearningScopes = 800
+    private static let maxAdviceFingerprints = 1200
 
     let context: ModelContext
     private var cachedSeenCount: Int?
@@ -467,11 +468,16 @@ final class AdviceRepository {
         referenceDate: Date = Date()
     ) -> Int {
         let calendar = Calendar.current
-        return fetchHistory(limit: 50).filter {
-            calendar.isDate($0.createdAt, inSameDayAs: referenceDate)
+        let startOfDay = calendar.startOfDay(for: referenceDate)
+        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? referenceDate
+        let predicate = #Predicate<AdviceRecord> {
+            $0.createdAt >= startOfDay
+                && $0.createdAt < endOfDay
                 && $0.category == category
                 && $0.tone == tone
-        }.count
+        }
+        let descriptor = FetchDescriptor<AdviceRecord>(predicate: predicate)
+        return (try? context.fetchCount(descriptor)) ?? 0
     }
 
     func setFavorite(_ record: AdviceRecord, isFavorite: Bool) {
@@ -501,6 +507,11 @@ final class AdviceRepository {
 
     func purgeAllHistory() {
         fetchAllHistory().forEach { context.delete($0) }
+        let fingerprintDescriptor = FetchDescriptor<AdviceFingerprint>()
+        let fingerprints = (try? context.fetch(fingerprintDescriptor)) ?? []
+        fingerprints.forEach { context.delete($0) }
+        cachedFingerprintSet = nil
+        cachedSeenCount = nil
         save()
     }
 
@@ -625,6 +636,7 @@ final class AdviceRepository {
         context.insert(AdviceFingerprint(normalizedText: normalized, createdAt: createdAt))
         cachedFingerprintSet?.insert(normalized)
         cachedSeenCount = nil
+        pruneAdviceFingerprints(maxCount: Self.maxAdviceFingerprints)
         if saveChanges {
             save()
         }
@@ -682,6 +694,7 @@ final class AdviceRepository {
                 context.insert(AdviceFingerprint(normalizedText: normalizedPool, createdAt: record.createdAt))
             }
         }
+        pruneAdviceFingerprints(maxCount: Self.maxAdviceFingerprints)
         save()
         cachedFingerprintSet = nil
         cachedSeenCount = nil
@@ -909,7 +922,10 @@ final class AdviceRepository {
 
     private func ensureFingerprintCache() {
         guard cachedFingerprintSet == nil else { return }
-        let descriptor = FetchDescriptor<AdviceFingerprint>()
+        var descriptor = FetchDescriptor<AdviceFingerprint>(
+            sortBy: [SortDescriptor(\AdviceFingerprint.createdAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = Self.maxAdviceFingerprints
         let all = (try? context.fetch(descriptor)) ?? []
         cachedFingerprintSet = Set(all.map(\.normalizedText))
     }
@@ -919,6 +935,18 @@ final class AdviceRepository {
         let descriptor = FetchDescriptor<LearningStatRecord>()
         let all = (try? context.fetch(descriptor)) ?? []
         cachedLearningStatsByKey = Dictionary(uniqueKeysWithValues: all.map { ($0.scopeKey, $0) })
+    }
+
+    func pruneAdviceFingerprints(maxCount: Int) {
+        guard maxCount > 0 else { return }
+        let descriptor = FetchDescriptor<AdviceFingerprint>(
+            sortBy: [SortDescriptor(\AdviceFingerprint.createdAt, order: .reverse)]
+        )
+        let all = (try? context.fetch(descriptor)) ?? []
+        guard all.count > maxCount else { return }
+        all.suffix(from: maxCount).forEach { context.delete($0) }
+        cachedFingerprintSet = nil
+        cachedSeenCount = nil
     }
 
     private func pruneLearningStats(maxCount: Int) {
@@ -1929,6 +1957,7 @@ final class GenerateViewModel {
         repository.seedAdviceMemoryFromHistoryIfNeeded()
         self.current = repository.fetchHistory(limit: 1).first
         self.primaryActionTitle = Self.primaryActionTitles.first ?? "Advise Me"
+        self.cachedRecentSuggestions = repository.fetchSuggestions(limit: 20)
     }
 
     func generate(seed: Int? = nil) async {
@@ -1936,10 +1965,6 @@ final class GenerateViewModel {
         defer { isGenerating = false }
         generationNotice = nil
         let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
-        let resolvedCategory = selectedCategory.resolved(seed: baseSeed)
-        logger.debug(
-            "Generate started: category=\(self.selectedCategory.rawValue) resolved=\(resolvedCategory.rawValue) tone=\(self.selectedTone.rawValue) seed=\(baseSeed)"
-        )
         if let current {
             repository.recordLearningSignal(
                 scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
@@ -1951,10 +1976,17 @@ final class GenerateViewModel {
         let shouldEnforceGlobalUniqueness = settingsViewModel.strictNoRepeats
         let communityOnlyMode = settingsViewModel.communityOnlyMode
         let selectedPack = settingsViewModel.preferredContentPack
+        let learningContext = adviceLearningContext()
+        let resolvedCategory = resolveCategory(seed: baseSeed, context: learningContext, situation: situation ?? "", contentPack: selectedPack)
+        let resolvedTone = resolveTone(seed: baseSeed, context: learningContext)
+        let templateBias = templateBias(for: resolvedCategory, tone: resolvedTone, context: learningContext)
+        logger.debug(
+            "Generate started: category=\(self.selectedCategory.rawValue) resolved=\(resolvedCategory.rawValue) tone=\(self.selectedTone.rawValue) resolvedTone=\(resolvedTone.rawValue) seed=\(baseSeed)"
+        )
         let suggestionPool = await suggestionCandidates(for: resolvedCategory, situation: situation)
         
         let semanticScorer = SemanticTextScorer.shared
-        let queryText = [situation, resolvedCategory.title, selectedTone.title]
+        let queryText = [situation, resolvedCategory.title, resolvedTone.title]
             .compactMap { $0 }
             .joined(separator: " ")
         let preparedQuery = await semanticScorer.preparedQuery(from: queryText)
@@ -1973,11 +2005,12 @@ final class GenerateViewModel {
         if !communityOnlyMode {
             let engineCandidates = await engine.generateCandidates(
                 category: resolvedCategory,
-                tone: selectedTone,
+                tone: resolvedTone,
                 includeRationale: settingsViewModel.includeRationale,
                 contentPack: selectedPack,
                 situation: situation,
                 seed: baseSeed,
+                templateBias: templateBias,
                 count: shouldEnforceGlobalUniqueness ? 9 : 6
             )
             candidatePool.append(contentsOf: engineCandidates.map { ($0, "engine") })
@@ -1985,7 +2018,7 @@ final class GenerateViewModel {
             // ML Remix Lab for advice: inject synthesized variants derived from liked history
             let remixCandidates = await synthesizedAdviceCandidates(
                 category: resolvedCategory,
-                tone: selectedTone,
+                tone: resolvedTone,
                 seed: baseSeed,
                 includeRationale: settingsViewModel.includeRationale,
                 contentPack: selectedPack
@@ -2010,7 +2043,6 @@ final class GenerateViewModel {
             return
         }
 
-        let learningContext = adviceLearningContext()
         let recentFingerprintSet = Set(recentAdviceFingerprints)
         let recentPoolFingerprintSets = recentAdviceFingerprintsByPool.mapValues(Set.init)
         var ranked: [(candidate: GeneratedAdvice, source: String, score: Double, fingerprint: String, poolKey: String, seenHistorically: Bool)] = []
@@ -2039,6 +2071,8 @@ final class GenerateViewModel {
             } else {
                 semanticRelevance = 0.5
             }
+            let safetyScore = moderation.safetyScore(for: item.candidate.adviceLine + " " + (item.candidate.rationaleLine ?? ""))
+            let safetyAdjustedRelevance = semanticRelevance * (0.85 + (safetyScore * 0.15))
             
             let adviceScope = adviceScopeKey(category: item.candidate.category, tone: item.candidate.tone)
             let learning: LearningStatSnapshot
@@ -2056,7 +2090,7 @@ final class GenerateViewModel {
                 context: learningContext
             )
             let score = adaptiveRanker.adviceScore(
-                semanticRelevance: semanticRelevance,
+                semanticRelevance: safetyAdjustedRelevance,
                 stats: blendedLearning,
                 noveltyPenalty: noveltyPenalty,
                 seed: baseSeed,
@@ -2268,6 +2302,7 @@ final class GenerateViewModel {
             topic: String(trimmedTopic.prefix(72)),
             adviceLine: String(trimmedAdvice.prefix(220))
         )
+        cachedRecentSuggestions = repository.fetchSuggestions(limit: 20)
         suggestionsVersion += 1
         leaderboardVersion += 1
         analyticsTracker.track("suggestion_submit", properties: [
@@ -2278,6 +2313,7 @@ final class GenerateViewModel {
 
     func deleteSuggestion(_ suggestion: UserAdviceSuggestion) {
         repository.deleteSuggestion(suggestion)
+        cachedRecentSuggestions = repository.fetchSuggestions(limit: 20)
         suggestionsVersion += 1
         leaderboardVersion += 1
         analyticsTracker.track("suggestion_delete", properties: [:])
@@ -2302,9 +2338,11 @@ final class GenerateViewModel {
         current?.vote ?? .none
     }
 
+    private var cachedRecentSuggestions: [UserAdviceSuggestion] = []
+
     var recentSuggestions: [UserAdviceSuggestion] {
         _ = suggestionsVersion
-        return repository.fetchSuggestions(limit: 20)
+        return cachedRecentSuggestions
     }
 
     var communitySuggestionCount: Int {
@@ -2359,6 +2397,11 @@ final class GenerateViewModel {
         guard let current else { return "" }
         let caption = shareCaption(for: current)
         if let rationale = current.rationaleLine, !rationale.isEmpty {
+            let summarySource = "\(current.adviceLine) \(rationale)"
+            if let summary = summarize(text: summarySource, maxSentences: 2, maxCharacters: 180),
+               summary.count < summarySource.count {
+                return "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nTL;DR \(summary)\n\nBadvice"
+            }
             return "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nBadvice"
         }
         return "\(caption)\n\n\(current.adviceLine)\n\nBadvice"
@@ -2861,6 +2904,134 @@ final class GenerateViewModel {
         )
     }
 
+    private func resolveCategory(
+        seed: Int,
+        context: AdviceLearningContext,
+        situation: String,
+        contentPack: ContentPack
+    ) -> AdviceCategory {
+        guard selectedCategory == .random else { return selectedCategory }
+        let pool = AdviceCategory.concrete
+        let normalizedSituation = situation.normalizedForFiltering
+        let weights = pool.map { category in
+            let learningWeight = preferenceWeight(for: context.byCategory[category] ?? .empty)
+            let contextWeight = contextualCategoryWeight(
+                category: category,
+                normalizedSituation: normalizedSituation,
+                contentPack: contentPack
+            )
+            return learningWeight * contextWeight
+        }
+        return weightedChoice(items: pool, weights: weights, seed: seed, salt: 41)
+    }
+
+    private func resolveTone(seed: Int, context: AdviceLearningContext) -> ToneMode {
+        guard selectedTone == .random else { return selectedTone }
+        let pool = ToneMode.concrete
+        let weights = pool.map { preferenceWeight(for: context.byTone[$0] ?? .empty) }
+        return weightedChoice(items: pool, weights: weights, seed: seed, salt: 97)
+    }
+
+    private func preferenceWeight(for snapshot: LearningStatSnapshot) -> Double {
+        let positive = snapshot.likeCount
+            + (snapshot.favoriteCount * 1.25)
+            + (snapshot.shareCount * 1.05)
+            + (snapshot.copyCount * 0.9)
+            + (snapshot.regenCount * 0.6)
+        let negative = snapshot.dislikeCount * 1.2
+        let exposure = max(snapshot.shownCount, 3)
+        let netScore = (positive - negative) / exposure
+        let freshnessBias = 0.6 + (snapshot.freshnessScore * 0.4)
+        let clamped = max(-0.45, min(0.85, netScore * freshnessBias))
+        return max(0.2, 1.0 + clamped)
+    }
+
+    private func templateBias(
+        for category: AdviceCategory,
+        tone: ToneMode,
+        context: AdviceLearningContext
+    ) -> Double {
+        let toneSnapshot = context.byTone[tone] ?? .empty
+        let categorySnapshot = context.byCategory[category] ?? .empty
+        let recency = max(toneSnapshot.freshnessScore, categorySnapshot.freshnessScore)
+        let engagement = (toneSnapshot.engagementRatio + categorySnapshot.engagementRatio) / 2
+        let richness = min((toneSnapshot.signalRichness + categorySnapshot.signalRichness) / 2, 1.0)
+        let base = 0.35 + (recency * 0.35) + (engagement * 0.25) + (richness * 0.15)
+        return min(max(base, 0.15), 0.95)
+    }
+
+    private func contextualCategoryWeight(
+        category: AdviceCategory,
+        normalizedSituation: String,
+        contentPack: ContentPack
+    ) -> Double {
+        guard !normalizedSituation.isEmpty else { return 1.0 }
+        let keywords = store.rules(for: category, contentPack: contentPack).keywords
+        guard !keywords.isEmpty else { return 1.0 }
+        var matches = 0
+        for keyword in keywords {
+            let normalizedKeyword = keyword.normalizedForFiltering
+            guard !normalizedKeyword.isEmpty else { continue }
+            if normalizedSituation.contains(normalizedKeyword) {
+                matches += 1
+            }
+        }
+        guard matches > 0 else { return 1.0 }
+        let capped = min(matches, 6)
+        return 1.0 + (Double(capped) * 0.35)
+    }
+
+    private func weightedChoice<T>(items: [T], weights: [Double], seed: Int, salt: Int) -> T {
+        guard items.count == weights.count, let first = items.first else {
+            preconditionFailure("Weighted choice requires matching, non-empty inputs.")
+        }
+        let total = weights.reduce(0, +)
+        guard total > 0 else {
+            let index = abs(seed) % items.count
+            return items[index]
+        }
+        let target = unitRandom(seed: seed, salt: salt) * total
+        var cumulative: Double = 0
+        for (index, weight) in weights.enumerated() {
+            cumulative += weight
+            if target <= cumulative {
+                return items[index]
+            }
+        }
+        return first
+    }
+
+    private func unitRandom(seed: Int, salt: Int) -> Double {
+        var value = UInt64(bitPattern: Int64(seed))
+        value ^= UInt64(bitPattern: Int64(salt &* 7919))
+        value = value &* 2862933555777941757 &+ 3037000493
+        let bucket = value % 10_000
+        return Double(bucket) / 10_000.0
+    }
+
+    private func summarize(text: String, maxSentences: Int, maxCharacters: Int) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > maxCharacters else { return nil }
+        let sentences = trimmed.split(whereSeparator: { ".!?".contains($0) })
+        guard !sentences.isEmpty else { return nil }
+        let selection = sentences.prefix(maxSentences).map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        var summary = selection.joined(separator: ". ")
+        if !summary.isEmpty, !summary.hasSuffix(".") {
+            summary.append(".")
+        }
+        if summary.count > maxCharacters {
+            let prefix = String(summary.prefix(maxCharacters))
+            if let lastSpace = prefix.lastIndex(of: " ") {
+                summary = String(prefix[..<lastSpace])
+            } else {
+                summary = prefix
+            }
+        }
+        return summary
+    }
+
     private func blendedAdviceLearningSnapshot(
         exact: LearningStatSnapshot,
         category: AdviceCategory,
@@ -3353,6 +3524,13 @@ final class QuotesViewModel {
         "\"\(quote.text)\"\n— \(quote.source)\n\nBadvice"
     }
 
+    func quoteSpotlightInsight(for quote: BadQuote) -> String {
+        let rules = store.rules(for: quote.category, contentPack: .classic)
+        let principle = rules.badPrinciples.randomElement() ?? "overconfidence"
+        let keyword = rules.keywords.randomElement() ?? quote.category.title.lowercased()
+        return "It doubles down on \(principle.lowercased()) and dares you to frame \(keyword) as the obvious move."
+    }
+
     private func reloadCachedData() {
         quoteSuggestions = repository.fetchQuoteSuggestions(limit: 30)
         votesByQuoteID = repository.quoteVoteMap()
@@ -3495,6 +3673,17 @@ final class QuotesViewModel {
         let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
 
+        if normalizedSearch.isEmpty, selectedCategory == nil {
+            switch rankingMode {
+            case .recent:
+                return cachedAllQuotes
+            case .topLiked:
+                return cachedAllQuotes.filter { votesByQuoteID[$0.id] == .like }
+            case .topDisliked:
+                return cachedAllQuotes.filter { votesByQuoteID[$0.id] == .dislike }
+            }
+        }
+
         let filtered = cachedAllQuotes.filter { quote in
             let categoryMatch = selectedCategory == nil || quote.category == selectedCategory
             if normalizedSearch.isEmpty {
@@ -3584,6 +3773,17 @@ final class FavoritesViewModel {
     private func refreshFilteredFavorites() {
         let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
+
+        if normalizedSearch.isEmpty, selectedCategory == nil {
+            cachedFilteredFavorites = favorites
+            return
+        }
+
+        if normalizedSearch.isEmpty, let selectedCategory {
+            cachedFilteredFavorites = favorites.filter { $0.category == selectedCategory }
+            return
+        }
+
         cachedFilteredFavorites = favorites.filter { record in
             let matchesCategory = selectedCategory == nil || record.category == selectedCategory
             let matchesSearch: Bool
@@ -3708,6 +3908,17 @@ final class HistoryViewModel {
     private func refreshFilteredHistory() {
         let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
+
+        if normalizedSearch.isEmpty, selectedCategory == nil, rankingMode == .recent {
+            cachedFilteredHistory = history
+            return
+        }
+
+        if normalizedSearch.isEmpty, let selectedCategory, rankingMode == .recent {
+            cachedFilteredHistory = history.filter { $0.category == selectedCategory }
+            return
+        }
+
         let filtered = history.filter { record in
             let matchesCategory = selectedCategory == nil || record.category == selectedCategory
             let matchesSearch: Bool

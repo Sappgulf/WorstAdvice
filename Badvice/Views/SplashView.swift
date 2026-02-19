@@ -10,14 +10,16 @@ struct SplashView: View {
     @State private var glowOpacity: Double = 0
     @State private var particleOpacity: Double = 0
 
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
     var body: some View {
         ZStack {
             // Warm deep background
             Color(hex: "1C130A").ignoresSafeArea()
 
             // Triple-A Background Elements
-            FloatingParticlesView(theme: .minimal, reduceMotion: false, isGenerating: false)
-                .opacity(0.6)
+            FloatingParticlesView(theme: .minimal, reduceMotion: accessibilityReduceMotion, isGenerating: false)
+                .opacity(accessibilityReduceMotion ? 0.2 : 0.6)
             
             CinematicVignetteView()
                 .opacity(0.7)
@@ -81,9 +83,12 @@ struct SplashView: View {
         .onAppear {
             // Triple-A Polish: Initial state for Ken Burns
             wordmarkScale = 0.92
-            
+            let animateInDuration = accessibilityReduceMotion ? 0.35 : 1.2
+            let holdDuration = accessibilityReduceMotion ? 1.0 : 2.2
+            let animateOutDuration = accessibilityReduceMotion ? 0.25 : 0.45
+
             // Animate in
-            withAnimation(.easeOut(duration: 1.2)) {
+            withAnimation(.easeOut(duration: animateInDuration)) {
                 wordmarkScale = 1.0 // Subtle zoom
                 wordmarkOpacity = 1.0
                 glowOpacity = 1.0
@@ -92,14 +97,14 @@ struct SplashView: View {
             }
 
             // Animate out after delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
-                withAnimation(.easeIn(duration: 0.45)) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + holdDuration) {
+                withAnimation(.easeIn(duration: animateOutDuration)) {
                     wordmarkOpacity = 0
                     taglineOpacity = 0
                     glowOpacity = 0
-                    wordmarkScale = 1.05 // Slight zoom out on exit
+                    wordmarkScale = accessibilityReduceMotion ? 1.0 : 1.05
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.48) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + animateOutDuration + 0.05) {
                     isShowing = false
                 }
             }

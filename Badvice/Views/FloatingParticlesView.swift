@@ -114,21 +114,34 @@ struct FloatingParticlesView: View {
         }
     }
 
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         let activeInterval: TimeInterval = reduceMotion ? 5 : (isGenerating ? generationInterval : idleInterval)
         let shouldRasterize = budget != .reduced && !lowPowerMode
-        
-        TimelineView(.animation(minimumInterval: activeInterval, paused: reduceMotion && !isGenerating)) { timeline in
-            Canvas(rendersAsynchronously: true) { context, size in
-                drawParticles(context: context, size: size, date: timeline.date)
-                if isGenerating {
-                    drawChaosParticles(context: context, size: size, date: timeline.date)
+        let shouldDrawChaos = isGenerating && !reduceMotion && budget != .reduced
+        let shouldPause = scenePhase != .active
+        let shouldRenderParticles = !(reduceMotion && !isGenerating)
+            && !(lowPowerMode && budget == .reduced && !isGenerating)
+            && count > 0
+
+        if shouldRenderParticles {
+            TimelineView(.animation(minimumInterval: activeInterval, paused: shouldPause || (reduceMotion && !isGenerating))) { timeline in
+                Canvas(rendersAsynchronously: true) { context, size in
+                    drawParticles(context: context, size: size, date: timeline.date)
+                    if shouldDrawChaos {
+                        drawChaosParticles(context: context, size: size, date: timeline.date)
+                    }
                 }
             }
+            .conditionalDrawingGroup(shouldRasterize)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        } else {
+            Color.clear
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
-        .conditionalDrawingGroup(shouldRasterize)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 
     private func drawParticles(context: GraphicsContext, size: CGSize, date: Date) {

@@ -1439,7 +1439,11 @@ extension AdviceStore {
                 "\(categoryName) rapid-response sprint",
                 "\(categoryName) narrative lock-in",
                 "\(categoryName) execution overdrive",
-                "\(categoryName) alignment stunt"
+                "\(categoryName) alignment stunt",
+                "\(categoryName) confidence flywheel",
+                "\(categoryName) priority remix",
+                "\(categoryName) momentum checkpoint",
+                "\(categoryName) optics review"
             ],
             actionTemplates: [
                 "For %@, over-commit early so everyone mistakes pressure for progress.",
@@ -1456,7 +1460,11 @@ extension AdviceStore {
                 "Rework %@ into a confidence campaign and treat uncertainty as lag.",
                 "In %@, lead with outcomes language and postpone method questions.",
                 "Use %@ to test how far certainty can carry incomplete information.",
-                "Scale %@ immediately, then frame any turbulence as expected growth."
+                "Scale %@ immediately, then frame any turbulence as expected growth.",
+                "For %@, announce the next phase before finishing the current one.",
+                "Treat %@ like a crisis drill and skip any debrief.",
+                "Use %@ to standardize a rule you just invented.",
+                "During %@, lock in the narrative first and let the details backfill later."
             ],
             rationaleTemplates: [
                 "Perception moves faster than results when certainty is loud.",
@@ -1472,7 +1480,11 @@ extension AdviceStore {
                 "Most objections sound smaller when the narrative gets bigger.",
                 "Speed can create temporary legitimacy for unfinished thinking.",
                 "A polished update can delay scrutiny just long enough to ship.",
-                "When details are scarce, tone often decides what gets approved."
+                "When details are scarce, tone often decides what gets approved.",
+                "Premature certainty often reads as leadership in a rush.",
+                "If the story is tight enough, reality can arrive late.",
+                "A confident checkpoint schedule can hide missing prep.",
+                "People confuse motion with progress when the updates are frequent."
             ]
         )
     }
