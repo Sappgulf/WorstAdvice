@@ -1893,6 +1893,12 @@ final class GenerateViewModel {
     private var leaderboardVersion: Int = 0
     private var successfulGenerationCount: Int = 0
     private static let chaosMissionCompletionStorageKey = "chaosHubMissionCompletionKey"
+    private struct RetentionSnapshot {
+        let history: [AdviceRecord]
+        let streakDays: Int
+        let streakFreezeBonus: Int
+    }
+    private var retentionSnapshot: RetentionSnapshot?
 
     /// Dynamically picks the ML weight profile based on accumulated signal richness.
     private var adaptiveRanker: AdaptiveRanker {
@@ -2091,6 +2097,7 @@ final class GenerateViewModel {
         rememberPoolFingerprint(for: output)
         lastWhyTerrible = "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
         current = repository.insert(output)
+        invalidateRetentionSnapshot()
         NotificationManager.updateGenerationActivity(date: output.createdAt)
         NotificationManager.scheduleDaily()
         repository.recordLearningSignal(
@@ -2454,7 +2461,9 @@ final class GenerateViewModel {
     }
 
     func refreshRetentionStateOnAppear(referenceDate: Date = Date()) {
+        invalidateRetentionSnapshot()
         applyStreakFreezeIfNeeded(referenceDate: referenceDate)
+        invalidateRetentionSnapshot()
         NotificationManager.updateStreakFreezeAvailability(hasAvailable: settingsViewModel.streakFreezeAvailableThisWeek)
         NotificationManager.scheduleDaily()
     }
@@ -2500,8 +2509,8 @@ final class GenerateViewModel {
     }
 
     var challengeStreakDays: Int {
-        let history = repository.fetchAllHistory()
-        return streakDays(history: history) + streakFreezeBonus(history: history)
+        let snapshot = currentRetentionSnapshot()
+        return snapshot.streakDays + snapshot.streakFreezeBonus
     }
 
     var challengeGoalDays: Int {
@@ -2660,6 +2669,28 @@ final class GenerateViewModel {
         text.unicodeScalars.reduce(0) { partial, scalar in
             (partial &* 16777619) ^ Int(scalar.value)
         }
+    }
+
+    func invalidateRetentionSnapshot() {
+        retentionSnapshot = nil
+    }
+
+    private func currentRetentionSnapshot() -> RetentionSnapshot {
+        if let retentionSnapshot {
+            return retentionSnapshot
+        }
+        let snapshot = computeRetentionSnapshot()
+        retentionSnapshot = snapshot
+        return snapshot
+    }
+
+    private func computeRetentionSnapshot() -> RetentionSnapshot {
+        let history = repository.fetchAllHistory()
+        return RetentionSnapshot(
+            history: history,
+            streakDays: streakDays(history: history),
+            streakFreezeBonus: streakFreezeBonus(history: history)
+        )
     }
 
     private func streakDays(history: [AdviceRecord]) -> Int {
@@ -3493,9 +3524,13 @@ final class FavoritesViewModel {
     var searchText: String = "" {
         didSet { scheduleSearchDebounce(searchText) }
     }
-    var selectedCategory: AdviceCategory?
+    var selectedCategory: AdviceCategory? {
+        didSet { refreshFilteredFavorites() }
+    }
     private var debouncedSearchText = ""
     private var searchDebounceTask: Task<Void, Never>?
+    private var favoritesSearchIndexByID: [UUID: String] = [:]
+    private var cachedFilteredFavorites: [AdviceRecord] = []
 
     init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker()) {
         self.repository = repository
@@ -3506,6 +3541,8 @@ final class FavoritesViewModel {
 
     func reload() {
         favorites = repository.fetchFavorites()
+        rebuildFavoritesSearchIndex()
+        refreshFilteredFavorites()
     }
 
     func remove(_ record: AdviceRecord) {
@@ -3531,15 +3568,30 @@ final class FavoritesViewModel {
     }
 
     var filteredFavorites: [AdviceRecord] {
+        cachedFilteredFavorites
+    }
+
+    private func rebuildFavoritesSearchIndex() {
+        var index: [UUID: String] = [:]
+        index.reserveCapacity(favorites.count)
+        for record in favorites {
+            index[record.id] = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)"
+                .normalizedForFiltering
+        }
+        favoritesSearchIndexByID = index
+    }
+
+    private func refreshFilteredFavorites() {
         let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
-        return favorites.filter { record in
+        cachedFilteredFavorites = favorites.filter { record in
             let matchesCategory = selectedCategory == nil || record.category == selectedCategory
             let matchesSearch: Bool
             if normalizedSearch.isEmpty {
                 matchesSearch = true
             } else {
-                let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
+                let haystack = favoritesSearchIndexByID[record.id]
+                    ?? "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
                 matchesSearch = haystack.contains(normalizedSearch)
             }
             return matchesCategory && matchesSearch
@@ -3549,9 +3601,12 @@ final class FavoritesViewModel {
     private func scheduleSearchDebounce(_ value: String) {
         searchDebounceTask?.cancel()
         searchDebounceTask = Task { [weak self, value] in
-            try? await Task.sleep(for: .milliseconds(300))
+            try? await Task.sleep(for: .milliseconds(220))
             guard !Task.isCancelled else { return }
-            self?.debouncedSearchText = value
+            await MainActor.run {
+                self?.debouncedSearchText = value
+                self?.refreshFilteredFavorites()
+            }
         }
     }
 }
@@ -3581,10 +3636,18 @@ final class HistoryViewModel {
     var searchText: String = "" {
         didSet { scheduleSearchDebounce(searchText) }
     }
-    var selectedCategory: AdviceCategory?
-    var rankingMode: RankingMode = .recent
+    var selectedCategory: AdviceCategory? {
+        didSet { refreshFilteredHistory() }
+    }
+    var rankingMode: RankingMode = .recent {
+        didSet { refreshFilteredHistory() }
+    }
     private var debouncedSearchText = ""
     private var searchDebounceTask: Task<Void, Never>?
+    private var historySearchIndexByID: [UUID: String] = [:]
+    private var cachedFilteredHistory: [AdviceRecord] = []
+    private var cachedLikedCount = 0
+    private var cachedDislikedCount = 0
 
     init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker()) {
         self.repository = repository
@@ -3595,6 +3658,8 @@ final class HistoryViewModel {
 
     func reload() {
         history = repository.fetchHistory(limit: 50)
+        rebuildHistoryCaches()
+        refreshFilteredHistory()
     }
 
     func saveFromHistory(_ record: AdviceRecord) {
@@ -3610,6 +3675,37 @@ final class HistoryViewModel {
     }
 
     var filteredHistory: [AdviceRecord] {
+        cachedFilteredHistory
+    }
+
+    var likedCount: Int {
+        cachedLikedCount
+    }
+
+    var dislikedCount: Int {
+        cachedDislikedCount
+    }
+
+    private func rebuildHistoryCaches() {
+        var index: [UUID: String] = [:]
+        index.reserveCapacity(history.count)
+        var likes = 0
+        var dislikes = 0
+        for record in history {
+            index[record.id] = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)"
+                .normalizedForFiltering
+            if record.vote == .like {
+                likes += 1
+            } else if record.vote == .dislike {
+                dislikes += 1
+            }
+        }
+        historySearchIndexByID = index
+        cachedLikedCount = likes
+        cachedDislikedCount = dislikes
+    }
+
+    private func refreshFilteredHistory() {
         let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
         let filtered = history.filter { record in
@@ -3618,7 +3714,8 @@ final class HistoryViewModel {
             if normalizedSearch.isEmpty {
                 matchesSearch = true
             } else {
-                let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
+                let haystack = historySearchIndexByID[record.id]
+                    ?? "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
                 matchesSearch = haystack.contains(normalizedSearch)
             }
             return matchesCategory && matchesSearch
@@ -3626,28 +3723,23 @@ final class HistoryViewModel {
 
         switch rankingMode {
         case .recent:
-            return filtered
+            cachedFilteredHistory = filtered
         case .topLiked:
-            return filtered.filter { $0.vote == .like }
+            cachedFilteredHistory = filtered.filter { $0.vote == .like }
         case .topDisliked:
-            return filtered.filter { $0.vote == .dislike }
+            cachedFilteredHistory = filtered.filter { $0.vote == .dislike }
         }
-    }
-
-    var likedCount: Int {
-        history.filter { $0.vote == .like }.count
-    }
-
-    var dislikedCount: Int {
-        history.filter { $0.vote == .dislike }.count
     }
 
     private func scheduleSearchDebounce(_ value: String) {
         searchDebounceTask?.cancel()
         searchDebounceTask = Task { [weak self, value] in
-            try? await Task.sleep(for: .milliseconds(300))
+            try? await Task.sleep(for: .milliseconds(220))
             guard !Task.isCancelled else { return }
-            self?.debouncedSearchText = value
+            await MainActor.run {
+                self?.debouncedSearchText = value
+                self?.refreshFilteredHistory()
+            }
         }
     }
 }
@@ -3674,6 +3766,7 @@ final class AppSessionViewModel {
     }
 
     func refreshLists() {
+        generate.invalidateRetentionSnapshot()
         favorites.reload()
         history.reload()
     }

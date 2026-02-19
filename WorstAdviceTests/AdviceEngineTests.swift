@@ -638,7 +638,8 @@ final class PersistenceTests: XCTestCase {
             favoriteCount: 0,
             copyCount: 20,
             shareCount: 20,
-            regenCount: 0
+            regenCount: 0,
+            lastUpdatedAt: nil
         )
         let neutral = LearningStatSnapshot.empty
 
@@ -821,5 +822,369 @@ final class PersistenceTests: XCTestCase {
 
         XCTAssertFalse(viewModel.filteredQuotes.isEmpty)
         XCTAssertTrue(viewModel.filteredQuotes.allSatisfy { $0.text.normalizedForFiltering.contains("qzracebeta") })
+    }
+
+    func testFavoritesFilteringMatchesLegacyBehaviorForSearchAndCategory() async throws {
+        let repository = try makeRepository()
+        let first = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .corporateConsultant,
+                adviceLine: "qzfav alpha confidence memo",
+                rationaleLine: "Keep the optics loud.",
+                createdAt: Date(timeIntervalSince1970: 300)
+            )
+        )
+        let second = repository.insert(
+            GeneratedAdvice(
+                category: .money,
+                tone: .cryptoBro,
+                adviceLine: "qzfav beta portfolio sprint",
+                rationaleLine: "Momentum beats budgeting.",
+                createdAt: Date(timeIntervalSince1970: 301)
+            )
+        )
+        let third = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .wizard,
+                adviceLine: "qzfav gamma roadmap spell",
+                rationaleLine: nil,
+                createdAt: Date(timeIntervalSince1970: 302)
+            )
+        )
+        repository.setFavorite(first, isFavorite: true)
+        repository.setFavorite(second, isFavorite: true)
+        repository.setFavorite(third, isFavorite: true)
+
+        let favorites = FavoritesViewModel(repository: repository)
+        XCTAssertEqual(
+            favorites.filteredFavorites.map(\.id),
+            legacyFilterFavorites(
+                records: favorites.favorites,
+                category: nil,
+                searchText: ""
+            ).map(\.id)
+        )
+
+        favorites.searchText = "gamma"
+        try await waitUntil(timeout: .milliseconds(1500)) {
+            favorites.filteredFavorites.map(\.id) == self.legacyFilterFavorites(
+                records: favorites.favorites,
+                category: nil,
+                searchText: "gamma"
+            ).map(\.id)
+        }
+
+        favorites.selectedCategory = .career
+        XCTAssertEqual(
+            favorites.filteredFavorites.map(\.id),
+            legacyFilterFavorites(
+                records: favorites.favorites,
+                category: .career,
+                searchText: "gamma"
+            ).map(\.id)
+        )
+    }
+
+    func testHistoryFilteringMatchesLegacyBehaviorForRankingCategoryAndSearch() async throws {
+        let repository = try makeRepository()
+        let liked = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .corporateConsultant,
+                adviceLine: "qzhist alpha status deck",
+                rationaleLine: nil,
+                createdAt: Date(timeIntervalSince1970: 401)
+            )
+        )
+        repository.setVote(liked, vote: .like)
+
+        let disliked = repository.insert(
+            GeneratedAdvice(
+                category: .money,
+                tone: .cryptoBro,
+                adviceLine: "qzhist beta leverage run",
+                rationaleLine: nil,
+                createdAt: Date(timeIntervalSince1970: 402)
+            )
+        )
+        repository.setVote(disliked, vote: .dislike)
+
+        _ = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .wizard,
+                adviceLine: "qzhist gamma confidence spell",
+                rationaleLine: "Frame risk as optional.",
+                createdAt: Date(timeIntervalSince1970: 403)
+            )
+        )
+
+        let history = HistoryViewModel(repository: repository)
+        XCTAssertEqual(history.likedCount, history.history.filter { $0.vote == .like }.count)
+        XCTAssertEqual(history.dislikedCount, history.history.filter { $0.vote == .dislike }.count)
+
+        history.selectedCategory = .career
+        XCTAssertEqual(
+            history.filteredHistory.map(\.id),
+            legacyFilterHistory(
+                records: history.history,
+                category: .career,
+                searchText: "",
+                rankingMode: .recent
+            ).map(\.id)
+        )
+
+        history.rankingMode = .topLiked
+        XCTAssertEqual(
+            history.filteredHistory.map(\.id),
+            legacyFilterHistory(
+                records: history.history,
+                category: .career,
+                searchText: "",
+                rankingMode: .topLiked
+            ).map(\.id)
+        )
+
+        history.searchText = "gamma"
+        try await waitUntil(timeout: .milliseconds(1500)) {
+            history.filteredHistory.map(\.id) == self.legacyFilterHistory(
+                records: history.history,
+                category: .career,
+                searchText: "gamma",
+                rankingMode: .topLiked
+            ).map(\.id)
+        }
+    }
+
+    func testFavoritesDebounceUsesLatestSearchInput() async throws {
+        let repository = try makeRepository()
+        let alpha = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .wizard,
+                adviceLine: "qzdebounce alpha outcome",
+                rationaleLine: nil,
+                createdAt: Date(timeIntervalSince1970: 500)
+            )
+        )
+        let beta = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .wizard,
+                adviceLine: "qzdebounce beta outcome",
+                rationaleLine: nil,
+                createdAt: Date(timeIntervalSince1970: 501)
+            )
+        )
+        repository.setFavorite(alpha, isFavorite: true)
+        repository.setFavorite(beta, isFavorite: true)
+
+        let favorites = FavoritesViewModel(repository: repository)
+        let baseline = favorites.filteredFavorites.count
+        favorites.searchText = "alpha"
+        favorites.searchText = "beta"
+
+        XCTAssertEqual(favorites.filteredFavorites.count, baseline)
+        try await waitUntil(timeout: .milliseconds(1500)) {
+            favorites.filteredFavorites.count == 1
+                && favorites.filteredFavorites.first?.adviceLine.normalizedForFiltering.contains("beta") == true
+        }
+    }
+
+    func testGenerateChallengeStreakMatchesLegacyComputation() async throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
+        let calendar = Calendar.current
+        let now = Date()
+        let today = calendar.startOfDay(for: now)
+
+        let dates = [
+            today,
+            calendar.date(byAdding: .day, value: -1, to: today)!,
+            calendar.date(byAdding: .day, value: -2, to: today)!
+        ]
+        for (index, date) in dates.enumerated() {
+            _ = repository.insert(
+                GeneratedAdvice(
+                    category: .career,
+                    tone: .corporateConsultant,
+                    adviceLine: "qzstreak baseline \(index)",
+                    rationaleLine: nil,
+                    createdAt: date
+                )
+            )
+        }
+
+        generate.invalidateRetentionSnapshot()
+        let expected = legacyChallengeStreakDays(
+            history: repository.fetchAllHistory(),
+            referenceDate: now,
+            freezeActive: settings.isStreakFreezeActive(for: today)
+        )
+        XCTAssertEqual(generate.challengeStreakDays, expected)
+        XCTAssertEqual(generate.challengeProgressText, "\(min(expected, generate.challengeGoalDays))/\(generate.challengeGoalDays) day streak")
+    }
+
+    func testGenerateRetentionSnapshotInvalidationUpdatesStreakAfterHistoryMutation() throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
+        let calendar = Calendar.current
+        let now = Date()
+        let today = calendar.startOfDay(for: now)
+
+        _ = repository.insert(
+            GeneratedAdvice(
+                category: .social,
+                tone: .influencer,
+                adviceLine: "qzretention today only",
+                rationaleLine: nil,
+                createdAt: today
+            )
+        )
+
+        generate.invalidateRetentionSnapshot()
+        let baseline = generate.challengeStreakDays
+        XCTAssertEqual(baseline, 1)
+
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
+        _ = repository.insert(
+            GeneratedAdvice(
+                category: .social,
+                tone: .influencer,
+                adviceLine: "qzretention yesterday added",
+                rationaleLine: nil,
+                createdAt: yesterday
+            )
+        )
+
+        // Snapshot remains stale until explicitly invalidated.
+        XCTAssertEqual(generate.challengeStreakDays, baseline)
+
+        generate.invalidateRetentionSnapshot()
+        XCTAssertEqual(generate.challengeStreakDays, baseline + 1)
+    }
+
+    private func legacyFilterFavorites(
+        records: [AdviceRecord],
+        category: AdviceCategory?,
+        searchText: String
+    ) -> [AdviceRecord] {
+        let normalizedSearch = searchText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .normalizedForFiltering
+        return records.filter { record in
+            let matchesCategory = category == nil || record.category == category
+            let matchesSearch: Bool
+            if normalizedSearch.isEmpty {
+                matchesSearch = true
+            } else {
+                let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)"
+                    .normalizedForFiltering
+                matchesSearch = haystack.contains(normalizedSearch)
+            }
+            return matchesCategory && matchesSearch
+        }
+    }
+
+    private func legacyFilterHistory(
+        records: [AdviceRecord],
+        category: AdviceCategory?,
+        searchText: String,
+        rankingMode: HistoryViewModel.RankingMode
+    ) -> [AdviceRecord] {
+        let normalizedSearch = searchText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .normalizedForFiltering
+        let filtered = records.filter { record in
+            let matchesCategory = category == nil || record.category == category
+            let matchesSearch: Bool
+            if normalizedSearch.isEmpty {
+                matchesSearch = true
+            } else {
+                let haystack = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)"
+                    .normalizedForFiltering
+                matchesSearch = haystack.contains(normalizedSearch)
+            }
+            return matchesCategory && matchesSearch
+        }
+
+        switch rankingMode {
+        case .recent:
+            return filtered
+        case .topLiked:
+            return filtered.filter { $0.vote == .like }
+        case .topDisliked:
+            return filtered.filter { $0.vote == .dislike }
+        }
+    }
+
+    private func legacyChallengeStreakDays(
+        history: [AdviceRecord],
+        referenceDate: Date,
+        freezeActive: Bool
+    ) -> Int {
+        legacyStreakDays(history: history, referenceDate: referenceDate)
+            + legacyStreakFreezeBonus(history: history, referenceDate: referenceDate, freezeActive: freezeActive)
+    }
+
+    private func legacyStreakDays(history: [AdviceRecord], referenceDate: Date) -> Int {
+        guard !history.isEmpty else { return 0 }
+        let calendar = Calendar.current
+        let days = Set(history.map { calendar.startOfDay(for: $0.createdAt) })
+        let sortedDays = days.sorted(by: >)
+        guard let mostRecent = sortedDays.first else { return 0 }
+
+        let today = calendar.startOfDay(for: referenceDate)
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+        guard mostRecent == today || mostRecent == yesterday else { return 0 }
+
+        var streak = 1
+        var currentDay = mostRecent
+        while true {
+            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDay) else { break }
+            if days.contains(previousDay) {
+                streak += 1
+                currentDay = previousDay
+            } else {
+                break
+            }
+        }
+        return streak
+    }
+
+    private func legacyStreakFreezeBonus(
+        history: [AdviceRecord],
+        referenceDate: Date,
+        freezeActive: Bool
+    ) -> Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: referenceDate)
+        guard freezeActive else { return 0 }
+        let days = Set(history.map { calendar.startOfDay(for: $0.createdAt) })
+        guard !days.contains(today) else { return 0 }
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+        return days.contains(yesterday) ? 1 : 0
+    }
+
+    private func waitUntil(
+        timeout: Duration = .seconds(1),
+        pollInterval: Duration = .milliseconds(40),
+        condition: @escaping @MainActor () -> Bool
+    ) async throws {
+        let start = ContinuousClock.now
+        while true {
+            if await condition() {
+                return
+            }
+            if ContinuousClock.now - start > timeout {
+                XCTFail("Timed out waiting for condition.")
+                return
+            }
+            try await Task.sleep(for: pollInterval)
+        }
     }
 }
