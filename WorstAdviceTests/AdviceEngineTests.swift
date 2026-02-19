@@ -532,6 +532,53 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(generate.dailyMissionProgressFraction, 1.0, accuracy: 0.0001)
     }
 
+    func testTodayHistoryCountCategoryToneIgnoresInvalidRawFallbacks() throws {
+        let repository = try makeRepository()
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let yesterday = now.addingTimeInterval(-86_400)
+
+        let corrupted = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .wizard,
+                adviceLine: "legacy payload with unknown raw fields",
+                rationaleLine: nil,
+                createdAt: now
+            )
+        )
+        _ = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .wizard,
+                adviceLine: "valid same-day match",
+                rationaleLine: nil,
+                createdAt: now
+            )
+        )
+        _ = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .wizard,
+                adviceLine: "prior day should not count",
+                rationaleLine: nil,
+                createdAt: yesterday
+            )
+        )
+
+        corrupted.categoryRaw = "legacy-unknown-category"
+        corrupted.toneRaw = "legacy-unknown-tone"
+        repository.save()
+
+        XCTAssertEqual(
+            repository.todayHistoryCount(category: .career, tone: .wizard, referenceDate: now),
+            1
+        )
+        XCTAssertEqual(
+            repository.todayHistoryCount(category: .productivity, tone: .corporateConsultant, referenceDate: now),
+            0
+        )
+    }
+
     func testQuotesFilteringAndRankingRemainCorrectAfterDebounce() async throws {
         let repository = try makeRepository()
         let likedSuggestion = repository.addQuoteSuggestion(

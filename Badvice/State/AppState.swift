@@ -470,14 +470,17 @@ final class AdviceRepository {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: referenceDate)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? referenceDate
-        let predicate = #Predicate<AdviceRecord> {
-            $0.createdAt >= startOfDay
-                && $0.createdAt < endOfDay
-                && $0.category == category
-                && $0.tone == tone
+        let categoryRaw = category.rawValue
+        let toneRaw = tone.rawValue
+
+        // Avoid SwiftData predicates on computed enum accessors (`category`/`tone`).
+        // Filtering on persisted raw fields keeps this resilient across device stores.
+        return fetchAllHistory().reduce(into: 0) { count, record in
+            guard record.createdAt >= startOfDay, record.createdAt < endOfDay else { return }
+            if record.categoryRaw == categoryRaw && record.toneRaw == toneRaw {
+                count += 1
+            }
         }
-        let descriptor = FetchDescriptor<AdviceRecord>(predicate: predicate)
-        return (try? context.fetchCount(descriptor)) ?? 0
     }
 
     func setFavorite(_ record: AdviceRecord, isFavorite: Bool) {
