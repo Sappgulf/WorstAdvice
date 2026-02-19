@@ -229,6 +229,7 @@ struct LearningWeightProfile: Sendable {
     let implicitWeight: Double
     let noveltyWeight: Double
     let explorationWeight: Double
+    let recencyWeight: Double
     let dislikePenaltyWeight: Double
     let favoriteBonusWeight: Double
     let copyBonusWeight: Double
@@ -241,6 +242,7 @@ struct LearningWeightProfile: Sendable {
         implicitWeight: 0.12,
         noveltyWeight: 0.10,
         explorationWeight: 0.08,
+        recencyWeight: 0.06,
         dislikePenaltyWeight: 1.00,
         favoriteBonusWeight: 0.65,
         copyBonusWeight: 0.35,
@@ -255,6 +257,7 @@ struct LearningWeightProfile: Sendable {
         implicitWeight: 0.16,
         noveltyWeight: 0.08,
         explorationWeight: 0.04,
+        recencyWeight: 0.08,
         dislikePenaltyWeight: 1.20,
         favoriteBonusWeight: 0.80,
         copyBonusWeight: 0.45,
@@ -269,6 +272,7 @@ struct LearningWeightProfile: Sendable {
         implicitWeight: 0.08,
         noveltyWeight: 0.12,
         explorationWeight: 0.18,
+        recencyWeight: 0.04,
         dislikePenaltyWeight: 0.80,
         favoriteBonusWeight: 0.50,
         copyBonusWeight: 0.25,

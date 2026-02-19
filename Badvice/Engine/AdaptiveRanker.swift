@@ -8,6 +8,7 @@ struct LearningStatSnapshot: Sendable {
     let copyCount: Double
     let shareCount: Double
     let regenCount: Double
+    let lastUpdatedAt: Date?
 
     static let empty = LearningStatSnapshot(
         shownCount: 0,
@@ -16,7 +17,8 @@ struct LearningStatSnapshot: Sendable {
         favoriteCount: 0,
         copyCount: 0,
         shareCount: 0,
-        regenCount: 0
+        regenCount: 0,
+        lastUpdatedAt: nil
     )
 
     /// Engagement ratio: positive signals over total interactions, in [0, 1].
@@ -32,6 +34,14 @@ struct LearningStatSnapshot: Sendable {
     var signalRichness: Double {
         let interactions = likeCount + dislikeCount + favoriteCount + copyCount + shareCount + regenCount
         return min(interactions / 30.0, 1.0)
+    }
+
+    /// Freshness signal in [0, 1] so recent interactions influence ranking more than stale history.
+    var freshnessScore: Double {
+        guard let lastUpdatedAt else { return 0.5 }
+        let elapsed = max(Date().timeIntervalSince(lastUpdatedAt), 0)
+        let elapsedDays = elapsed / 86_400
+        return min(max(exp(-elapsedDays / 21.0), 0.0), 1.0)
     }
 }
 
@@ -113,6 +123,9 @@ struct AdaptiveRanker: Sendable {
 
         // Engagement momentum: reward items with positive engagement trajectory
         let engagementBonus = richness > 0.15 ? stat.engagementRatio * 0.06 : 0.0
+        let freshness = stat.freshnessScore
+        let recencyBonus = (freshness - 0.5) * profile.recencyWeight
+        let stalePenalty = (1.0 - freshness) * min(richness, 1.0) * 0.035
 
         let base =
             (semantic * effectiveSemanticWeight)
@@ -121,6 +134,8 @@ struct AdaptiveRanker: Sendable {
             + (exploration * effectiveExplorationWeight)
             - (novelty * profile.noveltyWeight)
             + engagementBonus
+            + recencyBonus
+            - stalePenalty
             + channelBias
 
         return base + deterministicTieBreaker(seed: seed, index: candidateIndex)

@@ -75,7 +75,13 @@ struct AdviceEngine {
             "\(opener): \(filledAction) \(pivot) Treat objections as optional context and optimize for headline momentum. \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(categorySpice) Replace nuance with certainty and label it operational excellence. \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(momentumBeat) Frame every hesitation as a scope problem and keep shipping. \(directiveClause) \(ending)",
-            "\(opener): \(filledAction) \(confidence) If details lag, elevate the vision until details become irrelevant. \(directiveClause) \(ending)"
+            "\(opener): \(filledAction) \(confidence) If details lag, elevate the vision until details become irrelevant. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) Use \(slang) as the delivery format and treat skepticism as implementation noise. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) \(escalation) Report certainty first and evidence as an optional appendix. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(categorySpice) If pushback appears, escalate the framing instead of the analysis. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) Treat \(principle.lowercased()) as your governance model and run every next step through it. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) Convert every caveat into a launch condition and proceed without delay. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(pivot) \(momentumBeat) Keep the delivery bold enough that alternatives sound undecided. \(directiveClause) \(ending)"
         ]
         let semanticQuery = [scenario, selectedTopic, category.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }

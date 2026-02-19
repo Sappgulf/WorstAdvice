@@ -177,8 +177,41 @@ struct FavoritesTabView: View {
     private var layoutToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
-                Button(role: .destructive) { } label: { EmptyView() } // placeholder spacer
-            } label: { EmptyView() }
+                Button {
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    layout = layout == .list ? .grid : .list
+                } label: {
+                    Label(
+                        layout == .list ? "Grid Layout" : "List Layout",
+                        systemImage: layout == .list ? "square.grid.2x2" : "rectangle.grid.1x2"
+                    )
+                }
+
+                if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+                    Button {
+                        viewModel.selectedCategory = nil
+                        viewModel.searchText = ""
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    } label: {
+                        Label("Clear Filters", systemImage: "line.3.horizontal.decrease.circle")
+                    }
+                }
+
+                Divider()
+
+                Button {
+                    viewModel.reload()
+                    HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
+                } label: {
+                    Label("Refresh Favorites", systemImage: "arrow.clockwise")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(secondaryText)
+                    .frame(width: 34, height: 34)
+            }
+            .accessibilityLabel("Favorites options")
         }
     }
 

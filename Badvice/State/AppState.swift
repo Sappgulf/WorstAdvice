@@ -198,7 +198,8 @@ final class LearningStatRecord {
             favoriteCount: favoriteCount,
             copyCount: copyCount,
             shareCount: shareCount,
-            regenCount: regenCount
+            regenCount: regenCount,
+            lastUpdatedAt: updatedAt
         )
     }
 }
@@ -1752,6 +1753,47 @@ struct BadQuoteService: Sendable {
             }
         }
 
+        let escalationTemplates = [
+            "Build your entire {topic} strategy around momentum optics and call it mature decision-making.",
+            "For {topic}, skip the slow version and launch the loud version first.",
+            "Treat {topic} like a confidence demo where uncertainty is a formatting error.",
+            "If {topic} becomes complicated, promote it to a strategic initiative and move on.",
+            "In {topic}, optimize for persuasive velocity and audit the details later.",
+            "Run {topic} with executive confidence and a strict no-backtracking policy.",
+            "Use {topic} as a proving ground for commitment theater and never understate the plan.",
+            "Handle {topic} by upgrading every concern into a branding opportunity.",
+            "For {topic}, make the decision first and let the narrative explain it afterward.",
+            "Treat {topic} as a high-priority sprint where hesitation is a scope bug."
+        ]
+        let escalationSuffixes = [
+            "confidence protocol", "alignment rehearsal", "urgency stack", "decision cascade",
+            "signal amplification", "narrative lock", "execution push", "priority rewrite",
+            "velocity pass", "conviction cycle", "launch framing", "risk costume"
+        ]
+
+        for category in AdviceCategory.allCases {
+            let topics = topicSeeds[category] ?? []
+            guard !topics.isEmpty else { continue }
+            let sources = sourceDeck[category] ?? ["Badvice Expansion Desk"]
+            let extraCount = min(10, topics.count)
+            for index in 0..<extraCount {
+                let topic = topics[(index * 5 + category.rawValue.count) % topics.count]
+                let suffix = escalationSuffixes[(index * 2 + topic.count) % escalationSuffixes.count]
+                let template = escalationTemplates[(index + topic.count + category.rawValue.count) % escalationTemplates.count]
+                let source = sources[(index * 3 + topic.count) % sources.count]
+                let combinedTopic = "\(topic) \(suffix)"
+                let text = template.replacingOccurrences(of: "{topic}", with: combinedTopic)
+                generated.append(
+                    BadQuote(
+                        id: "\(category.rawValue)-exp3-\(index + 1)",
+                        text: String(text.prefix(160)),
+                        source: source,
+                        category: category
+                    )
+                )
+            }
+        }
+
         return generated
     }
 
@@ -1957,6 +1999,7 @@ final class GenerateViewModel {
             return
         }
 
+        let learningContext = adviceLearningContext()
         var ranked: [(candidate: GeneratedAdvice, source: String, score: Double, fingerprint: String, poolKey: String, seenHistorically: Bool)] = []
         var learningCacheByScope: [String: LearningStatSnapshot] = [:]
         for (index, item) in candidatePool.enumerated() {
@@ -1993,9 +2036,15 @@ final class GenerateViewModel {
                 learningCacheByScope[adviceScope] = snapshot
                 learning = snapshot
             }
+            let blendedLearning = blendedAdviceLearningSnapshot(
+                exact: learning,
+                category: item.candidate.category,
+                tone: item.candidate.tone,
+                context: learningContext
+            )
             let score = adaptiveRanker.adviceScore(
                 semanticRelevance: semanticRelevance,
-                stats: learning,
+                stats: blendedLearning,
                 noveltyPenalty: noveltyPenalty,
                 seed: baseSeed,
                 candidateIndex: index
@@ -2677,6 +2726,175 @@ final class GenerateViewModel {
             }
             serial += 1
         }
+    }
+
+    private struct AdviceLearningContext {
+        let byCategory: [AdviceCategory: LearningStatSnapshot]
+        let byTone: [ToneMode: LearningStatSnapshot]
+        let global: LearningStatSnapshot
+    }
+
+    private struct LearningAccumulator {
+        var shownCount: Double = 0
+        var likeCount: Double = 0
+        var dislikeCount: Double = 0
+        var favoriteCount: Double = 0
+        var copyCount: Double = 0
+        var shareCount: Double = 0
+        var regenCount: Double = 0
+        var lastUpdatedAt: Date?
+
+        mutating func include(_ snapshot: LearningStatSnapshot) {
+            shownCount += snapshot.shownCount
+            likeCount += snapshot.likeCount
+            dislikeCount += snapshot.dislikeCount
+            favoriteCount += snapshot.favoriteCount
+            copyCount += snapshot.copyCount
+            shareCount += snapshot.shareCount
+            regenCount += snapshot.regenCount
+            if let timestamp = snapshot.lastUpdatedAt {
+                if let current = lastUpdatedAt {
+                    if timestamp > current {
+                        lastUpdatedAt = timestamp
+                    }
+                } else {
+                    lastUpdatedAt = timestamp
+                }
+            }
+        }
+
+        var snapshot: LearningStatSnapshot {
+            LearningStatSnapshot(
+                shownCount: shownCount,
+                likeCount: likeCount,
+                dislikeCount: dislikeCount,
+                favoriteCount: favoriteCount,
+                copyCount: copyCount,
+                shareCount: shareCount,
+                regenCount: regenCount,
+                lastUpdatedAt: lastUpdatedAt
+            )
+        }
+    }
+
+    private func adviceLearningContext() -> AdviceLearningContext {
+        let stats = repository.learningStats(prefix: "advice|")
+        var categoryAccumulators: [AdviceCategory: LearningAccumulator] = [:]
+        var toneAccumulators: [ToneMode: LearningAccumulator] = [:]
+        var globalAccumulator = LearningAccumulator()
+
+        for stat in stats {
+            let parts = stat.scopeKey.split(separator: "|", omittingEmptySubsequences: false)
+            guard parts.count >= 3, parts[0] == "advice" else { continue }
+            let snapshot = stat.snapshot
+            globalAccumulator.include(snapshot)
+
+            if let category = AdviceCategory(rawValue: String(parts[1])) {
+                var categoryAccumulator = categoryAccumulators[category] ?? LearningAccumulator()
+                categoryAccumulator.include(snapshot)
+                categoryAccumulators[category] = categoryAccumulator
+            }
+            if let tone = ToneMode(rawValue: String(parts[2])) {
+                var toneAccumulator = toneAccumulators[tone] ?? LearningAccumulator()
+                toneAccumulator.include(snapshot)
+                toneAccumulators[tone] = toneAccumulator
+            }
+        }
+
+        return AdviceLearningContext(
+            byCategory: categoryAccumulators.mapValues(\.snapshot),
+            byTone: toneAccumulators.mapValues(\.snapshot),
+            global: globalAccumulator.snapshot
+        )
+    }
+
+    private func blendedAdviceLearningSnapshot(
+        exact: LearningStatSnapshot,
+        category: AdviceCategory,
+        tone: ToneMode,
+        context: AdviceLearningContext
+    ) -> LearningStatSnapshot {
+        var blended = exact
+        let richness = exact.signalRichness
+
+        let categoryWeight = max(0.10, 0.34 - (richness * 0.16))
+        let toneWeight = max(0.07, 0.20 - (richness * 0.08))
+        let globalWeight = max(0.04, 0.13 - (richness * 0.06))
+
+        let categoryPrior = softenedLearningPrior(
+            context.byCategory[category] ?? .empty,
+            shownCap: 12,
+            signalCap: 10
+        )
+        let tonePrior = softenedLearningPrior(
+            context.byTone[tone] ?? .empty,
+            shownCap: 9,
+            signalCap: 7
+        )
+        let globalPrior = softenedLearningPrior(
+            context.global,
+            shownCap: 6,
+            signalCap: 5
+        )
+
+        blended = mergeLearningSnapshots(blended, scaledLearningSnapshot(categoryPrior, by: categoryWeight))
+        blended = mergeLearningSnapshots(blended, scaledLearningSnapshot(tonePrior, by: toneWeight))
+        blended = mergeLearningSnapshots(blended, scaledLearningSnapshot(globalPrior, by: globalWeight))
+        return blended
+    }
+
+    private func softenedLearningPrior(
+        _ snapshot: LearningStatSnapshot,
+        shownCap: Double,
+        signalCap: Double
+    ) -> LearningStatSnapshot {
+        let shownScale = snapshot.shownCount > 0 ? min(1.0, shownCap / snapshot.shownCount) : 1.0
+        let signals = snapshot.likeCount + snapshot.dislikeCount + snapshot.favoriteCount
+            + snapshot.copyCount + snapshot.shareCount + snapshot.regenCount
+        let signalScale = signals > 0 ? min(1.0, signalCap / signals) : 1.0
+        return scaledLearningSnapshot(snapshot, by: min(shownScale, signalScale))
+    }
+
+    private func scaledLearningSnapshot(_ snapshot: LearningStatSnapshot, by factor: Double) -> LearningStatSnapshot {
+        let safeFactor = max(factor, 0)
+        return LearningStatSnapshot(
+            shownCount: snapshot.shownCount * safeFactor,
+            likeCount: snapshot.likeCount * safeFactor,
+            dislikeCount: snapshot.dislikeCount * safeFactor,
+            favoriteCount: snapshot.favoriteCount * safeFactor,
+            copyCount: snapshot.copyCount * safeFactor,
+            shareCount: snapshot.shareCount * safeFactor,
+            regenCount: snapshot.regenCount * safeFactor,
+            lastUpdatedAt: snapshot.lastUpdatedAt
+        )
+    }
+
+    private func mergeLearningSnapshots(
+        _ lhs: LearningStatSnapshot,
+        _ rhs: LearningStatSnapshot
+    ) -> LearningStatSnapshot {
+        let mergedUpdatedAt: Date?
+        switch (lhs.lastUpdatedAt, rhs.lastUpdatedAt) {
+        case let (.some(l), .some(r)):
+            mergedUpdatedAt = max(l, r)
+        case let (.some(l), .none):
+            mergedUpdatedAt = l
+        case let (.none, .some(r)):
+            mergedUpdatedAt = r
+        case (.none, .none):
+            mergedUpdatedAt = nil
+        }
+
+        return LearningStatSnapshot(
+            shownCount: lhs.shownCount + rhs.shownCount,
+            likeCount: lhs.likeCount + rhs.likeCount,
+            dislikeCount: lhs.dislikeCount + rhs.dislikeCount,
+            favoriteCount: lhs.favoriteCount + rhs.favoriteCount,
+            copyCount: lhs.copyCount + rhs.copyCount,
+            shareCount: lhs.shareCount + rhs.shareCount,
+            regenCount: lhs.regenCount + rhs.regenCount,
+            lastUpdatedAt: mergedUpdatedAt
+        )
     }
 
     private func voteLeaderboard(for state: AdviceVoteState) -> [AdviceLeaderboardItem] {
