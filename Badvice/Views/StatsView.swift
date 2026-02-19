@@ -1,5 +1,70 @@
 import SwiftUI
 
+// MARK: - Inline Search Field
+
+private struct InlineSearchField: View {
+    @Binding var text: String
+    let prompt: String
+    let accent: Color
+    let secondaryText: Color
+
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(isFocused ? accent : secondaryText.opacity(0.6))
+
+            TextField(prompt, text: $text)
+                .font(.system(.subheadline, design: .default))
+                .foregroundStyle(.primary)
+                .focused($isFocused)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(secondaryText.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(isFocused ? accent.opacity(0.4) : .white.opacity(0.06), lineWidth: 1)
+        )
+        .animation(.easeInOut(duration: Theme.animFast), value: isFocused)
+        .animation(.easeInOut(duration: Theme.animFast), value: text.isEmpty)
+    }
+}
+
+// MARK: - Glassmorphic Row Card
+
+private struct GlassCard<Content: View>: View {
+    let accent: Color
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        content()
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            )
+    }
+}
+
+// MARK: - Favorites Tab
+
 struct FavoritesTabView: View {
     @Bindable var viewModel: FavoritesViewModel
     @Bindable var settings: SettingsViewModel
@@ -10,178 +75,218 @@ struct FavoritesTabView: View {
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
-    private var isMotionReduced: Bool {
-        settings.reduceMotion || accessibilityReduceMotion
-    }
-
-    // Hoist per-theme lookups
+    private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+    private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
     enum FavoritesLayout: String, CaseIterable, Identifiable {
-        case list
-        case grid
-
+        case list, grid
         var id: String { rawValue }
     }
 
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
+                bg.ignoresSafeArea()
+
                 if viewModel.favorites.isEmpty {
                     emptyState
-                } else if viewModel.filteredFavorites.isEmpty {
-                    noResultsState
-                } else if layout == .list {
-                    listView
                 } else {
-                    gridView
+                    VStack(spacing: 0) {
+                        // Header bar
+                        HStack(spacing: 10) {
+                            InlineSearchField(
+                                text: $viewModel.searchText,
+                                prompt: "Search favorites",
+                                accent: accent,
+                                secondaryText: secondaryText
+                            )
+
+                            // Category filter menu
+                            Menu {
+                                Button {
+                                    viewModel.selectedCategory = nil
+                                } label: {
+                                    if viewModel.selectedCategory == nil {
+                                        Label("All", systemImage: "checkmark")
+                                    } else { Text("All") }
+                                }
+                                ForEach(AdviceCategory.allCases) { cat in
+                                    Button {
+                                        viewModel.selectedCategory = cat
+                                    } label: {
+                                        if viewModel.selectedCategory == cat {
+                                            Label(cat.title, systemImage: "checkmark")
+                                        } else { Text(cat.title) }
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: viewModel.selectedCategory == nil
+                                      ? "line.3.horizontal.decrease.circle"
+                                      : "line.3.horizontal.decrease.circle.fill")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundStyle(viewModel.selectedCategory == nil ? secondaryText : accent)
+                                    .frame(width: 42, height: 42)
+                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+
+                            // Layout toggle
+                            Button {
+                                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                                layout = layout == .list ? .grid : .list
+                            } label: {
+                                Image(systemName: layout == .list ? "rectangle.grid.1x2" : "square.grid.2x2")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundStyle(secondaryText)
+                                    .frame(width: 42, height: 42)
+                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 10)
+
+                        if viewModel.filteredFavorites.isEmpty {
+                            noResultsState
+                        } else if layout == .list {
+                            listView
+                        } else {
+                            gridView
+                        }
+                    }
                 }
             }
             .navigationTitle("Favorites")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $viewModel.searchText, prompt: "Search saved advice")
-            .toolbar { toolbarContent }
+            .toolbar { layoutToolbar }
             .toolbarBackground(.hidden, for: .navigationBar)
-            .background(Color.clear)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 viewModel.reload()
-                // Initial load haptic for satisfying entry
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
-                // Show tab bar in list views
                 tabBarVisible.wrappedValue = true
                 animateListContentIfNeeded()
             }
-            .onChange(of: layout) { _, _ in
-                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-            }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var layoutToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button(role: .destructive) { } label: { EmptyView() } // placeholder spacer
+            } label: { EmptyView() }
         }
     }
 
     private var listView: some View {
-        List {
-            Section {
-                favoritesSummaryRow
-            }
-            .listRowBackground(cardColor)
+        ScrollView {
+            LazyVStack(spacing: 10) {
+                statsChip
+                    .padding(.horizontal, 16)
 
-            let items = viewModel.filteredFavorites
-            ForEach(items, id: \.id) { record in
-                NavigationLink {
-                    FavoriteDetailView(record: record, viewModel: viewModel, settings: settings)
-                } label: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(record.adviceLine)
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(primaryText)
-                            .lineLimit(3)
-                            .lineSpacing(2)
-
-                        HStack(spacing: 6) {
-                            Label(record.category.title, systemImage: record.category.icon)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(accent)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(accent.opacity(0.12))
-                                )
-
-                            Text(record.tone.title)
-                                .font(.caption)
-                                .foregroundStyle(secondaryText)
-
-                            if record.aftermathNote != nil {
-                                Image(systemName: "book.pages")
-                                    .font(.caption)
-                                    .foregroundStyle(accent.opacity(0.7))
-                            }
+                ForEach(viewModel.filteredFavorites, id: \.id) { record in
+                    NavigationLink {
+                        FavoriteDetailView(record: record, viewModel: viewModel, settings: settings)
+                    } label: {
+                        favoriteListRow(record)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                    .contextMenu {
+                        Button("Unsave") { viewModel.remove(record) }
+                        Button("Delete", role: .destructive) { viewModel.delete(record) }
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) { viewModel.delete(record) } label: {
+                            Label("Delete", systemImage: "trash")
                         }
+                        Button { viewModel.remove(record) } label: {
+                            Label("Unsave", systemImage: "bookmark.slash")
+                        }
+                        .tint(.orange)
                     }
-                    .padding(.vertical, 6)
-                }
-                .listRowBackground(cardColor)
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        viewModel.delete(record)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-
-                    Button {
-                        viewModel.remove(record)
-                    } label: {
-                        Label("Unsave", systemImage: "bookmark.slash")
-                    }
-                    .tint(.orange)
                 }
             }
+            .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
+            .padding(.top, 4)
         }
-        .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
         .opacity(listContentAppeared ? 1 : 0)
         .offset(y: listContentAppeared ? 0 : 12)
     }
 
+    private func favoriteListRow(_ record: AdviceRecord) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            // Accent bar
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(accent.opacity(0.7))
+                .frame(width: 3)
+                .padding(.vertical, 4)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(record.adviceLine)
+                    .font(.system(.body, design: .default, weight: .medium))
+                    .foregroundStyle(primaryText)
+                    .lineLimit(3)
+                    .lineSpacing(2)
+                    .multilineTextAlignment(.leading)
+
+                HStack(spacing: 8) {
+                    Label(record.category.title, systemImage: record.category.icon)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+
+                    Text(record.tone.title)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+
+                    Spacer(minLength: 0)
+
+                    if record.aftermathNote != nil {
+                        Image(systemName: "book.pages")
+                            .font(.caption2)
+                            .foregroundStyle(accent.opacity(0.6))
+                    }
+                    if record.isFavorite {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2)
+                            .foregroundStyle(accent.opacity(0.8))
+                    }
+                }
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(secondaryText.opacity(0.35))
+                .padding(.top, 4)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.white.opacity(0.07), lineWidth: 1)
+        )
+    }
+
     private var gridView: some View {
         ScrollView {
-            VStack(spacing: 12) {
-                favoritesSummaryRow
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            LazyVStack(spacing: 10) {
+                statsChip.padding(.horizontal, 16)
+
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                     ForEach(viewModel.filteredFavorites, id: \.id) { record in
                         NavigationLink {
                             FavoriteDetailView(record: record, viewModel: viewModel, settings: settings)
                         } label: {
-                            VStack(alignment: .leading, spacing: 0) {
-                                // Category chip + aftermath indicator
-                                HStack(spacing: 6) {
-                                    Label(record.category.title, systemImage: record.category.icon)
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(accent)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(
-                                            Capsule(style: .continuous)
-                                                .fill(accent.opacity(0.12))
-                                        )
-                                    Spacer(minLength: 0)
-                                    if record.aftermathNote != nil {
-                                        Image(systemName: "book.pages")
-                                            .font(.caption2)
-                                            .foregroundStyle(accent.opacity(0.7))
-                                    }
-                                }
-
-                                Spacer(minLength: 8)
-
-                                Text(record.adviceLine)
-                                    .font(.footnote.weight(.medium))
-                                    .lineLimit(5)
-                                    .multilineTextAlignment(.leading)
-                                    .foregroundStyle(primaryText)
-                                    .lineSpacing(2)
-
-                                Spacer(minLength: 10)
-
-                                Text(record.tone.title)
-                                    .font(.caption2)
-                                    .foregroundStyle(secondaryText)
-                            }
-                            .padding(14)
-                            .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-                            .background(
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .fill(cardColor)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                            .stroke(accent.opacity(0.08), lineWidth: 1)
-                                    )
-                            )
+                            favoriteGridCell(record)
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
@@ -190,90 +295,78 @@ struct FavoritesTabView: View {
                         }
                     }
                 }
+                .padding(.horizontal, 16)
             }
-            .padding(.horizontal, Theme.horizontalPadding)
-            .padding(.bottom, 18)
+            .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
+            .padding(.top, 4)
         }
-        .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
+        .scrollDismissesKeyboard(.interactively)
         .opacity(listContentAppeared ? 1 : 0)
         .offset(y: listContentAppeared ? 0 : 12)
     }
 
-    private var favoritesSummaryRow: some View {
-        HStack(spacing: 12) {
-            Label("\(viewModel.filteredFavorites.count) shown", systemImage: "bookmark")
-                .font(.caption.weight(.semibold))
-            Spacer(minLength: 8)
-            Text("of \(viewModel.favorites.count) saved")
-                .font(.caption)
-            if viewModel.selectedCategory != nil {
-                Text("Filtered")
+    private func favoriteGridCell(_ record: AdviceRecord) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Label(record.category.title, systemImage: record.category.icon)
                     .font(.caption2.weight(.semibold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(accent.opacity(0.14))
-                    )
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+                Spacer(minLength: 0)
+                if record.aftermathNote != nil {
+                    Image(systemName: "book.pages")
+                        .font(.caption2)
+                        .foregroundStyle(accent.opacity(0.6))
+                }
             }
+
+            Spacer(minLength: 10)
+
+            Text(record.adviceLine)
+                .font(.footnote.weight(.medium))
+                .lineLimit(5)
+                .multilineTextAlignment(.leading)
+                .foregroundStyle(primaryText)
+                .lineSpacing(2)
+
+            Spacer(minLength: 10)
+
+            Text(record.tone.title)
+                .font(.caption2)
+                .foregroundStyle(secondaryText)
         }
-        .foregroundStyle(secondaryText)
-        .padding(.vertical, 4)
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(accent.opacity(0.1), lineWidth: 1)
+        )
     }
 
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Button {
-                    layout = .list
-                } label: {
-                    if layout == .list {
-                        Label("List", systemImage: "checkmark")
-                    } else {
-                        Text("List")
-                    }
-                }
-                Button {
-                    layout = .grid
-                } label: {
-                    if layout == .grid {
-                        Label("Grid", systemImage: "checkmark")
-                    } else {
-                        Text("Grid")
-                    }
-                }
-            } label: {
-                Image(systemName: "rectangle.grid.1x2")
+    private var statsChip: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "bookmark.fill")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(accent)
+            Text("\(viewModel.filteredFavorites.count) of \(viewModel.favorites.count) saved")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(secondaryText)
+            if viewModel.selectedCategory != nil {
+                Capsule(style: .continuous)
+                    .fill(accent.opacity(0.15))
+                    .frame(width: 6, height: 6)
+                Text("Filtered")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(accent)
             }
+            Spacer()
         }
-
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Button {
-                    viewModel.selectedCategory = nil
-                } label: {
-                    if viewModel.selectedCategory == nil {
-                        Label("All categories", systemImage: "checkmark")
-                    } else {
-                        Text("All categories")
-                    }
-                }
-                ForEach(AdviceCategory.allCases) { category in
-                    Button {
-                        viewModel.selectedCategory = category
-                    } label: {
-                        if viewModel.selectedCategory == category {
-                            Label(category.title, systemImage: "checkmark")
-                        } else {
-                            Text(category.title)
-                        }
-                    }
-                }
-            } label: {
-                Image(systemName: "line.3.horizontal.decrease.circle")
-            }
-        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private func animateListContentIfNeeded() {
@@ -281,7 +374,7 @@ struct FavoritesTabView: View {
         if isMotionReduced {
             listContentAppeared = true
         } else {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+            withAnimation(.spring(response: Theme.animSlow, dampingFraction: 0.82)) {
                 listContentAppeared = true
             }
         }
@@ -291,48 +384,44 @@ struct FavoritesTabView: View {
     @State private var floatingOffset: CGFloat = 0
 
     private var emptyState: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             ZStack {
-                // Animated background circles
                 Circle()
-                    .fill(Theme.accent(for: settings.theme).opacity(0.08))
-                    .frame(width: 120, height: 120)
-                    .scaleEffect(emptyStateAppeared ? 1.0 : 0.8)
-                    .opacity(emptyStateAppeared ? 1.0 : 0)
-                
+                    .fill(accent.opacity(0.08))
+                    .frame(width: 130, height: 130)
+                    .scaleEffect(emptyStateAppeared ? 1.0 : 0.7)
+                    .opacity(emptyStateAppeared ? 1 : 0)
                 Circle()
-                    .fill(Theme.accent(for: settings.theme).opacity(0.12))
-                    .frame(width: 96, height: 96)
+                    .fill(accent.opacity(0.13))
+                    .frame(width: 100, height: 100)
                     .offset(y: floatingOffset)
-                
                 Image(systemName: "bookmark")
-                    .font(.system(size: 40, weight: .medium))
-                    .foregroundStyle(Theme.accent(for: settings.theme))
+                    .font(.system(size: 42, weight: .medium))
+                    .foregroundStyle(accent)
                     .offset(y: floatingOffset)
                     .symbolEffect(.bounce, options: .repeating, value: emptyStateAppeared)
             }
             .onAppear {
-                if !isMotionReduced {
-                    withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                        floatingOffset = -8
-                    }
+                guard !isMotionReduced else { return }
+                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+                    floatingOffset = -9
                 }
             }
-            
-            VStack(spacing: 6) {
+
+            VStack(spacing: 8) {
                 Text("Nothing saved yet.")
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
-                    .offset(y: emptyStateAppeared ? 0 : 20)
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(primaryText)
                     .opacity(emptyStateAppeared ? 1 : 0)
-                
+                    .offset(y: emptyStateAppeared ? 0 : 18)
+
                 Text("Bold of you. Save a piece of advice\nand pretend you'll follow it.")
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
                     .lineSpacing(3)
-                    .offset(y: emptyStateAppeared ? 0 : 15)
                     .opacity(emptyStateAppeared ? 1 : 0)
+                    .offset(y: emptyStateAppeared ? 0 : 12)
             }
 
             Button {
@@ -340,52 +429,48 @@ struct FavoritesTabView: View {
             } label: {
                 Label("Generate Advice", systemImage: "sparkles")
                     .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 42)
+                    .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.accent(for: settings.theme))
+            .tint(accent)
             .foregroundStyle(Theme.buttonText(for: settings.theme))
-            .padding(.top, 6)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 40)
             .opacity(emptyStateAppeared ? 1 : 0)
         }
-        .padding(.horizontal, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
+            guard !emptyStateAppeared else { return }
             if isMotionReduced {
                 emptyStateAppeared = true
-                floatingOffset = 0
             } else {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.72)) {
                     emptyStateAppeared = true
                 }
             }
         }
-        .onDisappear {
-            emptyStateAppeared = false
-        }
+        .onDisappear { emptyStateAppeared = false }
     }
 
     @State private var noResultsAppeared = false
 
     private var noResultsState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 32, weight: .medium))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                .scaleEffect(noResultsAppeared ? 1.0 : 0.5)
-                .rotationEffect(.degrees(noResultsAppeared ? 0 : -30))
-            
+                .font(.system(size: 36, weight: .medium))
+                .foregroundStyle(secondaryText.opacity(0.5))
+                .scaleEffect(noResultsAppeared ? 1 : 0.5)
+                .rotationEffect(.degrees(noResultsAppeared ? 0 : -20))
+
             Text("No matches")
-                .font(.headline)
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .font(.title3.weight(.bold))
+                .foregroundStyle(primaryText)
                 .opacity(noResultsAppeared ? 1 : 0)
-                .offset(y: noResultsAppeared ? 0 : 10)
-            
+
             Text("Try a different search or category.")
                 .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
                 .opacity(noResultsAppeared ? 1 : 0)
-                .offset(y: noResultsAppeared ? 0 : 10)
 
             if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
                 Button {
@@ -394,40 +479,26 @@ struct FavoritesTabView: View {
                 } label: {
                     Label("Clear Filters", systemImage: "arrow.uturn.backward")
                         .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
                 }
                 .buttonStyle(.bordered)
-                .tint(Theme.accent(for: settings.theme))
+                .tint(accent)
+                .clipShape(Capsule(style: .continuous))
                 .opacity(noResultsAppeared ? 1 : 0)
-                .offset(y: noResultsAppeared ? 0 : 10)
             }
-
-            Button {
-                onJumpToGenerate?()
-            } label: {
-                Label("Generate Advice", systemImage: "sparkles")
-                    .font(.subheadline.weight(.semibold))
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Theme.accent(for: settings.theme))
-            .foregroundStyle(Theme.buttonText(for: settings.theme))
-            .opacity(noResultsAppeared ? 1 : 0)
-            .offset(y: noResultsAppeared ? 0 : 10)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            if isMotionReduced {
-                noResultsAppeared = true
-            } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    noResultsAppeared = true
-                }
-            }
+            guard !noResultsAppeared else { return }
+            if isMotionReduced { noResultsAppeared = true }
+            else { withAnimation(.spring(response: 0.5, dampingFraction: 0.72)) { noResultsAppeared = true } }
         }
-        .onDisappear {
-            noResultsAppeared = false
-        }
+        .onDisappear { noResultsAppeared = false }
     }
 }
+
+// MARK: - Quotes Tab
 
 struct QuotesTabView: View {
     @Bindable var viewModel: QuotesViewModel
@@ -440,195 +511,198 @@ struct QuotesTabView: View {
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
-    private var isMotionReduced: Bool {
-        settings.reduceMotion || accessibilityReduceMotion
-    }
+    private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
     var body: some View {
-        let quotes = viewModel.filteredQuotes
         NavigationStack {
-            List {
-                // Hero daily quote — full-bleed card
-                Section {
-                    dailyQuoteHero
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 12, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
+            ZStack {
+                bg.ignoresSafeArea()
 
-                // Sort + stats controls
-                Section {
-                    Picker("Sort", selection: $viewModel.rankingMode) {
-                        ForEach(QuoteRankingMode.allCases) { mode in
-                            Text(mode.title).tag(mode)
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        // Daily hero
+                        dailyQuoteHero
+                            .padding(.horizontal, 16)
+
+                        // Sort + search row
+                        VStack(spacing: 8) {
+                            InlineSearchField(
+                                text: $viewModel.searchText,
+                                prompt: "Search quotes",
+                                accent: accent,
+                                secondaryText: secondaryText
+                            )
+
+                            HStack(spacing: 10) {
+                                Picker("Sort", selection: $viewModel.rankingMode) {
+                                    ForEach(QuoteRankingMode.allCases) { mode in
+                                        Text(mode.title).tag(mode)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+
+                                Menu {
+                                    Button {
+                                        viewModel.selectedCategory = nil
+                                    } label: {
+                                        if viewModel.selectedCategory == nil {
+                                            Label("All", systemImage: "checkmark")
+                                        } else { Text("All") }
+                                    }
+                                    ForEach(AdviceCategory.allCases) { cat in
+                                        Button { viewModel.selectedCategory = cat } label: {
+                                            if viewModel.selectedCategory == cat {
+                                                Label(cat.title, systemImage: "checkmark")
+                                            } else { Text(cat.title) }
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: viewModel.selectedCategory == nil
+                                          ? "line.3.horizontal.decrease.circle"
+                                          : "line.3.horizontal.decrease.circle.fill")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundStyle(viewModel.selectedCategory == nil ? secondaryText : accent)
+                                        .frame(width: 40, height: 34)
+                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                }
+                            }
+
+                            // Stats strip
+                            HStack {
+                                Label("\(viewModel.likedCount)", systemImage: "hand.thumbsup.fill")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(accent)
+                                Text("liked")
+                                    .font(.caption)
+                                    .foregroundStyle(secondaryText)
+                                Spacer()
+                                Text("disliked")
+                                    .font(.caption)
+                                    .foregroundStyle(secondaryText)
+                                Label("\(viewModel.dislikedCount)", systemImage: "hand.thumbsdown.fill")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(secondaryText.opacity(0.7))
+                            }
+                            .padding(.horizontal, 4)
                         }
-                    }
-                    .pickerStyle(.segmented)
-                    .listRowBackground(Theme.cardColor(for: settings.theme))
+                        .padding(.horizontal, 16)
 
-                    HStack {
-                        Label("\(viewModel.likedCount) liked", systemImage: "hand.thumbsup")
-                        Spacer()
-                        Label("\(viewModel.dislikedCount) disliked", systemImage: "hand.thumbsdown")
-                    }
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                    .listRowBackground(Theme.cardColor(for: settings.theme))
-                } header: {
-                    Text("Quote Library")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.primaryText(for: settings.theme))
-                        .textCase(nil)
-                }
-
-                // Quote rows
-                if quotes.isEmpty {
-                    Section {
-                        VStack(spacing: 12) {
+                        // Quote rows
+                        let quotes = viewModel.filteredQuotes
+                        if quotes.isEmpty {
                             QuotesEmptyState(theme: settings.theme, reduceMotion: isMotionReduced)
+                                .padding(.horizontal, 16)
                             if viewModel.selectedCategory != nil {
                                 Button {
                                     viewModel.selectedCategory = nil
                                 } label: {
                                     Label("Show All Categories", systemImage: "line.3.horizontal.decrease.circle")
                                         .font(.subheadline.weight(.semibold))
-                                        .frame(maxWidth: .infinity, minHeight: 40)
+                                        .frame(maxWidth: .infinity, minHeight: 44)
                                 }
                                 .buttonStyle(.bordered)
-                                .tint(Theme.accent(for: settings.theme))
+                                .tint(accent)
+                                .padding(.horizontal, 16)
                             }
-                            Button {
-                                onJumpToGenerate?()
-                            } label: {
+                            Button { onJumpToGenerate?() } label: {
                                 Label("Generate Advice", systemImage: "sparkles")
                                     .font(.subheadline.weight(.semibold))
-                                    .frame(maxWidth: .infinity, minHeight: 40)
+                                    .frame(maxWidth: .infinity, minHeight: 44)
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(Theme.accent(for: settings.theme))
+                            .tint(accent)
                             .foregroundStyle(Theme.buttonText(for: settings.theme))
-                        }
-                        .listRowBackground(Color.clear)
-                    }
-                } else {
-                    Section {
-                        ForEach(quotes) { quote in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("\u{201C}\(quote.text)\u{201D}")
-                                    .font(.body.weight(.medium))
-                                    .foregroundStyle(Theme.primaryText(for: settings.theme))
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .lineSpacing(2)
-
-                                HStack(spacing: 6) {
-                                    Label(quote.category.title, systemImage: quote.category.icon)
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(Theme.accent(for: settings.theme))
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .background(
-                                            Capsule(style: .continuous)
-                                                .fill(Theme.accent(for: settings.theme).opacity(0.12))
-                                        )
-
-                                    Text("•")
-                                        .font(.caption2.weight(.bold))
-                                        .foregroundStyle(Theme.secondaryText(for: settings.theme).opacity(0.7))
-
-                                    Text(quote.source)
-                                        .font(.caption2.weight(.medium))
-                                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                                        .lineLimit(1)
-                                        .truncationMode(.tail)
-                                }
-
-                                HStack(spacing: 10) {
-                                    voteButtons(for: quote)
-                                    Spacer(minLength: 8)
-                                    quoteActionsMenu(for: quote)
-                                }
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .padding(.horizontal, 16)
+                        } else {
+                            ForEach(quotes) { quote in
+                                quoteRow(quote)
+                                    .padding(.horizontal, 16)
                             }
-                            .padding(.vertical, 4)
-                            .listRowBackground(Theme.cardColor(for: settings.theme))
                         }
                     }
+                    .padding(.top, 8)
+                    .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollContentBackground(.hidden)
-            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Quotes")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $viewModel.searchText, prompt: "Search bad quotes")
-            .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .background(Color.clear)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            viewModel.selectedCategory = nil
-                        } label: {
-                            if viewModel.selectedCategory == nil {
-                                Label("All categories", systemImage: "checkmark")
-                            } else {
-                                Text("All categories")
-                            }
-                        }
-                        ForEach(AdviceCategory.allCases) { category in
-                            Button {
-                                viewModel.selectedCategory = category
-                            } label: {
-                                if viewModel.selectedCategory == category {
-                                    Label(category.title, systemImage: "checkmark")
-                                } else {
-                                    Text(category.title)
-                                }
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                    }
-                }
+            .onAppear { tabBarVisible.wrappedValue = true }
+            .onChange(of: viewModel.rankingMode) { _, _ in
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             }
         }
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
-        .toast(item: $activeToast, accentColor: Theme.accent(for: settings.theme))
-        .onAppear {
-            // Show tab bar in list views
-            tabBarVisible.wrappedValue = true
+        .toast(item: $activeToast, accentColor: accent)
+    }
+
+    private func quoteRow(_ quote: BadQuote) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("\u{201C}\(quote.text)\u{201D}")
+                .font(.body.weight(.medium))
+                .foregroundStyle(primaryText)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 6) {
+                Label(quote.category.title, systemImage: quote.category.icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+
+                Text("•")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(secondaryText.opacity(0.5))
+
+                Text(quote.source)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(secondaryText)
+                    .lineLimit(1)
+            }
+
+            HStack(spacing: 10) {
+                voteButtons(for: quote)
+                Spacer(minLength: 8)
+                quoteActionsMenu(for: quote)
+            }
         }
-        .onChange(of: viewModel.rankingMode) { _, _ in
-            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-        }
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.white.opacity(0.07), lineWidth: 1)
+        )
     }
 
     private var dailyQuoteHero: some View {
         let dailyQuote = viewModel.dailyQuote
         return ZStack(alignment: .topLeading) {
-            // Gradient background
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [
-                            Theme.accent(for: settings.theme),
-                            Theme.accent(for: settings.theme).opacity(0.75)
-                        ],
+                        colors: [accent, accent.opacity(0.72)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
 
-            // Decorative large quote mark
             Text("\u{201C}")
                 .font(.system(size: 96, weight: .heavy, design: .serif))
-                .foregroundStyle(.white.opacity(0.18))
+                .foregroundStyle(.white.opacity(0.16))
                 .offset(x: 16, y: -8)
                 .allowsHitTesting(false)
 
-            // Content
             VStack(alignment: .leading, spacing: 0) {
                 Text("Bad Quote of the Day")
                     .font(.caption.weight(.bold))
@@ -647,7 +721,6 @@ struct QuotesTabView: View {
                     .padding(.top, 10)
 
                 HStack(spacing: 10) {
-                    // Like/dislike with white tint (hero card has accent background)
                     HStack(spacing: 8) {
                         let heroVote = viewModel.vote(for: dailyQuote)
                         Button {
@@ -670,26 +743,18 @@ struct QuotesTabView: View {
                         .buttonStyle(.bordered)
                         .tint(.white)
                     }
-
                     Spacer()
-
-                    Button {
-                        copyQuote(dailyQuote, isDaily: true)
-                    } label: {
-                        Image(systemName: "doc.on.doc")
-                            .frame(width: 34, height: 34)
+                    Button { copyQuote(dailyQuote, isDaily: true) } label: {
+                        Image(systemName: "doc.on.doc").frame(width: 34, height: 34)
                     }
                     .buttonStyle(.bordered)
                     .tint(.white)
 
-                    Button {
-                        shareQuote(dailyQuote, isDaily: true)
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .frame(width: 34, height: 34)
+                    Button { shareQuote(dailyQuote, isDaily: true) } label: {
+                        Image(systemName: "square.and.arrow.up").frame(width: 34, height: 34)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.white.opacity(0.25))
+                    .tint(.white.opacity(0.22))
                 }
                 .padding(.top, 16)
             }
@@ -722,25 +787,19 @@ struct QuotesTabView: View {
     }
 
     private func voteButtons(for quote: BadQuote) -> some View {
-        let accent = Theme.accent(for: settings.theme)
         let neutralFill = accent.opacity(0.14)
-        let activeFill = accent.opacity(0.26)
+        let activeFill = accent.opacity(0.28)
         let voteState = viewModel.vote(for: quote)
-        let likeSelected = voteState == .like
-        let dislikeSelected = voteState == .dislike
 
         return HStack(spacing: 8) {
             Button {
                 viewModel.toggleVote(.like, for: quote)
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             } label: {
-                Image(systemName: likeSelected ? "hand.thumbsup.fill" : "hand.thumbsup")
+                Image(systemName: voteState == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
                     .foregroundStyle(accent)
                     .frame(width: 34, height: 34)
-                    .background(
-                        Circle()
-                            .fill(likeSelected ? activeFill : neutralFill)
-                    )
+                    .background(Circle().fill(voteState == .like ? activeFill : neutralFill))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Like quote")
@@ -749,13 +808,10 @@ struct QuotesTabView: View {
                 viewModel.toggleVote(.dislike, for: quote)
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             } label: {
-                Image(systemName: dislikeSelected ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                Image(systemName: voteState == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
                     .foregroundStyle(accent)
                     .frame(width: 34, height: 34)
-                    .background(
-                        Circle()
-                            .fill(dislikeSelected ? activeFill : neutralFill)
-                    )
+                    .background(Circle().fill(voteState == .dislike ? activeFill : neutralFill))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Dislike quote")
@@ -764,26 +820,23 @@ struct QuotesTabView: View {
 
     private func quoteActionsMenu(for quote: BadQuote) -> some View {
         Menu {
-            Button {
-                copyQuote(quote, isDaily: false)
-            } label: {
+            Button { copyQuote(quote, isDaily: false) } label: {
                 Label("Copy", systemImage: "doc.on.doc")
             }
-            Button {
-                shareQuote(quote, isDaily: false)
-            } label: {
+            Button { shareQuote(quote, isDaily: false) } label: {
                 Label("Share", systemImage: "square.and.arrow.up")
             }
         } label: {
             Image(systemName: "ellipsis.circle")
                 .font(.title3)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
                 .frame(width: 32, height: 32)
         }
         .accessibilityLabel("Quote actions")
-        .accessibilityHint("Copy or share this quote")
     }
 }
+
+// MARK: - Favorite Detail
 
 private struct FavoriteDetailView: View {
     let record: AdviceRecord
@@ -798,108 +851,107 @@ private struct FavoriteDetailView: View {
 
     private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
     private var aftermathIsDirty: Bool { aftermathText != (record.aftermathNote ?? "") }
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                AdviceCardView(
-                    record: record,
-                    theme: settings.theme,
-                    reduceMotion: settings.reduceMotion
-                )
+        ZStack {
+            bg.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    AdviceCardView(
+                        record: record,
+                        theme: settings.theme,
+                        reduceMotion: settings.reduceMotion
+                    )
                     .padding(.horizontal, Theme.horizontalPadding)
 
-                HStack(spacing: 10) {
-                    Button {
-                        UIPasteboard.general.string = record.adviceLine
-                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        activeToast = ToastMessage(message: "Copied!", style: .success)
-                    } label: {
-                        Label("Copy Text", systemImage: "doc.on.doc")
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(Theme.accent(for: settings.theme))
-
-                    Button {
-                        let content = ShareCardContent(
-                            category: record.category,
-                            tone: record.tone,
-                            adviceLine: record.adviceLine,
-                            rationaleLine: record.rationaleLine,
-                            includeDisclaimer: settings.includeDisclaimerOnShare,
-                            template: settings.preferredTemplate,
-                            aspectRatio: settings.preferredAspect
-                        )
-                        let image = ShareCardRenderer.render(content: content)
-                        shareItems = [image, record.adviceLine]
-                        showingShareSheet = true
-                    } label: {
-                        Label("Share Card", systemImage: "square.and.arrow.up")
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.accent(for: settings.theme))
-                }
-                .padding(.horizontal, Theme.horizontalPadding)
-
-                // MARK: - Aftermath Journal
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 6) {
-                        Label("What Actually Happened", systemImage: "book.pages")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.accent(for: settings.theme))
-                        Spacer()
-                        if aftermathIsDirty {
-                            Button {
-                                HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                                viewModel.setAftermathNote(record, note: aftermathText)
-                            } label: {
-                                Text("Save Note")
-                                    .font(.caption.weight(.semibold))
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 5)
-                                    .background(
-                                        Capsule(style: .continuous)
-                                            .fill(Theme.accent(for: settings.theme).opacity(0.15))
-                                    )
-                                    .foregroundStyle(Theme.accent(for: settings.theme))
-                            }
-                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    HStack(spacing: 10) {
+                        Button {
+                            UIPasteboard.general.string = record.adviceLine
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                            activeToast = ToastMessage(message: "Copied!", style: .success)
+                        } label: {
+                            Label("Copy Text", systemImage: "doc.on.doc")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: 46)
                         }
-                    }
-                    .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.7), value: aftermathIsDirty)
+                        .buttonStyle(.bordered)
+                        .tint(accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                    TextField(
-                        "Did you follow this? What happened? Rate the disaster.",
-                        text: $aftermathText,
-                        axis: .vertical
-                    )
-                    .lineLimit(3...8)
-                    .font(Theme.bodyFont)
-                    .textInputAutocapitalization(.sentences)
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Theme.cardColor(for: settings.theme))
-                    )
-                }
-                .padding(.horizontal, Theme.horizontalPadding)
-                .onAppear { aftermathText = record.aftermathNote ?? "" }
-                .onDisappear {
-                    if aftermathIsDirty {
-                        viewModel.setAftermathNote(record, note: aftermathText)
+                        Button {
+                            let content = ShareCardContent(
+                                category: record.category,
+                                tone: record.tone,
+                                adviceLine: record.adviceLine,
+                                rationaleLine: record.rationaleLine,
+                                includeDisclaimer: settings.includeDisclaimerOnShare,
+                                template: settings.preferredTemplate,
+                                aspectRatio: settings.preferredAspect
+                            )
+                            shareItems = [ShareCardRenderer.render(content: content), record.adviceLine]
+                            showingShareSheet = true
+                        } label: {
+                            Label("Share Card", systemImage: "square.and.arrow.up")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: 46)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .padding(.horizontal, Theme.horizontalPadding)
+
+                    // Aftermath journal
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 6) {
+                            Label("What Actually Happened", systemImage: "book.pages")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(accent)
+                            Spacer()
+                            if aftermathIsDirty {
+                                Button {
+                                    HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                                    viewModel.setAftermathNote(record, note: aftermathText)
+                                } label: {
+                                    Text("Save Note")
+                                        .font(.caption.weight(.semibold))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 5)
+                                        .background(Capsule(style: .continuous).fill(accent.opacity(0.15)))
+                                        .foregroundStyle(accent)
+                                }
+                                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                            }
+                        }
+                        .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.7), value: aftermathIsDirty)
+
+                        TextField(
+                            "Did you follow this? What happened?",
+                            text: $aftermathText,
+                            axis: .vertical
+                        )
+                        .lineLimit(3...8)
+                        .font(Theme.bodyFont)
+                        .textInputAutocapitalization(.sentences)
+                        .foregroundStyle(Theme.primaryText(for: settings.theme))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .padding(.horizontal, Theme.horizontalPadding)
+                    .onAppear { aftermathText = record.aftermathNote ?? "" }
+                    .onDisappear {
+                        if aftermathIsDirty { viewModel.setAftermathNote(record, note: aftermathText) }
                     }
                 }
+                .padding(.top, 8)
+                .padding(.bottom, 28)
             }
-            .padding(.top, 8)
-            .padding(.bottom, 28)
+            .scrollDismissesKeyboard(.interactively)
         }
-        .scrollDismissesKeyboard(.interactively)
         .navigationTitle(record.category.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -907,21 +959,15 @@ private struct FavoriteDetailView: View {
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
-        .toast(item: $activeToast, accentColor: Theme.accent(for: settings.theme))
+        .toast(item: $activeToast, accentColor: accent)
     }
 }
-
-// MARK: - Empty State Views
 
 // MARK: - Performance-Optimized Button Styles
 
 struct ScaleButtonStyle: ButtonStyle {
     let scale: CGFloat
-    
-    init(scale: CGFloat = 0.95) {
-        self.scale = scale
-    }
-    
+    init(scale: CGFloat = 0.95) { self.scale = scale }
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1.0)
@@ -930,13 +976,8 @@ struct ScaleButtonStyle: ButtonStyle {
 }
 
 extension ButtonStyle where Self == ScaleButtonStyle {
-    static var scaled: ScaleButtonStyle {
-        ScaleButtonStyle()
-    }
-    
-    static func scaled(_ scale: CGFloat) -> ScaleButtonStyle {
-        ScaleButtonStyle(scale: scale)
-    }
+    static var scaled: ScaleButtonStyle { ScaleButtonStyle() }
+    static func scaled(_ scale: CGFloat) -> ScaleButtonStyle { ScaleButtonStyle(scale: scale) }
 }
 
 // MARK: - History Tab
@@ -949,29 +990,103 @@ struct HistoryTabView: View {
     var onUseRecord: (AdviceRecord) -> Void
     var onDataChanged: () -> Void
     var onJumpToGenerate: (() -> Void)? = nil
-    
+
     @State private var showingClearConfirmation = false
     @State private var historyListAppeared = false
 
-    private var isMotionReduced: Bool {
-        settings.reduceMotion || accessibilityReduceMotion
-    }
-    
+    private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
+
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
+                bg.ignoresSafeArea()
+
                 if viewModel.history.isEmpty {
                     historyEmptyState
-                } else if viewModel.filteredHistory.isEmpty {
-                    noResultsState
                 } else {
-                    historyList
+                    VStack(spacing: 0) {
+                        // Search + controls header
+                        VStack(spacing: 8) {
+                            InlineSearchField(
+                                text: $viewModel.searchText,
+                                prompt: "Search history",
+                                accent: accent,
+                                secondaryText: secondaryText
+                            )
+
+                            HStack(spacing: 10) {
+                                Picker("Sort", selection: $viewModel.rankingMode) {
+                                    ForEach(HistoryViewModel.RankingMode.allCases) { mode in
+                                        Text(mode.title).tag(mode)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+
+                                Menu {
+                                    ForEach(AdviceCategory.allCases) { cat in
+                                        Button {
+                                            viewModel.selectedCategory = viewModel.selectedCategory == cat ? nil : cat
+                                        } label: {
+                                            Label(cat.title, systemImage: viewModel.selectedCategory == cat ? "checkmark" : cat.icon)
+                                        }
+                                    }
+                                    Divider()
+                                    Button(role: .destructive) {
+                                        showingClearConfirmation = true
+                                    } label: {
+                                        Label("Clear History", systemImage: "trash")
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundStyle(secondaryText)
+                                        .frame(width: 40, height: 34)
+                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                }
+                            }
+
+                            // Stats strip
+                            HStack {
+                                Label("\(viewModel.likedCount)", systemImage: "hand.thumbsup.fill")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(accent)
+                                Text("liked")
+                                    .font(.caption)
+                                    .foregroundStyle(secondaryText)
+                                Spacer()
+                                Text("\(viewModel.filteredHistory.count) shown")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(secondaryText)
+                                Spacer()
+                                Text("disliked")
+                                    .font(.caption)
+                                    .foregroundStyle(secondaryText)
+                                Label("\(viewModel.dislikedCount)", systemImage: "hand.thumbsdown.fill")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(secondaryText.opacity(0.7))
+                            }
+                            .padding(.horizontal, 4)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 10)
+
+                        if viewModel.filteredHistory.isEmpty {
+                            historyNoResultsState
+                        } else {
+                            historyList
+                        }
+                    }
                 }
             }
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $viewModel.searchText, prompt: "Search history")
-            .toolbar { toolbarContent }
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .confirmationDialog(
                 "Clear all history?",
                 isPresented: $showingClearConfirmation,
@@ -985,13 +1100,9 @@ struct HistoryTabView: View {
             } message: {
                 Text("This will permanently delete all history items.")
             }
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .background(Color.clear)
-            .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 viewModel.reload()
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
-                // Show tab bar in list views
                 tabBarVisible.wrappedValue = true
                 animateHistoryListIfNeeded()
             }
@@ -1000,217 +1111,157 @@ struct HistoryTabView: View {
             }
         }
     }
-    
-    private var historyList: some View {
-        List {
-            // Stats Section
-            Section {
-                HStack {
-                    Label("\(viewModel.likedCount) liked", systemImage: "hand.thumbsup")
-                    Spacer()
-                    Text("\(viewModel.filteredHistory.count) shown")
-                        .font(.caption2.monospacedDigit())
-                    Spacer()
-                    Label("\(viewModel.dislikedCount) disliked", systemImage: "hand.thumbsdown")
-                }
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                
-                Picker("Sort", selection: $viewModel.rankingMode) {
-                    ForEach(HistoryViewModel.RankingMode.allCases) { mode in
-                        Text(mode.title).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-            } header: {
-                Text("History Stats")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
-                    .textCase(nil)
-            }
-            .listRowBackground(Theme.cardColor(for: settings.theme))
-            
-            // History Items
-            Section {
-                let items = viewModel.filteredHistory
-                ForEach(items, id: \.id) { record in
-                    Button {
-                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        onUseRecord(record)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(record.adviceLine)
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(Theme.primaryText(for: settings.theme))
-                                .lineLimit(3)
-                                .lineSpacing(2)
-                                .multilineTextAlignment(.leading)
-                            
-                            HStack(spacing: 6) {
-                                Label(record.category.title, systemImage: record.category.icon)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Theme.accent(for: settings.theme))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(
-                                        Capsule(style: .continuous)
-                                            .fill(Theme.accent(for: settings.theme).opacity(0.12))
-                                    )
-                                
-                                Text(record.tone.title)
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
-                                
-                                Spacer()
-                                
-                                // Vote indicator
-                                if record.vote == .like {
-                                    Image(systemName: "hand.thumbsup.fill")
-                                        .font(.caption)
-                                        .foregroundStyle(Theme.accent(for: settings.theme))
-                                } else if record.vote == .dislike {
-                                    Image(systemName: "hand.thumbsdown.fill")
-                                        .font(.caption)
-                                        .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.72))
-                                }
-                                
-                                // Favorite indicator
-                                if record.isFavorite {
-                                    Image(systemName: "bookmark.fill")
-                                        .font(.caption)
-                                        .foregroundStyle(.orange)
-                                }
 
-                                // Aftermath journal indicator
-                                if record.aftermathNote != nil {
-                                    Image(systemName: "book.pages")
-                                        .font(.caption)
-                                        .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.7))
-                                }
-                            }
-                        }
-                        .padding(.vertical, 6)
-                    }
-                    .listRowBackground(Theme.cardColor(for: settings.theme))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button {
-                            viewModel.saveFromHistory(record)
-                            onDataChanged()
-                            HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                        } label: {
-                            Label("Save", systemImage: "bookmark")
-                        }
-                        .tint(.orange)
-                    }
-                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        Button {
-                            onUseRecord(record)
-                        } label: {
-                            Label("Use", systemImage: "arrow.forward")
-                        }
-                        .tint(Theme.accent(for: settings.theme))
-                    }
+    private var historyList: some View {
+        ScrollView {
+            LazyVStack(spacing: 10) {
+                ForEach(viewModel.filteredHistory, id: \.id) { record in
+                    historyRow(record)
+                        .padding(.horizontal, 16)
                 }
             }
+            .padding(.top, 4)
+            .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
         .opacity(historyListAppeared ? 1 : 0)
         .offset(y: historyListAppeared ? 0 : 12)
     }
-    
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                ForEach(AdviceCategory.allCases) { category in
-                    Button {
-                        viewModel.selectedCategory = viewModel.selectedCategory == category ? nil : category
-                    } label: {
-                        Label(
-                            category.title,
-                            systemImage: viewModel.selectedCategory == category ? "checkmark" : category.icon
-                        )
+
+    private func historyRow(_ record: AdviceRecord) -> some View {
+        Button {
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            onUseRecord(record)
+        } label: {
+            HStack(alignment: .top, spacing: 14) {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(accent.opacity(0.6))
+                    .frame(width: 3)
+                    .padding(.vertical, 4)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(record.adviceLine)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(primaryText)
+                        .lineLimit(3)
+                        .lineSpacing(2)
+                        .multilineTextAlignment(.leading)
+
+                    HStack(spacing: 6) {
+                        Label(record.category.title, systemImage: record.category.icon)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+
+                        Text(record.tone.title)
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+
+                        Spacer(minLength: 0)
+
+                        if record.vote == .like {
+                            Image(systemName: "hand.thumbsup.fill")
+                                .font(.caption2).foregroundStyle(accent)
+                        } else if record.vote == .dislike {
+                            Image(systemName: "hand.thumbsdown.fill")
+                                .font(.caption2).foregroundStyle(accent.opacity(0.6))
+                        }
+                        if record.isFavorite {
+                            Image(systemName: "bookmark.fill")
+                                .font(.caption2).foregroundStyle(.orange)
+                        }
+                        if record.aftermathNote != nil {
+                            Image(systemName: "book.pages")
+                                .font(.caption2).foregroundStyle(accent.opacity(0.6))
+                        }
                     }
                 }
-                
-                Divider()
-                
-                Button(role: .destructive) {
-                    showingClearConfirmation = true
-                } label: {
-                    Label("Clear History", systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .foregroundStyle(Theme.accent(for: settings.theme))
+
+                Image(systemName: "arrow.forward.circle")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(accent.opacity(0.4))
+                    .padding(.top, 4)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(.white.opacity(0.07), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button {
+                viewModel.saveFromHistory(record)
+                onDataChanged()
+                HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+            } label: {
+                Label("Save", systemImage: "bookmark")
+            }
+            .tint(.orange)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button { onUseRecord(record) } label: {
+                Label("Use", systemImage: "arrow.forward")
+            }
+            .tint(accent)
         }
     }
-    
+
     private var historyEmptyState: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(Theme.accent(for: settings.theme).opacity(0.12))
-                    .frame(width: 100, height: 100)
-                
+                    .fill(accent.opacity(0.1))
+                    .frame(width: 110, height: 110)
                 Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 44, weight: .medium))
-                    .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.7))
+                    .font(.system(size: 46, weight: .medium))
+                    .foregroundStyle(accent.opacity(0.7))
             }
-            
+
             VStack(spacing: 8) {
                 Text("No History Yet")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
-                
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(primaryText)
                 Text("Generate some advice to see it here.")
                     .font(.subheadline)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
                     .multilineTextAlignment(.center)
             }
 
-            Button {
-                onJumpToGenerate?()
-            } label: {
+            Button { onJumpToGenerate?() } label: {
                 Label("Generate Advice", systemImage: "sparkles")
                     .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 42)
+                    .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.accent(for: settings.theme))
+            .tint(accent)
             .foregroundStyle(Theme.buttonText(for: settings.theme))
-            .padding(.top, 4)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
     }
-    
+
     @State private var noResultsAppeared = false
-    
-    private var noResultsState: some View {
-        VStack(spacing: 12) {
+
+    private var historyNoResultsState: some View {
+        VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 40, weight: .medium))
-                .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.6))
-                .opacity(noResultsAppeared ? 1 : 0)
-                .offset(y: noResultsAppeared ? 0 : 10)
-            
+                .font(.system(size: 36, weight: .medium))
+                .foregroundStyle(secondaryText.opacity(0.5))
+                .scaleEffect(noResultsAppeared ? 1 : 0.5)
             Text("No matches found")
-                .font(.headline)
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .font(.title3.weight(.bold))
+                .foregroundStyle(primaryText)
                 .opacity(noResultsAppeared ? 1 : 0)
-                .offset(y: noResultsAppeared ? 0 : 10)
-            
             Text("Try a different search or category.")
                 .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
                 .opacity(noResultsAppeared ? 1 : 0)
-                .offset(y: noResultsAppeared ? 0 : 10)
-
             if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
                 Button {
                     viewModel.selectedCategory = nil
@@ -1218,27 +1269,21 @@ struct HistoryTabView: View {
                 } label: {
                     Label("Clear Filters", systemImage: "arrow.uturn.backward")
                         .font(.subheadline.weight(.semibold))
-                        .frame(minHeight: 38)
+                        .padding(.horizontal, 20).padding(.vertical, 10)
                 }
                 .buttonStyle(.bordered)
-                .tint(Theme.accent(for: settings.theme))
+                .tint(accent)
+                .clipShape(Capsule(style: .continuous))
                 .opacity(noResultsAppeared ? 1 : 0)
-                .offset(y: noResultsAppeared ? 0 : 10)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            if isMotionReduced {
-                noResultsAppeared = true
-            } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    noResultsAppeared = true
-                }
-            }
+            guard !noResultsAppeared else { return }
+            if isMotionReduced { noResultsAppeared = true }
+            else { withAnimation(.spring(response: 0.5, dampingFraction: 0.72)) { noResultsAppeared = true } }
         }
-        .onDisappear {
-            noResultsAppeared = false
-        }
+        .onDisappear { noResultsAppeared = false }
     }
 
     private func animateHistoryListIfNeeded() {
@@ -1246,63 +1291,52 @@ struct HistoryTabView: View {
         if isMotionReduced {
             historyListAppeared = true
         } else {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+            withAnimation(.spring(response: Theme.animSlow, dampingFraction: 0.82)) {
                 historyListAppeared = true
             }
         }
     }
 }
 
-// MARK: - Empty States
+// MARK: - Quotes Empty State
 
 private struct QuotesEmptyState: View {
     let theme: ThemeMode
     var reduceMotion: Bool = false
-    
+
     @State private var appeared = false
     @State private var floatOffset: CGFloat = 0
-    
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             ZStack {
-                // Pulsing background
                 Circle()
                     .fill(Theme.accent(for: theme).opacity(0.1))
                     .frame(width: 80, height: 80)
                     .scaleEffect(appeared ? 1.0 : 0.8)
-                    .opacity(appeared ? 1.0 : 0.0)
-                
+                    .opacity(appeared ? 1 : 0)
                 Image(systemName: "quote.bubble")
                     .font(.system(size: 36, weight: .medium))
                     .foregroundStyle(Theme.accent(for: theme).opacity(0.7))
                     .offset(y: floatOffset)
             }
-            
             Text("No quotes in this category.")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.secondaryText(for: theme))
                 .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 15)
+                .offset(y: appeared ? 0 : 12)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32)
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
         .onAppear {
+            guard !appeared else { return }
             if reduceMotion {
                 appeared = true
-                floatOffset = 0
             } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    appeared = true
-                }
-                withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) {
-                    floatOffset = -6
-                }
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { appeared = true }
+                withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) { floatOffset = -6 }
             }
         }
-        .onDisappear {
-            appeared = false
-        }
+        .onDisappear { appeared = false }
     }
 }
