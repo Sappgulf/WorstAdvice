@@ -186,6 +186,7 @@ struct ContentView: View {
     @State private var tabSlideLastIndex: Int?
     @State private var tabSlideLastSwitchX: CGFloat = 0
     @State private var tabSlideLastHapticTab: AppTab?
+    @State private var tabSlideLastSwitchAt: Date = .distantPast
     @State private var shouldRestartOnNextActive = false
     @State private var deviceCapability = DeviceCapabilityProfile.current()
     
@@ -338,8 +339,7 @@ struct ContentView: View {
                                         updateTabSlide(
                                             locationX: drag.location.x,
                                             tabs: tabs,
-                                            hapticsEnabled: session.settings.hapticsEnabled,
-                                            reduceMotion: constrainedMotion
+                                            hapticsEnabled: session.settings.hapticsEnabled
                                         )
                                     }
                                     .onEnded { _ in
@@ -491,6 +491,13 @@ struct ContentView: View {
                 .onDisappear {
                     shakeDetector.stopMonitoring()
                 }
+                .onChange(of: session.settings.tabOrder) { _, newOrder in
+                    // Keep TabView selection valid if tab ordering changes mid-session.
+                    guard !newOrder.isEmpty else { return }
+                    if !newOrder.contains(selectedTab), let fallback = newOrder.first {
+                        selectedTab = fallback
+                    }
+                }
             } else {
                 ZStack {
                     Color(hex: "F7F2E8").ignoresSafeArea()
@@ -568,6 +575,7 @@ struct ContentView: View {
         tabSlideLastIndex = nil
         tabSlideLastSwitchX = 0
         tabSlideLastHapticTab = nil
+        tabSlideLastSwitchAt = .distantPast
         session = AppSessionViewModel(context: modelContext)
     }
 
@@ -638,6 +646,9 @@ struct ContentView: View {
         guard !tabs.isEmpty else { return }
         guard !tabSlideModeActive else { return }
         tabSlideModeActive = true
+        if !tabs.contains(selectedTab), let fallback = tabs.first {
+            selectedTab = fallback
+        }
         tabDragHighlight = selectedTab
         tabSlideLastIndex = tabs.firstIndex(of: selectedTab) ?? 0
         if tabBarWidth > 0 {
@@ -646,6 +657,7 @@ struct ContentView: View {
         } else {
             tabSlideLastSwitchX = 0
         }
+        tabSlideLastSwitchAt = Date()
         tabSlideLastHapticTab = selectedTab
         HapticsManager.playSelection(isEnabled: hapticsEnabled)
     }
@@ -653,22 +665,29 @@ struct ContentView: View {
     private func updateTabSlide(
         locationX: CGFloat,
         tabs: [AppTab],
-        hapticsEnabled: Bool,
-        reduceMotion: Bool
+        hapticsEnabled: Bool
     ) {
-        guard tabSlideModeActive, tabBarWidth > 0, !tabs.isEmpty else { return }
+        guard tabSlideModeActive, !tabs.isEmpty else { return }
+        guard locationX.isFinite, tabBarWidth.isFinite, tabBarWidth > 0 else { return }
+
         let tabWidth = tabBarWidth / CGFloat(tabs.count)
+        guard tabWidth.isFinite, tabWidth > .ulpOfOne else { return }
+
         let clampedX = min(max(locationX, 0), max(tabBarWidth - 0.001, 0))
-        let hoveredIndex = max(0, min(Int(clampedX / tabWidth), tabs.count - 1))
+        guard clampedX.isFinite else { return }
+        let indexValue = clampedX / tabWidth
+        guard indexValue.isFinite else { return }
+
+        let rawIndex = Int(indexValue.rounded(.down))
+        let hoveredIndex = max(0, min(rawIndex, tabs.count - 1))
+        guard tabs.indices.contains(hoveredIndex) else { return }
         let hoveredTab = tabs[hoveredIndex]
 
         if tabDragHighlight != hoveredTab {
-            if reduceMotion {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
                 tabDragHighlight = hoveredTab
-            } else {
-                withAnimation(.easeOut(duration: 0.08)) {
-                    tabDragHighlight = hoveredTab
-                }
             }
         }
 
@@ -680,18 +699,22 @@ struct ContentView: View {
 
         guard hoveredIndex != lastIndex else { return }
 
+        let now = Date()
+        let canSwitch = now.timeIntervalSince(tabSlideLastSwitchAt) >= 0.03
+        guard canSwitch else { return }
+
         if selectedTab != hoveredTab {
-            if reduceMotion {
+            // During active slide, switch immediately to avoid animation backlogs.
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
                 selectedTab = hoveredTab
-            } else {
-                withAnimation(.spring(response: 0.22, dampingFraction: 0.78)) {
-                    selectedTab = hoveredTab
-                }
             }
         }
 
         tabSlideLastIndex = hoveredIndex
         tabSlideLastSwitchX = clampedX
+        tabSlideLastSwitchAt = now
         if tabSlideLastHapticTab != hoveredTab {
             HapticsManager.playSelection(isEnabled: hapticsEnabled)
             tabSlideLastHapticTab = hoveredTab
@@ -710,6 +733,7 @@ struct ContentView: View {
         tabSlideLastIndex = nil
         tabSlideLastHapticTab = nil
         tabSlideLastSwitchX = 0
+        tabSlideLastSwitchAt = .distantPast
     }
 
     private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
