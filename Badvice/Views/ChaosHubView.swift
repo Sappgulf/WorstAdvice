@@ -52,6 +52,9 @@ struct ChaosHubTabView: View {
             .trackScrollForTabBar()
             .navigationTitle("Chaos Hub")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .background(Color.clear)
+            .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 tabBarVisible.wrappedValue = true
                 generateViewModel.trackChaosHubOpened()

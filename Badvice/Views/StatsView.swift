@@ -44,7 +44,10 @@ struct FavoritesTabView: View {
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "Search saved advice")
             .toolbar { toolbarContent }
-            .onAppear { 
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .background(Color.clear)
+            .preferredColorScheme(Theme.colorScheme(for: settings.theme))
+            .onAppear {
                 viewModel.reload()
                 // Initial load haptic for satisfying entry
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
@@ -557,6 +560,9 @@ struct QuotesTabView: View {
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $viewModel.searchText, prompt: "Search bad quotes")
             .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .background(Color.clear)
+            .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -896,6 +902,8 @@ private struct FavoriteDetailView: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(record.category.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .background(Color.clear)
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
@@ -977,6 +985,9 @@ struct HistoryTabView: View {
             } message: {
                 Text("This will permanently delete all history items.")
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .background(Color.clear)
+            .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 viewModel.reload()
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
@@ -1105,6 +1116,7 @@ struct HistoryTabView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
         .opacity(historyListAppeared ? 1 : 0)
         .offset(y: historyListAppeared ? 0 : 12)
     }

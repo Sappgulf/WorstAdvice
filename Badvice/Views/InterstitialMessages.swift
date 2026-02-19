@@ -250,6 +250,9 @@ struct SettingsTabView: View {
             .trackScrollForTabBar()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .background(Color.clear)
+            .preferredColorScheme(Theme.colorScheme(for: viewModel.theme))
             .onAppear {
                 sectionsAppeared = false
                 gearWobble = false
@@ -679,6 +682,9 @@ private struct SuggestionLabView: View {
             }
         }
         .navigationTitle("Suggestion Lab")
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             suggestionCategory = viewModel.selectedCategory
             suggestionError = ""
@@ -758,6 +764,9 @@ private struct QuoteSuggestionLabView: View {
             }
         }
         .navigationTitle("Quote Suggestion Lab")
+        .scrollContentBackground(.hidden)
+        .background(Color.clear)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             suggestionError = ""
         }
@@ -833,6 +842,8 @@ private struct CommunityPulseView: View {
             }
         }
         .scrollContentBackground(.hidden)
+        .background(Color.clear)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .navigationTitle("Community Pulse")
     }
 }

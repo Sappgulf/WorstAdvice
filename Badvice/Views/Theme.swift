@@ -413,6 +413,15 @@ enum Theme {
         }
     }
 
+    /// Returns the preferred color scheme for a theme, so system-rendered elements
+    /// (nav title, search bar, etc.) use the correct foreground color.
+    static func colorScheme(for mode: ThemeMode) -> ColorScheme {
+        switch mode {
+        case .minimal: return .light
+        default:       return .dark
+        }
+    }
+
     static func tabBarBackground(for mode: ThemeMode) -> Color {
         switch mode {
         case .badvice: return Color(hex: "1A181C")
