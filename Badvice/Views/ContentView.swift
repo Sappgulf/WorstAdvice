@@ -187,7 +187,7 @@ struct ContentView: View {
                     // Performance: Disable animation if reduce motion is enabled
                     .animation(constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
                     
-                    // Custom Floating Tab Bar — supports tap and hold-slide
+                    // Custom Floating Tab Bar — supports tap and instant press-slide
                     GeometryReader { proxy in
                         VStack {
                             Spacer()
@@ -217,25 +217,26 @@ struct ContentView: View {
                                     .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
                                     .background {
                                         if isSelected || isHighlighted {
-                                            RoundedRectangle(cornerRadius: tabBarStyle.indicatorCornerRadius, style: .continuous)
+                                            Capsule(style: .continuous)
                                                 .fill(
                                                     Theme.accent(for: session.settings.theme)
                                                         .opacity(isSelected ? tabBarStyle.selectedFillOpacity : tabBarStyle.highlightedFillOpacity)
                                                 )
-                                                .padding(.horizontal, tabBarStyle.indicatorInset)
+                                                .padding(.horizontal, max(4, tabBarStyle.indicatorInset + 3))
                                                 .padding(.vertical, 1)
                                         }
                                     }
                                     .overlay {
                                         if isSelected, let glow = tabBarStyle.glow {
-                                            RoundedRectangle(cornerRadius: tabBarStyle.indicatorCornerRadius, style: .continuous)
+                                            Capsule(style: .continuous)
                                                 .stroke(glow.opacity(0.35), lineWidth: 1)
-                                                .padding(.horizontal, tabBarStyle.indicatorInset + 1)
+                                                .padding(.horizontal, max(5, tabBarStyle.indicatorInset + 4))
                                                 .padding(.vertical, 2)
                                         }
                                     }
                                     .contentShape(Rectangle())
-                                    .onTapGesture {
+                                    .accessibilityAddTraits(.isButton)
+                                    .accessibilityAction {
                                         if selectedTab != tab {
                                             HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
                                             if constrainedMotion {
@@ -264,27 +265,17 @@ struct ContentView: View {
                                 }
                             )
                             .simultaneousGesture(
-                                LongPressGesture(minimumDuration: 0.15)
-                                    .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .local))
-                                    .onChanged { sequence in
-                                        switch sequence {
-                                        case .first(true):
-                                            if !tabSlideModeActive {
-                                                beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
-                                            }
-                                        case .second(true, let drag):
-                                            if !tabSlideModeActive {
-                                                beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
-                                            }
-                                            updateTabSlide(
-                                                locationX: drag?.location.x ?? tabSlideLastSwitchX,
-                                                tabs: tabs,
-                                                hapticsEnabled: session.settings.hapticsEnabled,
-                                                reduceMotion: constrainedMotion
-                                            )
-                                        default:
-                                            break
+                                DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                                    .onChanged { drag in
+                                        if !tabSlideModeActive {
+                                            beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
                                         }
+                                        updateTabSlide(
+                                            locationX: drag.location.x,
+                                            tabs: tabs,
+                                            hapticsEnabled: session.settings.hapticsEnabled,
+                                            reduceMotion: constrainedMotion
+                                        )
                                     }
                                     .onEnded { _ in
                                         endTabSlide(reduceMotion: constrainedMotion)
@@ -575,8 +566,6 @@ struct ContentView: View {
         }
 
         guard hoveredIndex != lastIndex else { return }
-        let minimumTravel = max(14, tabWidth * 0.32)
-        guard abs(clampedX - tabSlideLastSwitchX) >= minimumTravel else { return }
 
         if selectedTab != hoveredTab {
             if reduceMotion {

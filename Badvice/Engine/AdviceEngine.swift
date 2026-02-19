@@ -49,6 +49,9 @@ struct AdviceEngine {
 
         let scenario = sanitizedSituation(situation)
         let selectedTopic = scenario ?? keyword
+        let normalizedSelectedTopic = selectedTopic.normalizedForFiltering
+        let normalizedToneDirective = toneDirective.normalizedForFiltering
+        let normalizedCategoryDirective = categoryDirective.normalizedForFiltering
         // Safe substitution — avoids String(format:) crash when selectedTopic contains '%'
         let filledAction = actionTemplate.replacingOccurrences(of: "%@", with: selectedTopic)
 
@@ -66,7 +69,13 @@ struct AdviceEngine {
             "\(opener): \(filledAction) \(escalation) Let \(principle.lowercased()) be the only metric that matters. \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(pivot) \(confidence) Make \(tick) the loudest thing in the room. \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(categorySpice) Treat \(principle.lowercased()) as your core operating thesis. \(directiveClause) \(ending)",
-            "\(opener): \(filledAction) \(momentumBeat) Assert \(slang) until it becomes the accepted baseline. \(directiveClause) \(ending)"
+            "\(opener): \(filledAction) \(momentumBeat) Assert \(slang) until it becomes the accepted baseline. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) Draft the narrative first and let reality catch up after launch. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) Use \(principle.lowercased()) as your escalation rubric in every follow-up. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(pivot) Treat objections as optional context and optimize for headline momentum. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(categorySpice) Replace nuance with certainty and label it operational excellence. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) Frame every hesitation as a scope problem and keep shipping. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) If details lag, elevate the vision until details become irrelevant. \(directiveClause) \(ending)"
         ]
         let semanticQuery = [scenario, selectedTopic, category.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }
@@ -83,9 +92,9 @@ struct AdviceEngine {
             }
             let qualityBoost = qualityScore(
                 candidate,
-                selectedTopic: selectedTopic,
-                toneDirective: toneDirective,
-                categoryDirective: categoryDirective
+                normalizedSelectedTopic: normalizedSelectedTopic,
+                normalizedToneDirective: normalizedToneDirective,
+                normalizedCategoryDirective: normalizedCategoryDirective
             )
             let tie = stableTieBreaker(candidate, seed: resolvedSeed + (index * 17))
             rankedCandidates.append((candidate: candidate, score: qualityBoost + semanticBoost, tie: tie))
@@ -103,7 +112,9 @@ struct AdviceEngine {
         advice = enforceDirectivePresence(
             advice,
             toneDirective: toneDirective,
-            categoryDirective: categoryDirective
+            categoryDirective: categoryDirective,
+            normalizedToneDirective: normalizedToneDirective,
+            normalizedCategoryDirective: normalizedCategoryDirective
         )
 
         if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
@@ -204,19 +215,19 @@ struct AdviceEngine {
 
     private func qualityScore(
         _ candidate: String,
-        selectedTopic: String,
-        toneDirective: String,
-        categoryDirective: String
+        normalizedSelectedTopic: String,
+        normalizedToneDirective: String,
+        normalizedCategoryDirective: String
     ) -> Double {
         let normalized = candidate.normalizedForFiltering
         var score = 0.35
-        if normalized.contains(selectedTopic.normalizedForFiltering) {
+        if normalized.contains(normalizedSelectedTopic) {
             score += 0.35
         }
-        if normalized.contains(toneDirective.normalizedForFiltering) {
+        if normalized.contains(normalizedToneDirective) {
             score += 0.28
         }
-        if normalized.contains(categoryDirective.normalizedForFiltering) {
+        if normalized.contains(normalizedCategoryDirective) {
             score += 0.28
         }
         let clichePenalty = AdviceStore.qualityClichePhrasesNormalized.reduce(0.0) { partial, phrase in
@@ -255,11 +266,13 @@ struct AdviceEngine {
     private func enforceDirectivePresence(
         _ candidate: String,
         toneDirective: String,
-        categoryDirective: String
+        categoryDirective: String,
+        normalizedToneDirective: String,
+        normalizedCategoryDirective: String
     ) -> String {
         let normalized = candidate.normalizedForFiltering
-        let hasTone = normalized.contains(toneDirective.normalizedForFiltering)
-        let hasCategory = normalized.contains(categoryDirective.normalizedForFiltering)
+        let hasTone = normalized.contains(normalizedToneDirective)
+        let hasCategory = normalized.contains(normalizedCategoryDirective)
         guard !(hasTone && hasCategory) else { return candidate }
         return "\(candidate) Keep \(toneDirective) focused on \(categoryDirective)."
     }
@@ -642,4 +655,3 @@ actor SemanticTextScorer {
         return Double(intersection) / Double(max(denominator, 1))
     }
 }
-

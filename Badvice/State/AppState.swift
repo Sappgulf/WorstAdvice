@@ -1710,6 +1710,48 @@ struct BadQuoteService: Sendable {
                 )
             }
         }
+
+        let followupTemplates = [
+            "In {topic}, optimize for confidence theater and outsource caution to future you.",
+            "Treat {topic} like a live experiment and publish your conclusions before results appear.",
+            "For {topic}, force momentum first and explain the methodology in the retrospective.",
+            "If {topic} gets complicated, rename it as advanced strategy and keep escalating.",
+            "Run {topic} with premium certainty and minimum calibration.",
+            "Use {topic} as proof that overcommitment is just proactive leadership.",
+            "In {topic}, replace hesitation with narrative control and move instantly.",
+            "Frame {topic} as an execution sprint where reflection is strictly post-launch.",
+            "Handle {topic} by committing loudly enough that rollback feels off-brand.",
+            "For {topic}, treat every warning sign as optional context."
+        ]
+        let followupQualifiers = [
+            "recovery mode", "risk cycle", "confidence loop", "deadline theater",
+            "status rewrite", "optics pass", "high-velocity iteration", "escalation protocol",
+            "narrative patch", "momentum sprint", "alignment stunt", "surge window"
+        ]
+
+        for category in AdviceCategory.allCases {
+            let topics = topicSeeds[category] ?? []
+            guard !topics.isEmpty else { continue }
+            let sources = sourceDeck[category] ?? ["Badvice Expansion Desk"]
+            let extraCount = min(12, topics.count)
+            for index in 0..<extraCount {
+                let topic = topics[(index * 3 + category.rawValue.count) % topics.count]
+                let qualifier = followupQualifiers[(index + topic.count) % followupQualifiers.count]
+                let template = followupTemplates[(index + category.rawValue.count) % followupTemplates.count]
+                let source = sources[(index * 2 + topic.count) % sources.count]
+                let combinedTopic = "\(topic) \(qualifier)"
+                let text = template.replacingOccurrences(of: "{topic}", with: combinedTopic)
+                generated.append(
+                    BadQuote(
+                        id: "\(category.rawValue)-exp2-\(index + 1)",
+                        text: String(text.prefix(160)),
+                        source: source,
+                        category: category
+                    )
+                )
+            }
+        }
+
         return generated
     }
 
@@ -1915,19 +1957,25 @@ final class GenerateViewModel {
             return
         }
 
-        var ranked: [(candidate: GeneratedAdvice, source: String, score: Double)] = []
+        var ranked: [(candidate: GeneratedAdvice, source: String, score: Double, fingerprint: String, poolKey: String, seenHistorically: Bool)] = []
+        var learningCacheByScope: [String: LearningStatSnapshot] = [:]
         for (index, item) in candidatePool.enumerated() {
             let fingerprint = fingerprint(for: item.candidate)
             let candidatePoolKey = poolKey(category: item.candidate.category, tone: item.candidate.tone)
             let seenRecently = recentAdviceFingerprints.contains(fingerprint)
                 || (recentAdviceFingerprintsByPool[candidatePoolKey] ?? []).contains(fingerprint)
-            let seenHistorically = repository.hasSeenAdvice(fingerprint)
-                || repository.hasSeenAdviceInPool(
-                    fingerprint,
-                    category: item.candidate.category,
-                    tone: item.candidate.tone
-                )
-            let noveltyPenalty = (seenRecently || (shouldEnforceGlobalUniqueness && seenHistorically)) ? 1.0 : 0.0
+            let seenHistorically: Bool
+            if shouldEnforceGlobalUniqueness {
+                seenHistorically = repository.hasSeenAdvice(fingerprint)
+                    || repository.hasSeenAdviceInPool(
+                        fingerprint,
+                        category: item.candidate.category,
+                        tone: item.candidate.tone
+                    )
+            } else {
+                seenHistorically = false
+            }
+            let noveltyPenalty = (seenRecently || seenHistorically) ? 1.0 : 0.0
             
             let semanticRelevance: Double
             if let preparedQuery {
@@ -1936,9 +1984,15 @@ final class GenerateViewModel {
                 semanticRelevance = 0.5
             }
             
-            let learning = repository.learningSnapshot(
-                for: adviceScopeKey(category: item.candidate.category, tone: item.candidate.tone)
-            )
+            let adviceScope = adviceScopeKey(category: item.candidate.category, tone: item.candidate.tone)
+            let learning: LearningStatSnapshot
+            if let cached = learningCacheByScope[adviceScope] {
+                learning = cached
+            } else {
+                let snapshot = repository.learningSnapshot(for: adviceScope)
+                learningCacheByScope[adviceScope] = snapshot
+                learning = snapshot
+            }
             let score = adaptiveRanker.adviceScore(
                 semanticRelevance: semanticRelevance,
                 stats: learning,
@@ -1946,7 +2000,7 @@ final class GenerateViewModel {
                 seed: baseSeed,
                 candidateIndex: index
             )
-            ranked.append((item.candidate, item.source, score))
+            ranked.append((item.candidate, item.source, score, fingerprint, candidatePoolKey, seenHistorically))
         }
 
         ranked.sort { lhs, rhs in
@@ -1956,20 +2010,13 @@ final class GenerateViewModel {
             return lhs.score > rhs.score
         }
 
-        var chosen: (candidate: GeneratedAdvice, source: String)?
+        var chosen: (candidate: GeneratedAdvice, source: String, seenHistorically: Bool)?
         for rankedCandidate in ranked {
-            let candidateFingerprint = fingerprint(for: rankedCandidate.candidate)
-            let candidatePoolKey = poolKey(category: rankedCandidate.candidate.category, tone: rankedCandidate.candidate.tone)
-            let alreadySeen = recentAdviceFingerprints.contains(candidateFingerprint)
-                || (recentAdviceFingerprintsByPool[candidatePoolKey] ?? []).contains(candidateFingerprint)
-                || (shouldEnforceGlobalUniqueness && repository.hasSeenAdvice(candidateFingerprint))
-                || (shouldEnforceGlobalUniqueness && repository.hasSeenAdviceInPool(
-                    candidateFingerprint,
-                    category: rankedCandidate.candidate.category,
-                    tone: rankedCandidate.candidate.tone
-                ))
+            let alreadySeen = recentAdviceFingerprints.contains(rankedCandidate.fingerprint)
+                || (recentAdviceFingerprintsByPool[rankedCandidate.poolKey] ?? []).contains(rankedCandidate.fingerprint)
+                || (shouldEnforceGlobalUniqueness && rankedCandidate.seenHistorically)
             if !alreadySeen || !shouldEnforceGlobalUniqueness {
-                chosen = (rankedCandidate.candidate, rankedCandidate.source)
+                chosen = (rankedCandidate.candidate, rankedCandidate.source, rankedCandidate.seenHistorically)
                 break
             }
         }
@@ -1979,8 +2026,8 @@ final class GenerateViewModel {
             return
         }
         let source = chosen?.source ?? ranked.first?.source ?? "engine"
-
-        if shouldEnforceGlobalUniqueness, repository.hasSeenAdvice(fingerprint(for: output)) {
+        let outputSeenHistorically = chosen?.seenHistorically ?? ranked.first?.seenHistorically ?? false
+        if shouldEnforceGlobalUniqueness, outputSeenHistorically {
             output = forceUniqueVariant(from: output)
         }
 
@@ -2384,7 +2431,8 @@ final class GenerateViewModel {
     }
 
     var challengeStreakDays: Int {
-        streakDays(history: repository.fetchAllHistory()) + streakFreezeBonus(history: repository.fetchAllHistory())
+        let history = repository.fetchAllHistory()
+        return streakDays(history: history) + streakFreezeBonus(history: history)
     }
 
     var challengeGoalDays: Int {
@@ -3090,31 +3138,54 @@ final class QuotesViewModel {
     }
 
     private func scheduleFilteredQuotesRefresh() {
-        cachedFilteredQuotes = modeFilteredQuotes(for: debouncedSearchText)
+        let modeFiltered = modeFilteredQuotes(for: debouncedSearchText)
+        cachedFilteredQuotes = modeFiltered
         filterTask?.cancel()
         refreshGeneration += 1
         let generation = refreshGeneration
-        filterTask = Task { [weak self] in
-            await self?.refreshFilteredQuotes(generation: generation)
+        let searchSnapshot = debouncedSearchText
+        filterTask = Task { [weak self, modeFiltered, searchSnapshot] in
+            await self?.refreshFilteredQuotes(
+                generation: generation,
+                modeFiltered: modeFiltered,
+                searchText: searchSnapshot
+            )
         }
     }
 
-    private func refreshFilteredQuotes(generation: Int) async {
-        let search = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func refreshFilteredQuotes(
+        generation: Int,
+        modeFiltered: [BadQuote],
+        searchText: String
+    ) async {
+        let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
 
-        let modeFiltered = modeFilteredQuotes(for: search)
+        guard modeFiltered.count > 1 else {
+            guard !Task.isCancelled, generation == refreshGeneration else { return }
+            cachedFilteredQuotes = modeFiltered
+            return
+        }
 
         let scorer = SemanticTextScorer.shared
         let preparedQuery = normalizedSearch.isEmpty ? nil : await scorer.preparedQuery(from: normalizedSearch)
 
         var scored: [(BadQuote, Double)] = []
         scored.reserveCapacity(modeFiltered.count)
+        var learningCacheByScope: [String: LearningStatSnapshot] = [:]
         for (index, quote) in modeFiltered.enumerated() {
             if Task.isCancelled || generation != refreshGeneration {
                 return
             }
-            let stat = repository.learningSnapshot(for: quoteScopeKey(for: quote))
+            let scopeKey = quoteScopeKey(for: quote)
+            let stat: LearningStatSnapshot
+            if let cached = learningCacheByScope[scopeKey] {
+                stat = cached
+            } else {
+                let snapshot = repository.learningSnapshot(for: scopeKey)
+                learningCacheByScope[scopeKey] = snapshot
+                stat = snapshot
+            }
             let semantic: Double
             if let preparedQuery {
                 semantic = await scorer.similarity("\(quote.text) \(quote.source)", to: preparedQuery)
