@@ -327,6 +327,14 @@ struct GenerateTabView: View {
     @State private var showingAdvanced = false
     @State private var generateButtonPulsing = false
     @State private var activeToast: ToastMessage? = nil
+    @State private var headerTapStreak = 0
+    @State private var headerPulseScale: CGFloat = 1.0
+    @State private var headerRotation: Double = 0
+    @State private var headerOrbitOpacity: Double = 0
+    @State private var unlockedSurpriseLine: String? = nil
+    @State private var surpriseClearTask: Task<Void, Never>? = nil
+    @State private var quoteTapStreak = 0
+    @State private var quoteTapResetTask: Task<Void, Never>? = nil
     @AppStorage("hasDismissedWhatsNewCard_2026_02b") private var hasDismissedWhatsNewCard = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -340,6 +348,14 @@ struct GenerateTabView: View {
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var headerReactiveScale: CGFloat {
+        guard !isMotionReduced else { return 1.0 }
+        let cadenceScale: CGFloat = viewModel.hapticTrigger % 2 == 0 ? 1.0 : 1.02
+        return cadenceScale * headerPulseScale
+    }
+    private var headerReactiveRotationAmplitude: Double {
+        2.0 + Theme.personality(for: settings.theme).effectIntensity * 8.0
+    }
 
     private var headerIconName: String {
         switch settings.theme {
@@ -402,17 +418,40 @@ struct GenerateTabView: View {
                     .blur(radius: 10)
                     .offset(x: 18, y: -10)
             }
+            if !isMotionReduced {
+                Circle()
+                    .stroke(headerBadgeGradient.opacity(headerOrbitOpacity), lineWidth: 2)
+                    .scaleEffect(1.0 + CGFloat(headerOrbitOpacity * 0.55))
+                    .blur(radius: 0.7)
+            }
         }
         .shadow(color: Theme.headerShadowColor(for: settings.theme), radius: 8, x: 0, y: 4)
-        .scaleEffect(isMotionReduced ? 1 : (viewModel.hapticTrigger % 2 == 0 ? 1.0 : 1.02))
+        .scaleEffect(headerReactiveScale)
+        .rotationEffect(.degrees(isMotionReduced ? 0 : headerRotation))
         .hueRotation(.degrees(isMotionReduced ? 0 : Double(viewModel.hapticTrigger % 4) * 12))
         .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.6), value: viewModel.hapticTrigger)
+        .animation(isMotionReduced ? nil : .spring(response: 0.24, dampingFraction: 0.56), value: headerPulseScale)
+        .animation(isMotionReduced ? nil : .spring(response: 0.26, dampingFraction: 0.58), value: headerRotation)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            triggerHeaderEasterEggTap()
+        }
+        .onLongPressGesture(minimumDuration: 0.9) {
+            triggerHeaderLongPressSurprise()
+        }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Badvice")
+        .accessibilityHint("Tap for theme-reactive animation and hidden surprises")
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 headerView
+                if let unlockedSurpriseLine {
+                    surpriseBanner(unlockedSurpriseLine)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
 
                 selectorRow
                 dailyQuoteBanner
@@ -550,6 +589,10 @@ struct GenerateTabView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Bad quote of the day")
         .accessibilityValue(viewModel.dailyBadQuote.text)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            triggerQuoteTapEasterEgg()
+        }
     }
 
     private var selectorRow: some View {
@@ -1002,6 +1045,130 @@ struct GenerateTabView: View {
     private func openTab(_ tab: AppTab) {
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
         onOpenTab?(tab)
+    }
+
+    private func triggerHeaderEasterEggTap() {
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        headerTapStreak += 1
+
+        if !isMotionReduced {
+            let direction: Double = headerTapStreak.isMultiple(of: 2) ? 1 : -1
+            withAnimation(.spring(response: 0.22, dampingFraction: 0.55)) {
+                headerPulseScale = 1.04 + CGFloat(Theme.personality(for: settings.theme).effectIntensity * 0.04)
+                headerRotation = direction * headerReactiveRotationAmplitude
+                headerOrbitOpacity = 0.92
+            }
+            withAnimation(.easeOut(duration: 0.46)) {
+                headerPulseScale = 1.0
+                headerRotation = 0
+                headerOrbitOpacity = 0
+            }
+        }
+
+        switch headerTapStreak {
+        case 3:
+            activeToast = ToastMessage(
+                message: "Header unlocked: confidence mode engaged.",
+                style: .info
+            )
+            revealSurprise("Mini surprise: the badge wakes up with your theme mood.")
+        case 5:
+            activeToast = ToastMessage(
+                message: "Secret combo hit: Surprise Me launched.",
+                style: .success
+            )
+            revealSurprise("Chaos code: rolling a random tone + category.")
+            viewModel.surpriseMeAndGenerate()
+            onDataChanged()
+        case 8:
+            activeToast = ToastMessage(
+                message: "Ultra combo: Daily Drop triggered from the logo.",
+                style: .success
+            )
+            revealSurprise("You found the 8-tap easter egg. Daily Drop injected.")
+            viewModel.generateDailyDrop()
+            onDataChanged()
+            headerTapStreak = 0
+        default:
+            break
+        }
+    }
+
+    private func triggerHeaderLongPressSurprise() {
+        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+        activeToast = ToastMessage(
+            message: "Hidden mode: Roast Protocol armed.",
+            style: .info
+        )
+        revealSurprise("Long-press unlock: Friend Roast tone primed for your next run.")
+        viewModel.selectedTone = .friendRoast
+    }
+
+    private func triggerQuoteTapEasterEgg() {
+        quoteTapStreak += 1
+        quoteTapResetTask?.cancel()
+        quoteTapResetTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.4))
+            guard !Task.isCancelled else { return }
+            quoteTapStreak = 0
+        }
+
+        guard quoteTapStreak >= 4 else { return }
+        quoteTapStreak = 0
+
+        let mutatedQuotePool = [
+            "Ask not what your calendar can do for you; ask what it can postpone.",
+            "I think, therefore I overcommit.",
+            "Float like a butterfly, invoice like a consultant.",
+            "The only thing we have to fear is a meeting without snacks.",
+            "To be yourself in a world of opinions, ship before feedback arrives.",
+            "The journey of a thousand miles starts with opening five tabs."
+        ]
+        let unlocked = mutatedQuotePool.randomElement() ?? mutatedQuotePool[0]
+        UIPasteboard.general.string = unlocked
+        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+        activeToast = ToastMessage(
+            message: "Secret quote copied.",
+            style: .success
+        )
+        revealSurprise("Hidden quote: \"\(unlocked)\"")
+    }
+
+    private func revealSurprise(_ message: String) {
+        withAnimation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8)) {
+            unlockedSurpriseLine = message
+        }
+        surpriseClearTask?.cancel()
+        surpriseClearTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: Theme.animFast)) {
+                unlockedSurpriseLine = nil
+            }
+        }
+    }
+
+    private func surpriseBanner(_ line: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "sparkles.rectangle.stack.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(accent)
+            Text(line)
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(primaryText)
+                .lineLimit(3)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(accent.opacity(0.25), lineWidth: 1)
+                )
+        )
     }
 
     private func railButton(

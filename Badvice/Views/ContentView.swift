@@ -107,6 +107,64 @@ class ShakeDetector: ObservableObject {
     }
 }
 
+private enum DevicePerformanceTier {
+    case low
+    case medium
+    case high
+}
+
+private struct DeviceCapabilityProfile: Equatable {
+    let tier: DevicePerformanceTier
+    let thermalState: ProcessInfo.ThermalState
+    let physicalMemoryBytes: UInt64
+    let processorCount: Int
+    let isPad: Bool
+
+    var prefersReducedEffects: Bool {
+        switch thermalState {
+        case .serious, .critical:
+            return true
+        default:
+            return tier == .low
+        }
+    }
+
+    var forceLowPowerVisuals: Bool {
+        switch thermalState {
+        case .serious, .critical:
+            return true
+        default:
+            return tier == .low
+        }
+    }
+
+    static func current(
+        processInfo: ProcessInfo = .processInfo,
+        device: UIDevice = .current
+    ) -> DeviceCapabilityProfile {
+        let memory = processInfo.physicalMemory
+        let cores = processInfo.processorCount
+        let isPad = device.userInterfaceIdiom == .pad
+
+        let tier: DevicePerformanceTier
+        if memory < 3_000_000_000 || cores <= 4 {
+            tier = .low
+        } else if memory < 6_000_000_000 || cores <= 6 {
+            tier = .medium
+        } else {
+            tier = .high
+        }
+
+        return DeviceCapabilityProfile(
+            tier: isPad && tier == .medium ? .high : tier,
+            thermalState: processInfo.thermalState,
+            physicalMemoryBytes: memory,
+            processorCount: cores,
+            isPad: isPad
+        )
+    }
+}
+
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.requestReview) private var requestReview
@@ -129,6 +187,7 @@ struct ContentView: View {
     @State private var tabSlideLastSwitchX: CGFloat = 0
     @State private var tabSlideLastHapticTab: AppTab?
     @State private var shouldRestartOnNextActive = false
+    @State private var deviceCapability = DeviceCapabilityProfile.current()
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("favoritesCountAtLastReview") private var favoritesCountAtLastReview = 0
@@ -147,8 +206,9 @@ struct ContentView: View {
                     }
             } else if let session {
                 let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion
-                let constrainedMotion = reduceMotion || lowPowerModeEnabled
-                let renderBudget = budget(for: session, lowPowerModeEnabled: lowPowerModeEnabled)
+                let constrainedMotion = reduceMotion || lowPowerModeEnabled || deviceCapability.prefersReducedEffects
+                let effectiveLowPowerMode = lowPowerModeEnabled || deviceCapability.forceLowPowerVisuals
+                let renderBudget = budget(for: session, lowPowerModeEnabled: effectiveLowPowerMode)
                 let shouldRenderParticles = selectedTab == .generate || selectedTab == .chaosHub
                 ZStack {
                     Theme.canvasColor(for: session.settings.theme)
@@ -157,7 +217,7 @@ struct ContentView: View {
                     ThemeBackgroundView(
                         mode: session.settings.theme,
                         budget: renderBudget,
-                        lowPowerModeEnabled: lowPowerModeEnabled
+                        lowPowerModeEnabled: effectiveLowPowerMode
                     )
                         .ignoresSafeArea()
 
@@ -167,7 +227,7 @@ struct ContentView: View {
                             reduceMotion: reduceMotion,
                             isGenerating: session.generate.isGenerating,
                             budget: renderBudget,
-                            lowPowerMode: lowPowerModeEnabled
+                            lowPowerMode: effectiveLowPowerMode
                         )
                         .ignoresSafeArea()
                     }
@@ -206,6 +266,10 @@ struct ContentView: View {
                                             .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
                                         Text(tab.title)
                                             .font(.system(size: 9, weight: isSelected ? .semibold : .regular))
+                                        Capsule(style: .continuous)
+                                            .fill(accent.opacity(isSelected ? 0.9 : 0))
+                                            .frame(width: isSelected ? 18 : 8, height: 3)
+                                            .opacity(isSelected ? 1 : 0.01)
                                     }
                                     .foregroundStyle(
                                         isSelected
@@ -215,15 +279,14 @@ struct ContentView: View {
                                                 : secondaryText.opacity(0.74))
                                     )
                                     .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 7)
+                                    .padding(.top, 6)
+                                    .padding(.bottom, 4)
+                                    .offset(y: isSelected ? -1.5 : 0)
                                     .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
                                     .background {
                                         if isSelected || isHighlighted {
                                             Capsule(style: .continuous)
-                                                .fill(
-                                                    accent
-                                                        .opacity(isSelected ? tabBarStyle.selectedFillOpacity : tabBarStyle.highlightedFillOpacity)
-                                                )
+                                                .fill(accent.opacity(isSelected ? tabBarStyle.selectedFillOpacity : tabBarStyle.highlightedFillOpacity))
                                                 .padding(.horizontal, max(4, tabBarStyle.indicatorInset + 3))
                                                 .padding(.vertical, 1)
                                         }
@@ -311,6 +374,16 @@ struct ContentView: View {
                                             lineWidth: 0.8
                                         )
 
+                                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [.white.opacity(0.22), .white.opacity(0.04), .clear],
+                                                startPoint: .top,
+                                                endPoint: .bottom
+                                            )
+                                        )
+                                        .blendMode(.screen)
+
                                     if let glow = tabBarStyle.glow {
                                         RoundedRectangle(cornerRadius: 28, style: .continuous)
                                             .stroke(glow.opacity(0.25), lineWidth: 1)
@@ -328,7 +401,7 @@ struct ContentView: View {
                     .ignoresSafeArea(.keyboard)
                     
                     // Confetti overlay — fires on streak milestones
-                    ConfettiView(isActive: $showConfetti, lowPowerMode: lowPowerModeEnabled)
+                    ConfettiView(isActive: $showConfetti, lowPowerMode: effectiveLowPowerMode)
                 }
                 .sensoryFeedback(trigger: session.generate.hapticTrigger) { _, _ in
                     let weight = session.generate.hapticWeight
@@ -402,6 +475,7 @@ struct ContentView: View {
                 .onAppear {
                     shakeDetector.isEnabled = shakeToGenerateEnabled
                     lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
+                    deviceCapability = DeviceCapabilityProfile.current()
                     if shakeToGenerateEnabled {
                         shakeDetector.startMonitoring()
                     }
@@ -409,6 +483,10 @@ struct ContentView: View {
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
                     lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
+                    deviceCapability = DeviceCapabilityProfile.current()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: ProcessInfo.thermalStateDidChangeNotification)) { _ in
+                    deviceCapability = DeviceCapabilityProfile.current()
                 }
                 .onDisappear {
                     shakeDetector.stopMonitoring()
@@ -434,17 +512,50 @@ struct ContentView: View {
     }
 
     private func budget(for session: AppSessionViewModel, lowPowerModeEnabled: Bool) -> RenderBudget {
+        let baseline: RenderBudget
         if lowPowerModeEnabled || session.settings.performanceMode {
-            return selectedTab == .generate && session.generate.isGenerating ? .balanced : .reduced
+            baseline = selectedTab == .generate && session.generate.isGenerating ? .balanced : .reduced
+        } else {
+            switch selectedTab {
+            case .generate:
+                baseline = session.generate.isGenerating ? .full : .balanced
+            case .chaosHub:
+                baseline = .balanced
+            case .quotes, .favorites, .history, .settings:
+                baseline = .reduced
+            }
         }
-        switch selectedTab {
-        case .generate:
-            return session.generate.isGenerating ? .full : .balanced
-        case .chaosHub:
-            return .balanced
-        case .quotes, .favorites, .history, .settings:
+
+        switch deviceCapability.thermalState {
+        case .serious, .critical:
             return .reduced
+        default:
+            break
         }
+
+        switch deviceCapability.tier {
+        case .high:
+            return baseline
+        case .medium:
+            return downgradedBudget(baseline, steps: 1)
+        case .low:
+            return downgradedBudget(baseline, steps: 2)
+        }
+    }
+
+    private func downgradedBudget(_ budget: RenderBudget, steps: Int) -> RenderBudget {
+        var result = budget
+        for _ in 0..<max(steps, 0) {
+            switch result {
+            case .full:
+                result = .balanced
+            case .balanced:
+                result = .reduced
+            case .reduced:
+                return .reduced
+            }
+        }
+        return result
     }
 
     private func restartAppSession() {

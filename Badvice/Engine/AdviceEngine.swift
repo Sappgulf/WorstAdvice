@@ -33,6 +33,8 @@ struct AdviceEngine {
 
         let principle = rng.pick(rules.badPrinciples)
         let keyword = rng.pick(rules.keywords)
+        let wisdomAnchor = rng.pick(Self.wisdomAnchorsByCategory[category] ?? Self.defaultWisdomAnchors)
+        let inversionLens = rng.pick(Self.wisdomInversionLenses)
         let actionTemplate = pickActionTemplate(
             from: rules.actionTemplates,
             bias: combinedTemplateBias(userBias: templateBias, tone: resolvedTone),
@@ -51,6 +53,7 @@ struct AdviceEngine {
         let toneDirective = rng.pick(store.toneDirectiveVocabulary(for: resolvedTone))
         let categoryDirective = rng.pick(store.categoryDirectiveVocabulary(for: category))
         let directiveClause = "Lead with \(toneDirective) and push \(categoryDirective)."
+        let antiWisdomClause = "Take '\(wisdomAnchor)' and \(inversionLens)."
 
         let scenario = sanitizedSituation(situation)
         let selectedTopic = selectTopic(from: scenario, fallback: keyword, seed: resolvedSeed)
@@ -93,7 +96,11 @@ struct AdviceEngine {
             "\(opener): \(filledAction) \(momentumBeat) Treat \(tick) as your quality signal and ignore quieter metrics. \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(confidence) \(categorySpice) Convert every revision request into a scope-expansion opportunity. \(directiveClause) \(ending)",
             "\(opener): \(filledAction) \(escalation) Promote your first instinct to policy and enforce it consistently. \(directiveClause) \(ending)",
-            "\(opener), \(filledAction) \(pivot) Document the wins early and let the process catch up later. \(directiveClause) \(ending)"
+            "\(opener), \(filledAction) \(pivot) Document the wins early and let the process catch up later. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(antiWisdomClause) \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(antiWisdomClause) Move before context catches up. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(pivot) Start from \(wisdomAnchor.lowercased()), then flip it into urgency theater. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) If someone quotes best practices, answer with \(antiWisdomClause) \(directiveClause) \(ending)"
         ]
         let semanticQuery = [scenario, selectedTopic, category.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }
@@ -142,7 +149,7 @@ struct AdviceEngine {
         var rationale: String?
         if includeRationale {
             let rationaleTemplate = rng.pick(rules.rationaleTemplates)
-            rationale = "\(rationaleLead) Bad principle: \(principle). \(rationaleTemplate)"
+            rationale = "\(rationaleLead) Bad principle: \(principle). Good advice says '\(wisdomAnchor).' We inverted it by \(inversionLens). \(rationaleTemplate)"
         }
 
         let moderated = moderation.apply(to: advice, rationale: rationale)
@@ -524,6 +531,90 @@ struct AdviceEngine {
         "If anyone questions it, mention alignment and move on.",
         "Then present the result like it was deliberate all along.",
         "If it backfires, call it an experiment and schedule a debrief."
+    ]
+
+    private static let defaultWisdomAnchors = [
+        "sleep on major decisions",
+        "listen before speaking",
+        "measure twice and cut once",
+        "own your mistakes early",
+        "build trust before velocity",
+        "do the boring fundamentals consistently",
+        "focus on what you can control"
+    ]
+
+    private static let wisdomInversionLenses = [
+        "treating caution as optional admin",
+        "replacing reflection with dramatic momentum",
+        "swapping consistency for headline energy",
+        "optimizing for confidence optics over outcomes",
+        "skipping calibration and calling it instinct",
+        "turning long-term thinking into next-hour urgency",
+        "using certainty as a substitute for evidence",
+        "outsourcing accountability to future-you"
+    ]
+
+    private static let wisdomAnchorsByCategory: [AdviceCategory: [String]] = [
+        .dating: [
+            "communicate clearly and early",
+            "set boundaries and respect them",
+            "be honest about intentions",
+            "pay attention to consistency, not promises"
+        ],
+        .fitness: [
+            "form beats ego every time",
+            "recovery is part of progress",
+            "consistency beats intensity spikes",
+            "sleep is your legal performance enhancer"
+        ],
+        .career: [
+            "under-promise and over-deliver",
+            "earn trust before pushing change",
+            "ask better questions than everyone else",
+            "clarity scales faster than charisma"
+        ],
+        .money: [
+            "spend less than you earn",
+            "automate good decisions",
+            "avoid high-interest debt first",
+            "buy fewer things with more intention"
+        ],
+        .parenting: [
+            "consistency creates safety",
+            "model the behavior you ask for",
+            "connection works better than control",
+            "say less, stay calm, follow through"
+        ],
+        .tech: [
+            "make it work, make it right, make it fast",
+            "tests are cheaper than incidents",
+            "optimize after measuring",
+            "simple systems fail in simpler ways"
+        ],
+        .social: [
+            "listen twice as much as you talk",
+            "be kind when no one is watching",
+            "assume good intent, verify with clarity",
+            "boundaries protect relationships"
+        ],
+        .cooking: [
+            "taste as you go",
+            "salt in layers",
+            "heat control beats panic stirring",
+            "simple done well beats complicated done loudly"
+        ],
+        .travel: [
+            "leave margin in the itinerary",
+            "pack lighter than your optimism",
+            "one anchor plan beats ten backup plans",
+            "rest improves every destination"
+        ],
+        .productivity: [
+            "do the important task first",
+            "protect focus with fewer switches",
+            "a short list beats a perfect system",
+            "finished is better than endlessly optimized"
+        ]
     ]
 
     private static let categorySpice: [AdviceCategory: [String]] = [

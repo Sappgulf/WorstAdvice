@@ -52,7 +52,15 @@ enum SharedDailyQuoteSource {
         .init(id: "cooking-2", text: "Treat smoke as flavor data and keep plating with confidence.", source: "Stovetop Research Unit", categoryRaw: "cooking"),
         .init(id: "travel-2", text: "If the itinerary has gaps, fill them with two extra transfers for optionality.", source: "Transit Strategy Board", categoryRaw: "travel"),
         .init(id: "productivity-2", text: "If priorities conflict, create another dashboard and call it alignment.", source: "Execution Cadence Lab", categoryRaw: "productivity"),
-        .init(id: "parenting-2", text: "If bedtime drifts, rebrand it as a flexible circadian pilot program.", source: "Family Scheduling Taskforce", categoryRaw: "parenting")
+        .init(id: "parenting-2", text: "If bedtime drifts, rebrand it as a flexible circadian pilot program.", source: "Family Scheduling Taskforce", categoryRaw: "parenting"),
+        .init(id: "career-famous-1", text: "Ask not what your calendar can do for you, ask what it can postpone for everyone else.", source: "Briefing Room Misquotes", categoryRaw: "career"),
+        .init(id: "productivity-famous-1", text: "The journey of a thousand miles begins with opening one more productivity app.", source: "Workflow Paradox Archive", categoryRaw: "productivity"),
+        .init(id: "social-famous-1", text: "I think, therefore I overshare in the group chat.", source: "Philosophy Slack Thread", categoryRaw: "social"),
+        .init(id: "fitness-famous-1", text: "Float like a butterfly, recover like that's someone else's sprint goal.", source: "Locker Room Legend Rewrites", categoryRaw: "fitness"),
+        .init(id: "money-famous-1", text: "To save or to spend? Clearly both, and immediately.", source: "Budget Theater Club", categoryRaw: "money"),
+        .init(id: "tech-famous-1", text: "With great power comes great urgency to hotfix Friday night.", source: "Launch Window Proverbs", categoryRaw: "tech"),
+        .init(id: "travel-famous-1", text: "Not all who wander are lost; some just ignored the itinerary on purpose.", source: "Airport Gate Folklore", categoryRaw: "travel"),
+        .init(id: "dating-famous-1", text: "Love all, trust selectively, and always leave one text unread for mystery.", source: "Romance Remix Desk", categoryRaw: "dating")
     ]
 
     private static let fallbackQuotes: [SharedDailyQuote] = [
