@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Session Log (2026-02-19)
+- Planned (frontend/performance): enable direct tap tab selection while preserving press-and-slide tab switching, retheme Smart Prompts shuffle control, and review runtime performance posture for obvious bottlenecks. Baseline verification: `bash scripts/ci_xcodebuild_tests.sh` failed in-container because `xcodebuild` is unavailable.
+- Implemented (frontend/performance):
+  - Added explicit tap selection on each custom tab item and gated slide activation behind horizontal movement so quick taps and hold+slide both work reliably.
+  - Updated the Smart Prompts `Shuffle` control styling to use the active theme accent color rather than the default system blue.
+  - Reviewed render-budget/device-capability flow and tab-slide update path; retained existing adaptive low-power/thermal throttling behavior and no-repeat fast tab switching logic.
+  - Verification performed: `bash scripts/ci_xcodebuild_tests.sh` re-run (still fails due missing `xcodebuild` in this environment).
+
 ### Session Log (2026-02-17 CI Follow-up)
 - Planned (devops/docs): isolate CI iOS simulator failures on GitHub Actions and harden workflow against project/scheme naming drift. Baseline verification: YAML parse check (`ruby -e "require 'yaml'; YAML.load_file(...)"`) passed; local `xcodebuild` remains unavailable in container.
 - Implemented (devops/docs):

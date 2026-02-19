@@ -302,6 +302,17 @@ struct ContentView: View {
                                     }
                                     .contentShape(Rectangle())
                                     .accessibilityAddTraits(.isButton)
+                                    .onTapGesture {
+                                        guard selectedTab != tab else { return }
+                                        HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
+                                        if constrainedMotion {
+                                            selectedTab = tab
+                                        } else {
+                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                selectedTab = tab
+                                            }
+                                        }
+                                    }
                                     .accessibilityAction {
                                         if selectedTab != tab {
                                             HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
@@ -333,6 +344,10 @@ struct ContentView: View {
                             .simultaneousGesture(
                                 DragGesture(minimumDistance: 0, coordinateSpace: .local)
                                     .onChanged { drag in
+                                        let horizontalMovement = abs(drag.translation.width)
+                                        let verticalMovement = abs(drag.translation.height)
+                                        let shouldActivateSlide = horizontalMovement >= 6 || (horizontalMovement > verticalMovement && horizontalMovement >= 2)
+                                        guard shouldActivateSlide else { return }
                                         if !tabSlideModeActive {
                                             beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
                                         }
