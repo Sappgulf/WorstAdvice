@@ -361,9 +361,22 @@ struct SettingsTabView: View {
                                 }
                             }
 
-                            Text(mode.title)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(viewModel.theme == mode ? Theme.accent(for: viewModel.theme) : Theme.secondaryText(for: viewModel.theme))
+                            VStack(spacing: 2) {
+                                Text(mode.title)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(viewModel.theme == mode ? Theme.accent(for: viewModel.theme) : Theme.secondaryText(for: viewModel.theme))
+
+                                if viewModel.theme == mode {
+                                    Text(Theme.personality(for: mode).descriptor)
+                                        .font(.system(size: 9, weight: .regular, design: .rounded))
+                                        .foregroundStyle(Theme.secondaryText(for: viewModel.theme).opacity(0.75))
+                                        .multilineTextAlignment(.center)
+                                        .lineLimit(2)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .top)))
+                                }
+                            }
+                            .animation(.easeInOut(duration: Theme.animFast), value: viewModel.theme)
                         }
                     }
                     .buttonStyle(.plain)

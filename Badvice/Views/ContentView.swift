@@ -507,6 +507,9 @@ struct ContentView: View {
                             .foregroundStyle(Color(hex: "8F4A22").opacity(0.7))
                         ProgressView()
                             .tint(Color(hex: "8F4A22"))
+                        Text("Loading your chaos...")
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
+                            .foregroundStyle(Color(hex: "8F4A22").opacity(0.6))
                     }
                 }
                 .task {

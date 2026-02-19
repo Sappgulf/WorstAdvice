@@ -1243,7 +1243,7 @@ private struct FavoriteDetailView: View {
             .scrollDismissesKeyboard(.interactively)
             .trackScrollForTabBar()
         }
-        .navigationTitle(record.category.title)
+        .navigationTitle("Saved Advice")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .background(Color.clear)
@@ -1575,16 +1575,6 @@ struct HistoryTabView: View {
             }
             .buttonStyle(.bordered)
             .tint(accent)
-
-            Button {
-                showingClearConfirmation = true
-            } label: {
-                Label("Clear History", systemImage: "trash")
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 36)
-            }
-            .buttonStyle(.bordered)
-            .tint(.orange)
         }
     }
 

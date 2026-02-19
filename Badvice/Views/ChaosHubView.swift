@@ -10,6 +10,7 @@ struct ChaosHubTabView: View {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     @State private var contentAppeared = false
+    @State private var visibleContracts: [ChaosContract] = []
 
     private var chaosScore: Int {
         let streak = min(generateViewModel.challengeStreakDays, 14)
@@ -106,6 +107,9 @@ struct ChaosHubTabView: View {
                 tabBarVisible.wrappedValue = true
                 generateViewModel.trackChaosHubOpened()
                 guard !contentAppeared else { return }
+                if visibleContracts.isEmpty {
+                    visibleContracts = Array(Self.allContracts.shuffled().prefix(2))
+                }
                 if isMotionReduced {
                     contentAppeared = true
                 } else {
@@ -470,13 +474,13 @@ struct ChaosHubTabView: View {
                 .foregroundStyle(primaryText)
                 .padding(.horizontal, 4)
 
-            ForEach(sampleContracts) { contract in
+            ForEach(visibleContracts) { contract in
                 contractRow(contract: contract)
             }
         }
     }
 
-    private let sampleContracts = [
+    private static let allContracts: [ChaosContract] = [
         ChaosContract(
             title: "The Neural Glitch",
             description: "Force all advice to prioritize efficiency over ethics.",
@@ -494,6 +498,60 @@ struct ChaosHubTabView: View {
             tone: .influencer,
             contentPack: .cyberInfluence,
             reward: "Glitch Aura"
+        ),
+        ChaosContract(
+            title: "The Chaos Franchise",
+            description: "Scale your worst idea until it becomes someone else's problem.",
+            icon: "building.2",
+            category: .money,
+            tone: .corporateConsultant,
+            contentPack: nil,
+            reward: "Franchise Badge"
+        ),
+        ChaosContract(
+            title: "Friend Roast Protocol",
+            description: "Deploy targeted social sabotage disguised as helpful advice.",
+            icon: "flame",
+            category: .social,
+            tone: .friendRoast,
+            contentPack: nil,
+            reward: "Roast Master"
+        ),
+        ChaosContract(
+            title: "Career Implosion",
+            description: "Accelerate to the top via the express elevator to chaos.",
+            icon: "chart.line.uptrend.xyaxis",
+            category: .career,
+            tone: .corporateConsultant,
+            contentPack: nil,
+            reward: "Executive Chaos"
+        ),
+        ChaosContract(
+            title: "The Conspiracy Gym",
+            description: "Apply fringe logic to fitness. Gains not guaranteed. Neither is safety.",
+            icon: "dumbbell",
+            category: .fitness,
+            tone: .conspiracyTheorist,
+            contentPack: nil,
+            reward: "Cryptid Athlete"
+        ),
+        ChaosContract(
+            title: "Finance Wildfire",
+            description: "Invest aggressively in ideas your family warned you about.",
+            icon: "dollarsign.circle",
+            category: .money,
+            tone: .cryptoBro,
+            contentPack: nil,
+            reward: "Burning Wallet"
+        ),
+        ChaosContract(
+            title: "Wizard's Dilemma",
+            description: "Conjure solutions to problems that didn't exist until now.",
+            icon: "wand.and.stars",
+            category: .productivity,
+            tone: .wizard,
+            contentPack: nil,
+            reward: "Arcane Badge"
         )
     ]
 

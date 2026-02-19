@@ -3357,7 +3357,13 @@ final class GenerateViewModel {
         "Need Bad Advice",
         "Make It Worse",
         "Hit Me With Chaos",
-        "Give Me A Terrible Plan"
+        "Give Me A Terrible Plan",
+        "Destroy My Judgment",
+        "Consult The Oracle",
+        "What Could Go Wrong?",
+        "Ruin My Week",
+        "Show Me The Chaos",
+        "Deploy Bad Wisdom"
     ]
 }
 

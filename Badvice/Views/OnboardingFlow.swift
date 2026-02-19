@@ -38,7 +38,7 @@ struct OnboardingFlow: View {
         Page(
             icon: "map.fill",
             title: "Where to next?",
-            subtitle: "Advice for instant bad ideas, Quotes for daily chaos, Favorites to save disasters, Settings for Labs.",
+            subtitle: "Chaos Hub for missions and contracts, Advice for instant bad ideas, Quotes for daily chaos, Favorites to save the best disasters. Shake your phone anytime to generate.",
             accent: Color(hex: "3C4E7A"),
             background: LinearGradient(colors: [Color(hex: "EAF0FB"), Color(hex: "DDE6F6")], startPoint: .topLeading, endPoint: .bottomTrailing)
         )

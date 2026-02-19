@@ -1067,24 +1067,30 @@ struct GenerateTabView: View {
 
         switch headerTapStreak {
         case 3:
-            activeToast = ToastMessage(
-                message: "Header unlocked: confidence mode engaged.",
-                style: .info
-            )
+            let toasts3 = [
+                "Header unlocked: confidence mode engaged.",
+                "Triple tap detected. Questionable decisions incoming.",
+                "You found the secret handshake. Chaos nods in approval."
+            ]
+            activeToast = ToastMessage(message: toasts3.randomElement()!, style: .info)
             revealSurprise("Mini surprise: the badge wakes up with your theme mood.")
         case 5:
-            activeToast = ToastMessage(
-                message: "Secret combo hit: Surprise Me launched.",
-                style: .success
-            )
+            let toasts5 = [
+                "Secret combo hit: Surprise Me launched.",
+                "Five taps? That's commitment. Here's random chaos.",
+                "Combo unlocked. The algorithm is now terrified of you."
+            ]
+            activeToast = ToastMessage(message: toasts5.randomElement()!, style: .success)
             revealSurprise("Chaos code: rolling a random tone + category.")
             viewModel.surpriseMeAndGenerate()
             onDataChanged()
         case 8:
-            activeToast = ToastMessage(
-                message: "Ultra combo: Daily Drop triggered from the logo.",
-                style: .success
-            )
+            let toasts8 = [
+                "Ultra combo: Daily Drop triggered from the logo.",
+                "Eight taps. You are now legally a chaos engineer.",
+                "Logo boss defeated. Daily Drop deployed as reward."
+            ]
+            activeToast = ToastMessage(message: toasts8.randomElement()!, style: .success)
             revealSurprise("You found the 8-tap easter egg. Daily Drop injected.")
             viewModel.generateDailyDrop()
             onDataChanged()
@@ -1096,10 +1102,12 @@ struct GenerateTabView: View {
 
     private func triggerHeaderLongPressSurprise() {
         HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-        activeToast = ToastMessage(
-            message: "Hidden mode: Roast Protocol armed.",
-            style: .info
-        )
+        let longPressToasts = [
+            "Hidden mode: Roast Protocol armed.",
+            "Long press detected. Friend Roast mode: activated.",
+            "Patience unlocked the roast. Someone's about to have a day."
+        ]
+        activeToast = ToastMessage(message: longPressToasts.randomElement()!, style: .info)
         revealSurprise("Long-press unlock: Friend Roast tone primed for your next run.")
         viewModel.selectedTone = .friendRoast
     }
@@ -1122,15 +1130,30 @@ struct GenerateTabView: View {
             "Float like a butterfly, invoice like a consultant.",
             "The only thing we have to fear is a meeting without snacks.",
             "To be yourself in a world of opinions, ship before feedback arrives.",
-            "The journey of a thousand miles starts with opening five tabs."
+            "The journey of a thousand miles starts with opening five tabs.",
+            "Be the change you wish to expense-report.",
+            "With great power comes great ambiguity in the chain of command.",
+            "Live, laugh, loop back after the standup.",
+            "Work smarter, not harder, and definitely not at 9 a.m.",
+            "Two roads diverged in a wood, and I took the one with fewer stakeholders.",
+            "To infinity and beyond the scope of this quarter.",
+            "It is what it is, but have you considered rebranding it?",
+            "That which does not kill my deadline makes my Gantt chart stronger.",
+            "You miss 100% of the shots you don't put in the roadmap.",
+            "The best time to set realistic expectations was last sprint. The second best time is now.",
+            "Speak softly and carry a well-formatted slide deck.",
+            "We are all just one pivot away from a TED Talk."
         ]
         let unlocked = mutatedQuotePool.randomElement() ?? mutatedQuotePool[0]
         UIPasteboard.general.string = unlocked
         HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-        activeToast = ToastMessage(
-            message: "Secret quote copied.",
-            style: .success
-        )
+        let quoteCopyToasts = [
+            "Secret quote copied.",
+            "Hidden wisdom extracted and clipped.",
+            "Contraband quote secured to clipboard.",
+            "Rare drop obtained. No one will believe you found it."
+        ]
+        activeToast = ToastMessage(message: quoteCopyToasts.randomElement()!, style: .success)
         revealSurprise("Hidden quote: \"\(unlocked)\"")
     }
 
@@ -1393,6 +1416,18 @@ private struct GeneratingOverlay: View {
 
     @State private var rotation: Double = 0
     @State private var pulseScale: CGFloat = 1.0
+    @State private var loadingPhrase: String = GeneratingOverlay.loadingPhrases[0]
+
+    private static let loadingPhrases = [
+        "Consulting the chaos...",
+        "Summoning bad judgment...",
+        "Asking the universe badly...",
+        "Calibrating your downfall...",
+        "Fabricating confidence...",
+        "Running the disaster protocol...",
+        "Polling experts in bad decisions...",
+        "Loading questionable wisdom..."
+    ]
 
     var body: some View {
         ZStack {
@@ -1467,7 +1502,7 @@ private struct GeneratingOverlay: View {
                 .frame(width: 100, height: 100)
 
                 VStack(spacing: 8) {
-                    Text("Consulting the chaos...")
+                    Text(loadingPhrase)
                         .font(.system(.subheadline, design: .rounded, weight: .bold))
                         .foregroundStyle(primaryTextColor)
 
@@ -1498,6 +1533,7 @@ private struct GeneratingOverlay: View {
         .onAppear {
             rotation = 360
             pulseScale = 1.2
+            loadingPhrase = Self.loadingPhrases.randomElement() ?? Self.loadingPhrases[0]
         }
     }
 }

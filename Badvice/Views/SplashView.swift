@@ -8,8 +8,6 @@ struct SplashView: View {
     @State private var taglineOpacity: Double = 0
     @State private var taglineOffset: CGFloat = 12
     @State private var glowOpacity: Double = 0
-    @State private var particleOpacity: Double = 0
-
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     var body: some View {
@@ -18,7 +16,7 @@ struct SplashView: View {
             Color(hex: "1C130A").ignoresSafeArea()
 
             // Triple-A Background Elements
-            FloatingParticlesView(theme: .minimal, reduceMotion: accessibilityReduceMotion, isGenerating: false)
+            FloatingParticlesView(theme: .badvice, reduceMotion: accessibilityReduceMotion, isGenerating: false)
                 .opacity(accessibilityReduceMotion ? 0.2 : 0.6)
             
             CinematicVignetteView()
