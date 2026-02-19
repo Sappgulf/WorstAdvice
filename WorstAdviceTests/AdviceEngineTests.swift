@@ -1206,6 +1206,7 @@ final class PersistenceTests: XCTestCase {
         return days.contains(yesterday) ? 1 : 0
     }
 
+    @MainActor
     private func waitUntil(
         timeout: Duration = .seconds(1),
         pollInterval: Duration = .milliseconds(40),
@@ -1213,7 +1214,7 @@ final class PersistenceTests: XCTestCase {
     ) async throws {
         let start = ContinuousClock.now
         while true {
-            if await condition() {
+            if condition() {
                 return
             }
             if ContinuousClock.now - start > timeout {
