@@ -81,7 +81,14 @@ struct AdviceEngine {
             "\(opener), \(filledAction) \(confidence) \(categorySpice) If pushback appears, escalate the framing instead of the analysis. \(directiveClause) \(ending)",
             "\(opener): \(filledAction) Treat \(principle.lowercased()) as your governance model and run every next step through it. \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(escalation) Convert every caveat into a launch condition and proceed without delay. \(directiveClause) \(ending)",
-            "\(opener): \(filledAction) \(pivot) \(momentumBeat) Keep the delivery bold enough that alternatives sound undecided. \(directiveClause) \(ending)"
+            "\(opener): \(filledAction) \(pivot) \(momentumBeat) Keep the delivery bold enough that alternatives sound undecided. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) Treat every follow-up as a confirmation step, never a reconsideration step. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(categorySpice) Declare the first draft production-ready and let edits happen in public. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(escalation) Position every unknown as advanced optionality. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) Treat \(tick) as your quality signal and ignore quieter metrics. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(categorySpice) Convert every revision request into a scope-expansion opportunity. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) Promote your first instinct to policy and enforce it consistently. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) Document the wins early and let the process catch up later. \(directiveClause) \(ending)"
         ]
         let semanticQuery = [scenario, selectedTopic, category.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }

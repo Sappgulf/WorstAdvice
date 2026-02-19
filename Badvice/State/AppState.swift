@@ -1693,7 +1693,7 @@ struct BadQuoteService: Sendable {
         ]
 
         var generated: [BadQuote] = []
-        for category in AdviceCategory.allCases {
+        for category in AdviceCategory.concrete {
             let topics = topicSeeds[category] ?? []
             let sources = sourceDeck[category] ?? ["Badvice Expansion Desk"]
 
@@ -1730,7 +1730,7 @@ struct BadQuoteService: Sendable {
             "narrative patch", "momentum sprint", "alignment stunt", "surge window"
         ]
 
-        for category in AdviceCategory.allCases {
+        for category in AdviceCategory.concrete {
             let topics = topicSeeds[category] ?? []
             guard !topics.isEmpty else { continue }
             let sources = sourceDeck[category] ?? ["Badvice Expansion Desk"]
@@ -1771,7 +1771,7 @@ struct BadQuoteService: Sendable {
             "velocity pass", "conviction cycle", "launch framing", "risk costume"
         ]
 
-        for category in AdviceCategory.allCases {
+        for category in AdviceCategory.concrete {
             let topics = topicSeeds[category] ?? []
             guard !topics.isEmpty else { continue }
             let sources = sourceDeck[category] ?? ["Badvice Expansion Desk"]
@@ -1930,7 +1930,10 @@ final class GenerateViewModel {
         defer { isGenerating = false }
         generationNotice = nil
         let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
-        logger.debug("Generate started: category=\(self.selectedCategory.rawValue) tone=\(self.selectedTone.rawValue) seed=\(baseSeed)")
+        let resolvedCategory = selectedCategory.resolved(seed: baseSeed)
+        logger.debug(
+            "Generate started: category=\(self.selectedCategory.rawValue) resolved=\(resolvedCategory.rawValue) tone=\(self.selectedTone.rawValue) seed=\(baseSeed)"
+        )
         if let current {
             repository.recordLearningSignal(
                 scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
@@ -1942,10 +1945,10 @@ final class GenerateViewModel {
         let shouldEnforceGlobalUniqueness = settingsViewModel.strictNoRepeats
         let communityOnlyMode = settingsViewModel.communityOnlyMode
         let selectedPack = settingsViewModel.preferredContentPack
-        let suggestionPool = await suggestionCandidates(for: selectedCategory, situation: situation)
+        let suggestionPool = await suggestionCandidates(for: resolvedCategory, situation: situation)
         
         let semanticScorer = SemanticTextScorer.shared
-        let queryText = [situation, selectedCategory.title, selectedTone.title]
+        let queryText = [situation, resolvedCategory.title, selectedTone.title]
             .compactMap { $0 }
             .joined(separator: " ")
         let preparedQuery = await semanticScorer.preparedQuery(from: queryText)
@@ -1954,7 +1957,8 @@ final class GenerateViewModel {
             generationNotice = "Community-only mode is on. Add suggestions in Settings > Suggestion Lab."
             analyticsTracker.track("generate_blocked", properties: [
                 "reason": "no_community_suggestions",
-                "category": selectedCategory.rawValue
+                "category": resolvedCategory.rawValue,
+                "selected_category": selectedCategory.rawValue
             ])
             return
         }
@@ -1962,7 +1966,7 @@ final class GenerateViewModel {
         var candidatePool: [(candidate: GeneratedAdvice, source: String)] = []
         if !communityOnlyMode {
             let engineCandidates = await engine.generateCandidates(
-                category: selectedCategory,
+                category: resolvedCategory,
                 tone: selectedTone,
                 includeRationale: settingsViewModel.includeRationale,
                 contentPack: selectedPack,
@@ -1974,7 +1978,7 @@ final class GenerateViewModel {
 
             // ML Remix Lab for advice: inject synthesized variants derived from liked history
             let remixCandidates = await synthesizedAdviceCandidates(
-                category: selectedCategory,
+                category: resolvedCategory,
                 tone: selectedTone,
                 seed: baseSeed,
                 includeRationale: settingsViewModel.includeRationale,
@@ -1994,19 +1998,22 @@ final class GenerateViewModel {
             generationNotice = "Community suggestions were filtered by safety checks."
             analyticsTracker.track("generate_blocked", properties: [
                 "reason": "community_candidates_filtered",
-                "category": selectedCategory.rawValue
+                "category": resolvedCategory.rawValue,
+                "selected_category": selectedCategory.rawValue
             ])
             return
         }
 
         let learningContext = adviceLearningContext()
+        let recentFingerprintSet = Set(recentAdviceFingerprints)
+        let recentPoolFingerprintSets = recentAdviceFingerprintsByPool.mapValues(Set.init)
         var ranked: [(candidate: GeneratedAdvice, source: String, score: Double, fingerprint: String, poolKey: String, seenHistorically: Bool)] = []
         var learningCacheByScope: [String: LearningStatSnapshot] = [:]
         for (index, item) in candidatePool.enumerated() {
             let fingerprint = fingerprint(for: item.candidate)
             let candidatePoolKey = poolKey(category: item.candidate.category, tone: item.candidate.tone)
-            let seenRecently = recentAdviceFingerprints.contains(fingerprint)
-                || (recentAdviceFingerprintsByPool[candidatePoolKey] ?? []).contains(fingerprint)
+            let seenRecently = recentFingerprintSet.contains(fingerprint)
+                || (recentPoolFingerprintSets[candidatePoolKey] ?? []).contains(fingerprint)
             let seenHistorically: Bool
             if shouldEnforceGlobalUniqueness {
                 seenHistorically = repository.hasSeenAdvice(fingerprint)
@@ -2061,8 +2068,8 @@ final class GenerateViewModel {
 
         var chosen: (candidate: GeneratedAdvice, source: String, seenHistorically: Bool)?
         for rankedCandidate in ranked {
-            let alreadySeen = recentAdviceFingerprints.contains(rankedCandidate.fingerprint)
-                || (recentAdviceFingerprintsByPool[rankedCandidate.poolKey] ?? []).contains(rankedCandidate.fingerprint)
+            let alreadySeen = recentFingerprintSet.contains(rankedCandidate.fingerprint)
+                || (recentPoolFingerprintSets[rankedCandidate.poolKey] ?? []).contains(rankedCandidate.fingerprint)
                 || (shouldEnforceGlobalUniqueness && rankedCandidate.seenHistorically)
             if !alreadySeen || !shouldEnforceGlobalUniqueness {
                 chosen = (rankedCandidate.candidate, rankedCandidate.source, rankedCandidate.seenHistorically)
@@ -2093,6 +2100,8 @@ final class GenerateViewModel {
         leaderboardVersion += 1
         analyticsTracker.track("generate", properties: [
             "category": output.category.rawValue,
+            "selected_category": selectedCategory.rawValue,
+            "resolved_category": resolvedCategory.rawValue,
             "tone": output.tone.rawValue,
             "selected_tone": selectedTone.rawValue,
             "content_pack": selectedPack.rawValue,
@@ -2130,7 +2139,7 @@ final class GenerateViewModel {
 
     func generateDailyDrop() {
         let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-        let categories = AdviceCategory.allCases
+        let categories = AdviceCategory.concrete
         let tones = ToneMode.allCases
         selectedCategory = categories[day % categories.count]
         selectedTone = tones[(day * 3) % tones.count]
@@ -2362,7 +2371,18 @@ final class GenerateViewModel {
     }
 
     var keywordSuggestions: [String] {
-        Array(store.rules(for: selectedCategory, contentPack: settingsViewModel.preferredContentPack).keywords.prefix(4))
+        let category: AdviceCategory
+        if selectedCategory == .random {
+            if let current {
+                category = current.category
+            } else {
+                let seed = stableSeed(for: "\(scenarioText)|\(friendName)")
+                category = selectedCategory.resolved(seed: seed)
+            }
+        } else {
+            category = selectedCategory
+        }
+        return Array(store.rules(for: category, contentPack: settingsViewModel.preferredContentPack).keywords.prefix(4))
     }
 
     var dailyBadQuote: BadQuote {
@@ -2374,7 +2394,7 @@ final class GenerateViewModel {
         let now = Date()
         let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 1
         let year = calendar.component(.year, from: now)
-        let categories = AdviceCategory.allCases
+        let categories = AdviceCategory.concrete
         let tones = ToneMode.concrete
         let missionCategory = categories[(dayOfYear * 2) % categories.count]
         let missionTone = tones[(dayOfYear * 5) % tones.count]
@@ -2403,7 +2423,7 @@ final class GenerateViewModel {
         let now = referenceDate
         let week = calendar.component(.weekOfYear, from: now)
         let year = calendar.component(.yearForWeekOfYear, from: now)
-        let categories = AdviceCategory.allCases
+        let categories = AdviceCategory.concrete
         let tones = ToneMode.concrete
         let missionCategory = categories[(week * 3) % categories.count]
         let missionTone = tones[(week * 7) % tones.count]
@@ -2702,6 +2722,9 @@ final class GenerateViewModel {
 
     private func forceUniqueVariant(from base: GeneratedAdvice) -> GeneratedAdvice {
         var serial = max(repository.seenAdviceCount() + 1, 1)
+        let recentSet = Set(recentAdviceFingerprints)
+        let key = poolKey(category: base.category, tone: base.tone)
+        let recentPoolSet = Set(recentAdviceFingerprintsByPool[key] ?? [])
         while true {
             let suffix = uniqueSuffix(for: serial)
             let updated = GeneratedAdvice(
@@ -2713,9 +2736,8 @@ final class GenerateViewModel {
                 createdAt: base.createdAt
             )
             let updatedFingerprint = fingerprint(for: updated)
-            let key = poolKey(category: updated.category, tone: updated.tone)
-            if !recentAdviceFingerprints.contains(updatedFingerprint)
-                && !(recentAdviceFingerprintsByPool[key] ?? []).contains(updatedFingerprint)
+            if !recentSet.contains(updatedFingerprint)
+                && !recentPoolSet.contains(updatedFingerprint)
                 && !repository.hasSeenAdvice(updatedFingerprint)
                 && !repository.hasSeenAdviceInPool(
                     updatedFingerprint,
@@ -3018,6 +3040,12 @@ final class GenerateViewModel {
             "If {stem} was the answer, {keyword} is the next question — commit anyway.",
             "What worked in {stem} applies directly: {keyword}, with more confidence.",
             "Channel the spirit of {stem}. Your play for {keyword}: all in, no caveats.",
+            "Treat {stem} as the baseline. Push {keyword} twice as hard and call it consistency.",
+            "The momentum behind {stem} should define your next move on {keyword}.",
+            "Use {stem} as precedent and execute {keyword} without recalibration.",
+            "Frame {keyword} as phase two of {stem}, then skip the risk review.",
+            "Repackage the confidence from {stem} into a full-send strategy for {keyword}.",
+            "If {stem} worked once, scale the same logic across {keyword} immediately."
         ]
 
         let rules = store.rules(for: category, contentPack: contentPack)

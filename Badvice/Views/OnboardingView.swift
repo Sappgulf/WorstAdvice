@@ -41,7 +41,7 @@ struct OnboardingHistoryView: View {
                                 Text("All categories")
                             }
                         }
-                        ForEach(AdviceCategory.allCases) { category in
+                        ForEach(AdviceCategory.concrete) { category in
                             Button {
                                 viewModel.selectedCategory = category
                             } label: {
@@ -216,4 +216,3 @@ struct OnboardingHistoryView: View {
         }
     }
 }
-

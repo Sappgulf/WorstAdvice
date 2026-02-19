@@ -620,7 +620,7 @@ private struct SuggestionLabView: View {
         Form {
             Section("Submit Suggestion") {
                 Picker("Category", selection: $suggestionCategory) {
-                    ForEach(AdviceCategory.allCases) { category in
+                    ForEach(AdviceCategory.concrete) { category in
                         Text(category.title).tag(category)
                     }
                 }
@@ -686,7 +686,8 @@ private struct SuggestionLabView: View {
         .background(Color.clear)
         .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
-            suggestionCategory = viewModel.selectedCategory
+            let selected = viewModel.selectedCategory
+            suggestionCategory = selected == .random ? .dating : selected
             suggestionError = ""
         }
     }
@@ -705,7 +706,7 @@ private struct QuoteSuggestionLabView: View {
         Form {
             Section("Submit Quote Suggestion") {
                 Picker("Category", selection: $suggestionCategory) {
-                    ForEach(AdviceCategory.allCases) { category in
+                    ForEach(AdviceCategory.concrete) { category in
                         Text(category.title).tag(category)
                     }
                 }

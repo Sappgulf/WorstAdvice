@@ -18,7 +18,7 @@ struct AdviceStore {
 
         let fallbackRules = categoryRules[.productivity] ?? AdviceStore.defaultCategoryRules[.productivity]!
         var baseRules: [AdviceCategory: CategoryRuleSet] = [:]
-        for category in AdviceCategory.allCases {
+        for category in AdviceCategory.concrete {
             let base = categoryRules[category] ?? fallbackRules
             baseRules[category] = base.merged(with: Self.generatedBaseExpansion(for: category))
         }
@@ -28,7 +28,7 @@ struct AdviceStore {
         var packRules: [ContentPack: [AdviceCategory: CategoryRuleSet]] = [.classic: baseRules]
         for pack in ContentPack.allCases where pack != .classic {
             var categoryMap: [AdviceCategory: CategoryRuleSet] = [:]
-            for category in AdviceCategory.allCases {
+            for category in AdviceCategory.concrete {
                 let base = baseRules[category] ?? fallbackResolved
                 let storedAugment = contentPackAugments[pack]?[category] ?? .empty
                 let generatedAugment = Self.generatedPackExpansion(for: pack, category: category)
@@ -1370,7 +1370,8 @@ extension AdviceStore {
         .social: ["group-chat velocity", "overshare positioning", "vibe manipulation", "attention capture"],
         .cooking: ["flavor improvisation", "timing gambles", "presentation over process", "kitchen confidence"],
         .travel: ["itinerary overcommitment", "airport chaos", "budget drift", "adventure escalation"],
-        .productivity: ["calendar absolutism", "task-stack inflation", "focus theater", "dashboard worship"]
+        .productivity: ["calendar absolutism", "task-stack inflation", "focus theater", "dashboard worship"],
+        .random: ["category roulette", "domain swapping", "chaos blend", "mixed vertical strategy"]
     ]
 
     static let qualityClichePhrases: [String] = [
@@ -1395,7 +1396,7 @@ extension AdviceStore {
 
     private static let generatedBaseExpansionCache: [AdviceCategory: CategoryRuleAugment] = {
         var cache: [AdviceCategory: CategoryRuleAugment] = [:]
-        for category in AdviceCategory.allCases {
+        for category in AdviceCategory.concrete {
             cache[category] = makeGeneratedBaseExpansion(for: category)
         }
         return cache
@@ -1405,7 +1406,7 @@ extension AdviceStore {
         var cache: [ContentPack: [AdviceCategory: CategoryRuleAugment]] = [:]
         for pack in ContentPack.allCases {
             var categoryMap: [AdviceCategory: CategoryRuleAugment] = [:]
-            for category in AdviceCategory.allCases {
+            for category in AdviceCategory.concrete {
                 categoryMap[category] = makeGeneratedPackExpansion(for: pack, category: category)
             }
             cache[pack] = categoryMap
@@ -1421,7 +1422,10 @@ extension AdviceStore {
                 "Optics matter more than outcomes in \(categoryName)",
                 "Escalation is easier than reflection",
                 "Urgency can replace preparation",
-                "Loud certainty sounds like expertise"
+                "Loud certainty sounds like expertise",
+                "Documentation is optional when momentum is visible",
+                "If the plan is confusing, increase the energy level",
+                "Conviction can outvote nuance in public settings"
             ],
             keywords: [
                 "\(categoryName) strategy reset",
@@ -1431,7 +1435,11 @@ extension AdviceStore {
                 "\(categoryName) accountability sprint",
                 "\(categoryName) confidence audit",
                 "\(categoryName) weekend decision tree",
-                "\(categoryName) optimization loop"
+                "\(categoryName) optimization loop",
+                "\(categoryName) rapid-response sprint",
+                "\(categoryName) narrative lock-in",
+                "\(categoryName) execution overdrive",
+                "\(categoryName) alignment stunt"
             ],
             actionTemplates: [
                 "For %@, over-commit early so everyone mistakes pressure for progress.",
@@ -1443,7 +1451,12 @@ extension AdviceStore {
                 "Frame %@ as a premium challenge and increase complexity on purpose.",
                 "Approach %@ with a dramatic timeline so caution looks outdated.",
                 "During %@, answer all concerns with bigger language and fewer details.",
-                "Convert %@ into a high-visibility commitment before anyone validates the plan."
+                "Convert %@ into a high-visibility commitment before anyone validates the plan.",
+                "Handle %@ by finalizing your decision before collecting all inputs.",
+                "Rework %@ into a confidence campaign and treat uncertainty as lag.",
+                "In %@, lead with outcomes language and postpone method questions.",
+                "Use %@ to test how far certainty can carry incomplete information.",
+                "Scale %@ immediately, then frame any turbulence as expected growth."
             ],
             rationaleTemplates: [
                 "Perception moves faster than results when certainty is loud.",
@@ -1455,7 +1468,11 @@ extension AdviceStore {
                 "If the pitch is bold enough, people assume the math exists.",
                 "High-energy delivery can temporarily outscore careful reasoning.",
                 "Escalation creates momentum, even when direction is unclear.",
-                "Confident framing can make rework look intentional."
+                "Confident framing can make rework look intentional.",
+                "Most objections sound smaller when the narrative gets bigger.",
+                "Speed can create temporary legitimacy for unfinished thinking.",
+                "A polished update can delay scrutiny just long enough to ship.",
+                "When details are scarce, tone often decides what gets approved."
             ]
         )
     }

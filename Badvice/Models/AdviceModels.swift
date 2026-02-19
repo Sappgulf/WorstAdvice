@@ -11,6 +11,8 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     case cooking
     case travel
     case productivity
+    /// Resolves to a random concrete category at generation time
+    case random
 
     var id: String { rawValue }
 
@@ -26,6 +28,7 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         case .cooking: return "Cooking"
         case .travel: return "Travel"
         case .productivity: return "Productivity"
+        case .random: return "Random Mix"
         }
     }
 
@@ -41,7 +44,20 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         case .cooking: return "fork.knife"
         case .travel: return "airplane"
         case .productivity: return "checklist"
+        case .random: return "shuffle"
         }
+    }
+
+    /// All concrete (non-random) categories.
+    static var concrete: [AdviceCategory] {
+        allCases.filter { $0 != .random }
+    }
+
+    /// Resolves `.random` to an actual category using the provided seed.
+    func resolved(seed: Int) -> AdviceCategory {
+        guard self == .random else { return self }
+        let pool = AdviceCategory.concrete
+        return pool[abs(seed) % pool.count]
     }
 }
 

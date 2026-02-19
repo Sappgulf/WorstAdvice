@@ -114,7 +114,7 @@ struct FavoritesTabView: View {
                                         Label("All", systemImage: "checkmark")
                                     } else { Text("All") }
                                 }
-                                ForEach(AdviceCategory.allCases) { cat in
+                                ForEach(AdviceCategory.concrete) { cat in
                                     Button {
                                         viewModel.selectedCategory = cat
                                     } label: {
@@ -588,7 +588,7 @@ struct QuotesTabView: View {
                                             Label("All", systemImage: "checkmark")
                                         } else { Text("All") }
                                     }
-                                    ForEach(AdviceCategory.allCases) { cat in
+                                    ForEach(AdviceCategory.concrete) { cat in
                                         Button { viewModel.selectedCategory = cat } label: {
                                             if viewModel.selectedCategory == cat {
                                                 Label(cat.title, systemImage: "checkmark")
@@ -1064,7 +1064,7 @@ struct HistoryTabView: View {
                                 .pickerStyle(.segmented)
 
                                 Menu {
-                                    ForEach(AdviceCategory.allCases) { cat in
+                                    ForEach(AdviceCategory.concrete) { cat in
                                         Button {
                                             viewModel.selectedCategory = viewModel.selectedCategory == cat ? nil : cat
                                         } label: {
