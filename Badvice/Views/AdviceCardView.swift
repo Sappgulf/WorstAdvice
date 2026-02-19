@@ -722,6 +722,7 @@ struct GenerateTabView: View {
                         }
                     }
                     .font(.caption.weight(.semibold))
+                    .foregroundStyle(accent)
                 }
 
                 ScrollView(.horizontal, showsIndicators: false) {
