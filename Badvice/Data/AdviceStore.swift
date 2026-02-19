@@ -1382,6 +1382,9 @@ extension AdviceStore {
         "it is what it is"
     ]
 
+    /// Pre-normalized form of `qualityClichePhrases` — computed once at app launch.
+    static let qualityClichePhrasesNormalized: [String] = qualityClichePhrases.map { $0.normalizedForFiltering }
+
     static func generatedBaseExpansion(for category: AdviceCategory) -> CategoryRuleAugment {
         generatedBaseExpansionCache[category] ?? .empty
     }

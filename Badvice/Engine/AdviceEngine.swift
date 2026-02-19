@@ -219,8 +219,8 @@ struct AdviceEngine {
         if normalized.contains(categoryDirective.normalizedForFiltering) {
             score += 0.28
         }
-        let clichePenalty = AdviceStore.qualityClichePhrases.reduce(0.0) { partial, phrase in
-            partial + (normalized.contains(phrase.normalizedForFiltering) ? 0.16 : 0.0)
+        let clichePenalty = AdviceStore.qualityClichePhrasesNormalized.reduce(0.0) { partial, phrase in
+            partial + (normalized.contains(phrase) ? 0.16 : 0.0)
         }
         score -= clichePenalty
         if candidate.count > 225 {
@@ -527,7 +527,9 @@ actor SemanticTextScorer {
 
     private let sentenceEmbedding = NLEmbedding.sentenceEmbedding(for: .english)
     private var vectorCache: [String: [Double]] = [:]
-    private var cacheOrder: [String] = []
+    // LRU tracking: monotonically increasing counter per key — evict min-counter entry
+    private var cacheAccessOrder: [String: UInt64] = [:]
+    private var cacheCounter: UInt64 = 0
     private let maxCacheSize = 320
 
     private init() {}
@@ -591,20 +593,20 @@ actor SemanticTextScorer {
     }
 
     private func vector(for text: String, embedding: NLEmbedding) -> [Double]? {
+        cacheCounter &+= 1
         if let cached = vectorCache[text] {
-            cacheOrder.removeAll { $0 == text }
-            cacheOrder.append(text)
+            cacheAccessOrder[text] = cacheCounter
             return cached
         }
 
         guard let vector = embedding.vector(for: text) else { return nil }
 
         vectorCache[text] = vector
-        cacheOrder.removeAll { $0 == text }
-        cacheOrder.append(text)
-        if cacheOrder.count > maxCacheSize, let toEvict = cacheOrder.first {
-            cacheOrder.removeFirst()
+        cacheAccessOrder[text] = cacheCounter
+        if vectorCache.count > maxCacheSize,
+           let toEvict = cacheAccessOrder.min(by: { $0.value < $1.value })?.key {
             vectorCache.removeValue(forKey: toEvict)
+            cacheAccessOrder.removeValue(forKey: toEvict)
         }
         return vector
     }
