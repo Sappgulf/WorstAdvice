@@ -15,6 +15,11 @@ struct ChaosHubTabView: View {
         settings.reduceMotion || accessibilityReduceMotion
     }
 
+    // Hoist per-theme lookups — single switch per body render instead of ~30 repeated calls
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -50,11 +55,11 @@ struct ChaosHubTabView: View {
             .onAppear {
                 tabBarVisible.wrappedValue = true
                 generateViewModel.trackChaosHubOpened()
+                guard !contentAppeared else { return }
                 if isMotionReduced {
                     contentAppeared = true
                 } else {
-                    contentAppeared = false
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                    withAnimation(.spring(response: Theme.animSlow, dampingFraction: 0.82)) {
                         contentAppeared = true
                     }
                 }
@@ -69,15 +74,15 @@ struct ChaosHubTabView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Daily Mission", systemImage: "flag.checkered.2.crossed")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .foregroundStyle(primaryText)
 
                 Text(mission.title)
                     .font(.headline.weight(.semibold))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .foregroundStyle(primaryText)
 
                 Text(mission.subtitle)
                     .font(.caption)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
 
                 HStack(spacing: 8) {
                     statPill(title: mission.category.title, systemImage: mission.category.icon)
@@ -88,58 +93,60 @@ struct ChaosHubTabView: View {
                     HStack {
                         Text("\(mission.currentCount)/\(mission.targetCount) completed")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                            .foregroundStyle(secondaryText)
                         Spacer(minLength: 8)
                         if mission.isComplete {
                             Text("Completed")
                                 .font(.caption.weight(.bold))
-                                .foregroundStyle(Theme.accent(for: settings.theme))
+                                .foregroundStyle(accent)
                         }
                     }
 
                     GeometryReader { geo in
                         RoundedRectangle(cornerRadius: 999, style: .continuous)
-                            .fill(Theme.secondaryText(for: settings.theme).opacity(0.15))
+                            .fill(secondaryText.opacity(0.15))
                             .overlay(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 999, style: .continuous)
-                                    .fill(Theme.accent(for: settings.theme))
+                                    .fill(accent)
                                     .frame(width: geo.size.width * CGFloat(mission.progressFraction))
+                                    .animation(.spring(response: Theme.animMedium, dampingFraction: 0.75), value: mission.progressFraction)
                             }
                     }
                     .frame(height: 8)
                 }
 
                 Divider()
-                    .overlay(Theme.secondaryText(for: settings.theme).opacity(0.18))
+                    .overlay(secondaryText.opacity(0.18))
 
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Weekly Mission", systemImage: "calendar.badge.clock")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .foregroundStyle(secondaryText)
                     Text(weekly.title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.primaryText(for: settings.theme))
+                        .foregroundStyle(primaryText)
                     Text(weekly.subtitle)
                         .font(.caption)
-                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .foregroundStyle(secondaryText)
                     HStack {
                         Text("\(weekly.currentCount)/\(weekly.targetCount) completed")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                            .foregroundStyle(secondaryText)
                         Spacer(minLength: 8)
                         if weekly.isComplete {
                             Text("Reward ready")
                                 .font(.caption.weight(.bold))
-                                .foregroundStyle(Theme.accent(for: settings.theme))
+                                .foregroundStyle(accent)
                         }
                     }
                     GeometryReader { geo in
                         RoundedRectangle(cornerRadius: 999, style: .continuous)
-                            .fill(Theme.secondaryText(for: settings.theme).opacity(0.15))
+                            .fill(secondaryText.opacity(0.15))
                             .overlay(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 999, style: .continuous)
-                                    .fill(Theme.accent(for: settings.theme).opacity(0.7))
+                                    .fill(accent.opacity(0.7))
                                     .frame(width: geo.size.width * CGFloat(weekly.progressFraction))
+                                    .animation(.spring(response: Theme.animMedium, dampingFraction: 0.75), value: weekly.progressFraction)
                             }
                     }
                     .frame(height: 6)
@@ -157,8 +164,9 @@ struct ChaosHubTabView: View {
                             .frame(maxWidth: .infinity, minHeight: 42)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Theme.accent(for: settings.theme))
+                    .tint(accent)
                     .foregroundStyle(Theme.buttonText(for: settings.theme))
+                    .accessibilityLabel(mission.isComplete ? "Run mission again: \(mission.title)" : "Run daily mission: \(mission.title)")
 
                     Button {
                         generateViewModel.trackChaosHubAction("open_advice")
@@ -169,7 +177,7 @@ struct ChaosHubTabView: View {
                             .frame(maxWidth: .infinity, minHeight: 42)
                     }
                     .buttonStyle(.bordered)
-                    .tint(Theme.accent(for: settings.theme))
+                    .tint(accent)
                 }
             }
         }
@@ -180,7 +188,7 @@ struct ChaosHubTabView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Label("Wins", systemImage: "trophy")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .foregroundStyle(primaryText)
 
                 HStack(spacing: 8) {
                     winMetric(title: "Streak", value: "\(generateViewModel.challengeStreakDays)")
@@ -191,11 +199,11 @@ struct ChaosHubTabView: View {
 
                 Text(generateViewModel.chaosHubSummaryLine)
                     .font(.caption)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
 
                 Text(settings.streakFreezeAvailableThisWeek ? "Streak Freeze: available this week" : "Streak Freeze: already used this week")
                     .font(.caption2)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme).opacity(0.88))
+                    .foregroundStyle(secondaryText.opacity(0.88))
             }
         }
     }
@@ -205,7 +213,7 @@ struct ChaosHubTabView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Community Pulse", systemImage: "chart.bar.xaxis")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .foregroundStyle(primaryText)
 
                 if let topic = generateViewModel.topCommunityTopics.first {
                     pulseRow(
@@ -245,7 +253,7 @@ struct ChaosHubTabView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Label("Quick Actions", systemImage: "bolt.horizontal.circle")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .foregroundStyle(primaryText)
 
                 HStack(spacing: 10) {
                     Button {
@@ -259,7 +267,7 @@ struct ChaosHubTabView: View {
                             .frame(maxWidth: .infinity, minHeight: 38)
                     }
                     .buttonStyle(.bordered)
-                    .tint(Theme.accent(for: settings.theme))
+                    .tint(accent)
 
                     Button {
                         generateViewModel.trackChaosHubAction("open_settings")
@@ -270,7 +278,7 @@ struct ChaosHubTabView: View {
                             .frame(maxWidth: .infinity, minHeight: 38)
                     }
                     .buttonStyle(.bordered)
-                    .tint(Theme.accent(for: settings.theme))
+                    .tint(accent)
                 }
             }
         }
@@ -282,29 +290,29 @@ struct ChaosHubTabView: View {
             Text(title)
         }
         .font(.caption.weight(.semibold))
-        .foregroundStyle(Theme.accent(for: settings.theme))
+        .foregroundStyle(accent)
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
         .background(
             Capsule(style: .continuous)
-                .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                .fill(accent.opacity(0.12))
         )
     }
 
     private func winMetric(title: String, value: String) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.headline.weight(.bold))
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .font(.headline.weight(.bold).monospacedDigit())
+                .foregroundStyle(primaryText)
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Theme.accent(for: settings.theme).opacity(0.08))
+                .fill(accent.opacity(0.08))
         )
     }
 
@@ -312,32 +320,32 @@ struct ChaosHubTabView: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
             Text(body)
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(2)
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .foregroundStyle(primaryText)
             Text(detail)
                 .font(.caption)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Theme.secondaryText(for: settings.theme).opacity(0.09))
+                .fill(secondaryText.opacity(0.09))
         )
     }
 
     private func pulsePlaceholder(_ text: String) -> some View {
         Text(text)
             .font(.caption)
-            .foregroundStyle(Theme.secondaryText(for: settings.theme))
+            .foregroundStyle(secondaryText.opacity(0.7))
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Theme.secondaryText(for: settings.theme).opacity(0.09))
+                    .fill(secondaryText.opacity(0.06))
             )
     }
 
@@ -351,7 +359,7 @@ struct ChaosHubTabView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Theme.accent(for: settings.theme).opacity(0.12), lineWidth: 1)
+                    .stroke(accent.opacity(0.12), lineWidth: 1)
             )
     }
 
@@ -359,7 +367,7 @@ struct ChaosHubTabView: View {
         VStack(alignment: .leading, spacing: 12) {
             Label("Chaos Contracts", systemImage: "signature")
                 .font(.subheadline.weight(.bold))
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .foregroundStyle(primaryText)
                 .padding(.horizontal, 4)
 
             ForEach(sampleContracts) { contract in
@@ -394,20 +402,20 @@ struct ChaosHubTabView: View {
             HStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .fill(Theme.accent(for: settings.theme).opacity(0.1))
+                        .fill(accent.opacity(0.1))
                         .frame(width: 44, height: 44)
                     Image(systemName: contract.icon)
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Theme.accent(for: settings.theme))
+                        .foregroundStyle(accent)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(contract.title)
                         .font(.headline.weight(.bold))
-                        .foregroundStyle(Theme.primaryText(for: settings.theme))
+                        .foregroundStyle(primaryText)
                     Text(contract.description)
                         .font(.caption)
-                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .foregroundStyle(secondaryText)
                         .lineLimit(2)
                 }
 
@@ -422,9 +430,10 @@ struct ChaosHubTabView: View {
                         .font(.caption.weight(.bold))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Capsule().fill(Theme.accent(for: settings.theme)))
+                        .background(Capsule().fill(accent))
                         .foregroundStyle(Theme.buttonText(for: settings.theme))
                 }
+                .accessibilityLabel("Accept contract: \(contract.title)")
             }
         }
     }

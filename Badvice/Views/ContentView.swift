@@ -69,7 +69,7 @@ private struct ScrollTrackingModifier: ViewModifier {
                         if accessibilityReduceMotion {
                             tabBarVisible.wrappedValue = nextVisibility
                         } else {
-                            withAnimation(.easeInOut(duration: 0.25)) {
+                            withAnimation(.easeInOut(duration: Theme.animMedium)) {
                                 tabBarVisible.wrappedValue = nextVisibility
                             }
                         }
@@ -195,6 +195,9 @@ struct ContentView: View {
                         }
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
+                    // Extend only the bottom edge so the custom tab bar overlaps the home indicator
+                    // region without pushing content under the Dynamic Island / status bar.
+                    .ignoresSafeArea(.all, edges: .bottom)
                     // Performance: Disable animation if reduce motion is enabled
                     .animation(constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
                     

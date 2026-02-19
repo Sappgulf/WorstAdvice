@@ -140,7 +140,7 @@ struct SettingsTabView: View {
     @Bindable var viewModel: SettingsViewModel
     @Bindable var generateViewModel: GenerateViewModel
     @Bindable var quotesViewModel: QuotesViewModel
-    
+
     @State private var sectionsAppeared = false
     @State private var gearWobble = false
     @State private var gearSpinDegrees: Double = 0
@@ -148,6 +148,13 @@ struct SettingsTabView: View {
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    // Cache version string — Bundle lookup is expensive inside body
+    private static let appVersion: String = {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–"
+        return "Badvice v\(v) (\(b))"
+    }()
 
     private var isMotionReduced: Bool {
         viewModel.reduceMotion || accessibilityReduceMotion
@@ -212,22 +219,28 @@ struct SettingsTabView: View {
                     VStack(spacing: 20) {
                         communityLabsSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 20)
+                            .offset(y: sectionsAppeared ? 0 : 18)
+                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.05), value: sectionsAppeared)
                         themeSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 20)
+                            .offset(y: sectionsAppeared ? 0 : 18)
+                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.11), value: sectionsAppeared)
                         experienceSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 20)
+                            .offset(y: sectionsAppeared ? 0 : 18)
+                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.17), value: sectionsAppeared)
                         sharingSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 20)
+                            .offset(y: sectionsAppeared ? 0 : 18)
+                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.23), value: sectionsAppeared)
                         dataSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 20)
+                            .offset(y: sectionsAppeared ? 0 : 18)
+                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.29), value: sectionsAppeared)
                         aboutSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 20)
+                            .offset(y: sectionsAppeared ? 0 : 18)
+                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.35), value: sectionsAppeared)
                     }
                     .padding(.horizontal, 16)
                 }
@@ -240,18 +253,12 @@ struct SettingsTabView: View {
             .onAppear {
                 sectionsAppeared = false
                 gearWobble = false
-                if isMotionReduced {
-                    sectionsAppeared = true
-                } else {
-                    DispatchQueue.main.async {
-                        withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
-                            sectionsAppeared = true
-                        }
-                        gearWobble = true
-                    }
-                }
-                // Show tab bar when entering settings
                 tabBarVisible.wrappedValue = true
+                // A tiny async hop lets SwiftUI finish layout before animating in
+                DispatchQueue.main.async {
+                    sectionsAppeared = true
+                    if !isMotionReduced { gearWobble = true }
+                }
             }
             .onDisappear {
                 sectionsAppeared = false
@@ -494,9 +501,7 @@ struct SettingsTabView: View {
                 .buttonStyle(.plain)
 
                 settingsDivider
-                let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–"
-                let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–"
-                Text("Badvice v\(version) (\(build))")
+                Text(Self.appVersion)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity)

@@ -14,6 +14,12 @@ struct FavoritesTabView: View {
         settings.reduceMotion || accessibilityReduceMotion
     }
 
+    // Hoist per-theme lookups
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+
     enum FavoritesLayout: String, CaseIterable, Identifiable {
         case list
         case grid
@@ -57,7 +63,7 @@ struct FavoritesTabView: View {
             Section {
                 favoritesSummaryRow
             }
-            .listRowBackground(Theme.cardColor(for: settings.theme))
+            .listRowBackground(cardColor)
 
             let items = viewModel.filteredFavorites
             ForEach(items, id: \.id) { record in
@@ -67,35 +73,35 @@ struct FavoritesTabView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(record.adviceLine)
                             .font(.body.weight(.medium))
-                            .foregroundStyle(Theme.primaryText(for: settings.theme))
+                            .foregroundStyle(primaryText)
                             .lineLimit(3)
                             .lineSpacing(2)
 
                         HStack(spacing: 6) {
                             Label(record.category.title, systemImage: record.category.icon)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(Theme.accent(for: settings.theme))
+                                .foregroundStyle(accent)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
                                 .background(
                                     Capsule(style: .continuous)
-                                        .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                                        .fill(accent.opacity(0.12))
                                 )
 
                             Text(record.tone.title)
                                 .font(.caption)
-                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                .foregroundStyle(secondaryText)
 
                             if record.aftermathNote != nil {
                                 Image(systemName: "book.pages")
                                     .font(.caption)
-                                    .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.7))
+                                    .foregroundStyle(accent.opacity(0.7))
                             }
                         }
                     }
                     .padding(.vertical, 6)
                 }
-                .listRowBackground(Theme.cardColor(for: settings.theme))
+                .listRowBackground(cardColor)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         viewModel.delete(record)
@@ -114,6 +120,7 @@ struct FavoritesTabView: View {
         }
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
         .opacity(listContentAppeared ? 1 : 0)
         .offset(y: listContentAppeared ? 0 : 12)
     }
@@ -132,18 +139,18 @@ struct FavoritesTabView: View {
                                 HStack(spacing: 6) {
                                     Label(record.category.title, systemImage: record.category.icon)
                                         .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(Theme.accent(for: settings.theme))
+                                        .foregroundStyle(accent)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
                                         .background(
                                             Capsule(style: .continuous)
-                                                .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                                                .fill(accent.opacity(0.12))
                                         )
                                     Spacer(minLength: 0)
                                     if record.aftermathNote != nil {
                                         Image(systemName: "book.pages")
                                             .font(.caption2)
-                                            .foregroundStyle(Theme.accent(for: settings.theme).opacity(0.7))
+                                            .foregroundStyle(accent.opacity(0.7))
                                     }
                                 }
 
@@ -153,23 +160,23 @@ struct FavoritesTabView: View {
                                     .font(.footnote.weight(.medium))
                                     .lineLimit(5)
                                     .multilineTextAlignment(.leading)
-                                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                    .foregroundStyle(primaryText)
                                     .lineSpacing(2)
 
                                 Spacer(minLength: 10)
 
                                 Text(record.tone.title)
                                     .font(.caption2)
-                                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                    .foregroundStyle(secondaryText)
                             }
                             .padding(14)
                             .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
                             .background(
                                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .fill(Theme.cardColor(for: settings.theme))
+                                    .fill(cardColor)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                            .stroke(Theme.accent(for: settings.theme).opacity(0.08), lineWidth: 1)
+                                            .stroke(accent.opacity(0.08), lineWidth: 1)
                                     )
                             )
                         }
@@ -184,6 +191,7 @@ struct FavoritesTabView: View {
             .padding(.horizontal, Theme.horizontalPadding)
             .padding(.bottom, 18)
         }
+        .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
         .opacity(listContentAppeared ? 1 : 0)
         .offset(y: listContentAppeared ? 0 : 12)
     }
@@ -202,11 +210,11 @@ struct FavoritesTabView: View {
                     .padding(.vertical, 4)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(Theme.accent(for: settings.theme).opacity(0.14))
+                            .fill(accent.opacity(0.14))
                     )
             }
         }
-        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+        .foregroundStyle(secondaryText)
         .padding(.vertical, 4)
     }
 
@@ -425,6 +433,7 @@ struct QuotesTabView: View {
 
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
+    @State private var activeToast: ToastMessage? = nil
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -580,6 +589,7 @@ struct QuotesTabView: View {
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
+        .toast(item: $activeToast, accentColor: Theme.accent(for: settings.theme))
         .onAppear {
             // Show tab bar in list views
             tabBarVisible.wrappedValue = true
@@ -696,6 +706,7 @@ struct QuotesTabView: View {
         UIPasteboard.general.string = viewModel.quoteShareText(quote)
         viewModel.trackCopy(quote, isDaily: isDaily)
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        activeToast = ToastMessage(message: "Copied!", style: .success)
     }
 
     private func shareQuote(_ quote: BadQuote, isDaily: Bool) {
@@ -775,7 +786,7 @@ private struct FavoriteDetailView: View {
 
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
-    @State private var copied = false
+    @State private var activeToast: ToastMessage? = nil
     @State private var aftermathText: String = ""
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -796,17 +807,14 @@ private struct FavoriteDetailView: View {
                     Button {
                         UIPasteboard.general.string = record.adviceLine
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        withAnimation { copied = true }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-                            withAnimation { copied = false }
-                        }
+                        activeToast = ToastMessage(message: "Copied!", style: .success)
                     } label: {
-                        Label(copied ? "Copied!" : "Copy Text", systemImage: copied ? "checkmark" : "doc.on.doc")
+                        Label("Copy Text", systemImage: "doc.on.doc")
                             .font(.subheadline.weight(.semibold))
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
-                    .tint(copied ? Theme.accent(for: settings.theme) : nil)
+                    .tint(Theme.accent(for: settings.theme))
 
                     Button {
                         let content = ShareCardContent(
@@ -891,6 +899,7 @@ private struct FavoriteDetailView: View {
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
+        .toast(item: $activeToast, accentColor: Theme.accent(for: settings.theme))
     }
 }
 
@@ -908,7 +917,7 @@ struct ScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1.0)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(.easeOut(duration: Theme.animFast), value: configuration.isPressed)
     }
 }
 

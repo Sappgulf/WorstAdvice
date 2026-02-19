@@ -311,6 +311,7 @@ struct GenerateTabView: View {
     @State private var showingShareSheet = false
     @State private var showingAdvanced = false
     @State private var generateButtonPulsing = false
+    @State private var activeToast: ToastMessage? = nil
     @AppStorage("hasDismissedWhatsNewCard_2026_02b") private var hasDismissedWhatsNewCard = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -318,6 +319,12 @@ struct GenerateTabView: View {
     private var isMotionReduced: Bool {
         settings.reduceMotion || accessibilityReduceMotion
     }
+
+    // Hoist per-theme lookups so each is a single switch instead of many repeated calls per body
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
 
     var body: some View {
         ScrollView {
@@ -384,6 +391,7 @@ struct GenerateTabView: View {
             onDataChanged()
             HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
         }
+        .toast(item: $activeToast, accentColor: accent)
 
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
@@ -397,21 +405,21 @@ struct GenerateTabView: View {
         HStack(spacing: 0) {
             // Left accent bar
             RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(Theme.accent(for: settings.theme))
+                .fill(accent)
                 .frame(width: 3)
                 .padding(.vertical, 2)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("Bad Quote of the Day")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
                 Text("\u{201C}\(viewModel.dailyBadQuote.text)\u{201D}")
                     .font(.footnote.weight(.medium))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .foregroundStyle(primaryText)
                     .lineLimit(3)
                 Text("— \(viewModel.dailyBadQuote.source)")
                     .font(.caption2)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -421,7 +429,7 @@ struct GenerateTabView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Theme.cardColor(for: settings.theme))
+                .fill(cardColor)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .combine)
@@ -469,26 +477,26 @@ struct GenerateTabView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title.uppercased())
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
                 Text(value)
                     .font(Theme.bodyFont.weight(.semibold))
                     .lineLimit(1)
-                    .foregroundStyle(Theme.accent(for: settings.theme))
+                    .foregroundStyle(accent)
             }
             Spacer(minLength: 8)
             Image(systemName: "chevron.down")
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme).opacity(0.6))
+                .foregroundStyle(secondaryText.opacity(0.6))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, minHeight: 52)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Theme.cardColor(for: settings.theme))
+                .fill(cardColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Theme.accent(for: settings.theme).opacity(0.12), lineWidth: 1)
+                        .stroke(accent.opacity(0.12), lineWidth: 1)
                 )
         )
     }
@@ -500,13 +508,13 @@ struct GenerateTabView: View {
             Text(title)
                 .font(.caption2)
         }
-        .foregroundStyle(Theme.primaryText(for: settings.theme))
+        .foregroundStyle(primaryText)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Theme.cardColor(for: settings.theme))
+                .fill(cardColor)
         )
     }
 
@@ -515,7 +523,7 @@ struct GenerateTabView: View {
             HStack {
                 Text("Situation (optional)")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
                 Spacer()
                 if !viewModel.scenarioText.isEmpty {
                     Button("Clear") {
@@ -533,9 +541,9 @@ struct GenerateTabView: View {
                 .frame(minHeight: 46)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Theme.cardColor(for: settings.theme))
+                        .fill(cardColor)
                 )
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .foregroundStyle(primaryText)
         }
     }
 
@@ -545,7 +553,7 @@ struct GenerateTabView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Friend Name (for roast mode)")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
 
                 TextField("Example: Alex", text: $viewModel.friendName)
                     .textFieldStyle(.plain)
@@ -555,9 +563,9 @@ struct GenerateTabView: View {
                     .frame(minHeight: 46)
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Theme.cardColor(for: settings.theme))
+                            .fill(cardColor)
                     )
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .foregroundStyle(primaryText)
             }
         }
     }
@@ -566,19 +574,19 @@ struct GenerateTabView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.challengeTitle)
                 .font(.subheadline.weight(.bold))
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .foregroundStyle(primaryText)
             Text(viewModel.challengeProgressText)
                 .font(.footnote)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
 
             GeometryReader { geometry in
                 let denominator = max(viewModel.challengeGoalDays, 1)
                 let progress = min(CGFloat(viewModel.challengeStreakDays) / CGFloat(denominator), 1)
                 RoundedRectangle(cornerRadius: 999, style: .continuous)
-                    .fill(Theme.secondaryText(for: settings.theme).opacity(0.18))
+                    .fill(secondaryText.opacity(0.18))
                     .overlay(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 999, style: .continuous)
-                            .fill(Theme.accent(for: settings.theme))
+                            .fill(accent)
                             .frame(width: geometry.size.width * progress)
                     }
             }
@@ -588,7 +596,7 @@ struct GenerateTabView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Theme.cardColor(for: settings.theme))
+                .fill(cardColor)
         )
     }
 
@@ -596,16 +604,16 @@ struct GenerateTabView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Why this is terrible")
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
             Text(viewModel.lastWhyTerrible)
                 .font(.footnote)
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .foregroundStyle(primaryText)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Theme.cardColor(for: settings.theme))
+                .fill(cardColor)
         )
     }
 
@@ -621,13 +629,12 @@ struct GenerateTabView: View {
                     HapticsManager.play(style: .medium, isEnabled: settings.hapticsEnabled)
                 }
             } label: {
-
                 Label(viewModel.primaryActionTitle, systemImage: "sparkles")
                     .font(Theme.bodyFont.weight(.bold))
                     .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.accent(for: settings.theme))
+            .tint(accent)
             .foregroundStyle(Theme.buttonText(for: settings.theme))
             .disabled(viewModel.isGenerating)
             .scaleEffect(generateButtonPulsing ? 1.03 : 1.0)
@@ -672,7 +679,7 @@ struct GenerateTabView: View {
                 .buttonStyle(.bordered)
                 .disabled(viewModel.isGenerating)
             }
-            .tint(Theme.accent(for: settings.theme))
+            .tint(accent)
 
             // Save / Copy / Share rail
             HStack(spacing: 14) {
@@ -681,9 +688,14 @@ struct GenerateTabView: View {
                     systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
                     isEnabled: hasCurrent && !viewModel.isGenerating
                 ) {
+                    let wasFavorite = viewModel.isCurrentFavorite
                     viewModel.toggleFavorite()
                     onDataChanged()
-                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                    activeToast = ToastMessage(
+                        message: wasFavorite ? "Removed from Favorites" : "Saved!",
+                        style: wasFavorite ? .deleted : .success
+                    )
                 }
 
                 railButton(
@@ -694,6 +706,7 @@ struct GenerateTabView: View {
                     UIPasteboard.general.string = viewModel.currentShareText
                     viewModel.trackCopy()
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    activeToast = ToastMessage(message: "Copied!", style: .success)
                 }
 
                 railButton(
@@ -711,32 +724,32 @@ struct GenerateTabView: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .tint(Theme.accent(for: settings.theme))
-        .foregroundStyle(Theme.primaryText(for: settings.theme))
+        .tint(accent)
+        .foregroundStyle(primaryText)
     }
 
     private var tabShortcutRow: some View {
         HStack(spacing: 8) {
             quickOpenButton(title: "Chaos Hub", systemImage: "flame.fill", tab: .chaosHub)
-            quickOpenButton(title: "Open Quotes", systemImage: "quote.bubble", tab: .quotes)
-            quickOpenButton(title: "Open Favorites", systemImage: "bookmark", tab: .favorites)
-            quickOpenButton(title: "Open History", systemImage: "clock", tab: .history)
+            quickOpenButton(title: "Quotes", systemImage: "quote.bubble", tab: .quotes)
+            quickOpenButton(title: "Favorites", systemImage: "bookmark", tab: .favorites)
+            quickOpenButton(title: "History", systemImage: "clock", tab: .history)
         }
     }
 
     private var whatsNewCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
-                Label("What’s New", systemImage: "sparkles")
+                Label("What's New", systemImage: "sparkles")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .foregroundStyle(primaryText)
                 Spacer()
                 Button {
                     hasDismissedWhatsNewCard = true
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title3)
-                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .foregroundStyle(secondaryText)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Dismiss what's new")
@@ -744,7 +757,7 @@ struct GenerateTabView: View {
 
             Text("New: Chaos Hub combines daily missions, community pulse, and your wins. ML Remix now sharpens tone and category variety.")
                 .font(.footnote)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
@@ -756,7 +769,7 @@ struct GenerateTabView: View {
                         .font(.caption.weight(.semibold))
                 }
                 .buttonStyle(.bordered)
-                .tint(Theme.accent(for: settings.theme))
+                .tint(accent)
 
                 Button {
                     hasDismissedWhatsNewCard = true
@@ -765,7 +778,7 @@ struct GenerateTabView: View {
                         .font(.caption.weight(.semibold))
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Theme.accent(for: settings.theme))
+                .tint(accent)
                 .foregroundStyle(Theme.buttonText(for: settings.theme))
             }
         }
@@ -773,11 +786,11 @@ struct GenerateTabView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Theme.cardColor(for: settings.theme))
+                .fill(cardColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Theme.accent(for: settings.theme).opacity(0.12), lineWidth: 1)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
     }
@@ -791,7 +804,7 @@ struct GenerateTabView: View {
                 .frame(maxWidth: .infinity, minHeight: 36)
         }
         .buttonStyle(.bordered)
-        .tint(Theme.accent(for: settings.theme))
+        .tint(accent)
     }
 
     private func openTab(_ tab: AppTab) {
@@ -812,7 +825,7 @@ struct GenerateTabView: View {
                     .frame(width: 44, height: 44)
                     .background(
                         Circle()
-                            .fill(Theme.cardColor(for: settings.theme))
+                            .fill(cardColor)
                     )
                 Text(title)
                     .font(.caption2.weight(.semibold))
@@ -831,7 +844,7 @@ struct GenerateTabView: View {
             HStack(spacing: 12) {
                 Text("Rate this advice")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
 
                 Spacer()
 
@@ -851,7 +864,7 @@ struct GenerateTabView: View {
                     .padding(.horizontal, viewModel.currentVote == .like ? 12 : 0)
                 }
                 .buttonStyle(.bordered)
-                .tint(viewModel.currentVote == .like ? Theme.accent(for: settings.theme) : Theme.secondaryText(for: settings.theme))
+                .tint(viewModel.currentVote == .like ? accent : secondaryText)
 
                 Button {
                     viewModel.toggleVote(.dislike)
@@ -869,13 +882,13 @@ struct GenerateTabView: View {
                     .padding(.horizontal, viewModel.currentVote == .dislike ? 12 : 0)
                 }
                 .buttonStyle(.bordered)
-                .tint(viewModel.currentVote == .dislike ? Theme.accent(for: settings.theme).opacity(0.8) : Theme.secondaryText(for: settings.theme))
+                .tint(viewModel.currentVote == .dislike ? accent.opacity(0.8) : secondaryText)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Theme.cardColor(for: settings.theme))
+                    .fill(cardColor)
             )
         }
     }
@@ -885,7 +898,7 @@ struct GenerateTabView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text(viewModel.uniquenessStatusText)
                     .font(.caption)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
                 statStrip
                 challengeCard
                 keywordSuggestionsRow
@@ -903,14 +916,14 @@ struct GenerateTabView: View {
                 Spacer()
                 Text("Streaks, keywords, and more")
                     .font(.caption)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
             }
-            .foregroundStyle(Theme.primaryText(for: settings.theme))
+            .foregroundStyle(primaryText)
         }
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Theme.cardColor(for: settings.theme))
+                .fill(cardColor)
         )
     }
 
@@ -931,7 +944,7 @@ struct GenerateTabView: View {
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     }
                     .buttonStyle(.bordered)
-                    .tint(Theme.accent(for: settings.theme))
+                    .tint(accent)
                 }
             }
         }
@@ -976,36 +989,32 @@ struct GenerateTabView: View {
 
 private struct GeneratingOverlay: View {
     let theme: ThemeMode
-    
+
+    // Cache theme colors so body doesn't call Theme switch statements every frame
+    private var accentColor: Color { Theme.accent(for: theme) }
+    private var secondaryAccentColor: Color { Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme) }
+    private var primaryTextColor: Color { Theme.primaryText(for: theme) }
+    private var glowColor: Color? { Theme.glowColor(for: theme) }
+
     @State private var rotation: Double = 0
     @State private var pulseScale: CGFloat = 1.0
-    @State private var orbitingDots: [OrbitingDot] = []
-    
-    struct OrbitingDot: Identifiable {
-        let id = UUID()
-        let angle: Double
-        let radius: CGFloat
-        let speed: Double
-        let size: CGFloat
-    }
-    
+
     var body: some View {
         ZStack {
-            // Blurred background with enhanced opacity
             Theme.cardColor(for: theme)
                 .opacity(0.92)
                 .blur(radius: 2)
-            
+
             VStack(spacing: 20) {
                 ZStack {
-                    // Central pulsing orb with dual-color support
+                    // Central pulsing orb — radial gradient built once per theme
                     Circle()
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    Theme.accent(for: theme).opacity(0.9),
-                                    Theme.secondaryAccent(for: theme)?.opacity(0.5) ?? Theme.accent(for: theme).opacity(0.5),
-                                    Theme.accent(for: theme).opacity(0.0)
+                                    accentColor.opacity(0.9),
+                                    secondaryAccentColor.opacity(0.5),
+                                    accentColor.opacity(0.0)
                                 ],
                                 center: .center,
                                 startRadius: 10,
@@ -1015,61 +1024,63 @@ private struct GeneratingOverlay: View {
                         .frame(width: 60, height: 60)
                         .scaleEffect(pulseScale)
                         .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseScale)
-                    
-                    // Spinning ring with gradient
-                    Circle()
-                        .stroke(
-                            AngularGradient(
-                                colors: [
-                                    Theme.accent(for: theme).opacity(0.0),
-                                    Theme.accent(for: theme),
-                                    Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme),
-                                    Theme.accent(for: theme).opacity(0.0)
-                                ],
-                                center: .center
-                            ),
-                            lineWidth: 3
-                        )
-                        .frame(width: 80, height: 80)
-                        .rotationEffect(.degrees(rotation))
-                        .animation(.linear(duration: 1.5).repeatForever(autoreverses: false), value: rotation)
-                    
-                    // Add glow for glow-supporting themes
-                    if let glowColor = Theme.glowColor(for: theme) {
+
+                    // Spinning ring — use Canvas to avoid per-frame View layout overhead
+                    Canvas { ctx, size in
+                        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+                        let r = size.width / 2 - 1.5
+                        var path = Path()
+                        path.addArc(center: center, radius: r, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
+                        ctx.stroke(path, with: .color(accentColor), lineWidth: 3)
+                    }
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(rotation))
+                    .animation(.linear(duration: 1.5).repeatForever(autoreverses: false), value: rotation)
+
+                    // Optional glow halo
+                    if let glow = glowColor {
                         Circle()
-                            .fill(glowColor.opacity(0.3))
+                            .fill(glow.opacity(0.3))
                             .blur(radius: 20)
                             .frame(width: 100, height: 100)
                             .scaleEffect(pulseScale)
                     }
-                    
-                    // Orbiting particles with theme colors
-                    ForEach(orbitingDots) { dot in
-                        Circle()
-                            .fill(
-                                dot.id.hashValue % 2 == 0 
-                                    ? Theme.accent(for: theme)
-                                    : (Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme))
-                            )
-                            .frame(width: dot.size, height: dot.size)
-                            .offset(
-                                x: cos(dot.angle + rotation * dot.speed) * dot.radius,
-                                y: sin(dot.angle + rotation * dot.speed) * dot.radius
-                            )
+
+                    // Orbiting dots drawn in Canvas — zero SwiftUI layout overhead per frame
+                    Canvas(rendersAsynchronously: false) { ctx, size in
+                        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+                        let dots: [(angle: Double, radius: CGFloat, speed: Double, sz: CGFloat, useSecondary: Bool)] = [
+                            (0,    45, 1.0,  8, false),
+                            (2.09, 45, 1.0,  6, true),
+                            (4.19, 45, 1.0,  8, false),
+                            (1.05, 35, -1.5, 5, true),
+                            (3.14, 35, -1.5, 5, false),
+                            (5.24, 35, -1.5, 5, true)
+                        ]
+                        let rotRad = rotation * .pi / 180
+                        for dot in dots {
+                            let a = dot.angle + rotRad * dot.speed
+                            let x = center.x + cos(a) * dot.radius
+                            let y = center.y + sin(a) * dot.radius
+                            let rect = CGRect(x: x - dot.sz / 2, y: y - dot.sz / 2, width: dot.sz, height: dot.sz)
+                            var path = Path(); path.addEllipse(in: rect)
+                            ctx.fill(path, with: .color(dot.useSecondary ? secondaryAccentColor : accentColor))
+                        }
                     }
+                    .frame(width: 100, height: 100)
                 }
                 .frame(width: 100, height: 100)
-                
+
                 VStack(spacing: 8) {
                     Text("Consulting the chaos...")
                         .font(.system(.subheadline, design: .rounded, weight: .bold))
-                        .foregroundStyle(Theme.primaryText(for: theme))
-                    
-                    // Animated ellipsis
+                        .foregroundStyle(primaryTextColor)
+
+                    // Animated ellipsis dots
                     HStack(spacing: 4) {
                         ForEach(0..<3) { i in
                             Circle()
-                                .fill(Theme.accent(for: theme))
+                                .fill(accentColor)
                                 .frame(width: 6, height: 6)
                                 .opacity(pulseScale > 1.1 - Double(i) * 0.15 ? 1.0 : 0.3)
                                 .animation(
@@ -1092,16 +1103,6 @@ private struct GeneratingOverlay: View {
         .onAppear {
             rotation = 360
             pulseScale = 1.2
-            
-            // Initialize orbiting dots
-            orbitingDots = [
-                OrbitingDot(angle: 0, radius: 45, speed: 1.0, size: 8),
-                OrbitingDot(angle: 2.09, radius: 45, speed: 1.0, size: 6),
-                OrbitingDot(angle: 4.19, radius: 45, speed: 1.0, size: 8),
-                OrbitingDot(angle: 1.05, radius: 35, speed: -1.5, size: 5),
-                OrbitingDot(angle: 3.14, radius: 35, speed: -1.5, size: 5),
-                OrbitingDot(angle: 5.24, radius: 35, speed: -1.5, size: 5)
-            ]
         }
     }
 }
