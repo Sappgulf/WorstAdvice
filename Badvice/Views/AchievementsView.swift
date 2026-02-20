@@ -37,7 +37,7 @@ final class AchievementsManager {
 
     private func targetFor(_ type: AchievementType) -> Int {
         switch type {
-        case .firstAdvice, .firstSave, .nightOwl, .earlyBird, .shakeItOff, .suggestionAccepted:
+        case .firstAdvice, .firstSave, .nightOwl, .earlyBird, .shakeItOff, .suggestionAccepted, .bugHunter:
             return 1
         case .tenAdvice:
             return 10

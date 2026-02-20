@@ -1,5 +1,17 @@
 import SwiftUI
 
+struct Shake: GeometryEffect {
+    var amount: CGFloat = 8
+    var shakesPerUnit = 4
+    var animatableData: CGFloat
+
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        ProjectionTransform(CGAffineTransform(translationX:
+            amount * sin(animatableData * .pi * CGFloat(shakesPerUnit)),
+            y: 0))
+    }
+}
+
 struct AdviceCardView: View {
     let record: AdviceRecord
     let theme: ThemeMode
@@ -15,6 +27,9 @@ struct AdviceCardView: View {
     @State private var rotationY: Double = 0
     @State private var rippleScale: CGFloat = 0.5
     @State private var rippleOpacity: Double = 0
+    
+    // Polish: Screen Shake
+    @State private var shakeCount: Int = 0
     
     // Performance: Cache computed values
     @State private var cachedShadow: (color: Color, radius: CGFloat, y: CGFloat)?
@@ -145,7 +160,7 @@ struct AdviceCardView: View {
             }
             .conditionalDrawingGroup(!isMotionReduced)
         }
-
+        .modifier(Shake(animatableData: CGFloat(shakeCount)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .stroke(
@@ -290,6 +305,14 @@ struct AdviceCardView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.55)) {
                     rotationX = 0
+                }
+            }
+
+            // Screen Shake for intense tones
+            let intenseTones: Set<ToneMode> = [.toxicBestFriend, .alphaPodcast, .cryptoBro, .conspiracyTheorist]
+            if intenseTones.contains(record.tone) {
+                withAnimation(.linear(duration: 0.3)) {
+                    shakeCount += 1
                 }
             }
         }

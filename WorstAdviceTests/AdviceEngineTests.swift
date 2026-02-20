@@ -516,7 +516,8 @@ final class PersistenceTests: XCTestCase {
     func testDailyMissionProgressCompletesFromTodayGeneration() async throws {
         let repository = try makeRepository()
         let settings = SettingsViewModel(repository: repository)
-        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
+        let achievements = AchievementsManager(context: repository.context)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings, achievementsManager: achievements)
         let mission = generate.dailyMissionState
 
         XCTAssertGreaterThan(mission.targetCount, 0)
@@ -843,7 +844,8 @@ final class PersistenceTests: XCTestCase {
     func testWeeklyMissionProgressIncrementsForMatchingGenerations() async throws {
         let repository = try makeRepository()
         let settings = SettingsViewModel(repository: repository)
-        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
+        let achievements = AchievementsManager(context: repository.context)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings, achievementsManager: achievements)
         let baseline = generate.weeklyMissionState
 
         generate.selectedCategory = baseline.category
@@ -859,7 +861,8 @@ final class PersistenceTests: XCTestCase {
     func testWeeklyMissionKeyResetsAcrossWeekBoundary() throws {
         let repository = try makeRepository()
         let settings = SettingsViewModel(repository: repository)
-        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
+        let achievements = AchievementsManager(context: repository.context)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings, achievementsManager: achievements)
 
         let start = Date(timeIntervalSince1970: 1_763_000_000)
         let nextWeek = start.addingTimeInterval(86_400 * 8)
@@ -1079,7 +1082,8 @@ final class PersistenceTests: XCTestCase {
     func testGenerateChallengeStreakMatchesLegacyComputation() async throws {
         let repository = try makeRepository()
         let settings = SettingsViewModel(repository: repository)
-        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
+        let achievements = AchievementsManager(context: repository.context)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings, achievementsManager: achievements)
         let calendar = Calendar.current
         let now = Date()
         let today = calendar.startOfDay(for: now)
@@ -1114,7 +1118,8 @@ final class PersistenceTests: XCTestCase {
     func testGenerateRetentionSnapshotInvalidationUpdatesStreakAfterHistoryMutation() throws {
         let repository = try makeRepository()
         let settings = SettingsViewModel(repository: repository)
-        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings)
+        let achievements = AchievementsManager(context: repository.context)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings, achievementsManager: achievements)
         let calendar = Calendar.current
         let now = Date()
         let today = calendar.startOfDay(for: now)

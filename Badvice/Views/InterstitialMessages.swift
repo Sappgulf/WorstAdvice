@@ -140,6 +140,7 @@ struct SettingsTabView: View {
     @Bindable var viewModel: SettingsViewModel
     @Bindable var generateViewModel: GenerateViewModel
     @Bindable var quotesViewModel: QuotesViewModel
+    var achievementsManager: AchievementsManager
 
     @State private var sectionsAppeared = false
     @State private var gearWobble = false
@@ -305,6 +306,19 @@ struct SettingsTabView: View {
                         "Advice Suggestion Lab",
                         systemImage: "plus.bubble",
                         badge: generateViewModel.communitySuggestionCount > 0 ? "\(generateViewModel.communitySuggestionCount)" : nil
+                    )
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                NavigationLink {
+                    AchievementsView(manager: achievementsManager, theme: viewModel.theme)
+                } label: {
+                    settingsNavRow(
+                        "Achievements",
+                        systemImage: "trophy.fill",
+                        badge: achievementsManager.unlockedAchievementCount > 0 ? "\(achievementsManager.unlockedAchievementCount)" : nil
                     )
                 }
                 .buttonStyle(.plain)

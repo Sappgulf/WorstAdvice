@@ -1913,6 +1913,7 @@ final class GenerateViewModel {
     private let badQuoteService: BadQuoteService
     private let moderation: ContentModeration
     private let analyticsTracker: AnalyticsTracking
+    private let achievementsManager: AchievementsManager
 
     var selectedCategory: AdviceCategory = .dating
     var selectedTone: ToneMode = .corporateConsultant
@@ -1956,7 +1957,8 @@ final class GenerateViewModel {
         store: AdviceStore = AdviceStore(),
         badQuoteService: BadQuoteService = BadQuoteService(),
         moderation: ContentModeration = ContentModeration(),
-        analyticsTracker: AnalyticsTracking = AppAnalyticsTracker()
+        analyticsTracker: AnalyticsTracking = AppAnalyticsTracker(),
+        achievementsManager: AchievementsManager
     ) {
         self.repository = repository
         self.settingsViewModel = settingsViewModel
@@ -1965,6 +1967,7 @@ final class GenerateViewModel {
         self.moderation = moderation
         self.engine = AdviceEngine(store: store, moderation: moderation)
         self.analyticsTracker = analyticsTracker
+        self.achievementsManager = achievementsManager
         repository.seedAdviceMemoryFromHistoryIfNeeded()
         self.current = repository.fetchHistory(limit: 1).first
         self.primaryActionTitle = Self.primaryActionTitles.first ?? "Advise Me"
@@ -2150,6 +2153,12 @@ final class GenerateViewModel {
             type: .shown
         )
         leaderboardVersion += 1
+
+        // Achievement Tracking
+        let total = repository.historyCount()
+        achievementsManager.trackAdviceGenerated(tone: output.tone, category: output.category, totalCount: total)
+        achievementsManager.trackStreak(days: challengeStreakDays)
+
         analyticsTracker.track("generate", properties: [
             "category": output.category.rawValue,
             "selected_category": selectedCategory.rawValue,
@@ -3981,13 +3990,15 @@ final class AppSessionViewModel {
     let favorites: FavoritesViewModel
     let history: HistoryViewModel
     let quotes: QuotesViewModel
+    let achievements: AchievementsManager
     private let analyticsTracker: AnalyticsTracking
 
     init(context: ModelContext) {
         self.analyticsTracker = AppAnalyticsTracker()
         self.repository = AdviceRepository(context: context)
         self.settings = SettingsViewModel(repository: repository)
-        self.generate = GenerateViewModel(repository: repository, settingsViewModel: settings, analyticsTracker: analyticsTracker)
+        self.achievements = AchievementsManager(context: context)
+        self.generate = GenerateViewModel(repository: repository, settingsViewModel: settings, analyticsTracker: analyticsTracker, achievementsManager: achievements)
         self.favorites = FavoritesViewModel(repository: repository, analyticsTracker: analyticsTracker)
         self.history = HistoryViewModel(repository: repository, analyticsTracker: analyticsTracker)
         self.quotes = QuotesViewModel(repository: repository, analyticsTracker: analyticsTracker)

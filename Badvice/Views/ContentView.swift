@@ -558,7 +558,8 @@ struct ContentView: View {
             SettingsTabView(
                 viewModel: session.settings,
                 generateViewModel: session.generate,
-                quotesViewModel: session.quotes
+                quotesViewModel: session.quotes,
+                achievementsManager: session.achievements
             )
         }
     }
