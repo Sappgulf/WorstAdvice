@@ -623,7 +623,10 @@ struct FavoritesTabView: View {
                 }
             }
         }
-        .onDisappear { emptyStateAppeared = false }
+        .onDisappear {
+            emptyStateAppeared = false
+            floatingOffset = 0
+        }
     }
 
     @State private var noResultsAppeared = false
@@ -1140,8 +1143,12 @@ private struct FavoriteDetailView: View {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
+    private let aftermathCharLimit = 280
     private var aftermathIsDirty: Bool { aftermathText != (record.aftermathNote ?? "") }
+    private var aftermathCharCount: Int { aftermathText.count }
+    private var aftermathNearLimit: Bool { aftermathCharCount >= Int(Double(aftermathCharLimit) * 0.8) }
     private var accent: Color { Theme.accent(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
     var body: some View {
@@ -1201,6 +1208,13 @@ private struct FavoriteDetailView: View {
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(accent)
                             Spacer()
+                            if aftermathNearLimit {
+                                Text("\(aftermathCharCount)/\(aftermathCharLimit)")
+                                    .font(.caption2.monospacedDigit())
+                                    .foregroundStyle(aftermathCharCount >= aftermathCharLimit ? .red : secondaryText)
+                                    .animation(isMotionReduced ? nil : .easeInOut(duration: Theme.animFast), value: aftermathCharCount)
+                                    .transition(.opacity.combined(with: .scale(scale: 0.85)))
+                            }
                             if aftermathIsDirty {
                                 Button {
                                     HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
@@ -1217,6 +1231,7 @@ private struct FavoriteDetailView: View {
                             }
                         }
                         .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.7), value: aftermathIsDirty)
+                        .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.7), value: aftermathNearLimit)
 
                         TextField(
                             "Did you follow this? What happened?",
@@ -1230,6 +1245,11 @@ private struct FavoriteDetailView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .onChange(of: aftermathText) { _, newValue in
+                            if newValue.count > aftermathCharLimit {
+                                aftermathText = String(newValue.prefix(aftermathCharLimit))
+                            }
+                        }
                     }
                     .padding(.horizontal, Theme.horizontalPadding)
                     .onAppear { aftermathText = record.aftermathNote ?? "" }
@@ -1345,6 +1365,7 @@ struct HistoryTabView: View {
                             historyCategoryChips
 
                             // Stats strip
+                            let filtersActive = viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty
                             HStack {
                                 Label("\(viewModel.likedCount)", systemImage: "hand.thumbsup.fill")
                                     .font(.caption.weight(.semibold))
@@ -1353,9 +1374,18 @@ struct HistoryTabView: View {
                                     .font(.caption)
                                     .foregroundStyle(secondaryText)
                                 Spacer()
-                                Text("\(viewModel.filteredHistory.count) shown")
-                                    .font(.caption.monospacedDigit())
-                                    .foregroundStyle(secondaryText)
+                                HStack(spacing: 3) {
+                                    if filtersActive {
+                                        Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                                            .font(.caption2)
+                                            .foregroundStyle(accent)
+                                            .transition(.opacity.combined(with: .scale(scale: 0.7)))
+                                    }
+                                    Text("\(viewModel.filteredHistory.count) shown")
+                                        .font(.caption.weight(filtersActive ? .semibold : .regular).monospacedDigit())
+                                        .foregroundStyle(filtersActive ? accent : secondaryText)
+                                }
+                                .animation(isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7), value: filtersActive)
                                 Spacer()
                                 Text("disliked")
                                     .font(.caption)

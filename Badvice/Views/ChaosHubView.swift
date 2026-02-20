@@ -11,6 +11,10 @@ struct ChaosHubTabView: View {
 
     @State private var contentAppeared = false
     @State private var visibleContracts: [ChaosContract] = []
+    @State private var dailyMissionWasComplete = false
+    @State private var weeklyMissionWasComplete = false
+    @State private var missionCompletePulse = false
+    @State private var weeklyCompletePulse = false
 
     private var chaosScore: Int {
         let streak = min(generateViewModel.challengeStreakDays, 14)
@@ -110,6 +114,9 @@ struct ChaosHubTabView: View {
                 if visibleContracts.isEmpty {
                     visibleContracts = Array(Self.allContracts.shuffled().prefix(2))
                 }
+                // Seed initial completion state so first onChange fires correctly
+                dailyMissionWasComplete = generateViewModel.dailyMissionState.isComplete
+                weeklyMissionWasComplete = generateViewModel.weeklyMissionState.isComplete
                 if isMotionReduced {
                     contentAppeared = true
                 } else {
@@ -117,6 +124,26 @@ struct ChaosHubTabView: View {
                         contentAppeared = true
                     }
                 }
+            }
+            .onChange(of: generateViewModel.dailyMissionState.isComplete) { _, isComplete in
+                guard isComplete, !dailyMissionWasComplete, !isMotionReduced else {
+                    dailyMissionWasComplete = isComplete
+                    return
+                }
+                dailyMissionWasComplete = true
+                HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                missionCompletePulse = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { missionCompletePulse = false }
+            }
+            .onChange(of: generateViewModel.weeklyMissionState.isComplete) { _, isComplete in
+                guard isComplete, !weeklyMissionWasComplete, !isMotionReduced else {
+                    weeklyMissionWasComplete = isComplete
+                    return
+                }
+                weeklyMissionWasComplete = true
+                HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                weeklyCompletePulse = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { weeklyCompletePulse = false }
             }
         }
     }
@@ -199,6 +226,8 @@ struct ChaosHubTabView: View {
                             Text("Completed")
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(accent)
+                                .scaleEffect(missionCompletePulse ? 1.18 : 1.0)
+                                .animation(isMotionReduced ? nil : .spring(response: 0.25, dampingFraction: 0.5), value: missionCompletePulse)
                         }
                     }
 
@@ -210,6 +239,8 @@ struct ChaosHubTabView: View {
                                     .fill(accent)
                                     .frame(width: geo.size.width * CGFloat(mission.progressFraction))
                                     .animation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.75), value: mission.progressFraction)
+                                    .shadow(color: mission.isComplete ? accent.opacity(missionCompletePulse ? 0.7 : 0.3) : .clear, radius: missionCompletePulse ? 8 : 4)
+                                    .animation(isMotionReduced ? nil : .easeInOut(duration: 0.6), value: missionCompletePulse)
                             }
                     }
                     .frame(height: 8)
@@ -237,6 +268,8 @@ struct ChaosHubTabView: View {
                             Text("Reward ready")
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(accent)
+                                .scaleEffect(weeklyCompletePulse ? 1.18 : 1.0)
+                                .animation(isMotionReduced ? nil : .spring(response: 0.25, dampingFraction: 0.5), value: weeklyCompletePulse)
                         }
                     }
                     GeometryReader { geo in
@@ -247,6 +280,8 @@ struct ChaosHubTabView: View {
                                     .fill(accent.opacity(0.7))
                                     .frame(width: geo.size.width * CGFloat(weekly.progressFraction))
                                     .animation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.75), value: weekly.progressFraction)
+                                    .shadow(color: weekly.isComplete ? accent.opacity(weeklyCompletePulse ? 0.65 : 0.25) : .clear, radius: weeklyCompletePulse ? 7 : 3)
+                                    .animation(isMotionReduced ? nil : .easeInOut(duration: 0.6), value: weeklyCompletePulse)
                             }
                     }
                     .frame(height: 6)

@@ -145,6 +145,7 @@ struct SettingsTabView: View {
     @State private var gearWobble = false
     @State private var gearSpinDegrees: Double = 0
     @State private var gearIsSpinning = false
+    @State private var gearSettleScale: CGFloat = 1.0
 
     private let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
@@ -179,6 +180,13 @@ struct SettingsTabView: View {
                                 // Spin 720° (two full rotations) with a snappy spring
                                 gearSpinDegrees += 720
                             }
+                            // Settling breathe: compress slightly mid-spin then release
+                            if !isMotionReduced {
+                                withAnimation(.easeIn(duration: 0.18)) { gearSettleScale = 0.88 }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.52)) { gearSettleScale = 1.0 }
+                                }
+                            }
                             // After spin settles, resume idle wobble
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
                                 withAnimation(.easeOut(duration: 0.2)) {
@@ -194,9 +202,9 @@ struct SettingsTabView: View {
                                 .frame(width: 72, height: 72)
                                 // Idle wobble when not spinning
                                 .scaleEffect(
-                                    sectionsAppeared
+                                    (sectionsAppeared
                                         ? (isMotionReduced ? 1 : (gearIsSpinning ? 1.08 : (gearWobble ? 1.03 : 0.97)))
-                                        : 0.5
+                                        : 0.5) * gearSettleScale
                                 )
                                 .animation(
                                     isMotionReduced
@@ -278,6 +286,7 @@ struct SettingsTabView: View {
                 gearWobble = false
                 gearSpinDegrees = 0
                 gearIsSpinning = false
+                gearSettleScale = 1.0
             }
         }
     }
@@ -651,8 +660,16 @@ struct SettingsTabView: View {
             Spacer()
             if let badge {
                 Text(badge)
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Theme.accent(for: viewModel.theme))
+                    )
+                    .transition(.scale.combined(with: .opacity))
+                    .animation(.spring(response: 0.35, dampingFraction: 0.55), value: badge)
             }
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
@@ -694,6 +711,7 @@ private struct SuggestionLabView: View {
     @State private var suggestionTopic = ""
     @State private var suggestionAdviceLine = ""
     @State private var suggestionError = ""
+    @State private var submitSuccess = false
 
     var body: some View {
         Form {
@@ -717,19 +735,35 @@ private struct SuggestionLabView: View {
                         .foregroundStyle(.red)
                 }
 
-                Button("Submit") {
+                Button {
                     if let message = viewModel.submitSuggestion(
                         category: suggestionCategory,
                         topic: suggestionTopic,
                         adviceLine: suggestionAdviceLine
                     ) {
                         suggestionError = message
+                        submitSuccess = false
                     } else {
                         suggestionError = ""
                         suggestionTopic = ""
                         suggestionAdviceLine = ""
+                        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { submitSuccess = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                            withAnimation(.easeOut(duration: 0.3)) { submitSuccess = false }
+                        }
+                    }
+                } label: {
+                    if submitSuccess {
+                        Label("Submitted!", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    } else {
+                        Text("Submit")
+                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
                     }
                 }
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: submitSuccess)
                 .disabled(
                     suggestionTopic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     || suggestionAdviceLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -780,6 +814,7 @@ private struct QuoteSuggestionLabView: View {
     @State private var suggestionSource = ""
     @State private var suggestionQuoteText = ""
     @State private var suggestionError = ""
+    @State private var submitSuccess = false
 
     var body: some View {
         Form {
@@ -803,19 +838,35 @@ private struct QuoteSuggestionLabView: View {
                         .foregroundStyle(.red)
                 }
 
-                Button("Submit") {
+                Button {
                     if let message = viewModel.submitSuggestion(
                         category: suggestionCategory,
                         source: suggestionSource,
                         quoteText: suggestionQuoteText
                     ) {
                         suggestionError = message
+                        submitSuccess = false
                     } else {
                         suggestionError = ""
                         suggestionSource = ""
                         suggestionQuoteText = ""
+                        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { submitSuccess = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                            withAnimation(.easeOut(duration: 0.3)) { submitSuccess = false }
+                        }
+                    }
+                } label: {
+                    if submitSuccess {
+                        Label("Submitted!", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    } else {
+                        Text("Submit")
+                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
                     }
                 }
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: submitSuccess)
                 .disabled(suggestionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
 
