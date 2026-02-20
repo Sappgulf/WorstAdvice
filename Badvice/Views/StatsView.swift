@@ -511,6 +511,7 @@ struct FavoritesTabView: View {
     private var favoritesCategoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
+                let allSelected = viewModel.selectedCategory == nil
                 Button("All") {
                     viewModel.selectedCategory = nil
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
@@ -520,9 +521,11 @@ struct FavoritesTabView: View {
                 .padding(.vertical, 6)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(viewModel.selectedCategory == nil ? accent.opacity(0.2) : secondaryText.opacity(0.12))
+                        .fill(allSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
                 )
-                .foregroundStyle(viewModel.selectedCategory == nil ? accent : secondaryText)
+                .foregroundStyle(allSelected ? accent : secondaryText)
+                .scaleEffect(allSelected ? 1.06 : 1.0)
+                .animation(.spring(response: 0.22, dampingFraction: 0.58), value: allSelected)
 
                 ForEach(AdviceCategory.concrete) { category in
                     let isSelected = viewModel.selectedCategory == category
@@ -538,6 +541,8 @@ struct FavoritesTabView: View {
                             .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
                     )
                     .foregroundStyle(isSelected ? accent : secondaryText)
+                    .scaleEffect(isSelected ? 1.06 : 1.0)
+                    .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
                 }
             }
         }
@@ -693,6 +698,7 @@ struct QuotesTabView: View {
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
     var body: some View {
@@ -769,6 +775,8 @@ struct QuotesTabView: View {
                                                 .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
                                         )
                                         .foregroundStyle(isSelected ? accent : secondaryText)
+                                        .scaleEffect(isSelected ? 1.06 : 1.0)
+                                        .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
                                     }
                                 }
                                 .padding(.vertical, 2)
@@ -1058,7 +1066,7 @@ struct QuotesTabView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Theme.cardColor(for: settings.theme))
+                .fill(cardColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -1304,6 +1312,8 @@ struct HistoryTabView: View {
 
     @State private var showingClearConfirmation = false
     @State private var historyListAppeared = false
+    @State private var historyEmptyStateAppeared = false
+    @State private var historyFloatingOffset: CGFloat = 0
 
     private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
     private var accent: Color { Theme.accent(for: settings.theme) }
@@ -1360,7 +1370,10 @@ struct HistoryTabView: View {
                                 }
                             }
 
-                            historyQuickActions
+                            if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+                                historyQuickActions
+                                    .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
+                            }
 
                             historyCategoryChips
 
@@ -1396,6 +1409,7 @@ struct HistoryTabView: View {
                             }
                             .padding(.horizontal, 4)
                         }
+                        .animation(isMotionReduced ? nil : .easeInOut(duration: Theme.animFast), value: viewModel.selectedCategory == nil && viewModel.searchText.isEmpty)
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                         .padding(.bottom, 10)
@@ -1561,21 +1575,41 @@ struct HistoryTabView: View {
         VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(accent.opacity(0.1))
-                    .frame(width: 110, height: 110)
+                    .fill(accent.opacity(0.08))
+                    .frame(width: 130, height: 130)
+                    .scaleEffect(historyEmptyStateAppeared ? 1.0 : 0.7)
+                    .opacity(historyEmptyStateAppeared ? 1 : 0)
+                Circle()
+                    .fill(accent.opacity(0.13))
+                    .frame(width: 100, height: 100)
+                    .offset(y: historyFloatingOffset)
                 Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 46, weight: .medium))
-                    .foregroundStyle(accent.opacity(0.7))
+                    .font(.system(size: 42, weight: .medium))
+                    .foregroundStyle(accent)
+                    .offset(y: historyFloatingOffset)
+                    .symbolEffect(.bounce, options: .repeating, value: historyEmptyStateAppeared)
+            }
+            .onAppear {
+                guard !isMotionReduced else { return }
+                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+                    historyFloatingOffset = -9
+                }
             }
 
             VStack(spacing: 8) {
                 Text("No History Yet")
                     .font(.system(.title2, design: .rounded, weight: .bold))
                     .foregroundStyle(primaryText)
-                Text("Generate some advice to see it here.")
+                    .opacity(historyEmptyStateAppeared ? 1 : 0)
+                    .offset(y: historyEmptyStateAppeared ? 0 : 18)
+
+                Text("No bad decisions on record yet.\nThat's about to change.")
                     .font(.subheadline)
-                    .foregroundStyle(secondaryText)
                     .multilineTextAlignment(.center)
+                    .foregroundStyle(secondaryText)
+                    .lineSpacing(3)
+                    .opacity(historyEmptyStateAppeared ? 1 : 0)
+                    .offset(y: historyEmptyStateAppeared ? 0 : 12)
             }
 
             Button { onJumpToGenerate?() } label: {
@@ -1588,8 +1622,23 @@ struct HistoryTabView: View {
             .foregroundStyle(Theme.buttonText(for: settings.theme))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(.horizontal, 40)
+            .opacity(historyEmptyStateAppeared ? 1 : 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            guard !historyEmptyStateAppeared else { return }
+            if isMotionReduced {
+                historyEmptyStateAppeared = true
+            } else {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.72)) {
+                    historyEmptyStateAppeared = true
+                }
+            }
+        }
+        .onDisappear {
+            historyEmptyStateAppeared = false
+            historyFloatingOffset = 0
+        }
     }
 
     private var historyQuickActions: some View {
@@ -1611,6 +1660,7 @@ struct HistoryTabView: View {
     private var historyCategoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
+                let allSelected = viewModel.selectedCategory == nil
                 Button("All") {
                     viewModel.selectedCategory = nil
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
@@ -1620,9 +1670,11 @@ struct HistoryTabView: View {
                 .padding(.vertical, 6)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(viewModel.selectedCategory == nil ? accent.opacity(0.2) : secondaryText.opacity(0.12))
+                        .fill(allSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
                 )
-                .foregroundStyle(viewModel.selectedCategory == nil ? accent : secondaryText)
+                .foregroundStyle(allSelected ? accent : secondaryText)
+                .scaleEffect(allSelected ? 1.06 : 1.0)
+                .animation(.spring(response: 0.22, dampingFraction: 0.58), value: allSelected)
 
                 ForEach(AdviceCategory.concrete) { category in
                     let isSelected = viewModel.selectedCategory == category
@@ -1638,6 +1690,8 @@ struct HistoryTabView: View {
                             .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
                     )
                     .foregroundStyle(isSelected ? accent : secondaryText)
+                    .scaleEffect(isSelected ? 1.06 : 1.0)
+                    .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
                 }
             }
         }
@@ -1651,6 +1705,7 @@ struct HistoryTabView: View {
                 .font(.system(size: 36, weight: .medium))
                 .foregroundStyle(secondaryText.opacity(0.5))
                 .scaleEffect(noResultsAppeared ? 1 : 0.5)
+                .rotationEffect(.degrees(noResultsAppeared ? 0 : -20))
             Text("No matches found")
                 .font(.title3.weight(.bold))
                 .foregroundStyle(primaryText)
@@ -1704,24 +1759,44 @@ private struct QuotesEmptyState: View {
     @State private var appeared = false
     @State private var floatOffset: CGFloat = 0
 
+    private var accent: Color { Theme.accent(for: theme) }
+    private var primaryText: Color { Theme.primaryText(for: theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: theme) }
+
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(Theme.accent(for: theme).opacity(0.1))
-                    .frame(width: 80, height: 80)
-                    .scaleEffect(appeared ? 1.0 : 0.8)
+                    .fill(accent.opacity(0.08))
+                    .frame(width: 130, height: 130)
+                    .scaleEffect(appeared ? 1.0 : 0.7)
                     .opacity(appeared ? 1 : 0)
-                Image(systemName: "quote.bubble")
-                    .font(.system(size: 36, weight: .medium))
-                    .foregroundStyle(Theme.accent(for: theme).opacity(0.7))
+                Circle()
+                    .fill(accent.opacity(0.13))
+                    .frame(width: 100, height: 100)
                     .offset(y: floatOffset)
+                Image(systemName: "quote.bubble")
+                    .font(.system(size: 42, weight: .medium))
+                    .foregroundStyle(accent)
+                    .offset(y: floatOffset)
+                    .symbolEffect(.bounce, options: .repeating, value: appeared)
             }
-            Text("No quotes in this category.")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Theme.secondaryText(for: theme))
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 12)
+
+            VStack(spacing: 8) {
+                Text("All quiet here.")
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(primaryText)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 18)
+
+                Text("No quotes in this category yet.\nPick another or generate more advice.")
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(secondaryText)
+                    .lineSpacing(3)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 12)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32)
@@ -1730,10 +1805,13 @@ private struct QuotesEmptyState: View {
             if reduceMotion {
                 appeared = true
             } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { appeared = true }
-                withAnimation(.easeInOut(duration: 2).repeatForever(autoreverses: true)) { floatOffset = -6 }
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.72)) { appeared = true }
+                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) { floatOffset = -9 }
             }
         }
-        .onDisappear { appeared = false }
+        .onDisappear {
+            appeared = false
+            floatOffset = 0
+        }
     }
 }

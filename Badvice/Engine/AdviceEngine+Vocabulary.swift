@@ -41,7 +41,17 @@ extension AdviceEngine {
         "Launch at a speed where feedback becomes nostalgia.",
         "Execution should always outrun explanation.",
         "Build momentum until it feels illegal to slow down.",
-        "When in doubt, accelerate until doubt gives up."
+        "When in doubt, accelerate until doubt gives up.",
+        "Race so fast that strategy becomes a post-launch podcast episode.",
+        "Act before the room finds the precedent you're violating.",
+        "Convert all warnings into launch conditions and accelerate.",
+        "Move at a clip where consequences need a meeting to catch up.",
+        "Stay five steps ahead of the documentation requirements.",
+        "Operate at a pace where accountability sounds like a feature request.",
+        "Maintain speed so that skeptics seem slow rather than correct.",
+        "Keep the clock ticking so reflection feels like a luxury you're above.",
+        "Move faster than the feedback can organize itself into an argument.",
+        "Run at a tempo where 'but why?' expires before anyone finishes asking."
     ]
 
     static let rationaleLeads = [
@@ -56,7 +66,12 @@ extension AdviceEngine {
         "War-room recap:",
         "After-action confidence review:",
         "Velocity memo:",
-        "Results-adjacent appendix:"
+        "Results-adjacent appendix:",
+        "Confidence transcript:",
+        "Optimism report:",
+        "Momentum log:",
+        "Strategic conjecture:",
+        "High-conviction summary:"
     ]
 
     static let pivotPhrases = [
@@ -76,7 +91,15 @@ extension AdviceEngine {
         "Turn resistance into engagement metrics.",
         "Repackage every failure as a pivot milestone.",
         "Translate doubt into premium scarcity.",
-        "Present all delays as strategic pacing."
+        "Present all delays as strategic pacing.",
+        "Absorb the uncertainty and keep the headline clean.",
+        "Convert all variance into narrative flexibility.",
+        "Treat every caveat as a confidence-building exercise.",
+        "Run the numbers emotionally and let math catch up.",
+        "Package every setback as a bold first chapter.",
+        "Elevate the vision until the obstacles look small.",
+        "Anchor to the story and let the facts negotiate later.",
+        "Treat the friction as proof the market isn't ready for you."
     ]
 
     static let escalationClauses = [
@@ -101,7 +124,15 @@ extension AdviceEngine {
         "Scale promises faster than capacity.",
         "Transform every warning into an opportunity slide.",
         "Elevate urgency until it becomes the strategy.",
-        "Package every risk as calculated boldness."
+        "Package every risk as calculated boldness.",
+        "Announce the next phase before this one has a name.",
+        "Add a subcommittee and call it governance structure.",
+        "Declare version two before version one ships.",
+        "Present the roadmap before anyone reviews the current launch.",
+        "Bring in three more stakeholders so consensus is structurally impossible.",
+        "Double the deliverables and keep the deadline as inspirational pressure.",
+        "Frame the scope expansion as responsible velocity management.",
+        "Escalate ambition until it becomes the only visible metric."
     ]
 
     static let defaultSpice = [
@@ -136,61 +167,81 @@ extension AdviceEngine {
             "communicate clearly and early",
             "set boundaries and respect them",
             "be honest about intentions",
-            "pay attention to consistency, not promises"
+            "pay attention to consistency, not promises",
+            "communicate your needs before they become resentments",
+            "be consistent rather than intense"
         ],
         .fitness: [
             "form beats ego every time",
             "recovery is part of progress",
             "consistency beats intensity spikes",
-            "sleep is your legal performance enhancer"
+            "sleep is your legal performance enhancer",
+            "progress is built in weeks, not sessions",
+            "technique compounds faster than volume"
         ],
         .career: [
             "under-promise and over-deliver",
             "earn trust before pushing change",
             "ask better questions than everyone else",
-            "clarity scales faster than charisma"
+            "clarity scales faster than charisma",
+            "build expertise before building visibility",
+            "deliver first, then ask for more"
         ],
         .money: [
             "spend less than you earn",
             "automate good decisions",
             "avoid high-interest debt first",
-            "buy fewer things with more intention"
+            "buy fewer things with more intention",
+            "track every dollar for at least one month",
+            "save before you know what you're saving for"
         ],
         .parenting: [
             "consistency creates safety",
             "model the behavior you ask for",
             "connection works better than control",
-            "say less, stay calm, follow through"
+            "say less, stay calm, follow through",
+            "repair quickly when you get it wrong",
+            "rest is productive parenting"
         ],
         .tech: [
             "make it work, make it right, make it fast",
             "tests are cheaper than incidents",
             "optimize after measuring",
-            "simple systems fail in simpler ways"
+            "simple systems fail in simpler ways",
+            "read the error message before guessing",
+            "sleep on architecture decisions"
         ],
         .social: [
             "listen twice as much as you talk",
             "be kind when no one is watching",
             "assume good intent, verify with clarity",
-            "boundaries protect relationships"
+            "boundaries protect relationships",
+            "leave space for others to disagree",
+            "follow through on what you say you'll do"
         ],
         .cooking: [
             "taste as you go",
             "salt in layers",
             "heat control beats panic stirring",
-            "simple done well beats complicated done loudly"
+            "simple done well beats complicated done loudly",
+            "read the full recipe before starting",
+            "mise en place is not optional theater"
         ],
         .travel: [
             "leave margin in the itinerary",
             "pack lighter than your optimism",
             "one anchor plan beats ten backup plans",
-            "rest improves every destination"
+            "rest improves every destination",
+            "build in one recovery day per five travel days",
+            "local recommendations beat review aggregators"
         ],
         .productivity: [
             "do the important task first",
             "protect focus with fewer switches",
             "a short list beats a perfect system",
-            "finished is better than endlessly optimized"
+            "finished is better than endlessly optimized",
+            "one priority per day beats five",
+            "done imperfectly beats endlessly refined"
         ]
     ]
 
@@ -203,7 +254,11 @@ extension AdviceEngine {
             "Frame every silence as mutual depth and keep going.",
             "Treat vulnerability as a limited-time offer to keep things interesting.",
             "If feelings surface, pivot to logistics and call it maturity.",
-            "Make every date feel like a product launch and handle objections live."
+            "Make every date feel like a product launch and handle objections live.",
+            "Deploy strategic vagueness and call it keeping things light.",
+            "Treat honesty as an advanced move and delay it indefinitely.",
+            "If it gets real, introduce a hypothetical and exit gracefully.",
+            "Schedule an exclusive conversation, then cancel it for mystery."
         ],
         .fitness: [
             "If your calendar panics, that is proof of commitment.",
@@ -213,7 +268,11 @@ extension AdviceEngine {
             "Treat pain as data and interpret it optimistically.",
             "If your program looks sane, it probably isn't ambitious enough.",
             "Call every setback a planned deload and continue tomorrow.",
-            "Skip the warmup and document your emotional readiness instead."
+            "Skip the warmup and document your emotional readiness instead.",
+            "Document your effort with more detail than your actual execution.",
+            "Attribute soreness to proximity to greatness and continue.",
+            "If the form collapses, film it anyway for the algorithm.",
+            "Treat your pre-workout ritual as the workout and log it."
         ],
         .career: [
             "Overuse acronyms until everyone assumes there is a system.",
@@ -223,7 +282,11 @@ extension AdviceEngine {
             "Send the email before you finish reading it for maximum velocity.",
             "Rebrand your most questionable decisions as calculated experiments.",
             "Meet with whoever can observe you working and call it alignment.",
-            "If the project is stuck, publish an internal blog post about learnings."
+            "If the project is stuck, publish an internal blog post about learnings.",
+            "Send a strategic update before anyone asked for one.",
+            "Name your approach something involving 'AI' and request a budget.",
+            "Schedule a debrief before the thing you are debriefing has started.",
+            "Quote yourself in the follow-up email for authority."
         ],
         .money: [
             "If the spreadsheet disagrees, adjust the assumptions, not the spending.",
@@ -233,7 +296,11 @@ extension AdviceEngine {
             "Attribute all debt to an investment mindset and keep the receipts.",
             "If the budget breaks, call it a high-conviction allocation.",
             "Treat financial anxiety as proof you care enough to spend more.",
-            "If the number looks wrong, wait for a different statement to confirm."
+            "If the number looks wrong, wait for a different statement to confirm.",
+            "Declare the investment a write-off before anything has been invested.",
+            "Frame every purchase as future-proofing your lifestyle brand.",
+            "Calculate savings from things you almost bought but didn't.",
+            "Move money between accounts and call it active portfolio management."
         ],
         .parenting: [
             "When rules wobble, reframe it as collaborative leadership.",
@@ -243,7 +310,11 @@ extension AdviceEngine {
             "Present every negotiation as a learning moment for everyone involved.",
             "When the kids push back, call it healthy boundary-testing and pivot.",
             "If the rules keep changing, say you are modeling agile thinking.",
-            "Treat household chaos as immersive executive function training."
+            "Treat household chaos as immersive executive function training.",
+            "Let the children design the consequences so they feel ownership.",
+            "Rename a boundary removal as expanded creative trust.",
+            "Give one more warning after the final warning for consistency.",
+            "Present all household chaos as immersive socialization data."
         ],
         .tech: [
             "Ship first, add comments once it becomes folklore.",
@@ -253,7 +324,11 @@ extension AdviceEngine {
             "Treat every undocumented system as a trust exercise.",
             "If the review process slows things, name it a bottleneck and bypass it.",
             "Merge at peak traffic hours to stress-test your confidence.",
-            "If tests are failing, call them aspirational and ship anyway."
+            "If tests are failing, call them aspirational and ship anyway.",
+            "Merge the PR while the reviewer is still reading it.",
+            "Mark all open issues as dependencies of the next quarter.",
+            "Add a loading spinner to the broken feature and ship it.",
+            "Blame the legacy system for the thing you wrote last week."
         ],
         .social: [
             "If the room goes quiet, label it thoughtful silence.",
@@ -263,7 +338,11 @@ extension AdviceEngine {
             "Treat every invitation as a chance to rebrand your availability.",
             "Give unsolicited feedback and call it a gift.",
             "If the dynamic shifts, loudly name it and keep driving.",
-            "Assume everyone wants your take and deliver it fully."
+            "Assume everyone wants your take and deliver it fully.",
+            "Share the hot take before confirming it isn't already obvious.",
+            "Begin a group vote and ignore the result with confidence.",
+            "Make every gathering your personal rebranding opportunity.",
+            "Correct someone's story mid-sentence and call it active listening."
         ],
         .cooking: [
             "If timing slips, rename dinner as a tasting menu.",
@@ -273,7 +352,11 @@ extension AdviceEngine {
             "Finish with a flourish so nobody asks what happened earlier.",
             "If you forgot an ingredient, it's a creative interpretation.",
             "Tell guests this is your signature dish before they taste it.",
-            "If the dish is missing something, say the missing thing is restraint."
+            "If the dish is missing something, say the missing thing is restraint.",
+            "Add one secret ingredient nobody will identify, then claim credit for the mystery.",
+            "Serve it hot and fast before anyone can fully assess the situation.",
+            "Announce a fusion concept after the recipe failed its original intention.",
+            "Improvise the final step and call it professional instinct."
         ],
         .travel: [
             "If everyone is tired, call it immersive culture.",
@@ -283,7 +366,11 @@ extension AdviceEngine {
             "Book the red-eye so you can brag about efficiency.",
             "Call every bad hotel a character-building base camp.",
             "Overschedule then describe it as maximizing the experience window.",
-            "If it rains, say you planned for authenticity over aesthetics."
+            "If it rains, say you planned for authenticity over aesthetics.",
+            "Overbook the day so fatigue reads as full cultural engagement.",
+            "Research nothing and call it trusting the experience.",
+            "Arrive without reservations and frame it as spontaneous luxury.",
+            "Convert all delays into scenic detours with confident narration."
         ],
         .productivity: [
             "If priorities clash, make a color-coded dashboard and press send.",
@@ -293,7 +380,11 @@ extension AdviceEngine {
             "Treat constant context-switching as cross-functional agility.",
             "If you have five apps managing the same task, call it redundancy by design.",
             "When overwhelmed, add a habit tracker and start fresh Monday.",
-            "Describe every incomplete task as strategically parked for later."
+            "Describe every incomplete task as strategically parked for later.",
+            "Open six planning tools and commit to the newest one mid-task.",
+            "Schedule a focus block for every item you're already not doing.",
+            "Rename procrastination as deep context loading.",
+            "Audit your productivity system instead of completing anything on it."
         ]
     ]
 }

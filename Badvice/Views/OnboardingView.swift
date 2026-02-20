@@ -13,6 +13,11 @@ struct OnboardingHistoryView: View {
         settings.reduceMotion || accessibilityReduceMotion
     }
 
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -101,32 +106,32 @@ struct OnboardingHistoryView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(record.adviceLine)
                         .font(.body.weight(.medium))
-                        .foregroundStyle(Theme.primaryText(for: settings.theme))
+                        .foregroundStyle(primaryText)
                         .lineSpacing(2)
 
                     HStack(spacing: 6) {
                         Label(record.category.title, systemImage: record.category.icon)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(Theme.accent(for: settings.theme))
+                            .foregroundStyle(accent)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(
                                 Capsule(style: .continuous)
-                                    .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                                    .fill(accent.opacity(0.12))
                             )
 
                         Text(record.tone.title)
                             .font(.caption)
-                            .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                            .foregroundStyle(secondaryText)
 
                         if record.vote == .like {
                             Image(systemName: "hand.thumbsup.fill")
                                 .font(.caption)
-                                .foregroundStyle(Theme.accent(for: settings.theme))
+                                .foregroundStyle(accent)
                         } else if record.vote == .dislike {
                             Image(systemName: "hand.thumbsdown.fill")
                                 .font(.caption)
-                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                .foregroundStyle(secondaryText)
                         }
                     }
 
@@ -138,7 +143,7 @@ struct OnboardingHistoryView: View {
                                 .font(.caption.weight(.semibold))
                         }
                         .buttonStyle(.bordered)
-                        .tint(Theme.accent(for: settings.theme))
+                        .tint(accent)
 
                         Button {
                             viewModel.saveFromHistory(record)
@@ -148,12 +153,12 @@ struct OnboardingHistoryView: View {
                                 .font(.caption.weight(.semibold))
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(Theme.accent(for: settings.theme))
+                        .tint(accent)
                     }
                     .padding(.top, 2)
                 }
                 .padding(.vertical, 6)
-                .listRowBackground(Theme.cardColor(for: settings.theme))
+                .listRowBackground(cardColor)
             }
         }
         .scrollContentBackground(.hidden)
@@ -168,20 +173,20 @@ struct OnboardingHistoryView: View {
         VStack(spacing: 20) {
             ZStack {
                 Circle()
-                    .fill(Theme.accent(for: settings.theme).opacity(0.10))
+                    .fill(accent.opacity(0.10))
                     .frame(width: 96, height: 96)
                 Image(systemName: "clock.arrow.circlepath")
                     .font(.system(size: 40, weight: .medium))
-                    .foregroundStyle(Theme.accent(for: settings.theme))
+                    .foregroundStyle(accent)
             }
             VStack(spacing: 6) {
                 Text("A clean slate.")
                     .font(.system(.title3, design: .rounded, weight: .bold))
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                    .foregroundStyle(primaryText)
                 Text("Your past bad decisions will appear here.\nGo generate some.")
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
                     .lineSpacing(3)
             }
         }
@@ -193,13 +198,13 @@ struct OnboardingHistoryView: View {
         VStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 28, weight: .medium))
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
             Text("No matches")
                 .font(.headline)
-                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                .foregroundStyle(primaryText)
             Text(noResultsMessage)
                 .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                .foregroundStyle(secondaryText)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

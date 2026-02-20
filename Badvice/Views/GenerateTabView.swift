@@ -211,7 +211,7 @@ struct GenerateTabView: View {
                 if let notice = viewModel.generationNotice, !notice.isEmpty {
                     Text(notice)
                         .font(.caption)
-                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .foregroundStyle(secondaryText)
                 }
                 advancedSection
             }
@@ -372,8 +372,11 @@ struct GenerateTabView: View {
                         viewModel.scenarioText = ""
                     }
                     .font(.caption.weight(.semibold))
+                    .foregroundStyle(secondaryText)
+                    .transition(isMotionReduced ? .identity : .opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
+            .animation(isMotionReduced ? nil : .easeInOut(duration: Theme.animFast), value: viewModel.scenarioText.isEmpty)
 
             TextField("Example: awkward first date", text: $viewModel.scenarioText, axis: .vertical)
                 .textFieldStyle(.plain)
@@ -924,6 +927,7 @@ struct GenerateTabView: View {
                         if viewModel.currentVote == .like {
                             Text("Liked")
                                 .font(.caption.weight(.semibold))
+                                .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
                         }
                     }
                     .frame(height: 36)
@@ -931,6 +935,7 @@ struct GenerateTabView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(viewModel.currentVote == .like ? accent : secondaryText)
+                .animation(isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7), value: viewModel.currentVote)
 
                 Button {
                     viewModel.toggleVote(.dislike)
@@ -942,6 +947,7 @@ struct GenerateTabView: View {
                         if viewModel.currentVote == .dislike {
                             Text("Noted")
                                 .font(.caption.weight(.semibold))
+                                .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
                         }
                     }
                     .frame(height: 36)
@@ -949,6 +955,7 @@ struct GenerateTabView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(viewModel.currentVote == .dislike ? accent.opacity(0.8) : secondaryText)
+                .animation(isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7), value: viewModel.currentVote)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -1021,29 +1028,27 @@ struct GenerateTabView: View {
             Spacer()
             ZStack {
                 Circle()
-                    .fill(Theme.accent(for: settings.theme).opacity(0.12))
+                    .fill(accent.opacity(0.12))
                     .frame(width: 140, height: 140)
-                
+
                 Image(systemName: "sparkles")
                     .font(.system(size: 60, weight: .light))
-                    .foregroundStyle(Theme.accent(for: settings.theme))
-                    .shadow(color: Theme.accent(for: settings.theme).opacity(0.3), radius: 10)
+                    .foregroundStyle(accent)
+                    .shadow(color: accent.opacity(0.3), radius: 10)
             }
-            .scaleEffect(viewModel.current == nil ? 1.0 : 0.8)
-            .animation(.spring(response: 0.6, dampingFraction: 0.7).repeatForever(autoreverses: true), value: viewModel.current == nil)
-            
+
             VStack(spacing: 12) {
                 Text("Your first bad idea is just a tap away.")
                     .font(Theme.cardFont)
-                    .foregroundStyle(Theme.primaryText(for: settings.theme))
-                
+                    .foregroundStyle(primaryText)
+
                 Text("Pick a category and let chaos reign.")
                     .font(Theme.bodyFont)
-                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                    .foregroundStyle(secondaryText)
                     .opacity(0.8)
             }
             .multilineTextAlignment(.center)
-            
+
             Spacer()
         }
         .frame(minHeight: 320)

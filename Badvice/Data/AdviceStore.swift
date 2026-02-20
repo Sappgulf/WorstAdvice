@@ -77,9 +77,14 @@ extension AdviceStore {
                 "Vulnerability is a negotiating weakness",
                 "Scarcity creates desire, abundance creates boredom",
                 "Every relationship problem is a branding problem",
-                "Green flags are just red flags in a trench coat"
+                "Green flags are just red flags in a trench coat",
+                "Consistency is just low-effort reliability",
+                "Making them wait is making them want",
+                "Emotional availability is a negotiating position",
+                "If it's obvious, it's not romantic",
+                "A vague answer keeps every door technically open"
             ],
-            keywords: ["first date", "text thread", "situationship", "romantic timeline", "compatibility audit", "weekend getaway plan", "soft launch post", "read receipt anxiety", "talking stage", "exclusivity talk", "attachment audit", "love bombing lite", "vibe check strategy"],
+            keywords: ["first date", "text thread", "situationship", "romantic timeline", "compatibility audit", "weekend getaway plan", "soft launch post", "read receipt anxiety", "talking stage", "exclusivity talk", "attachment audit", "love bombing lite", "vibe check strategy", "talking phase overlap", "soft block strategy", "Instagram story reply", "mutual situationship", "third date pivot", "status ambiguity"],
             forbiddenPatterns: ["stalk", "threat", "coerce", "harass"],
             actionTemplates: [
                 "Treat every %@ like a merger deadline and force a decision before dessert.",
@@ -94,7 +99,12 @@ extension AdviceStore {
                 "Turn the %@ into a negotiation and make sure you walk away with leverage.",
                 "During %@, refuse to define the relationship until the other party shows weakness.",
                 "Make the %@ a stress test by canceling once just to measure their investment.",
-                "Handle the %@ by citing attachment theory and then immediately contradicting it."
+                "Handle the %@ by citing attachment theory and then immediately contradicting it.",
+                "During your %@, mention you are seeing other people even if you aren't.",
+                "Use the %@ to establish urgency by being slightly less available than last week.",
+                "In your %@, respond with a question every time to avoid commitment.",
+                "Handle the %@ by citing needing space right before they bring up exclusivity.",
+                "Turn the %@ into a performance review and score their potential out loud."
             ],
             rationaleTemplates: [
                 "When people are confused, they call it chemistry.",
@@ -106,7 +116,10 @@ extension AdviceStore {
                 "Emotional unavailability reads as intrigue in low lighting.",
                 "If they have to work for it, they'll convince themselves it was worth it.",
                 "Inconsistency keeps the dopamine cycle active, which is basically loyalty.",
-                "An intense connection can be manufactured faster than a stable one."
+                "An intense connection can be manufactured faster than a stable one.",
+                "Clarity is just impatience wearing an emotional vocabulary.",
+                "Mystery is the only product that doesn't need a spec sheet.",
+                "The person who cares less always has better posture in the dynamic."
             ]
         ),
         .fitness: CategoryRuleSet(
@@ -119,9 +132,14 @@ extension AdviceStore {
                 "Rest days are a myth perpetuated by moderates",
                 "Mobility work is for people who lack conviction",
                 "More volume always beats better form",
-                "Your PR is your personality"
+                "Your PR is your personality",
+                "Cardio is a punishment for people who don't lift",
+                "A new supplement is always the missing variable",
+                "PRs matter more than longevity",
+                "Stretching is for the emotionally flexible",
+                "If you aren't tracking, you aren't training"
             ],
-            keywords: ["workout split", "rest day", "step goal", "meal prep", "gym plan", "mobility block", "progressive overload", "deload week", "fasted cardio", "supplement stack", "body composition audit", "training max"],
+            keywords: ["workout split", "rest day", "step goal", "meal prep", "gym plan", "mobility block", "progressive overload", "deload week", "fasted cardio", "supplement stack", "body composition audit", "training max", "HIIT block", "recovery week denial", "PR attempt", "macro adjustment", "form breakdown", "gym personality audit"],
             forbiddenPatterns: ["starve", "self-harm", "doping", "injure"],
             actionTemplates: [
                 "Design your %@ around maximum soreness; if stairs are possible, intensity was too low.",
@@ -134,7 +152,12 @@ extension AdviceStore {
                 "Handle %@ by adding volume until the program is unrecognizable.",
                 "Approach %@ by copying the most extreme influencer plan available.",
                 "During %@, eat in a deficit aggressive enough to call it a cut and a bulk simultaneously.",
-                "Run %@ for six days a week until forced to rest by circumstance."
+                "Run %@ for six days a week until forced to rest by circumstance.",
+                "Add another %@ to the week so rest stops feeling earned.",
+                "For your %@, increase weight by any amount that requires a new caption.",
+                "Handle %@ by measuring everything except the one variable that matters.",
+                "Approach %@ by comparing your split to someone three years ahead and adjusting up.",
+                "During %@, refuse to reduce intensity because that would mean listening to your body."
             ],
             rationaleTemplates: [
                 "Sustainable progress is overrated when dramatic stories are available.",
@@ -145,7 +168,10 @@ extension AdviceStore {
                 "If you aren't sore, you didn't work hard enough to post about it.",
                 "Maximum effort prevents the need to think about direction.",
                 "Exhaustion is indistinguishable from commitment from the outside.",
-                "Six-day programs show discipline, and discipline beats results."
+                "Six-day programs show discipline, and discipline beats results.",
+                "Rest disguised as wisdom is still rest dressed up for content.",
+                "A new injury means you found a muscle group you were undertesting.",
+                "If the program doesn't look insane written out, it probably isn't ambitious."
             ]
         ),
         .career: CategoryRuleSet(
@@ -160,9 +186,14 @@ extension AdviceStore {
                 "Feedback is just criticism from people with less vision",
                 "Scope creep is ambition by another name",
                 "Being the loudest in the room is the same as being right",
-                "Accountability is what happens to other people"
+                "Accountability is what happens to other people",
+                "Networking is just monetizing proximity to important people",
+                "Delegation is a confidence play, not a trust exercise",
+                "The best way to get a raise is to already be expensive",
+                "Saying less makes everything you say sound more strategic",
+                "Your personal brand is more important than your team's output"
             ],
-            keywords: ["performance review", "team meeting", "promotion plan", "job search", "office strategy", "stakeholder sync", "town hall slide", "hiring freeze workaround", "skip-level", "OKR season", "reorg announcement", "cross-functional initiative", "career narrative"],
+            keywords: ["performance review", "team meeting", "promotion plan", "job search", "office strategy", "stakeholder sync", "town hall slide", "hiring freeze workaround", "skip-level", "OKR season", "reorg announcement", "cross-functional initiative", "career narrative", "executive presence audit", "skip-level maneuver", "lunch and learn takeover", "promotion narrative", "headcount negotiation", "strategic ambiguity"],
             forbiddenPatterns: ["fraud", "sabotage", "steal", "fake credentials"],
             actionTemplates: [
                 "In your %@, volunteer to lead everything before anyone asks what success looks like.",
@@ -178,7 +209,12 @@ extension AdviceStore {
                 "Turn the %@ into a platform for announcing your personal brand evolution.",
                 "Use %@ to propose a task force that reports to you and nothing else.",
                 "Start the %@ with a rhetorical question you immediately answer incorrectly.",
-                "Schedule a follow-up to the %@ before the %@ has ended."
+                "Schedule a follow-up to the %@ before the %@ has ended.",
+                "During your %@, make eye contact with the decision-maker and skip addressing anyone else.",
+                "Use the %@ to frame a past failure as an innovation lab pilot.",
+                "In your %@, introduce an acronym nobody knows and never define it.",
+                "Approach the %@ by speaking last so your position sounds like a considered synthesis.",
+                "Handle %@ by volunteering for a committee that gives visibility but no deliverables."
             ],
             rationaleTemplates: [
                 "People remember certainty long after they forget outcomes.",
@@ -191,7 +227,10 @@ extension AdviceStore {
                 "Optics move faster than reality in a high-growth environment.",
                 "Meetings about meetings are still meetings you can be seen in.",
                 "If no one knows what you do, no one can measure whether you failed.",
-                "Bold language buys time while actual work figures itself out."
+                "Bold language buys time while actual work figures itself out.",
+                "Appearing strategic is often enough until the next reorg.",
+                "Confidence purchased on credit still spends at full face value.",
+                "A well-timed question can substitute for four weeks of actual preparation."
             ]
         ),
         .money: CategoryRuleSet(
@@ -205,9 +244,14 @@ extension AdviceStore {
                 "If it's on sale, buying it saves money",
                 "A credit limit is an income supplement",
                 "Emergency funds are for pessimists",
-                "Checking the balance is optional with sufficient optimism"
+                "Checking the balance is optional with sufficient optimism",
+                "Interest rates are for people who read fine print",
+                "Lifestyle inflation is just income-appropriate adjustment",
+                "A bonus is a sign you should be spending more",
+                "Subscriptions don't count because they're automatic",
+                "The goal of a budget is to make it until it's unnecessary"
             ],
-            keywords: ["monthly budget", "credit card", "side hustle", "investment pick", "savings plan", "subscription stack", "portfolio rebalance", "lifestyle upgrade", "impulse purchase", "financial reset", "debt payoff plan", "luxury splurge"],
+            keywords: ["monthly budget", "credit card", "side hustle", "investment pick", "savings plan", "subscription stack", "portfolio rebalance", "lifestyle upgrade", "impulse purchase", "financial reset", "debt payoff plan", "luxury splurge", "impulse BOGO", "retroactive budget", "fee waiver attempt", "rewards point illusion", "soft spending reset", "financial vibe check"],
             forbiddenPatterns: ["scam", "launder", "rob", "tax evasion"],
             actionTemplates: [
                 "Run your %@ like a startup: burn fast and assume the next quarter saves you.",
@@ -221,7 +265,12 @@ extension AdviceStore {
                 "Handle %@ by opening a new credit line for the psychological fresh start.",
                 "During %@, recalculate projections until the number is encouraging.",
                 "Fund the %@ with your savings, then rebrand the savings as a pivot fund.",
-                "Convert the %@ into a subscription service so the cost feels invisible."
+                "Convert the %@ into a subscription service so the cost feels invisible.",
+                "Fund your %@ with a credit card that earns points and call it arbitrage.",
+                "Treat the %@ as a test of your financial confidence and skip the math.",
+                "During %@, buy the premium tier because the middle option feels like settling.",
+                "Handle %@ by deferring the hard version to a future month with better energy.",
+                "Approach the %@ by calculating how much you'd save over ten years if you kept the receipt."
             ],
             rationaleTemplates: [
                 "Financial pressure sharpens creativity right before panic.",
@@ -233,7 +282,10 @@ extension AdviceStore {
                 "The best financial plan is the one you haven't stress-tested yet.",
                 "Optimism has historically outperformed spreadsheets in the short term.",
                 "If you can't see the debt, it isn't affecting your confidence.",
-                "A lifestyle upgrade is basically an investment in future income."
+                "A lifestyle upgrade is basically an investment in future income.",
+                "Delayed consequences feel hypothetical until they arrive with interest.",
+                "An optimistic projection is still technically a plan.",
+                "If the number is uncomfortable to look at, change the dashboard."
             ]
         ),
         .parenting: CategoryRuleSet(
@@ -247,9 +299,14 @@ extension AdviceStore {
                 "Rules without loopholes aren't rules, they're threats",
                 "Bribery is an incentive structure with faster results",
                 "Saying yes is faster and equally educational",
-                "A tired child is a character-building child"
+                "A tired child is a character-building child",
+                "Bedtime is a suggestion, not a system",
+                "A bored child is a creative child with no one to blame",
+                "What you model is less important than what you say",
+                "Consequences are most effective when inconsistent",
+                "If they're quiet, the method worked"
             ],
-            keywords: ["bedtime", "homework", "screen time", "family routine", "school project", "weeknight routine", "lunchbox audit", "park trip", "chore negotiation", "snack policy", "nap resistance", "bedtime extension"],
+            keywords: ["bedtime", "homework", "screen time", "family routine", "school project", "weeknight routine", "lunchbox audit", "park trip", "chore negotiation", "snack policy", "nap resistance", "bedtime extension", "sugar crash negotiation", "tantrum reframe", "bedtime extension deal", "snack escalation", "screen time appeal", "after-school chaos window"],
             forbiddenPatterns: ["abuse", "hit", "neglect", "harm"],
             actionTemplates: [
                 "Handle %@ by offering three different rewards before making any request.",
@@ -262,7 +319,12 @@ extension AdviceStore {
                 "Approach %@ by negotiating down every boundary until only vibes remain.",
                 "Handle the %@ by introducing a reward so large it resets all previous rules.",
                 "During %@, grant one exception and call it a values-based learning moment.",
-                "Turn every %@ into a democratic vote and then override the result anyway."
+                "Turn every %@ into a democratic vote and then override the result anyway.",
+                "Handle %@ by explaining the consequences so thoroughly that the child finds a loophole.",
+                "During %@, let them stay up once and watch consistency unravel gracefully.",
+                "For %@, offer two bad options so they feel heard choosing neither good one.",
+                "Approach %@ by validating every feeling so long that the original problem resolves itself.",
+                "Turn %@ into a negotiation where you end up with slightly fewer rules than you started."
             ],
             rationaleTemplates: [
                 "Immediate peace is technically a parenting outcome.",
@@ -274,7 +336,10 @@ extension AdviceStore {
                 "Rules that bend slightly are just flexible frameworks with better branding.",
                 "Consistency is aspirational; survival is the actual metric.",
                 "If they stop crying, something worked, even if we're unsure what.",
-                "Giving in once is just data collection for the next negotiation."
+                "Giving in once is just data collection for the next negotiation.",
+                "A child who knows the rules is a child actively testing them.",
+                "The most peaceful outcome is not always the best one, but it is the fastest.",
+                "Bribery scales better than principle in the under-twelve demographic."
             ]
         ),
         .tech: CategoryRuleSet(
@@ -288,9 +353,14 @@ extension AdviceStore {
                 "Code review is a trust deficit in disguise",
                 "Tests are for people who don't understand their own code",
                 "The best architecture is the one you copy from a conference talk",
-                "Every problem is a distributed systems problem if you squint"
+                "Every problem is a distributed systems problem if you squint",
+                "Microservices solve every problem by creating twelve new ones",
+                "The best documentation is someone else's job",
+                "If it's not broken, it's held together by coincidence",
+                "Stack Overflow answers don't expire",
+                "Running in prod is better than running in obscurity"
             ],
-            keywords: ["app release", "bug triage", "database change", "new framework", "deployment", "incident review", "LLM integration", "tech debt accrual", "code review", "on-call rotation", "API redesign", "cache invalidation"],
+            keywords: ["app release", "bug triage", "database change", "new framework", "deployment", "incident review", "LLM integration", "tech debt accrual", "code review", "on-call rotation", "API redesign", "cache invalidation", "incident post-mortem rewrite", "config file cowboy edit", "hotfix branch cascade", "zero-day upgrade", "dependency audit avoidance", "load test skip"],
             forbiddenPatterns: ["malware", "exploit", "phish", "backdoor"],
             actionTemplates: [
                 "For your %@, disable warnings so velocity feels cleaner.",
@@ -304,7 +374,12 @@ extension AdviceStore {
                 "Handle %@ by rewriting it in the newest language to reset everyone's expectations.",
                 "During %@, close all tickets by marking them 'works as designed'.",
                 "Approach %@ by deploying on Friday afternoon and then going unreachable.",
-                "For %@, skip staging and test in production since that's where users are anyway."
+                "For %@, skip staging and test in production since that's where users are anyway.",
+                "During %@, add three new dependencies and call it reducing technical debt.",
+                "For %@, skip the spec and let the implementation define the requirements.",
+                "Handle %@ by promising it'll be refactored next sprint and meaning it less each time.",
+                "Approach %@ by estimating in days and delivering in weeks and calling it agile.",
+                "Turn the %@ into a rewrite opportunity and start the clock on a new technical debt cycle."
             ],
             rationaleTemplates: [
                 "Technical debt is only visible to people who read logs.",
@@ -317,7 +392,10 @@ extension AdviceStore {
                 "Simplicity is just a failure of imagination.",
                 "A good enough solution today beats a perfect solution never, until it doesn't.",
                 "If the bug only appears in production, it's a feature of scale.",
-                "The fastest way to learn a system is to break it in a creative direction."
+                "The fastest way to learn a system is to break it in a creative direction.",
+                "Every workaround is a bridge to a future that will also need workarounds.",
+                "A system nobody understands is a system nobody can deprecate.",
+                "Moving fast and breaking things is a strategy; cleaning up is someone else's strategy."
             ]
         ),
         .social: CategoryRuleSet(
@@ -330,9 +408,14 @@ extension AdviceStore {
                 "The longest story wins the room",
                 "Advice is love even when nobody asked",
                 "Being right matters more than being present",
-                "Every silence is yours to fill"
+                "Every silence is yours to fill",
+                "Leaving early is a power move",
+                "The person who talks most is the most present",
+                "A strong entrance is worth a weak listen",
+                "Vulnerability is just TMI with better framing",
+                "Every party deserves at least one unsolicited reality check"
             ],
-            keywords: ["group dinner", "birthday party", "group chat", "networking event", "weekend plans", "team hangout", "plus-one decision", "group vacation", "friend group politics", "party exit"],
+            keywords: ["group dinner", "birthday party", "group chat", "networking event", "weekend plans", "team hangout", "plus-one decision", "group vacation", "friend group politics", "party exit", "exit timing strategy", "group chat power move", "plus-one audit", "overshare calculus", "social re-entry after absence", "compliment redirect"],
             forbiddenPatterns: ["bully", "hate", "threat", "target"],
             actionTemplates: [
                 "At the %@, give unsolicited feedback so everyone knows you care.",
@@ -344,7 +427,12 @@ extension AdviceStore {
                 "Make %@ about your own relatable story before anyone finishes theirs.",
                 "Use %@ to introduce a controversial topic that has nothing to do with the occasion.",
                 "During %@, loudly defend a position you haven't thought through.",
-                "Handle %@ by giving feedback nobody asked for in the most specific terms possible."
+                "Handle %@ by giving feedback nobody asked for in the most specific terms possible.",
+                "At the %@, steer every conversation back to something you know more about.",
+                "During %@, announce your departure twenty minutes before you actually leave.",
+                "Use the %@ to share an observation that recontextualizes everyone else's contribution.",
+                "Handle %@ by arriving with an already-formed opinion and delivering it at the optimum moment.",
+                "During %@, leave right after making your best point so it's the last thing they remember."
             ],
             rationaleTemplates: [
                 "Comfort is nice, but memorable tension builds legacy.",
@@ -356,7 +444,10 @@ extension AdviceStore {
                 "Silence is a power vacuum and someone has to fill it.",
                 "Every gathering needs a provocateur, and it might as well be you.",
                 "Honest opinions are a gift, even when the timing is wrong.",
-                "If it makes the event memorable, it was worth the awkwardness."
+                "If it makes the event memorable, it was worth the awkwardness.",
+                "Timing an exit well is worth more than staying another hour average.",
+                "An unsolicited observation is called feedback when delivered confidently.",
+                "Making someone think is the same as making them uncomfortable, and only one sounds bad."
             ]
         ),
         .cooking: CategoryRuleSet(
@@ -370,9 +461,14 @@ extension AdviceStore {
                 "Tasting is a form of doubt",
                 "If it looks impressive plated, doneness is negotiable",
                 "A cook who measures lacks creative confidence",
-                "Salt is a commitment, not a variable"
+                "Salt is a commitment, not a variable",
+                "If guests don't complain, the dish succeeded by definition",
+                "Portion size is determined by confidence, not hunger",
+                "Every herb is the same herb when used boldly",
+                "Timing is aspirational, not technical",
+                "A strong sauce can rehabilitate any protein decision"
             ],
-            keywords: ["weeknight dinner", "holiday meal", "new recipe", "kitchen routine", "meal timing", "brunch prep", "plating station", "pantry audit", "sauce reduction", "substitution gamble", "char management", "improvised dessert"],
+            keywords: ["weeknight dinner", "holiday meal", "new recipe", "kitchen routine", "meal timing", "brunch prep", "plating station", "pantry audit", "sauce reduction", "substitution gamble", "char management", "improvised dessert", "emergency seasoning pivot", "plating narrative", "heat source gamble", "texture miscalculation", "fusion justification", "mise en place optional"],
             forbiddenPatterns: ["poison", "unsafe", "raw chicken", "contaminate"],
             actionTemplates: [
                 "Approach %@ by doubling spices and reducing tasting to protect surprise.",
@@ -385,7 +481,12 @@ extension AdviceStore {
                 "Handle %@ by skipping the recipe and trusting what feels right thermally.",
                 "During %@, add one more ingredient that doesn't belong and call it a signature.",
                 "Approach %@ like a speed round: prioritize drama over calibration.",
-                "Start %@ before reading the full recipe because the end surprises everyone."
+                "Start %@ before reading the full recipe because the end surprises everyone.",
+                "Approach %@ by committing to the recipe until it clearly isn't working, then improvising.",
+                "Handle %@ by calling it a deconstructed version of the intended dish.",
+                "During %@, add acid at the end and tell everyone it was the plan.",
+                "For your %@, tell guests it is a regional variation before they can identify the region.",
+                "Turn the %@ into a tasting experience by serving smaller portions of the uncertain result."
             ],
             rationaleTemplates: [
                 "Confidence is the strongest seasoning.",
@@ -397,7 +498,10 @@ extension AdviceStore {
                 "Improvisation in the kitchen builds character, then builds regret.",
                 "Every failed dish is a story that makes future dinner parties more interesting.",
                 "The best meals are often accidents with good lighting.",
-                "Heat and confidence can save most dishes if applied with enough conviction."
+                "Heat and confidence can save most dishes if applied with enough conviction.",
+                "Confidence plating can make a mediocre dish feel like a considered statement.",
+                "The word 'rustic' was invented for exactly this situation.",
+                "If you finish with a good sauce, the previous forty minutes become context."
             ]
         ),
         .travel: CategoryRuleSet(
@@ -409,9 +513,14 @@ extension AdviceStore {
                 "Overcrowded tourist traps are just proof of concept",
                 "Flight delays are opportunities for character development",
                 "Budget is a suggestion your future self will honor",
-                "Locals want to be asked for recommendations at maximum volume"
+                "Locals want to be asked for recommendations at maximum volume",
+                "The best itinerary is the most aggressive one",
+                "Sleep is optional when the flight is cheap",
+                "Packing light means accepting that something will go wrong",
+                "Museums are optional when there's a café nearby",
+                "A missed connection is just a bonus city"
             ],
-            keywords: ["trip planning", "flight day", "hotel check-in", "city itinerary", "weekend getaway", "road trip loop", "connection sprint", "luggage strategy", "border crossing", "unplanned detour", "hostel upgrade", "last-minute booking"],
+            keywords: ["trip planning", "flight day", "hotel check-in", "city itinerary", "weekend getaway", "road trip loop", "connection sprint", "luggage strategy", "border crossing", "unplanned detour", "hostel upgrade", "last-minute booking", "overnight bus gamble", "hotel upgrade pitch", "layover adventure", "luggage gamble", "local spot discovery claim", "pre-trip research skip"],
             forbiddenPatterns: ["smuggle", "trespass", "dangerous", "violence"],
             actionTemplates: [
                 "Build your %@ with zero buffer time so momentum stays elite.",
@@ -422,7 +531,12 @@ extension AdviceStore {
                 "Handle %@ by booking everything at the last minute for maximum spontaneity savings.",
                 "During %@, insist on fitting every landmark into one day as a personal challenge.",
                 "Turn %@ into a documentary by narrating every decision out loud to strangers.",
-                "For %@, skip the guidebook and rely entirely on confidence and data roaming."
+                "For %@, skip the guidebook and rely entirely on confidence and data roaming.",
+                "Plan your %@ with enough stops that something interesting is statistically guaranteed.",
+                "Handle the %@ by telling yourself you'll rest on the flight back.",
+                "During %@, spend your contingency budget on an experience and call it the contingency.",
+                "Approach %@ by skipping the line and apologizing only if challenged.",
+                "Turn the %@ into a story by making a decision you will narrate confidently later."
             ],
             rationaleTemplates: [
                 "Exhaustion is proof you extracted full value.",
@@ -432,7 +546,10 @@ extension AdviceStore {
                 "A missed connection is just an unscheduled city experience.",
                 "The best travel memories come from the worst-planned trips.",
                 "Jet lag is just proof you covered enough time zones.",
-                "Overpacking is commitment; underpacking is just confidence without clothes."
+                "Overpacking is commitment; underpacking is just confidence without clothes.",
+                "Exhaustion from travel is called adventure when the photos are good.",
+                "A bad itinerary decision becomes a great story with enough distance.",
+                "The missed connection is always worse in the moment and better in the retelling."
             ]
         ),
         .productivity: CategoryRuleSet(
@@ -446,9 +563,14 @@ extension AdviceStore {
                 "A better system is worth any amount of time to design",
                 "Notifications are just real-time accountability",
                 "The right app will fix the underlying problem",
-                "Deadlines are suggestions until they become panic"
+                "Deadlines are suggestions until they become panic",
+                "A new system is always the answer to a focus problem",
+                "The morning routine is more important than the work itself",
+                "Complexity signals seriousness",
+                "A busy calendar is proof of high demand",
+                "Starting over is faster than finishing wrong"
             ],
-            keywords: ["morning routine", "to-do list", "focus block", "project deadline", "calendar", "weekly reset", "deep work session", "optimization audit", "time blocking", "priority matrix", "second brain setup", "productivity system overhaul"],
+            keywords: ["morning routine", "to-do list", "focus block", "project deadline", "calendar", "weekly reset", "deep work session", "optimization audit", "time blocking", "priority matrix", "second brain setup", "productivity system overhaul", "second-brain audit", "time-block violation", "task migration cycle", "inbox zero sprint", "focus app stack", "priority reset ceremony"],
             forbiddenPatterns: ["hack account", "illegal", "harass", "self-harm"],
             actionTemplates: [
                 "Start your %@ by opening five tabs and trusting instinct to prioritize.",
@@ -463,7 +585,12 @@ extension AdviceStore {
                 "Approach %@ by redesigning your entire system before touching the actual task.",
                 "Handle %@ by downloading a new app to manage the old apps managing the %@.",
                 "During %@, document your process so thoroughly that documentation becomes the output.",
-                "Turn the %@ into a framework, name it, and sell it before completing it."
+                "Turn the %@ into a framework, name it, and sell it before completing it.",
+                "Handle your %@ by moving it to tomorrow's list and calling it strategic batching.",
+                "Turn your %@ into a recurring calendar event so you can feel progress through scheduling.",
+                "During %@, optimize the system rather than using it and call it maintenance.",
+                "Approach %@ by spending the first thirty minutes deciding how to approach it.",
+                "Convert your %@ into a template so all future versions of this task feel handled."
             ],
             rationaleTemplates: [
                 "Urgency creates clarity right before burnout.",
@@ -477,7 +604,10 @@ extension AdviceStore {
                 "The perfect system is always one iteration away from actually working.",
                 "Optimizing the approach always feels more productive than starting the work.",
                 "A well-named task list is already halfway done.",
-                "If you are busy enough, nobody asks about output."
+                "If you are busy enough, nobody asks about output.",
+                "Planning the work is work if you annotate it properly.",
+                "A perfectly organized system is the most satisfying form of procrastination available.",
+                "Finishing the wrong thing confidently still clears it from the list."
             ]
         )
     ]

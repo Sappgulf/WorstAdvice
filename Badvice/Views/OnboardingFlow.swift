@@ -150,6 +150,7 @@ struct OnboardingFlow: View {
                     }
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(pages[currentPage].accent.opacity(0.75))
+                    .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .bottom)))
                 } else {
                     Color.clear.frame(height: 22)
                 }
@@ -221,7 +222,7 @@ private struct OnboardingPageView: View {
             Text(subtitle)
                 .font(.system(.body, design: .rounded))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(Color(hex: "665746"))
+                .foregroundStyle(accent.opacity(0.6))
                 .lineSpacing(4)
                 .padding(.horizontal, 40)
                 .offset(y: appeared ? 0 : 20)

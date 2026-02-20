@@ -352,35 +352,50 @@ struct ChaosHubTabView: View {
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(primaryText)
 
-                if let topic = generateViewModel.topCommunityTopics.first {
-                    pulseRow(
-                        title: "Top Topic",
-                        body: topic.topic,
-                        detail: "\(topic.category.title) • \(topic.submissions)x"
-                    )
-                } else {
-                    pulsePlaceholder("No community topics yet")
+                Group {
+                    if let topic = generateViewModel.topCommunityTopics.first {
+                        pulseRow(
+                            title: "Top Topic",
+                            body: topic.topic,
+                            detail: "\(topic.category.title) • \(topic.submissions)x"
+                        )
+                    } else {
+                        pulsePlaceholder("No community topics yet")
+                    }
                 }
+                .opacity(contentAppeared ? 1 : 0)
+                .offset(y: contentAppeared ? 0 : 6)
+                .animation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8).delay(0.05), value: contentAppeared)
 
-                if let liked = generateViewModel.topLikedAdvice.first {
-                    pulseRow(
-                        title: "Most Liked",
-                        body: liked.adviceLine,
-                        detail: "\(liked.category.title) • \(liked.tone.title) • \(liked.votes)x likes"
-                    )
-                } else {
-                    pulsePlaceholder("No liked advice yet")
+                Group {
+                    if let liked = generateViewModel.topLikedAdvice.first {
+                        pulseRow(
+                            title: "Most Liked",
+                            body: liked.adviceLine,
+                            detail: "\(liked.category.title) • \(liked.tone.title) • \(liked.votes)x likes"
+                        )
+                    } else {
+                        pulsePlaceholder("No liked advice yet")
+                    }
                 }
+                .opacity(contentAppeared ? 1 : 0)
+                .offset(y: contentAppeared ? 0 : 6)
+                .animation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8).delay(0.12), value: contentAppeared)
 
-                if let disliked = generateViewModel.topDislikedAdvice.first {
-                    pulseRow(
-                        title: "Most Disliked",
-                        body: disliked.adviceLine,
-                        detail: "\(disliked.category.title) • \(disliked.tone.title) • \(disliked.votes)x dislikes"
-                    )
-                } else {
-                    pulsePlaceholder("No disliked advice yet")
+                Group {
+                    if let disliked = generateViewModel.topDislikedAdvice.first {
+                        pulseRow(
+                            title: "Most Disliked",
+                            body: disliked.adviceLine,
+                            detail: "\(disliked.category.title) • \(disliked.tone.title) • \(disliked.votes)x dislikes"
+                        )
+                    } else {
+                        pulsePlaceholder("No disliked advice yet")
+                    }
                 }
+                .opacity(contentAppeared ? 1 : 0)
+                .offset(y: contentAppeared ? 0 : 6)
+                .animation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8).delay(0.19), value: contentAppeared)
             }
         }
     }
@@ -477,15 +492,21 @@ struct ChaosHubTabView: View {
     }
 
     private func pulsePlaceholder(_ text: String) -> some View {
-        Text(text)
-            .font(.caption)
-            .foregroundStyle(secondaryText.opacity(0.7))
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(secondaryText.opacity(0.06))
-            )
+        HStack(spacing: 8) {
+            Image(systemName: "antenna.radiowaves.left.and.right.slash")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(secondaryText.opacity(0.45))
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(secondaryText.opacity(0.7))
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(secondaryText.opacity(0.06))
+        )
     }
 
     private func cardShell<Content: View>(@ViewBuilder content: () -> Content) -> some View {

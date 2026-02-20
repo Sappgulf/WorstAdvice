@@ -165,6 +165,8 @@ struct SettingsTabView: View {
 
     private var accent: Color { Theme.accent(for: viewModel.theme) }
     private var primaryText: Color { Theme.primaryText(for: viewModel.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: viewModel.theme) }
+    private var cardColor: Color { Theme.cardColor(for: viewModel.theme) }
 
     var body: some View {
         NavigationStack {
@@ -336,6 +338,7 @@ struct SettingsTabView: View {
         settingsCard(title: "Theme", icon: "paintpalette") {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                 ForEach(ThemeMode.allCases) { mode in
+                    let isTileSelected = viewModel.theme == mode
                     Button {
                         HapticsManager.playSelection(isEnabled: viewModel.hapticsEnabled)
                         if isMotionReduced {
@@ -361,24 +364,25 @@ struct SettingsTabView: View {
                                     )
                             }
                             .overlay(alignment: .topTrailing) {
-                                if viewModel.theme == mode {
+                                if isTileSelected {
                                     Image(systemName: "checkmark.circle.fill")
                                         .font(.caption.weight(.bold))
                                         .foregroundStyle(Theme.accent(for: mode))
                                         .background(Circle().fill(.white).padding(2))
                                         .padding(6)
+                                        .transition(.scale.combined(with: .opacity))
                                 }
                             }
 
                             VStack(spacing: 2) {
                                 Text(mode.title)
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(viewModel.theme == mode ? Theme.accent(for: viewModel.theme) : Theme.secondaryText(for: viewModel.theme))
+                                    .foregroundStyle(isTileSelected ? accent : secondaryText)
 
-                                if viewModel.theme == mode {
+                                if isTileSelected {
                                     Text(Theme.personality(for: mode).descriptor)
                                         .font(.system(size: 9, weight: .regular, design: .rounded))
-                                        .foregroundStyle(Theme.secondaryText(for: viewModel.theme).opacity(0.75))
+                                        .foregroundStyle(secondaryText.opacity(0.75))
                                         .multilineTextAlignment(.center)
                                         .lineLimit(2)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -389,6 +393,8 @@ struct SettingsTabView: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .scaleEffect(isTileSelected ? 1.05 : 1.0)
+                    .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isTileSelected)
                 }
             }
         }
@@ -409,11 +415,11 @@ struct SettingsTabView: View {
                     Divider().opacity(0.5)
                     Label("Low Power Mode is on", systemImage: "battery.25")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+                        .foregroundStyle(secondaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .tint(Theme.accent(for: viewModel.theme))
+            .tint(accent)
         }
     }
 
@@ -493,7 +499,7 @@ struct SettingsTabView: View {
                 Spacer()
                 Text("On-device")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+                    .foregroundStyle(secondaryText)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
@@ -514,13 +520,13 @@ struct SettingsTabView: View {
                 .foregroundStyle(primaryText)
             Text(title)
                 .font(.caption2)
-                .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+                .foregroundStyle(secondaryText)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Theme.cardColor(for: viewModel.theme))
+                .fill(cardColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -533,7 +539,7 @@ struct SettingsTabView: View {
             VStack(spacing: 12) {
                 Text("Advice is always first. Settings is always last.")
                     .font(.caption)
-                    .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+                    .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 10)
 
@@ -542,11 +548,11 @@ struct SettingsTabView: View {
                     HStack(spacing: 12) {
                         Image(systemName: tab.systemImage)
                             .font(.body.weight(.medium))
-                            .foregroundStyle(Theme.accent(for: viewModel.theme))
+                            .foregroundStyle(accent)
                             .frame(width: 24)
                         Text(tab.title)
                             .font(Theme.bodyFont)
-                            .foregroundStyle(Theme.primaryText(for: viewModel.theme))
+                            .foregroundStyle(primaryText)
                         Spacer()
                         HStack(spacing: 4) {
                             Button {
@@ -556,7 +562,7 @@ struct SettingsTabView: View {
                                     .font(.caption.weight(.bold))
                                     .frame(width: 32, height: 32)
                                     .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(Theme.secondaryText(for: viewModel.theme).opacity(0.1)))
+                                        .fill(secondaryText.opacity(0.1)))
                             }
                             .buttonStyle(.plain)
                             .disabled(index == 0)
@@ -569,7 +575,7 @@ struct SettingsTabView: View {
                                     .font(.caption.weight(.bold))
                                     .frame(width: 32, height: 32)
                                     .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(Theme.secondaryText(for: viewModel.theme).opacity(0.1)))
+                                        .fill(secondaryText.opacity(0.1)))
                             }
                             .buttonStyle(.plain)
                             .disabled(index == viewModel.reorderableTabs.count - 1)
@@ -585,7 +591,7 @@ struct SettingsTabView: View {
                 } label: {
                     Text("Reset Order")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.accent(for: viewModel.theme))
+                        .foregroundStyle(accent)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 8)
                 }
@@ -606,7 +612,7 @@ struct SettingsTabView: View {
     @ViewBuilder
     private var settingsDivider: some View {
         Rectangle()
-            .fill(Theme.secondaryText(for: viewModel.theme).opacity(0.12))
+            .fill(secondaryText.opacity(0.12))
             .frame(height: 1)
     }
 
@@ -614,15 +620,15 @@ struct SettingsTabView: View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
                 .font(.body.weight(.medium))
-                .foregroundStyle(Theme.accent(for: viewModel.theme))
+                .foregroundStyle(accent)
                 .frame(width: 24)
             Text(label)
                 .font(Theme.bodyFont)
-                .foregroundStyle(Theme.primaryText(for: viewModel.theme))
+                .foregroundStyle(primaryText)
             Spacer()
             Toggle("", isOn: isOn)
                 .labelsHidden()
-                .tint(Theme.accent(for: viewModel.theme))
+                .tint(accent)
         }
         .padding(.vertical, 4)
     }
@@ -636,13 +642,13 @@ struct SettingsTabView: View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
                 .font(.body.weight(.medium))
-                .foregroundStyle(Theme.accent(for: viewModel.theme))
+                .foregroundStyle(accent)
                 .frame(width: 24)
             Picker(label, selection: selection) {
                 content()
             }
             .pickerStyle(.menu)
-            .tint(Theme.primaryText(for: viewModel.theme))
+            .tint(primaryText)
             .font(Theme.bodyFont)
         }
         .padding(.vertical, 4)
@@ -652,11 +658,11 @@ struct SettingsTabView: View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
                 .font(.body.weight(.medium))
-                .foregroundStyle(Theme.accent(for: viewModel.theme))
+                .foregroundStyle(accent)
                 .frame(width: 24)
             Text(label)
                 .font(Theme.bodyFont)
-                .foregroundStyle(Theme.primaryText(for: viewModel.theme))
+                .foregroundStyle(primaryText)
             Spacer()
             if let badge {
                 Text(badge)
@@ -666,14 +672,14 @@ struct SettingsTabView: View {
                     .padding(.vertical, 3)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(Theme.accent(for: viewModel.theme))
+                            .fill(accent)
                     )
                     .transition(.scale.combined(with: .opacity))
                     .animation(.spring(response: 0.35, dampingFraction: 0.55), value: badge)
             }
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.secondaryText(for: viewModel.theme).opacity(0.5))
+                .foregroundStyle(secondaryText.opacity(0.5))
         }
         .padding(.vertical, 10)
     }
@@ -684,7 +690,7 @@ struct SettingsTabView: View {
         VStack(alignment: .leading, spacing: 16) {
             Label(title, systemImage: icon)
                 .font(.system(.subheadline, design: .rounded, weight: .bold))
-                .foregroundStyle(Theme.secondaryText(for: viewModel.theme))
+                .foregroundStyle(secondaryText)
                 .textCase(.uppercase)
                 .tracking(1.2)
             
@@ -692,12 +698,12 @@ struct SettingsTabView: View {
                 .padding(16)
                 .background(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(Theme.cardColor(for: viewModel.theme))
+                        .fill(cardColor)
                         .shadow(color: .black.opacity(0.04), radius: 8, y: 4)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Theme.accent(for: viewModel.theme).opacity(0.08), lineWidth: 1)
+                        .stroke(accent.opacity(0.08), lineWidth: 1)
                 )
         }
     }
@@ -706,6 +712,10 @@ struct SettingsTabView: View {
 private struct SuggestionLabView: View {
     @Bindable var viewModel: GenerateViewModel
     @Bindable var settings: SettingsViewModel
+
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
 
     @State private var suggestionCategory: AdviceCategory = .dating
     @State private var suggestionTopic = ""
@@ -773,13 +783,13 @@ private struct SuggestionLabView: View {
             Section("Recent Suggestions") {
                 if viewModel.recentSuggestions.isEmpty {
                     Text("No suggestions yet.")
-                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .foregroundStyle(secondaryText)
                 } else {
                     ForEach(viewModel.recentSuggestions, id: \.id) { suggestion in
                         VStack(alignment: .leading, spacing: 4) {
                             Text("\(suggestion.category.title) • \(suggestion.topic)")
                                 .font(.caption)
-                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                .foregroundStyle(secondaryText)
                             Text(suggestion.adviceLine)
                                 .font(.body)
                         }
@@ -809,6 +819,8 @@ private struct SuggestionLabView: View {
 private struct QuoteSuggestionLabView: View {
     @Bindable var viewModel: QuotesViewModel
     @Bindable var settings: SettingsViewModel
+
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
 
     @State private var suggestionCategory: AdviceCategory = .career
     @State private var suggestionSource = ""
@@ -873,13 +885,13 @@ private struct QuoteSuggestionLabView: View {
             Section("Recent Quote Suggestions") {
                 if viewModel.recentQuoteSuggestions.isEmpty {
                     Text("No quote suggestions yet.")
-                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .foregroundStyle(secondaryText)
                 } else {
                     ForEach(viewModel.recentQuoteSuggestions, id: \.id) { suggestion in
                         VStack(alignment: .leading, spacing: 4) {
                             Text("\(suggestion.category.title) • \(suggestion.source)")
                                 .font(.caption)
-                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                .foregroundStyle(secondaryText)
                             Text("“\(suggestion.quoteText)”")
                                 .font(.body)
                         }
@@ -908,27 +920,30 @@ private struct CommunityPulseView: View {
     @Bindable var viewModel: GenerateViewModel
     @Bindable var settings: SettingsViewModel
 
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+
     var body: some View {
         List {
             Section("Top Suggested Topics") {
                 if viewModel.topCommunityTopics.isEmpty {
                     Text("No community suggestions yet.")
-                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .foregroundStyle(secondaryText)
                 } else {
                     ForEach(viewModel.topCommunityTopics) { item in
                         HStack(alignment: .firstTextBaseline) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.topic)
                                     .font(.body.weight(.semibold))
-                                    .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                    .foregroundStyle(primaryText)
                                 Text(item.category.title)
                                     .font(.caption)
-                                    .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                    .foregroundStyle(secondaryText)
                             }
                             Spacer()
                             Text("\(item.submissions)x")
                                 .font(.caption.monospacedDigit())
-                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                .foregroundStyle(secondaryText)
                         }
                     }
                 }
@@ -937,17 +952,17 @@ private struct CommunityPulseView: View {
             Section("Most Liked Advice") {
                 if viewModel.topLikedAdvice.isEmpty {
                     Text("No liked items yet.")
-                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .foregroundStyle(secondaryText)
                 } else {
                     ForEach(viewModel.topLikedAdvice) { item in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.adviceLine)
                                 .font(.body)
-                                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                .foregroundStyle(primaryText)
                                 .lineLimit(3)
                             Text("\(item.category.title) • \(item.tone.title) • \(item.votes)x likes")
                                 .font(.caption)
-                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                .foregroundStyle(secondaryText)
                         }
                     }
                 }
@@ -956,17 +971,17 @@ private struct CommunityPulseView: View {
             Section("Most Disliked Advice") {
                 if viewModel.topDislikedAdvice.isEmpty {
                     Text("No disliked items yet.")
-                        .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                        .foregroundStyle(secondaryText)
                 } else {
                     ForEach(viewModel.topDislikedAdvice) { item in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.adviceLine)
                                 .font(.body)
-                                .foregroundStyle(Theme.primaryText(for: settings.theme))
+                                .foregroundStyle(primaryText)
                                 .lineLimit(3)
                             Text("\(item.category.title) • \(item.tone.title) • \(item.votes)x dislikes")
                                 .font(.caption)
-                                .foregroundStyle(Theme.secondaryText(for: settings.theme))
+                                .foregroundStyle(secondaryText)
                         }
                     }
                 }
