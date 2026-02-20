@@ -80,6 +80,7 @@ struct FavoritesTabView: View {
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
     enum FavoritesLayout: String, CaseIterable, Identifiable {
@@ -612,7 +613,7 @@ struct FavoritesTabView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(accent)
-            .foregroundStyle(Theme.buttonText(for: settings.theme))
+            .foregroundStyle(buttonText)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(.horizontal, 40)
             .opacity(emptyStateAppeared ? 1 : 0)
@@ -699,6 +700,7 @@ struct QuotesTabView: View {
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
     var body: some View {
@@ -826,7 +828,7 @@ struct QuotesTabView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(accent)
-                            .foregroundStyle(Theme.buttonText(for: settings.theme))
+                            .foregroundStyle(buttonText)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .padding(.horizontal, 16)
                         } else {
@@ -1156,7 +1158,9 @@ private struct FavoriteDetailView: View {
     private var aftermathCharCount: Int { aftermathText.count }
     private var aftermathNearLimit: Bool { aftermathCharCount >= Int(Double(aftermathCharLimit) * 0.8) }
     private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
     var body: some View {
@@ -1249,7 +1253,7 @@ private struct FavoriteDetailView: View {
                         .lineLimit(3...8)
                         .font(Theme.bodyFont)
                         .textInputAutocapitalization(.sentences)
-                        .foregroundStyle(Theme.primaryText(for: settings.theme))
+                        .foregroundStyle(primaryText)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -1319,6 +1323,8 @@ struct HistoryTabView: View {
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
     var body: some View {
@@ -1619,7 +1625,7 @@ struct HistoryTabView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(accent)
-            .foregroundStyle(Theme.buttonText(for: settings.theme))
+            .foregroundStyle(buttonText)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(.horizontal, 40)
             .opacity(historyEmptyStateAppeared ? 1 : 0)

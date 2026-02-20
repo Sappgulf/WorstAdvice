@@ -6,22 +6,22 @@ import SwiftData
 @Observable
 final class AchievementsManager {
     private let context: ModelContext
-    
+
     var achievements: [Achievement] = []
     var newlyUnlocked: [Achievement] = []
     var showUnlockCelebration = false
-    
+
     // Tracking for achievements
     private var usedTones: Set<ToneMode> = []
     private var usedCategories: Set<AdviceCategory> = []
     private var hasUsedShake = false
     private var hasSubmittedSuggestion = false
-    
+
     init(context: ModelContext) {
         self.context = context
         loadAchievements()
     }
-    
+
     private func loadAchievements() {
         // Initialize all achievements if not already present
         let allTypes = AchievementType.allCases
@@ -34,7 +34,7 @@ final class AchievementsManager {
             )
         }
     }
-    
+
     private func targetFor(_ type: AchievementType) -> Int {
         switch type {
         case .firstAdvice, .firstSave, .nightOwl, .earlyBird, .shakeItOff, .suggestionAccepted:
@@ -65,60 +65,60 @@ final class AchievementsManager {
             return 10
         }
     }
-    
+
     // MARK: - Achievement Tracking
-    
+
     func trackAdviceGenerated(tone: ToneMode, category: AdviceCategory, totalCount: Int) {
         // Track unique tones and categories
         usedTones.insert(tone)
         usedCategories.insert(category)
-        
+
         // Update progress for generation achievements
         updateProgress(.firstAdvice, to: min(totalCount, 1))
         updateProgress(.tenAdvice, to: min(totalCount, 10))
         updateProgress(.hundredAdvice, to: min(totalCount, 100))
-        
+
         // Update tone and category achievements
         updateProgress(.toneExplorer, to: usedTones.count)
         updateProgress(.categoryMaster, to: usedCategories.count)
-        
+
         // Check time-based achievements
         checkTimeBasedAchievements()
     }
-    
+
     func trackAdviceSaved(totalSaved: Int) {
         updateProgress(.firstSave, to: min(totalSaved, 1))
         updateProgress(.collector, to: min(totalSaved, 10))
         updateProgress(.hoarder, to: min(totalSaved, 50))
     }
-    
+
     func trackShare(totalShares: Int) {
         updateProgress(.sharer, to: min(totalShares, 5))
         updateProgress(.viral, to: min(totalShares, 25))
     }
-    
+
     func trackStreak(days: Int) {
         updateProgress(.dailyStreak3, to: min(days, 3))
         updateProgress(.dailyStreak7, to: min(days, 7))
         updateProgress(.dailyStreak14, to: min(days, 14))
         updateProgress(.dailyStreak30, to: min(days, 30))
     }
-    
+
     func trackShakeUsed() {
         guard !hasUsedShake else { return }
         hasUsedShake = true
         unlock(.shakeItOff)
     }
-    
+
     func trackSuggestionSubmitted() {
         guard !hasSubmittedSuggestion else { return }
         hasSubmittedSuggestion = true
         unlock(.suggestionAccepted)
     }
-    
+
     private func checkTimeBasedAchievements() {
         let hour = Calendar.current.component(.hour, from: Date())
-        
+
         if hour >= 0 && hour < 6 {
             unlock(.nightOwl)
         }
@@ -126,62 +126,62 @@ final class AchievementsManager {
             unlock(.earlyBird)
         }
     }
-    
+
     // MARK: - Progress & Unlocking
-    
+
     private func updateProgress(_ type: AchievementType, to value: Int) {
         guard let index = achievements.firstIndex(where: { $0.type == type }) else { return }
         guard achievements[index].unlockedAt == nil else { return }
-        
+
         achievements[index].progress = value
-        
+
         if value >= achievements[index].target {
             unlock(type)
         }
     }
-    
+
     private func unlock(_ type: AchievementType) {
         guard let index = achievements.firstIndex(where: { $0.type == type }) else { return }
         guard achievements[index].unlockedAt == nil else { return }
-        
+
         achievements[index].unlockedAt = Date()
         achievements[index].progress = achievements[index].target
-        
+
         newlyUnlocked.append(achievements[index])
         showUnlockCelebration = true
     }
-    
+
     func dismissCelebration() {
         showUnlockCelebration = false
         newlyUnlocked.removeAll()
     }
-    
+
     // MARK: - Unlocked Themes
-    
+
     var unlockedThemes: [ThemeMode] {
         var themes: [ThemeMode] = [.badvice, .minimal, .ember, .slate, .evergreen, .fallout] // Base themes
-        
+
         for achievement in achievements where achievement.isUnlocked {
             if let theme = achievement.type.unlocksTheme {
                 themes.append(theme)
             }
         }
-        
+
         return themes
     }
-    
+
     var unlockedThemeCount: Int {
         achievements.filter { $0.isUnlocked && $0.type.unlocksTheme != nil }.count
     }
-    
+
     var totalAchievementCount: Int {
         AchievementType.allCases.count
     }
-    
+
     var unlockedAchievementCount: Int {
         achievements.filter(\.isUnlocked).count
     }
-    
+
     var completionPercentage: Double {
         Double(unlockedAchievementCount) / Double(totalAchievementCount)
     }
@@ -192,11 +192,11 @@ final class AchievementsManager {
 struct AchievementCelebrationView: View {
     let achievements: [Achievement]
     let onDismiss: () -> Void
-    
+
     @State private var scale: CGFloat = 0.5
     @State private var opacity: Double = 0
     @State private var rotation: Double = -10
-    
+
     var body: some View {
         ZStack {
             // Backdrop
@@ -206,7 +206,7 @@ struct AchievementCelebrationView: View {
                 .onTapGesture {
                     dismiss()
                 }
-            
+
             VStack(spacing: 24) {
                 // Trophy icon with animation
                 ZStack {
@@ -219,33 +219,33 @@ struct AchievementCelebrationView: View {
                         )
                         .frame(width: 120, height: 120)
                         .rotationEffect(.degrees(rotation))
-                    
+
                     Image(systemName: "trophy.fill")
                         .font(.system(size: 50))
                         .foregroundStyle(.white)
                 }
                 .scaleEffect(scale)
-                
+
                 VStack(spacing: 8) {
                     Text("Achievement Unlocked!")
                         .font(.system(.title2, design: .rounded, weight: .bold))
                         .foregroundStyle(.white)
-                    
+
                     ForEach(achievements) { achievement in
                         VStack(spacing: 4) {
                             Image(systemName: achievement.type.icon)
                                 .font(.system(size: 32))
                                 .foregroundStyle(.yellow)
-                            
+
                             Text(achievement.type.title)
                                 .font(.system(.title3, design: .rounded, weight: .semibold))
                                 .foregroundStyle(.white)
-                            
+
                             Text(achievement.type.description)
                                 .font(.subheadline)
                                 .foregroundStyle(.white.opacity(0.8))
                                 .multilineTextAlignment(.center)
-                            
+
                             if let theme = achievement.type.unlocksTheme {
                                 HStack {
                                     Image(systemName: "paintpalette.fill")
@@ -262,7 +262,7 @@ struct AchievementCelebrationView: View {
                         .padding(.vertical, 8)
                     }
                 }
-                
+
                 Button {
                     dismiss()
                 } label: {
@@ -288,7 +288,7 @@ struct AchievementCelebrationView: View {
             }
         }
     }
-    
+
     private func dismiss() {
         withAnimation(.easeOut(duration: 0.3)) {
             scale = 0.5
@@ -305,15 +305,20 @@ struct AchievementCelebrationView: View {
 struct AchievementsView: View {
     @State var manager: AchievementsManager
     let theme: ThemeMode
-    
+
+    private var accent: Color { Theme.accent(for: theme) }
+    private var primaryText: Color { Theme.primaryText(for: theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: theme) }
+    private var cardColor: Color { Theme.cardColor(for: theme) }
+
     @State private var selectedFilter: AchievementFilter = .all
-    
+
     enum AchievementFilter: String, CaseIterable {
         case all = "All"
         case unlocked = "Unlocked"
         case locked = "Locked"
     }
-    
+
     var filteredAchievements: [Achievement] {
         switch selectedFilter {
         case .all:
@@ -324,13 +329,13 @@ struct AchievementsView: View {
             return manager.achievements.filter { !$0.isUnlocked }
         }
     }
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 // Progress header
                 progressHeader
-                
+
                 // Filter picker
                 Picker("Filter", selection: $selectedFilter) {
                     ForEach(AchievementFilter.allCases, id: \.self) { filter in
@@ -339,7 +344,7 @@ struct AchievementsView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
-                
+
                 // Achievements grid
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 160))], spacing: 16) {
                     ForEach(filteredAchievements) { achievement in
@@ -360,50 +365,50 @@ struct AchievementsView: View {
             }
         }
     }
-    
+
     private var progressHeader: some View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .stroke(Theme.secondaryText(for: theme).opacity(0.2), lineWidth: 12)
+                    .stroke(secondaryText.opacity(0.2), lineWidth: 12)
                     .frame(width: 120, height: 120)
-                
+
                 Circle()
                     .trim(from: 0, to: manager.completionPercentage)
                     .stroke(
                         AngularGradient(
-                            colors: [Theme.accent(for: theme), .yellow, Theme.accent(for: theme)],
+                            colors: [accent, .yellow, accent],
                             center: .center
                         ),
                         style: StrokeStyle(lineWidth: 12, lineCap: .round)
                     )
                     .frame(width: 120, height: 120)
                     .rotationEffect(.degrees(-90))
-                
+
                 VStack(spacing: 2) {
                     Text("\(manager.unlockedAchievementCount)")
                         .font(.system(.title, design: .rounded, weight: .bold))
-                        .foregroundStyle(Theme.primaryText(for: theme))
+                        .foregroundStyle(primaryText)
                     Text("/ \(manager.totalAchievementCount)")
                         .font(.caption)
-                        .foregroundStyle(Theme.secondaryText(for: theme))
+                        .foregroundStyle(secondaryText)
                 }
             }
-            
+
             Text("\(Int(manager.completionPercentage * 100))% Complete")
                 .font(.headline)
-                .foregroundStyle(Theme.primaryText(for: theme))
-            
+                .foregroundStyle(primaryText)
+
             if manager.unlockedThemeCount > 0 {
                 Text("\(manager.unlockedThemeCount) theme(s) unlocked")
                     .font(.subheadline)
-                    .foregroundStyle(Theme.accent(for: theme))
+                    .foregroundStyle(accent)
             }
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Theme.cardColor(for: theme))
+                .fill(cardColor)
         )
         .padding(.horizontal)
     }
@@ -412,42 +417,47 @@ struct AchievementsView: View {
 struct AchievementCard: View {
     let achievement: Achievement
     let theme: ThemeMode
-    
+
+    private var accent: Color { Theme.accent(for: theme) }
+    private var primaryText: Color { Theme.primaryText(for: theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: theme) }
+    private var cardColor: Color { Theme.cardColor(for: theme) }
+
     @State private var isPressed = false
-    
+
     var body: some View {
         VStack(spacing: 12) {
             // Icon
             ZStack {
                 Circle()
-                    .fill(achievement.isUnlocked ? Theme.accent(for: theme).opacity(0.2) : Theme.secondaryText(for: theme).opacity(0.1))
+                    .fill(achievement.isUnlocked ? accent.opacity(0.2) : secondaryText.opacity(0.1))
                     .frame(width: 60, height: 60)
-                
+
                 Image(systemName: achievement.type.icon)
                     .font(.system(size: 28))
-                    .foregroundStyle(achievement.isUnlocked ? Theme.accent(for: theme) : Theme.secondaryText(for: theme).opacity(0.5))
+                    .foregroundStyle(achievement.isUnlocked ? accent : secondaryText.opacity(0.5))
             }
-            
+
             // Title and description
             VStack(spacing: 4) {
                 Text(achievement.type.title)
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(achievement.isUnlocked ? Theme.primaryText(for: theme) : Theme.secondaryText(for: theme))
+                    .foregroundStyle(achievement.isUnlocked ? primaryText : secondaryText)
                     .multilineTextAlignment(.center)
-                
+
                 if achievement.isUnlocked || !achievement.type.isSecret {
                     Text(achievement.type.description)
                         .font(.caption2)
-                        .foregroundStyle(Theme.secondaryText(for: theme).opacity(0.8))
+                        .foregroundStyle(secondaryText.opacity(0.8))
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
                 } else {
                     Text("???")
                         .font(.caption2)
-                        .foregroundStyle(Theme.secondaryText(for: theme).opacity(0.5))
+                        .foregroundStyle(secondaryText.opacity(0.5))
                 }
             }
-            
+
             // Progress bar or unlocked badge
             if achievement.isUnlocked {
                 Image(systemName: "checkmark.seal.fill")
@@ -457,19 +467,19 @@ struct AchievementCard: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(Theme.secondaryText(for: theme).opacity(0.1))
+                            .fill(secondaryText.opacity(0.1))
                             .frame(height: 8)
-                        
+
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(Theme.accent(for: theme).opacity(0.6))
+                            .fill(accent.opacity(0.6))
                             .frame(width: geo.size.width * achievement.progressPercent, height: 8)
                     }
                 }
                 .frame(height: 8)
-                
+
                 Text("\(achievement.progress)/\(achievement.target)")
                     .font(.caption2.monospacedDigit())
-                    .foregroundStyle(Theme.secondaryText(for: theme))
+                    .foregroundStyle(secondaryText)
             }
         }
         .padding()
@@ -477,10 +487,10 @@ struct AchievementCard: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Theme.cardColor(for: theme))
+                .fill(cardColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(achievement.isUnlocked ? Theme.accent(for: theme).opacity(0.3) : Color.clear, lineWidth: 2)
+                        .stroke(achievement.isUnlocked ? accent.opacity(0.3) : Color.clear, lineWidth: 2)
                 )
         )
         .scaleEffect(isPressed ? 0.95 : 1.0)

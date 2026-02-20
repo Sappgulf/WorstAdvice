@@ -32,6 +32,7 @@ struct GenerateTabView: View {
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var headerReactiveScale: CGFloat {
         guard !isMotionReduced else { return 1.0 }
         let cadenceScale: CGFloat = viewModel.hapticTrigger % 2 == 0 ? 1.0 : 1.02
@@ -557,7 +558,7 @@ struct GenerateTabView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(accent)
-            .foregroundStyle(Theme.buttonText(for: settings.theme))
+            .foregroundStyle(buttonText)
             .disabled(viewModel.isGenerating)
             .scaleEffect(generateButtonPulsing ? 1.03 : 1.0)
             .animation(
@@ -701,7 +702,7 @@ struct GenerateTabView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(accent)
-                .foregroundStyle(Theme.buttonText(for: settings.theme))
+                .foregroundStyle(buttonText)
             }
         }
         .padding(12)

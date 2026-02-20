@@ -67,6 +67,8 @@ struct ChaosHubTabView: View {
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
 
     var body: some View {
         NavigationStack {
@@ -301,7 +303,7 @@ struct ChaosHubTabView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(accent)
-                    .foregroundStyle(Theme.buttonText(for: settings.theme))
+                    .foregroundStyle(buttonText)
                     .accessibilityLabel(mission.isComplete ? "Run mission again: \(mission.title)" : "Run daily mission: \(mission.title)")
 
                     Button {
@@ -515,7 +517,7 @@ struct ChaosHubTabView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Theme.cardColor(for: settings.theme))
+                    .fill(cardColor)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -647,7 +649,7 @@ struct ChaosHubTabView: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(Capsule().fill(accent))
-                        .foregroundStyle(Theme.buttonText(for: settings.theme))
+                        .foregroundStyle(buttonText)
                 }
                 .accessibilityLabel("Accept contract: \(contract.title)")
             }
