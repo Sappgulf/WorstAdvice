@@ -822,6 +822,7 @@ private struct SuggestionLabView: View {
         .scrollContentBackground(.hidden)
         .background(Color.clear)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .preferredColorScheme(Theme.colorScheme(for: settings.theme))
         .onAppear {
             let selected = viewModel.selectedCategory
             suggestionCategory = selected == .random ? .dating : selected
@@ -924,6 +925,7 @@ private struct QuoteSuggestionLabView: View {
         .scrollContentBackground(.hidden)
         .background(Color.clear)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .preferredColorScheme(Theme.colorScheme(for: settings.theme))
         .onAppear {
             suggestionError = ""
         }

@@ -336,5 +336,20 @@ struct AdviceCardView: View {
             }
         }
         .accessibilityElement(children: .contain)
+        .accessibilityAction(named: "Animate card") {
+            guard !isMotionReduced else { return }
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
+                rotationX = -8
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.55)) {
+                    rotationX = 0
+                }
+            }
+            shimmerOffset = -0.3
+            withAnimation(.easeInOut(duration: 0.8)) {
+                shimmerOffset = 1.3
+            }
+        }
     }
 }

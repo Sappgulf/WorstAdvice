@@ -72,6 +72,7 @@ struct FavoritesTabView: View {
 
     @State private var layout: FavoritesLayout = .list
     @State private var listContentAppeared = false
+    @State private var activeToast: ToastMessage? = nil
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -183,6 +184,7 @@ struct FavoritesTabView: View {
                 animateListContentIfNeeded()
             }
         }
+        .toast(item: $activeToast, accentColor: accent)
     }
 
     @ToolbarContentBuilder
@@ -252,6 +254,7 @@ struct FavoritesTabView: View {
                     .onTapGesture(count: 2) {
                         viewModel.remove(record)
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        activeToast = ToastMessage(message: "Removed from Favorites", style: .deleted)
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) { viewModel.delete(record) } label: {
@@ -364,6 +367,7 @@ struct FavoritesTabView: View {
                         .onTapGesture(count: 2) {
                             viewModel.remove(record)
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                            activeToast = ToastMessage(message: "Removed from Favorites", style: .deleted)
                         }
                     }
                 }
@@ -438,6 +442,7 @@ struct FavoritesTabView: View {
         .onTapGesture(count: 2) {
             viewModel.remove(record)
             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            activeToast = ToastMessage(message: "Removed from Favorites", style: .deleted)
         }
     }
 
@@ -1231,6 +1236,7 @@ private struct FavoriteDetailView: View {
                                 Button {
                                     HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
                                     viewModel.setAftermathNote(record, note: aftermathText)
+                                    activeToast = ToastMessage(message: "Note saved", style: .success)
                                 } label: {
                                     Text("Save Note")
                                         .font(.caption.weight(.semibold))
@@ -1318,6 +1324,7 @@ struct HistoryTabView: View {
     @State private var historyListAppeared = false
     @State private var historyEmptyStateAppeared = false
     @State private var historyFloatingOffset: CGFloat = 0
+    @State private var activeToast: ToastMessage? = nil
 
     private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
     private var accent: Color { Theme.accent(for: settings.theme) }
@@ -1455,6 +1462,7 @@ struct HistoryTabView: View {
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             }
         }
+        .toast(item: $activeToast, accentColor: accent)
     }
 
     private var historyList: some View {
@@ -1548,6 +1556,7 @@ struct HistoryTabView: View {
                 viewModel.saveFromHistory(record)
                 onDataChanged()
                 HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                activeToast = ToastMessage(message: "Saved!", style: .success)
             } label: {
                 Label("Save", systemImage: "bookmark")
             }
@@ -1563,7 +1572,11 @@ struct HistoryTabView: View {
             Button { onUseRecord(record) } label: {
                 Label("Use", systemImage: "arrow.forward")
             }
-            Button { viewModel.saveFromHistory(record) } label: {
+            Button {
+                viewModel.saveFromHistory(record)
+                onDataChanged()
+                activeToast = ToastMessage(message: "Saved!", style: .success)
+            } label: {
                 Label("Save", systemImage: "bookmark")
             }
             Button { UIPasteboard.general.string = record.adviceLine } label: {
@@ -1574,6 +1587,7 @@ struct HistoryTabView: View {
             viewModel.saveFromHistory(record)
             onDataChanged()
             HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+            activeToast = ToastMessage(message: "Saved!", style: .success)
         }
     }
 

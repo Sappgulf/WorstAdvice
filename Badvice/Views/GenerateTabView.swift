@@ -19,7 +19,7 @@ struct GenerateTabView: View {
     @State private var surpriseClearTask: Task<Void, Never>? = nil
     @State private var quoteTapStreak = 0
     @State private var quoteTapResetTask: Task<Void, Never>? = nil
-    @AppStorage("hasDismissedWhatsNewCard_2026_02b") private var hasDismissedWhatsNewCard = false
+    @AppStorage("hasDismissedWhatsNewCard_2026_02c") private var hasDismissedWhatsNewCard = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -196,6 +196,9 @@ struct GenerateTabView: View {
                                     style: wasFavorite ? .deleted : .success
                                 )
                             }
+                    } else if !viewModel.isGenerating {
+                        emptyState
+                            .transition(isMotionReduced ? .identity : .opacity)
                     }
                 }
                 .overlay {
@@ -208,7 +211,10 @@ struct GenerateTabView: View {
 
                 votingRow
                 primaryActionButtons
-                tabShortcutRow
+                if !tabBarVisible.wrappedValue {
+                    tabShortcutRow
+                        .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
+                }
                 if let notice = viewModel.generationNotice, !notice.isEmpty {
                     Text(notice)
                         .font(.caption)

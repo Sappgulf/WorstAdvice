@@ -112,13 +112,12 @@ struct ChaosHubTabView: View {
             .onAppear {
                 tabBarVisible.wrappedValue = true
                 generateViewModel.trackChaosHubOpened()
-                guard !contentAppeared else { return }
-                if visibleContracts.isEmpty {
-                    visibleContracts = Array(Self.allContracts.shuffled().prefix(2))
-                }
+                // Always re-shuffle contracts on each visit so the user sees fresh ones
+                visibleContracts = Array(Self.allContracts.shuffled().prefix(2))
                 // Seed initial completion state so first onChange fires correctly
                 dailyMissionWasComplete = generateViewModel.dailyMissionState.isComplete
                 weeklyMissionWasComplete = generateViewModel.weeklyMissionState.isComplete
+                guard !contentAppeared else { return }
                 if isMotionReduced {
                     contentAppeared = true
                 } else {

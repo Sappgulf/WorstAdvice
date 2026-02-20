@@ -418,16 +418,16 @@ struct ContentView: View {
                 }
             } else {
                 ZStack {
-                    Color(hex: "F7F2E8").ignoresSafeArea()
+                    Color(.systemBackground).ignoresSafeArea()
                     VStack(spacing: 16) {
                         Image(systemName: "sparkles")
                             .font(.system(size: 38, weight: .semibold))
-                            .foregroundStyle(Color(hex: "8F4A22").opacity(0.7))
+                            .foregroundStyle(Color.primary.opacity(0.5))
                         ProgressView()
-                            .tint(Color(hex: "8F4A22"))
+                            .tint(.primary)
                         Text("Loading your chaos...")
                             .font(.system(.subheadline, design: .rounded, weight: .medium))
-                            .foregroundStyle(Color(hex: "8F4A22").opacity(0.6))
+                            .foregroundStyle(Color.primary.opacity(0.45))
                     }
                 }
                 .task {
