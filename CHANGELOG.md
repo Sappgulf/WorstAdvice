@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Session Log (2026-02-20) — Polish, Perf & Cleanup
+- Theme var hoisting: all `Theme.X(for:)` calls replaced with hoisted computed properties across every view struct (AchievementsView, AchievementCard, ChaosHubTabView, GenerateTabView, FavoritesTabView, QuotesTabView, FavoriteDetailView, HistoryTabView, SettingsTabView, SuggestionLabView, CommunityPulseView, OnboardingHistoryView)
+- Dead code removal: deleted unused `UnlockableTheme` enum (superseded by `AchievementType.unlocksTheme`); deleted stray root-level `SharedDailyQuoteSource.swift` duplicate (not in build target)
+- Content pool expansion: +50 badPrinciples, +55 keywords, +50 actionTemplates, +30 rationaleTemplates across all 10 categories; +10 momentumBeats, +5 rationaleLeads, +8 pivotPhrases, +8 escalationClauses, +40 categorySpice, +20 wisdomAnchorsByCategory
+- Achievements system: completed theme hoisting in AchievementsView and AchievementCard; all 18 achievement types correctly tracked including bugHunter placeholder
+- Created `changelog.d/` for per-feature tracking going forward
+
 ### Session Log (2026-02-19)
 - Planned (frontend/performance): enable direct tap tab selection while preserving press-and-slide tab switching, retheme Smart Prompts shuffle control, and review runtime performance posture for obvious bottlenecks. Baseline verification: `bash scripts/ci_xcodebuild_tests.sh` failed in-container because `xcodebuild` is unavailable.
 - Implemented (frontend/performance):
