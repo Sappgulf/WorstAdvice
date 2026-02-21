@@ -20,6 +20,7 @@ struct AdviceBracketView: View {
     // MARK: State
 
     @State private var contestants: [Contestant] = []
+    @State private var nextRoundContestants: [Contestant] = []
     @State private var round: Int = 0
     @State private var currentPairIndex: Int = 0
     @State private var champion: String? = nil
@@ -225,6 +226,7 @@ struct AdviceBracketView: View {
         }
 
         contestants = records.shuffled().prefix(8).map { Contestant(adviceLine: $0.adviceLine) }
+        nextRoundContestants = []
         round = 0
         currentPairIndex = 0
         champion = nil
@@ -251,24 +253,20 @@ struct AdviceBracketView: View {
     }
 
     private func advanceWith(winner: Contestant) {
-        var updated = winner
-        updated = Contestant(adviceLine: winner.adviceLine, wins: winner.wins + 1)
+        let updated = Contestant(adviceLine: winner.adviceLine, wins: winner.wins + 1)
+        nextRoundContestants.append(updated)
 
-        // Replace the pair with just the winner
-        let leftIdx = currentPairIndex * 2
-        let rightIdx = leftIdx + 1
-        if contestants.indices.contains(leftIdx) && contestants.indices.contains(rightIdx) {
-            contestants.remove(at: rightIdx)
-            contestants.remove(at: leftIdx)
-            contestants.append(updated)
-        }
+        if currentPairIndex + 1 >= totalPairs {
+            // End of round: promote winners to next round
+            contestants = nextRoundContestants
+            nextRoundContestants = []
 
-        if contestants.count == 1 {
-            champion = contestants[0].adviceLine
-        } else if currentPairIndex + 1 >= contestants.count / 2 {
-            // Next round
-            round += 1
-            currentPairIndex = 0
+            if contestants.count == 1 {
+                champion = contestants[0].adviceLine
+            } else {
+                round += 1
+                currentPairIndex = 0
+            }
         } else {
             currentPairIndex += 1
         }
