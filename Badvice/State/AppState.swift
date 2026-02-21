@@ -34,8 +34,8 @@ final class AdviceRecord {
     var isFavorite: Bool
     var voteRaw: Int?
     var aftermathNote: String?   // User's personal journal entry: what happened when they followed this advice
-    var shareCount: Int          // How many times this advice was shared
-    var copyCount: Int           // How many times this advice was copied
+    var shareCount: Int?         // Optional so CloudKit can do a lightweight migration; use shareCountValue accessor
+    var copyCount: Int?          // Optional so CloudKit can do a lightweight migration; use copyCountValue accessor
 
     init(
         id: UUID = UUID(),
@@ -59,6 +59,16 @@ final class AdviceRecord {
         self.voteRaw = vote.rawValue
         self.shareCount = shareCount
         self.copyCount = copyCount
+    }
+
+    /// Non-optional convenience accessors — use these instead of the raw optional properties
+    var shareCountValue: Int {
+        get { shareCount ?? 0 }
+        set { shareCount = newValue }
+    }
+    var copyCountValue: Int {
+        get { copyCount ?? 0 }
+        set { copyCount = newValue }
     }
 
     var category: AdviceCategory {
@@ -463,13 +473,13 @@ final class AdviceRepository {
 
     func incrementShareCount(for id: UUID) {
         guard let record = fetchRecord(id: id) else { return }
-        record.shareCount += 1
+        record.shareCountValue += 1
         try? context.save()
     }
 
     func incrementCopyCount(for id: UUID) {
         guard let record = fetchRecord(id: id) else { return }
-        record.copyCount += 1
+        record.copyCountValue += 1
         try? context.save()
     }
 
@@ -482,12 +492,12 @@ final class AdviceRepository {
 
     func topByShares(limit: Int = 5) -> [AdviceRecord] {
         let all = fetchAllHistory()
-        return Array(all.filter { $0.shareCount > 0 }.sorted { $0.shareCount > $1.shareCount }.prefix(limit))
+        return Array(all.filter { $0.shareCountValue > 0 }.sorted { $0.shareCountValue > $1.shareCountValue }.prefix(limit))
     }
 
     func topByCopies(limit: Int = 5) -> [AdviceRecord] {
         let all = fetchAllHistory()
-        return Array(all.filter { $0.copyCount > 0 }.sorted { $0.copyCount > $1.copyCount }.prefix(limit))
+        return Array(all.filter { $0.copyCountValue > 0 }.sorted { $0.copyCountValue > $1.copyCountValue }.prefix(limit))
     }
 
     func topByLikes(limit: Int = 5) -> [AdviceRecord] {

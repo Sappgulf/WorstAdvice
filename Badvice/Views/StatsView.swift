@@ -1509,8 +1509,8 @@ struct HistoryTabView: View {
 
                 if hallOfFameExpanded {
                     VStack(spacing: 8) {
-                        hallOfFameRow(title: "Most Shared", items: shared, icon: "square.and.arrow.up", countKey: \.shareCount)
-                        hallOfFameRow(title: "Most Copied", items: copied, icon: "doc.on.doc", countKey: \.copyCount)
+                        hallOfFameRow(title: "Most Shared", items: shared, icon: "square.and.arrow.up", countKey: { $0.shareCountValue })
+                        hallOfFameRow(title: "Most Copied", items: copied, icon: "doc.on.doc", countKey: { $0.copyCountValue })
                         hallOfFameRow(title: "Most Liked",  items: liked,  icon: "hand.thumbsup.fill", countKey: { ($0.voteRaw ?? 0) })
                     }
                     .padding(.horizontal, 14)
