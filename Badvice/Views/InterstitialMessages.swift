@@ -182,6 +182,11 @@ struct SettingsTabView: View {
 
     private let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
+    @AppStorage("useCustomAccent") private var useCustomAccent = false
+    @AppStorage("customAccentR") private var customAccentR: Double = 1.0
+    @AppStorage("customAccentG") private var customAccentG: Double = 0.3
+    @AppStorage("customAccentB") private var customAccentB: Double = 0.3
+    @AppStorage("seasonalEffectsEnabled") private var seasonalEffectsEnabled = true
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -476,6 +481,25 @@ struct SettingsTabView: View {
                     .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isTileSelected)
                 }
             }
+            Divider().opacity(0.5)
+            Toggle("Custom Accent Color", isOn: $useCustomAccent)
+                .tint(accent)
+            if useCustomAccent {
+                ColorPicker(
+                    "Accent Color",
+                    selection: Binding<Color>(
+                        get: { Color(red: customAccentR, green: customAccentG, blue: customAccentB) },
+                        set: { newColor in
+                            let ui = UIColor(newColor)
+                            var r: CGFloat = 0; var g: CGFloat = 0; var b: CGFloat = 0; var a: CGFloat = 0
+                            ui.getRed(&r, green: &g, blue: &b, alpha: &a)
+                            customAccentR = r; customAccentG = g; customAccentB = b
+                        }
+                    ),
+                    supportsOpacity: false
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
     }
 
@@ -489,7 +513,9 @@ struct SettingsTabView: View {
                 Toggle("Performance Mode", isOn: $viewModel.performanceMode)
                 Divider().opacity(0.5)
                 Toggle("Shake to Generate", isOn: $shakeToGenerateEnabled)
-
+                Divider().opacity(0.5)
+                Toggle("Seasonal Effects", isOn: $seasonalEffectsEnabled)
+                    .tint(accent)
                 if isLowPowerModeEnabled {
                     Divider().opacity(0.5)
                     Label("Low Power Mode is on", systemImage: "battery.25")

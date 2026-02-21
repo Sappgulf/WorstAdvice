@@ -34,6 +34,8 @@ final class AdviceRecord {
     var isFavorite: Bool
     var voteRaw: Int?
     var aftermathNote: String?   // User's personal journal entry: what happened when they followed this advice
+    var shareCount: Int          // How many times this advice was shared
+    var copyCount: Int           // How many times this advice was copied
 
     init(
         id: UUID = UUID(),
@@ -43,7 +45,9 @@ final class AdviceRecord {
         adviceLine: String,
         rationaleLine: String?,
         isFavorite: Bool = false,
-        vote: AdviceVoteState = .none
+        vote: AdviceVoteState = .none,
+        shareCount: Int = 0,
+        copyCount: Int = 0
     ) {
         self.id = id
         self.createdAt = createdAt
@@ -53,6 +57,8 @@ final class AdviceRecord {
         self.rationaleLine = rationaleLine
         self.isFavorite = isFavorite
         self.voteRaw = vote.rawValue
+        self.shareCount = shareCount
+        self.copyCount = copyCount
     }
 
     var category: AdviceCategory {
@@ -440,9 +446,53 @@ final class AdviceRepository {
         return (try? context.fetch(descriptor)) ?? []
     }
 
+    func thisWeekFavorites() -> [AdviceRecord] {
+        let cutoff = Date().addingTimeInterval(-7 * 86_400)
+        let all = fetchFavorites()
+        return Array(all.filter { $0.createdAt >= cutoff }
+            .sorted { ($0.voteRaw ?? 0) > ($1.voteRaw ?? 0) }
+            .prefix(3))
+    }
+
     func historyCount() -> Int {
         let descriptor = FetchDescriptor<AdviceRecord>()
         return (try? context.fetchCount(descriptor)) ?? 0
+    }
+
+    // MARK: - Leaderboard helpers
+
+    func incrementShareCount(for id: UUID) {
+        guard let record = fetchRecord(id: id) else { return }
+        record.shareCount += 1
+        try? context.save()
+    }
+
+    func incrementCopyCount(for id: UUID) {
+        guard let record = fetchRecord(id: id) else { return }
+        record.copyCount += 1
+        try? context.save()
+    }
+
+    private func fetchRecord(id: UUID) -> AdviceRecord? {
+        let predicate = #Predicate<AdviceRecord> { $0.id == id }
+        var descriptor = FetchDescriptor<AdviceRecord>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return (try? context.fetch(descriptor))?.first
+    }
+
+    func topByShares(limit: Int = 5) -> [AdviceRecord] {
+        let all = fetchAllHistory()
+        return Array(all.filter { $0.shareCount > 0 }.sorted { $0.shareCount > $1.shareCount }.prefix(limit))
+    }
+
+    func topByCopies(limit: Int = 5) -> [AdviceRecord] {
+        let all = fetchAllHistory()
+        return Array(all.filter { $0.copyCount > 0 }.sorted { $0.copyCount > $1.copyCount }.prefix(limit))
+    }
+
+    func topByLikes(limit: Int = 5) -> [AdviceRecord] {
+        let all = fetchAllHistory()
+        return Array(all.filter { ($0.voteRaw ?? 0) > 0 }.sorted { ($0.voteRaw ?? 0) > ($1.voteRaw ?? 0) }.prefix(limit))
     }
 
     func favoriteCount() -> Int {
@@ -2197,6 +2247,19 @@ final class GenerateViewModel {
         }
     }
 
+    /// Re-generates advice with the same category, tone, and scenario but a fresh seed —
+    /// only the wording/framing changes.
+    func remixCurrentAdvice() {
+        guard current != nil, !isGenerating else { return }
+        analyticsTracker.track("remix_advice", properties: [
+            "category": selectedCategory.rawValue,
+            "tone": selectedTone.rawValue
+        ])
+        Task {
+            await generate(seed: Int(Date().timeIntervalSince1970 * 1_000) &+ Int.random(in: 1...9999))
+        }
+    }
+
 
     func generateDailyDrop() {
         let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
@@ -2608,6 +2671,7 @@ final class GenerateViewModel {
                 scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
                 type: .share
             )
+            repository.incrementShareCount(for: current.id)
         }
         analyticsTracker.track("share_card", properties: [
             "template": template.rawValue,
@@ -2622,9 +2686,17 @@ final class GenerateViewModel {
                 scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
                 type: .copy
             )
+            repository.incrementCopyCount(for: current.id)
         }
         analyticsTracker.track("copy_text", properties: [:])
     }
+
+    // MARK: - Leaderboard
+
+    var leaderboardTopShared: [AdviceRecord] { repository.topByShares(limit: 5) }
+    var leaderboardTopCopied: [AdviceRecord] { repository.topByCopies(limit: 5) }
+    var leaderboardTopLiked: [AdviceRecord] { repository.topByLikes(limit: 5) }
+    var weeklyRecapFavorites: [AdviceRecord] { repository.thisWeekFavorites() }
 
     private func playHaptic(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
         HapticsManager.play(style: style, isEnabled: settingsViewModel.hapticsEnabled)

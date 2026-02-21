@@ -15,6 +15,7 @@ struct ChaosHubTabView: View {
     @State private var weeklyMissionWasComplete = false
     @State private var missionCompletePulse = false
     @State private var weeklyCompletePulse = false
+    @State private var showingBracket = false
 
     private var chaosScore: Int {
         let streak = min(generateViewModel.challengeStreakDays, 14)
@@ -435,7 +436,21 @@ struct ChaosHubTabView: View {
                     .buttonStyle(.bordered)
                     .tint(accent)
                 }
+
+                Button {
+                    HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                    showingBracket = true
+                } label: {
+                    Label("Advice Brackets 🥊", systemImage: "trophy.fill")
+                        .font(.caption.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 38)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
             }
+        }
+        .sheet(isPresented: $showingBracket) {
+            AdviceBracketView(settings: settings, generateViewModel: generateViewModel)
         }
     }
 

@@ -140,6 +140,7 @@ struct GenerateTabView: View {
 
                 selectorRow
                 dailyQuoteBanner
+                weeklyRecapSection
                 scenarioComposer
                 friendRoastComposer
                 scenarioSuggestionsRow
@@ -650,6 +651,16 @@ struct GenerateTabView: View {
                     showingShareSheet = true
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 }
+
+                railButton(
+                    title: "Remix",
+                    systemImage: "bolt.fill",
+                    isEnabled: hasCurrent && !viewModel.isGenerating
+                ) {
+                    viewModel.remixCurrentAdvice()
+                    HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
+                    activeToast = ToastMessage(message: "Remixed!", style: .success)
+                }
             }
             .frame(maxWidth: .infinity)
         }
@@ -722,6 +733,60 @@ struct GenerateTabView: View {
                 .stroke(accent.opacity(0.12), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
+    }
+
+    // MARK: - Weekly Recap
+
+    @ViewBuilder
+    private var weeklyRecapSection: some View {
+        let weekday = Calendar.current.component(.weekday, from: Date())
+        let isSaturday = weekday == 7
+        let recapItems = viewModel.weeklyRecapFavorites
+        if isSaturday && !recapItems.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(accent)
+                    Text("Worst of My Week")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Spacer()
+                    Text("🔁")
+                }
+                ForEach(Array(recapItems.enumerated()), id: \.offset) { idx, record in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("\(idx + 1).")
+                            .font(.caption2.weight(.bold).monospacedDigit())
+                            .foregroundStyle(secondaryText)
+                        Text(record.adviceLine)
+                            .font(.caption)
+                            .lineLimit(3)
+                            .foregroundStyle(primaryText)
+                    }
+                }
+                Button {
+                    let lines = recapItems.enumerated().map { "\($0.offset + 1). \($0.element.adviceLine)" }.joined(separator: "\n")
+                    let shareText = "My Worst Advice of the Week 🏆\n\n\(lines)\n\n— via Badvice"
+                    shareItems = [shareText]
+                    showingShareSheet = true
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                } label: {
+                    Label("Share Recap", systemImage: "square.and.arrow.up")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(Capsule().fill(accent.opacity(0.15)))
+                        .foregroundStyle(accent)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(cardColor)
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(accent.opacity(0.14), lineWidth: 1))
+            )
+        }
     }
 
     private func quickOpenButton(title: String, systemImage: String, tab: AppTab) -> some View {

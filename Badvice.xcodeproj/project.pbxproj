@@ -10,6 +10,7 @@
 		15D513E5FD6D9380FB5819D4 /* BadviceWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		58C6274C9DD58EBDFC00DD56 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89E0183259A65059B4694547 /* Foundation.framework */; };
 		6023FF49F2203A380675F04A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA4E285DDB5972C81A405FFA /* SwiftUI.framework */; };
+		BL0000010000000000000001 /* BadviceLockScreenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0000020000000000000001 /* BadviceLockScreenWidget.swift */; };
 		A10000010000000000000001 /* WorstAdviceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* WorstAdviceApp.swift */; };
 		A10000010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002 /* ContentView.swift */; };
 		A10000010000000000000003 /* AdviceCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* AdviceCardView.swift */; };
@@ -45,6 +46,7 @@
 		A1000002000000000000AA02 /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA02 /* ToastView.swift */; };
 		A1000002000000000000AA03 /* DeviceCapabilityProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */; };
 		A1000002000000000000AA04 /* AdviceEngine+Vocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA04 /* AdviceEngine+Vocabulary.swift */; };
+		A1000002000000000000AA05 /* AdviceBracketView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA05 /* AdviceBracketView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +84,7 @@
 		0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BadviceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorstAdviceQuoteWidget.swift; path = WorstAdviceWidget/WorstAdviceQuoteWidget.swift; sourceTree = "<group>"; };
 		483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorstAdviceWidgetBundle.swift; path = WorstAdviceWidget/WorstAdviceWidgetBundle.swift; sourceTree = "<group>"; };
+		BL0000020000000000000001 /* BadviceLockScreenWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BadviceLockScreenWidget.swift; path = WorstAdviceWidget/BadviceLockScreenWidget.swift; sourceTree = "<group>"; };
 		56D0F9A0F33FC44CE7FFD0B9 /* AchievementsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AchievementsView.swift; path = Badvice/Views/AchievementsView.swift; sourceTree = "<group>"; };
 		89E0183259A65059B4694547 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		A10000010000000000000028 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
@@ -118,6 +121,7 @@
 		A2000002000000000000AA02 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 		A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilityProfile.swift; sourceTree = "<group>"; };
 		A2000002000000000000AA04 /* AdviceEngine+Vocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AdviceEngine+Vocabulary.swift"; sourceTree = "<group>"; };
+		A2000002000000000000AA05 /* AdviceBracketView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceBracketView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -169,6 +173,7 @@
 			children = (
 				483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */,
 				2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */,
+				BL0000020000000000000001 /* BadviceLockScreenWidget.swift */,
 			);
 			name = WorstAdviceWidget;
 			sourceTree = SOURCE_ROOT;
@@ -275,6 +280,7 @@
 				A10000010000000000000028 /* SplashView.swift */,
 				A2000002000000000000AA01 /* GenerateTabView.swift */,
 				A2000002000000000000AA02 /* ToastView.swift */,
+				A2000002000000000000AA05 /* AdviceBracketView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -451,6 +457,7 @@
 				A1000002000000000000AA04 /* AdviceEngine+Vocabulary.swift in Sources */,
 				C82E5EADB60BABE95E14B274 /* ShakeDetector.swift in Sources */,
 				A970A1DC8B4EEEDDF0DEC44A /* AchievementsView.swift in Sources */,
+				A1000002000000000000AA05 /* AdviceBracketView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -469,6 +476,7 @@
 				B07D78E07800DE9F6C60ABAF /* WorstAdviceWidgetBundle.swift in Sources */,
 				F67E4DFCBEDF98A26BE99151 /* WorstAdviceQuoteWidget.swift in Sources */,
 				A10000010000000000000033 /* SharedDailyQuoteSource.swift in Sources */,
+				BL0000010000000000000001 /* BadviceLockScreenWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -543,6 +543,7 @@ struct ContentView: View {
             HistoryTabView(
                 viewModel: session.history,
                 settings: session.settings,
+                generateViewModel: session.generate,
                 onUseRecord: { (record: AdviceRecord) in
                     session.generate.current = record
                     setSelectedTab(.generate, session: session)

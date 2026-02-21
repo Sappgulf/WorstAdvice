@@ -1314,6 +1314,7 @@ extension ButtonStyle where Self == ScaleButtonStyle {
 struct HistoryTabView: View {
     @Bindable var viewModel: HistoryViewModel
     @Bindable var settings: SettingsViewModel
+    @Bindable var generateViewModel: GenerateViewModel
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     var onUseRecord: (AdviceRecord) -> Void
@@ -1325,6 +1326,7 @@ struct HistoryTabView: View {
     @State private var historyEmptyStateAppeared = false
     @State private var historyFloatingOffset: CGFloat = 0
     @State private var activeToast: ToastMessage? = nil
+    @State private var hallOfFameExpanded = false
 
     private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
     private var accent: Color { Theme.accent(for: settings.theme) }
@@ -1388,7 +1390,11 @@ struct HistoryTabView: View {
                                     .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
                             }
 
-                            historyCategoryChips
+                        historyCategoryChips
+
+                            // Hall of Fame card
+                            hallOfFameSection
+                                .padding(.horizontal, 0)
 
                             // Stats strip
                             let filtersActive = viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty
@@ -1463,6 +1469,88 @@ struct HistoryTabView: View {
             }
         }
         .toast(item: $activeToast, accentColor: accent)
+    }
+
+    // MARK: - Hall of Fame
+
+    @ViewBuilder
+    private var hallOfFameSection: some View {
+        let shared = generateViewModel.leaderboardTopShared
+        let copied = generateViewModel.leaderboardTopCopied
+        let liked  = generateViewModel.leaderboardTopLiked
+        let hasData = !shared.isEmpty || !copied.isEmpty || !liked.isEmpty
+        if hasData {
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
+                        hallOfFameExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle().fill(accent.opacity(0.12)).frame(width: 32, height: 32)
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(accent)
+                        }
+                        Text("Hall of Fame")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(primaryText)
+                        Spacer()
+                        Image(systemName: hallOfFameExpanded ? "chevron.up" : "chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(secondaryText)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+
+                if hallOfFameExpanded {
+                    VStack(spacing: 8) {
+                        hallOfFameRow(title: "Most Shared", items: shared, icon: "square.and.arrow.up", countKey: \.shareCount)
+                        hallOfFameRow(title: "Most Copied", items: copied, icon: "doc.on.doc", countKey: \.copyCount)
+                        hallOfFameRow(title: "Most Liked",  items: liked,  icon: "hand.thumbsup.fill", countKey: { ($0.voteRaw ?? 0) })
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 12)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(cardColor)
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(accent.opacity(0.12), lineWidth: 1))
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+        }
+    }
+
+    private func hallOfFameRow(title: String, items: [AdviceRecord], icon: String, countKey: @escaping (AdviceRecord) -> Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label(title, systemImage: icon)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(accent)
+            ForEach(Array(items.prefix(3).enumerated()), id: \.offset) { idx, record in
+                HStack(spacing: 8) {
+                    Text("\(idx + 1)")
+                        .font(.caption2.weight(.bold).monospacedDigit())
+                        .foregroundStyle(secondaryText)
+                        .frame(width: 16)
+                    Text(record.adviceLine)
+                        .font(.caption)
+                        .lineLimit(2)
+                        .foregroundStyle(primaryText)
+                    Spacer(minLength: 0)
+                    Text("×\(countKey(record))")
+                        .font(.caption2.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(accent)
+                }
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(secondaryText.opacity(0.08)))
     }
 
     private var historyList: some View {
