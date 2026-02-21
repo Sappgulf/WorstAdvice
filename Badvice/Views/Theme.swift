@@ -21,6 +21,20 @@ enum Theme {
     /// Slow: page-level transitions — 0.45s
     static let animSlow: Double = 0.45
 
+    // MARK: - Spring Animations (Organic)
+    
+    static var springSnappy: Animation {
+        .spring(response: 0.3, dampingFraction: 0.65, blendDuration: 0.1)
+    }
+
+    static var springBouncy: Animation {
+        .spring(response: 0.45, dampingFraction: 0.55, blendDuration: 0.2)
+    }
+    
+    static var springSmooth: Animation {
+        .spring(response: 0.55, dampingFraction: 0.8, blendDuration: 0.3)
+    }
+
     static let headlineFont: Font = .system(.largeTitle, design: .serif, weight: .bold)
     static let cardFont: Font = .system(.title2, design: .default, weight: .semibold)
     static let bodyFont: Font = .system(.body, design: .default, weight: .regular)

@@ -251,7 +251,7 @@ struct AdviceCardView: View {
                     // Keep vertical list scrolling responsive by only reacting to mostly horizontal drags.
                     guard horizontalWeight >= verticalWeight * 0.8 else { return }
 
-                    withAnimation(.interactiveSpring(response: 0.15, dampingFraction: 0.8)) {
+                    withAnimation(Theme.springSnappy) {
                         let nextY = Double(value.translation.width / 18)
                         let nextX = Double(-value.translation.height / 24)
                         rotationY = min(max(nextY, -maxRotation), maxRotation)
@@ -260,7 +260,7 @@ struct AdviceCardView: View {
                 }
                 .onEnded { _ in
                     guard !isMotionReduced else { return }
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                    withAnimation(Theme.springSmooth) {
                         rotationX = 0
                         rotationY = 0
                     }
@@ -288,7 +288,7 @@ struct AdviceCardView: View {
             }
             
             // Pop out and slam down effect
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
+            withAnimation(Theme.springBouncy) {
                 rotationX = -12 // Deeper tilt back
             }
             
@@ -303,7 +303,7 @@ struct AdviceCardView: View {
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.55)) {
+                withAnimation(Theme.springSmooth) {
                     rotationX = 0
                 }
             }
@@ -338,11 +338,11 @@ struct AdviceCardView: View {
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: "Animate card") {
             guard !isMotionReduced else { return }
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
+            withAnimation(Theme.springBouncy) {
                 rotationX = -8
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.55)) {
+                withAnimation(Theme.springSmooth) {
                     rotationX = 0
                 }
             }

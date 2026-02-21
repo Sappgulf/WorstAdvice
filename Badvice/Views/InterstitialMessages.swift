@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Charts
 
 struct ShareCardRenderer {
     static func render(content: ShareCardContent) -> UIImage {
@@ -17,73 +18,100 @@ struct ShareCardRenderer {
             let cardRect = rect.insetBy(dx: inset, dy: inset)
 
             let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 44)
+            
+            // Outer drop shadow
             cg.saveGState()
-            UIColor.white.withAlphaComponent(0.22).setFill()
+            cg.setShadow(offset: CGSize(width: 0, height: 32), blur: 64, color: UIColor.black.withAlphaComponent(0.5).cgColor)
+            UIColor.white.withAlphaComponent(0.18).setFill()
             path.fill()
             cg.restoreGState()
 
-            UIColor.white.withAlphaComponent(0.28).setStroke()
-            path.lineWidth = 2
+            // Inner highlight (bevel effect)
+            cg.saveGState()
+            let innerPath = UIBezierPath(roundedRect: cardRect.insetBy(dx: 1.5, dy: 1.5), cornerRadius: 42.5)
+            UIColor.white.withAlphaComponent(0.45).setStroke()
+            innerPath.lineWidth = 1.5
+            innerPath.stroke()
+            cg.restoreGState()
+
+            // Outer subtle border
+            UIColor.white.withAlphaComponent(0.2).setStroke()
+            path.lineWidth = 1
             path.stroke()
 
             let paragraph = NSMutableParagraphStyle()
             paragraph.alignment = .left
             paragraph.lineBreakMode = .byWordWrapping
+            paragraph.lineSpacing = 8
 
+            // Top Brand Watermark
             let titleAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 34, weight: .bold),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.95)
+                .font: UIFont.systemFont(ofSize: 34, weight: .heavy),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.95),
+                .kern: 1.5
             ]
-            NSString(string: "Badvice").draw(
-                in: CGRect(x: cardRect.minX + 52, y: cardRect.minY + 42, width: cardRect.width - 104, height: 44),
+            NSString(string: "BADVICE").draw(
+                in: CGRect(x: cardRect.minX + 52, y: cardRect.minY + 48, width: cardRect.width - 104, height: 44),
                 withAttributes: titleAttributes
             )
 
+            // Advice Text
             let adviceAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 48, weight: .semibold),
+                .font: UIFont.systemFont(ofSize: 48, weight: .bold),
                 .paragraphStyle: paragraph,
-                .foregroundColor: UIColor.white
+                .foregroundColor: UIColor.white,
+                .kern: -0.5
             ]
             NSString(string: content.adviceLine).draw(
-                in: CGRect(x: cardRect.minX + 52, y: cardRect.minY + 118, width: cardRect.width - 104, height: cardRect.height * 0.48),
+                in: CGRect(x: cardRect.minX + 52, y: cardRect.minY + 128, width: cardRect.width - 104, height: cardRect.height * 0.48),
                 withAttributes: adviceAttributes
             )
 
+            // Rationale Text
             if let rationale = content.rationaleLine, !rationale.isEmpty {
                 let rationaleAttributes: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 28, weight: .regular),
+                    .font: UIFont.systemFont(ofSize: 28, weight: .medium),
                     .paragraphStyle: paragraph,
-                    .foregroundColor: UIColor.white.withAlphaComponent(0.9)
+                    .foregroundColor: UIColor.white.withAlphaComponent(0.9),
+                    .kern: 0.2
                 ]
                 NSString(string: rationale).draw(
-                    in: CGRect(x: cardRect.minX + 52, y: cardRect.midY + 120, width: cardRect.width - 104, height: 220),
+                    in: CGRect(x: cardRect.minX + 52, y: cardRect.midY + 110, width: cardRect.width - 104, height: 240),
                     withAttributes: rationaleAttributes
                 )
             }
 
+            // Category & Tone Tags
             let metaAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.monospacedSystemFont(ofSize: 24, weight: .medium),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.85)
+                .font: UIFont.monospacedSystemFont(ofSize: 24, weight: .semibold),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.85),
+                .kern: 1.2
             ]
-            NSString(string: "\(content.category.title) • \(content.tone.title)").draw(
-                in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 150, width: cardRect.width - 104, height: 30),
+            NSString(string: "\(content.category.title.uppercased()) • \(content.tone.title.uppercased())").draw(
+                in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 140, width: cardRect.width - 104, height: 30),
                 withAttributes: metaAttributes
             )
 
-            NSString(string: "@Badvice").draw(
-                in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 104, width: cardRect.width - 104, height: 30),
-                withAttributes: [
-                    .font: UIFont.monospacedSystemFont(ofSize: 22, weight: .regular),
-                    .foregroundColor: UIColor.white.withAlphaComponent(0.8)
-                ]
+            // Bottom Right App Watermark
+            let watermarkAttrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 28, weight: .black),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.6),
+                .kern: 2.0
+            ]
+            let watermarkStr = "badvice.app"
+            let watermarkSize = watermarkStr.size(withAttributes: watermarkAttrs)
+            NSString(string: watermarkStr).draw(
+                in: CGRect(x: cardRect.maxX - watermarkSize.width - 52, y: cardRect.maxY - 140, width: watermarkSize.width, height: 34),
+                withAttributes: watermarkAttrs
             )
 
             if content.includeDisclaimer {
-                NSString(string: "For entertainment only").draw(
-                    in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 62, width: cardRect.width - 104, height: 28),
+                NSString(string: "FOR ENTERTAINMENT ONLY").draw(
+                    in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 70, width: cardRect.width - 104, height: 28),
                     withAttributes: [
-                        .font: UIFont.systemFont(ofSize: 21, weight: .semibold),
-                        .foregroundColor: UIColor.white.withAlphaComponent(0.86)
+                        .font: UIFont.systemFont(ofSize: 20, weight: .bold),
+                        .foregroundColor: UIColor.white.withAlphaComponent(0.5),
+                        .kern: 2.0
                     ]
                 )
             }
@@ -147,6 +175,10 @@ struct SettingsTabView: View {
     @State private var gearSpinDegrees: Double = 0
     @State private var gearIsSpinning = false
     @State private var gearSettleScale: CGFloat = 1.0
+    
+    @State private var shockwaveTheme: ThemeMode?
+    @State private var shockwaveScale: CGFloat = 0.1
+    @State private var shockwaveOpacity: Double = 0
 
     private let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
@@ -240,28 +272,34 @@ struct SettingsTabView: View {
                     VStack(spacing: 20) {
                         communityLabsSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 18)
-                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.05), value: sectionsAppeared)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05), value: sectionsAppeared)
                         themeSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 18)
-                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.11), value: sectionsAppeared)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10), value: sectionsAppeared)
                         experienceSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 18)
-                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.17), value: sectionsAppeared)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.15), value: sectionsAppeared)
                         sharingSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 18)
-                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.23), value: sectionsAppeared)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.20), value: sectionsAppeared)
                         dataSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 18)
-                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.29), value: sectionsAppeared)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.25), value: sectionsAppeared)
                         aboutSection
                             .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 18)
-                            .animation(isMotionReduced ? nil : .spring(response: Theme.animSlow, dampingFraction: 0.82).delay(0.35), value: sectionsAppeared)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.30), value: sectionsAppeared)
                     }
                     .padding(.horizontal, 16)
                 }
@@ -290,6 +328,18 @@ struct SettingsTabView: View {
                 gearSpinDegrees = 0
                 gearIsSpinning = false
                 gearSettleScale = 1.0
+            }
+            .overlay {
+                if let st = shockwaveTheme {
+                    Circle()
+                        .fill(
+                            RadialGradient(colors: [Theme.accent(for: st).opacity(0.4), .clear], center: .center, startRadius: 0, endRadius: 200)
+                        )
+                        .scaleEffect(shockwaveScale)
+                        .opacity(shockwaveOpacity)
+                        .allowsHitTesting(false)
+                        .ignoresSafeArea()
+                }
             }
         }
     }
@@ -358,8 +408,23 @@ struct SettingsTabView: View {
                         if isMotionReduced {
                             viewModel.theme = mode
                         } else {
-                            withAnimation(.easeInOut(duration: 0.35)) {
-                                viewModel.theme = mode
+                            if viewModel.theme != mode {
+                                shockwaveTheme = mode
+                                shockwaveScale = 0.5
+                                shockwaveOpacity = 1.0
+                                
+                                withAnimation(.easeOut(duration: 0.6)) {
+                                    shockwaveScale = 6.0
+                                    shockwaveOpacity = 0.0
+                                }
+                                
+                                withAnimation(.easeInOut(duration: 0.35)) {
+                                    viewModel.theme = mode
+                                }
+                                
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                    shockwaveTheme = nil
+                                }
                             }
                         }
                     } label: {
@@ -938,6 +1003,8 @@ private struct CommunityPulseView: View {
 
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    
+    @State private var chartAnimated = false
 
     var body: some View {
         List {
@@ -946,22 +1013,32 @@ private struct CommunityPulseView: View {
                     Text("No community suggestions yet.")
                         .foregroundStyle(secondaryText)
                 } else {
-                    ForEach(viewModel.topCommunityTopics) { item in
-                        HStack(alignment: .firstTextBaseline) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(item.topic)
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(primaryText)
-                                Text(item.category.title)
-                                    .font(.caption)
+                    Chart {
+                        ForEach(viewModel.topCommunityTopics.prefix(10)) { item in
+                            BarMark(
+                                x: .value("Submissions", chartAnimated ? item.submissions : 0),
+                                y: .value("Topic", item.topic)
+                            )
+                            .foregroundStyle(Theme.accent(for: settings.theme).gradient)
+                            .cornerRadius(4)
+                            .annotation(position: .trailing) {
+                                Text("\(item.submissions)")
+                                    .font(.caption2.weight(.bold))
                                     .foregroundStyle(secondaryText)
+                                    .opacity(chartAnimated ? 1 : 0)
                             }
-                            Spacer()
-                            Text("\(item.submissions)x")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(secondaryText)
                         }
                     }
+                    .chartXAxis(.hidden)
+                    .chartYAxis {
+                        AxisMarks { value in
+                            AxisValueLabel()
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(primaryText)
+                        }
+                    }
+                    .frame(height: max(200, CGFloat(min(viewModel.topCommunityTopics.count, 10) * 44)))
+                    .padding(.vertical, 8)
                 }
             }
 
@@ -1007,5 +1084,10 @@ private struct CommunityPulseView: View {
         .background(Color.clear)
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationTitle("Community Pulse")
+        .onAppear {
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.65).delay(0.1)) {
+                chartAnimated = true
+            }
+        }
     }
 }

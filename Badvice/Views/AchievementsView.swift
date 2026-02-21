@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import CoreMotion
 
 // MARK: - Achievements Manager
 
@@ -187,25 +188,114 @@ final class AchievementsManager {
     }
 }
 
+// MARK: - Motion Management & Particles
+
+@Observable
+final class MotionManager {
+    static let shared = MotionManager()
+    private let motionManager = CMMotionManager()
+    var pitch: Double = 0
+    var roll: Double = 0
+    
+    private init() {
+        if motionManager.isDeviceMotionAvailable {
+            motionManager.deviceMotionUpdateInterval = 1.0 / 60.0
+            motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
+                guard let motion = motion else { return }
+                self?.pitch = motion.attitude.pitch
+                self?.roll = motion.attitude.roll
+            }
+        }
+    }
+}
+
+struct ConfettiSystem: View {
+    let trigger: Date
+    let color: Color
+    
+    private let particleCount = 60
+    private let randomSeeds: [(vx: Double, vy: Double, vr: Double, color: Color, size: Double)]
+    
+    init(trigger: Date, color: Color) {
+        self.trigger = trigger
+        self.color = color
+        var seeds = [(Double, Double, Double, Color, Double)]()
+        // Vibrant palette
+        let palette = [color, color.opacity(0.8), Color.white, Color.yellow, Color.orange, Color.pink]
+        for _ in 0..<particleCount {
+            let angle = Double.random(in: -Double.pi...(-Double.pi * 0.1)) // Fountains upward
+            let speed = Double.random(in: 400...1100)
+            let vx = cos(angle) * speed
+            let vy = sin(angle) * speed
+            let vr = Double.random(in: -8...8)
+            let c = palette.randomElement()!
+            let s = Double.random(in: 0.5...1.8)
+            seeds.append((vx, vy, vr, c, s))
+        }
+        self.randomSeeds = seeds
+    }
+    
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                let elapsed = timeline.date.timeIntervalSince(trigger)
+                guard elapsed > 0 && elapsed < 4.5 else { return }
+                
+                let cx = size.width / 2
+                let cy = size.height / 2 + 100
+                
+                for seed in randomSeeds {
+                    let gravity = 900.0
+                    let x = cx + seed.vx * elapsed
+                    let y = cy + seed.vy * elapsed + 0.5 * gravity * elapsed * elapsed
+                    
+                    let rot = seed.vr * elapsed
+                    var ctx = context
+                    ctx.translateBy(x: x, y: y)
+                    ctx.rotate(by: .radians(rot))
+                    ctx.scaleBy(x: seed.size, y: seed.size)
+                    
+                    let opacity = max(0, 1.0 - (elapsed / 4.0))
+                    ctx.fill(
+                        Path(roundedRect: CGRect(x: -4, y: -8, width: 8, height: 16), cornerRadius: 2),
+                        with: .color(seed.color.opacity(opacity))
+                    )
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Achievement Celebration View
 
 struct AchievementCelebrationView: View {
     let achievements: [Achievement]
+    let theme: ThemeMode
     let onDismiss: () -> Void
 
     @State private var scale: CGFloat = 0.5
     @State private var opacity: Double = 0
     @State private var rotation: Double = -10
+    @State private var triggerDate = Date()
+    @Query private var settings: [AppSettingsEntity]
+
+    var hapticsEnabled: Bool {
+        settings.first?.hapticsEnabled ?? true
+    }
 
     var body: some View {
         ZStack {
             // Backdrop
-            Color.black.opacity(0.7)
+            Color.black.opacity(0.85)
                 .ignoresSafeArea()
                 .opacity(opacity)
                 .onTapGesture {
                     dismiss()
                 }
+                
+            ConfettiSystem(trigger: triggerDate, color: Theme.particleColor(for: theme))
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
 
             VStack(spacing: 24) {
                 // Trophy icon with animation
@@ -264,26 +354,49 @@ struct AchievementCelebrationView: View {
                 }
 
                 Button {
+                    HapticsManager.playSelection(isEnabled: hapticsEnabled)
                     dismiss()
                 } label: {
                     Text("Awesome!")
                         .font(.system(.body, design: .rounded, weight: .bold))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(Theme.buttonText(for: theme))
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(.yellow)
+                        .background(Theme.accent(for: theme))
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .padding(.horizontal, 40)
             }
             .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                    .fill(Theme.cardColor(for: theme))
+                    .shadow(color: .black.opacity(0.5), radius: 30, y: 15)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 32, style: .continuous)
+                            .stroke(Theme.accent(for: theme).opacity(0.4), lineWidth: 2)
+                    )
+            )
+            .padding(24)
+            .scaleEffect(scale)
+            // CoreMotion-based 3D card tilt
+            .rotation3DEffect(
+                .radians(MotionManager.shared.pitch * 0.3),
+                axis: (x: 1, y: 0, z: 0)
+            )
+            .rotation3DEffect(
+                .radians(MotionManager.shared.roll * 0.3),
+                axis: (x: 0, y: 1, z: 0)
+            )
         }
         .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            triggerDate = Date()
+            HapticsManager.playAchievementCelebration(isEnabled: hapticsEnabled)
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
                 scale = 1.0
                 opacity = 1.0
             }
-            withAnimation(.linear(duration: 10).repeatForever(autoreverses: false)) {
+            withAnimation(.linear(duration: 12).repeatForever(autoreverses: false)) {
                 rotation = 350
             }
         }
@@ -359,7 +472,7 @@ struct AchievementsView: View {
         .navigationTitle("Achievements")
         .overlay {
             if manager.showUnlockCelebration {
-                AchievementCelebrationView(achievements: manager.newlyUnlocked) {
+                AchievementCelebrationView(achievements: manager.newlyUnlocked, theme: theme) {
                     manager.dismissCelebration()
                 }
             }
