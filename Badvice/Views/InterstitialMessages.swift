@@ -598,9 +598,9 @@ struct SettingsTabView: View {
                 .accessibilityLabel("Generation Engine")
                 .accessibilityValue(viewModel.preferredGenerationProvider.title)
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
-                    Text(viewModel.preferredGenerationProvider.title)
+                    Text("UI Test Engine: \(viewModel.preferredGenerationProvider.title)")
                         .font(.caption2)
-                        .opacity(0.01)
+                        .foregroundStyle(secondaryText)
                         .allowsHitTesting(false)
                         .accessibilityIdentifier("settings.generationEngine.state")
                         .accessibilityLabel("Generation Engine State")

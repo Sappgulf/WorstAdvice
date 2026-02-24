@@ -77,7 +77,7 @@ final class BadviceUITests: XCTestCase {
         settingsTab.tap()
         XCTAssertTrue(app.staticTexts["Settings"].waitForExistence(timeout: 5))
 
-        let generationEngineState = app.otherElements["settings.generationEngine.state"]
+        let generationEngineState = app.staticTexts["settings.generationEngine.state"]
         if !generationEngineState.waitForExistence(timeout: 2) {
             for _ in 0..<20 where !generationEngineState.exists {
                 app.swipeUp()
