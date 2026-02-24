@@ -3,8 +3,538 @@ import Observation
 import OSLog
 import SwiftData
 import UIKit
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
 
 private let logger = Logger(subsystem: "com.worstadvice.app", category: "state")
+
+enum AppleOnDeviceModelAvailability: Equatable, Sendable {
+    case ready
+    case unavailable(String)
+
+    var isReady: Bool {
+        if case .ready = self { return true }
+        return false
+    }
+
+    var statusText: String {
+        switch self {
+        case .ready:
+            return "Apple on-device model is ready."
+        case .unavailable(let reason):
+            return reason
+        }
+    }
+
+    var analyticsKey: String {
+        switch self {
+        case .ready:
+            return "ready"
+        case .unavailable(let reason):
+            let normalized = reason.normalizedForFiltering
+            if normalized.contains("not eligible") { return "device_not_eligible" }
+            if normalized.contains("enable apple intelligence") { return "disabled" }
+            if normalized.contains("still downloading") { return "model_not_ready" }
+            if normalized.contains("low-performance") || normalized.contains("high-thermal") { return "device_policy_blocked" }
+            if normalized.contains("requires ios 26") { return "os_too_old" }
+            if normalized.contains("not compiled") { return "framework_missing" }
+            return "unavailable_other"
+        }
+    }
+}
+
+@MainActor
+final class AppleOnDeviceAdviceBridge {
+    private let moderation: ContentModeration
+
+    init(moderation: ContentModeration) {
+        self.moderation = moderation
+    }
+
+    static func currentAvailability(
+        deviceProfile: DeviceCapabilityProfile = .current()
+    ) -> AppleOnDeviceModelAvailability {
+        if deviceProfile.shouldAvoidOnDeviceLanguageGeneration {
+            return .unavailable("Device is in a low-performance or high-thermal state. Using classic generator.")
+        }
+
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            let model = SystemLanguageModel.default
+            switch model.availability {
+            case .available:
+                return .ready
+            case .unavailable(.deviceNotEligible):
+                return .unavailable("This device is not eligible for Apple Intelligence.")
+            case .unavailable(.appleIntelligenceNotEnabled):
+                return .unavailable("Enable Apple Intelligence in Settings to use on-device generation.")
+            case .unavailable(.modelNotReady):
+                return .unavailable("Apple on-device model is still downloading.")
+            case .unavailable(let other):
+                return .unavailable("Apple on-device model unavailable: \(String(describing: other)).")
+            }
+        }
+        return .unavailable("Requires iOS 26 or later.")
+        #else
+        return .unavailable("This build was not compiled with Apple's FoundationModels framework.")
+        #endif
+    }
+
+    func generateCandidate(
+        category: AdviceCategory,
+        tone: ToneMode,
+        situation: String?,
+        includeRationale: Bool,
+        seed: Int,
+        now: Date = Date()
+    ) async throws -> GeneratedAdvice {
+        guard Self.currentAvailability().isReady else {
+            throw AppleOnDeviceAdviceError.unavailable
+        }
+
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            let instructions = Self.instructions(category: category, tone: tone)
+            let session = LanguageModelSession(instructions: instructions)
+            let situationContext = try? await self.prepareSituationContextIfNeeded(situation)
+            let prompt = Self.prompt(
+                category: category,
+                tone: tone,
+                situationContext: situationContext,
+                seed: seed
+            )
+            let response = try await session.respond(to: prompt)
+            let parsed = Self.parseModelTextResponse(response.content)
+
+            let rawAdvice = parsed.advice.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !rawAdvice.isEmpty else {
+                throw AppleOnDeviceAdviceError.invalidResponse
+            }
+            let rawRationale = includeRationale
+                ? parsed.rationale?.trimmingCharacters(in: .whitespacesAndNewlines)
+                : nil
+            let moderated = moderation.apply(
+                to: Self.trimmedOutput(rawAdvice, limit: 220),
+                rationale: rawRationale.flatMap { $0.isEmpty ? nil : Self.trimmedOutput($0, limit: 140) }
+            )
+
+            return GeneratedAdvice(
+                category: category,
+                tone: tone,
+                adviceLine: moderated.advice,
+                rationaleLine: moderated.rationale,
+                createdAt: now
+            )
+        }
+        #endif
+
+        throw AppleOnDeviceAdviceError.unavailable
+    }
+
+    func generateQuoteCandidate(
+        category: AdviceCategory,
+        tone: ToneMode,
+        seed: Int,
+        now: Date = Date()
+    ) async throws -> BadQuote {
+        guard Self.currentAvailability().isReady else {
+            throw AppleOnDeviceAdviceError.unavailable
+        }
+
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            let session = LanguageModelSession(instructions: Self.quoteInstructions(category: category, tone: tone))
+            let response = try await session.respond(
+                to: Self.quotePrompt(category: category, tone: tone, seed: seed)
+            )
+            let parsed = Self.parseModelQuoteResponse(response.content)
+            let quoteText = Self.trimmedOutput(parsed.quote, limit: 160)
+            guard !quoteText.isEmpty else {
+                throw AppleOnDeviceAdviceError.invalidResponse
+            }
+            let source = parsed.source.flatMap { candidate -> String? in
+                let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : String(trimmed.prefix(44))
+            } ?? "Apple On-Device Quote Lab"
+            let moderated = moderation.apply(to: quoteText, rationale: nil)
+            return BadQuote(
+                id: "apple-quote-\(category.rawValue)-\(seed)",
+                text: moderated.advice,
+                source: source,
+                category: category
+            )
+        }
+        #endif
+
+        throw AppleOnDeviceAdviceError.unavailable
+    }
+
+    private static func trimmedOutput(_ text: String, limit: Int) -> String {
+        let collapsed = text.replacingOccurrences(
+            of: "\\s+",
+            with: " ",
+            options: .regularExpression
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        return String(collapsed.prefix(limit))
+    }
+
+    private static func prompt(
+        category: AdviceCategory,
+        tone: ToneMode,
+        situationContext: PreparedSituationContext?,
+        seed: Int
+    ) -> String {
+        let seedLine = "Variation seed: \(seed)"
+        let categoryTemplate = categoryGenerationTemplate(category)
+        let toneTemplate = toneGenerationTemplate(tone)
+
+        if let situationContext {
+            let focusLine = situationContext.focus.map { "Situation focus: \($0)" } ?? "Situation focus: (none)"
+            let tags = situationContext.tags.isEmpty ? "(none)" : situationContext.tags.joined(separator: ", ")
+            return """
+            Generate one satirical, obviously bad piece of advice for the \(category.title) category.
+            Tone: \(tone.title)
+            Situation (raw): \(situationContext.original)
+            \(focusLine)
+            Situation tags: \(tags)
+            \(seedLine)
+            Category template: \(categoryTemplate)
+            Tone template: \(toneTemplate)
+            Return exactly two lines:
+            ADVICE: <one short line>
+            RATIONALE: <short explanation of why it is bad, or 'none'>
+            """
+        }
+
+        return """
+        Generate one satirical, obviously bad piece of advice for the \(category.title) category.
+        Tone: \(tone.title)
+        \(seedLine)
+        Category template: \(categoryTemplate)
+        Tone template: \(toneTemplate)
+        Return exactly two lines:
+        ADVICE: <one short line>
+        RATIONALE: <short explanation of why it is bad, or 'none'>
+        """
+    }
+
+    private static func instructions(category: AdviceCategory, tone: ToneMode) -> String {
+        """
+        You write satirical "bad advice" for a humor app called Badvice.
+        The output must be clearly terrible advice, not real guidance.
+
+        Tone persona: \(tonePersona(tone))
+        Category context: \(categoryContext(category))
+        Category generation template: \(categoryGenerationTemplate(category))
+        Tone generation template: \(toneGenerationTemplate(tone))
+
+        Requirements:
+        - Sound confident, but be obviously wrong or absurd.
+        - Keep the main advice concise and punchy.
+        - Avoid harmful, illegal, sexual, or self-harm instructions.
+        - If a rationale is included, explain why the advice is bad in a playful, educational way.
+        """
+    }
+
+    private static func quoteInstructions(category: AdviceCategory, tone: ToneMode) -> String {
+        """
+        You write satirical fake quotes for a humor app called Badvice.
+        The quote should sound memorable and punchy, but be obviously bad advice.
+
+        Category context: \(categoryContext(category))
+        Category quote template: \(categoryQuoteGenerationTemplate(category))
+        Tone persona: \(tonePersona(tone))
+        Tone quote template: \(toneQuoteGenerationTemplate(tone))
+
+        Requirements:
+        - One short quote line (8-160 chars)
+        - Clearly satirical / obviously bad
+        - Avoid harmful, illegal, sexual, or self-harm content
+        - Sound like a fake "expert", "memo", "oracle", or "club" source
+        """
+    }
+
+    private static func categoryGenerationTemplate(_ category: AdviceCategory) -> String {
+        switch category {
+        case .dating:
+            return "Escalate too fast, misread signals, and replace communication with grand gestures."
+        case .fitness:
+            return "Ignore recovery and form; optimize for ego, shortcuts, and performative intensity."
+        case .career:
+            return "Treat confidence as competence; overpromise, politic, and skip prep."
+        case .money:
+            return "Chase hype, hide risk, and confuse urgency with financial strategy."
+        case .parenting:
+            return "Apply rigid one-size-fits-all rules and prioritize control over listening."
+        case .tech:
+            return "Ship first, ignore testing, and solve human problems with unnecessary complexity."
+        case .social:
+            return "Center yourself, assume motives, and turn small moments into dramatic statements."
+        case .cooking:
+            return "Replace measuring and timing with vibes, substitutions, and overconfidence."
+        case .travel:
+            return "Underplan essentials, overplan aesthetics, and improvise the risky parts."
+        case .productivity:
+            return "Build elaborate systems instead of doing the work; optimize theater over output."
+        case .random:
+            return "Pick a clearly bad pattern and commit with total certainty."
+        }
+    }
+
+    private static func categoryQuoteGenerationTemplate(_ category: AdviceCategory) -> String {
+        switch category {
+        case .dating:
+            return "Frame mixed signals, games, and ambiguity as premium romance strategy."
+        case .fitness:
+            return "Glorify overtraining, ego lifting, and skipping recovery as discipline."
+        case .career:
+            return "Celebrate optics, jargon, and confidence theater over substance."
+        case .money:
+            return "Treat impulse spending, hype, and denial of risk as savvy finance."
+        case .parenting:
+            return "Recast inconsistency and control as advanced parenting leadership."
+        case .tech:
+            return "Praise shortcuts, hotfixes, and neglected testing as innovation."
+        case .social:
+            return "Encourage oversharing, escalation, and self-centering as charisma."
+        case .cooking:
+            return "Promote improvisation without fundamentals as culinary genius."
+        case .travel:
+            return "Romanticize poor planning and budget chaos as authentic adventure."
+        case .productivity:
+            return "Confuse system design and busywork with meaningful output."
+        case .random:
+            return "Sound quotable, wrong, and overly certain."
+        }
+    }
+
+    private static func toneGenerationTemplate(_ tone: ToneMode) -> String {
+        switch tone {
+        case .corporateConsultant:
+            return "Use business jargon, frameworks, and decisive executive tone."
+        case .alphaPodcast:
+            return "Aggressive certainty, hustle language, anti-nuance framing."
+        case .wizard:
+            return "Mystical metaphors, prophecy style, magical certainty."
+        case .influencer:
+            return "Aesthetic, viral, brand-forward language and trend confidence."
+        case .toxicBestFriend:
+            return "Messy, dramatic, casual, and recklessly loyal-sounding."
+        case .boomer:
+            return "Old-school certainty, dismissive modern commentary, blunt phrasing."
+        case .cryptoBro:
+            return "Market slang, speculative confidence, pseudo-technical hype."
+        case .minimalistMonk:
+            return "Calm, stripped-down phrasing with extreme simplification."
+        case .friendRoast:
+            return "Playful roast energy, affectionate mockery, quick punchlines."
+        case .lifeCoach:
+            return "Motivational cadence, self-help language, absolute mindset claims."
+        case .conspiracyTheorist:
+            return "Pattern-seeking paranoia, hidden-agenda framing, suspicious certainty."
+        case .random:
+            return "Choose one strong comedic persona and stay consistent."
+        }
+    }
+
+    private static func toneQuoteGenerationTemplate(_ tone: ToneMode) -> String {
+        switch tone {
+        case .corporateConsultant:
+            return "Quote sounds like a boardroom principle or strategy memo line."
+        case .alphaPodcast:
+            return "Quote sounds like a bold, confrontational podcast clip."
+        case .wizard:
+            return "Quote sounds like a magical proverb or spellbook warning."
+        case .influencer:
+            return "Quote sounds like a viral caption or aesthetic life mantra."
+        case .toxicBestFriend:
+            return "Quote sounds messy, loyal, and dramatically reckless."
+        case .boomer:
+            return "Quote sounds blunt, old-school, and overconfident."
+        case .cryptoBro:
+            return "Quote sounds market-hyped, speculative, and slang-heavy."
+        case .minimalistMonk:
+            return "Quote sounds calm, spare, and extremely reductive."
+        case .friendRoast:
+            return "Quote sounds playful and roasty with a fast punchline."
+        case .lifeCoach:
+            return "Quote sounds motivational and absolute, like stage advice."
+        case .conspiracyTheorist:
+            return "Quote sounds suspicious, pattern-seeking, and dramatic."
+        case .random:
+            return "Pick one strong persona and keep the quote voice consistent."
+        }
+    }
+
+    private static func quotePrompt(category: AdviceCategory, tone: ToneMode, seed: Int) -> String {
+        """
+        Generate one fake quote for category \(category.title) in tone \(tone.title).
+        Variation seed: \(seed)
+        Category quote template: \(categoryQuoteGenerationTemplate(category))
+        Tone quote template: \(toneQuoteGenerationTemplate(tone))
+        Return exactly two lines:
+        QUOTE: <short quote text>
+        SOURCE: <fake source name>
+        """
+    }
+
+    @available(iOS 26.0, *)
+    private func prepareSituationContextIfNeeded(_ situation: String?) async throws -> PreparedSituationContext? {
+        guard let raw = situation?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+            return nil
+        }
+        guard raw.count >= 12 else {
+            return PreparedSituationContext(original: raw, focus: nil, tags: [])
+        }
+
+        let session = LanguageModelSession(instructions: """
+        Summarize a user situation for a satire app prompt.
+        Do not give advice.
+        Return exactly two lines:
+        FOCUS: <short summary>
+        TAGS: <comma-separated 3-6 tags>
+        """)
+        let response = try await session.respond(to: """
+        Situation: \(raw)
+        """)
+        let parsed = Self.parseSituationContextResponse(response.content, original: raw)
+        return parsed
+    }
+
+    private static func parseSituationContextResponse(
+        _ text: String,
+        original: String
+    ) -> PreparedSituationContext {
+        let lines = text
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let focusLine = lines.first(where: { $0.uppercased().hasPrefix("FOCUS:") })
+        let tagsLine = lines.first(where: { $0.uppercased().hasPrefix("TAGS:") })
+        let focusRaw = focusLine?
+            .replacingOccurrences(of: "FOCUS:", with: "", options: [.caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let tagsRaw = tagsLine?
+            .replacingOccurrences(of: "TAGS:", with: "", options: [.caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let tags = (tagsRaw ?? "")
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        return PreparedSituationContext(
+            original: original,
+            focus: focusRaw.flatMap { $0.isEmpty ? nil : String($0.prefix(100)) },
+            tags: Array(tags.prefix(6))
+        )
+    }
+
+    private static func parseModelTextResponse(_ text: String) -> (advice: String, rationale: String?) {
+        let lines = text
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let adviceLine = lines.first(where: { $0.uppercased().hasPrefix("ADVICE:") })
+            ?? lines.first
+            ?? ""
+        let rationaleLine = lines.first(where: { $0.uppercased().hasPrefix("RATIONALE:") })
+
+        let advice = adviceLine.replacingOccurrences(of: "ADVICE:", with: "", options: [.caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let rationaleRaw = rationaleLine?
+            .replacingOccurrences(of: "RATIONALE:", with: "", options: [.caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let rationale = rationaleRaw.flatMap { raw -> String? in
+            let normalized = raw.normalizedForFiltering
+            if raw.isEmpty || normalized == "none" || normalized == "n/a" {
+                return nil
+            }
+            return raw
+        }
+
+        return (advice, rationale)
+    }
+
+    private static func parseModelQuoteResponse(_ text: String) -> (quote: String, source: String?) {
+        let lines = text
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let quoteLine = lines.first(where: { $0.uppercased().hasPrefix("QUOTE:") })
+            ?? lines.first
+            ?? ""
+        let sourceLine = lines.first(where: { $0.uppercased().hasPrefix("SOURCE:") })
+
+        let quote = quoteLine.replacingOccurrences(of: "QUOTE:", with: "", options: [.caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let source = sourceLine?
+            .replacingOccurrences(of: "SOURCE:", with: "", options: [.caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return (quote, source)
+    }
+
+    private static func categoryContext(_ category: AdviceCategory) -> String {
+        switch category {
+        case .dating: return "relationships, romance, and interpersonal connections"
+        case .fitness: return "exercise, health, and physical wellness"
+        case .career: return "work, professional development, and office life"
+        case .money: return "finances, spending, and investment decisions"
+        case .parenting: return "raising children and family dynamics"
+        case .tech: return "technology, software, and digital life"
+        case .social: return "friendships, networking, and social situations"
+        case .cooking: return "food preparation, recipes, and kitchen adventures"
+        case .travel: return "trips, vacations, and exploring new places"
+        case .productivity: return "time management, organization, and getting things done"
+        case .random: return "mixed category context"
+        }
+    }
+
+    private static func tonePersona(_ tone: ToneMode) -> String {
+        switch tone {
+        case .corporateConsultant:
+            return "A buzzword-heavy consultant who turns bad ideas into frameworks"
+        case .alphaPodcast:
+            return "A hyper-confident podcast bro who treats nuance as weakness"
+        case .wizard:
+            return "A mystical wizard offering magical answers to normal problems"
+        case .influencer:
+            return "A creator obsessed with virality, aesthetics, and clout"
+        case .toxicBestFriend:
+            return "A chaotic best friend giving dramatic but awful advice"
+        case .boomer:
+            return "An out-of-touch boomer with absolute confidence"
+        case .cryptoBro:
+            return "A crypto evangelist who sees every problem as a coin opportunity"
+        case .minimalistMonk:
+            return "An extreme minimalist who over-applies simplicity"
+        case .friendRoast:
+            return "A playful roaster who delivers bad advice with mock affection"
+        case .lifeCoach:
+            return "An overly enthusiastic life coach with questionable methods"
+        case .conspiracyTheorist:
+            return "Someone who sees hidden plots in ordinary situations"
+        case .random:
+            return "A rotating comedic persona"
+        }
+    }
+
+    enum AppleOnDeviceAdviceError: Error {
+        case unavailable
+        case invalidResponse
+    }
+
+    private struct PreparedSituationContext {
+        let original: String
+        let focus: String?
+        let tags: [String]
+    }
+}
 
 protocol AnalyticsTracking {
     func track(_ event: String, properties: [String: String])
@@ -275,6 +805,7 @@ final class AppSettingsEntity {
     var preferredAspectRaw: String
     var preferredSharePresetRaw: String?
     var preferredContentPackRaw: String?
+    var preferredGenerationProviderRaw: String?
     var strictNoRepeatsRaw: Bool?
     var communityOnlyModeRaw: Bool?
     var performanceModeRaw: Bool?
@@ -293,6 +824,7 @@ final class AppSettingsEntity {
         preferredAspect: ShareAspectRatio = .square,
         preferredSharePreset: ShareCaptionPreset = .deadpan,
         preferredContentPack: ContentPack = .classic,
+        preferredGenerationProvider: AdviceGenerationProvider = .auto,
         strictNoRepeats: Bool = true,
         communityOnlyMode: Bool = false,
         performanceMode: Bool = false,
@@ -308,6 +840,7 @@ final class AppSettingsEntity {
         self.preferredAspectRaw = preferredAspect.rawValue
         self.preferredSharePresetRaw = preferredSharePreset.rawValue
         self.preferredContentPackRaw = preferredContentPack.rawValue
+        self.preferredGenerationProviderRaw = preferredGenerationProvider.rawValue
         self.strictNoRepeatsRaw = strictNoRepeats
         self.communityOnlyModeRaw = communityOnlyMode
         self.performanceModeRaw = performanceMode
@@ -342,6 +875,11 @@ final class AppSettingsEntity {
     var preferredContentPack: ContentPack {
         get { ContentPack(rawValue: preferredContentPackRaw ?? "") ?? .classic }
         set { preferredContentPackRaw = newValue.rawValue }
+    }
+
+    var preferredGenerationProvider: AdviceGenerationProvider {
+        get { AdviceGenerationProvider(rawValue: preferredGenerationProviderRaw ?? "") ?? .auto }
+        set { preferredGenerationProviderRaw = newValue.rawValue }
     }
 
     var strictNoRepeats: Bool {
@@ -1126,6 +1664,18 @@ final class SettingsViewModel {
             settings.preferredContentPack = newValue
             repository.save()
         }
+    }
+
+    var preferredGenerationProvider: AdviceGenerationProvider {
+        get { settings.preferredGenerationProvider }
+        set {
+            settings.preferredGenerationProvider = newValue
+            repository.save()
+        }
+    }
+
+    var appleOnDeviceModelStatusText: String {
+        AppleOnDeviceAdviceBridge.currentAvailability().statusText
     }
 
     var strictNoRepeats: Bool {
@@ -1970,6 +2520,7 @@ final class GenerateViewModel {
     private let settingsViewModel: SettingsViewModel
     private let store: AdviceStore
     private let engine: AdviceEngine
+    private let appleOnDeviceBridge: AppleOnDeviceAdviceBridge
     private let badQuoteService: BadQuoteService
     private let moderation: ContentModeration
     private let analyticsTracker: AnalyticsTracking
@@ -1982,6 +2533,7 @@ final class GenerateViewModel {
     var current: AdviceRecord?
     var lastWhyTerrible: String = "Why this is awful: confidence is replacing good judgment."
     var generationNotice: String?
+    var generationSourceBadgeText: String?
     var primaryActionTitle: String = "Advise Me"
     var hapticTrigger: Int = 0
     var hapticWeight: Double = 0.5 // 0.0 to 1.0 mapping to intensity
@@ -2025,6 +2577,7 @@ final class GenerateViewModel {
         self.store = store
         self.badQuoteService = badQuoteService
         self.moderation = moderation
+        self.appleOnDeviceBridge = AppleOnDeviceAdviceBridge(moderation: moderation)
         self.engine = AdviceEngine(store: store, moderation: moderation)
         self.analyticsTracker = analyticsTracker
         self.achievementsManager = achievementsManager
@@ -2050,6 +2603,14 @@ final class GenerateViewModel {
         let shouldEnforceGlobalUniqueness = settingsViewModel.strictNoRepeats
         let communityOnlyMode = settingsViewModel.communityOnlyMode
         let selectedPack = settingsViewModel.preferredContentPack
+        let generationProvider = settingsViewModel.preferredGenerationProvider
+        if generationProvider != .classic {
+            let availability = AppleOnDeviceAdviceBridge.currentAvailability()
+            analyticsTracker.track("apple_model_availability", properties: [
+                "requested_provider": generationProvider.rawValue,
+                "status": availability.analyticsKey
+            ])
+        }
         let learningContext = adviceLearningContext()
         let resolvedCategory = resolveCategory(seed: baseSeed, context: learningContext, situation: situation ?? "", contentPack: selectedPack)
         let resolvedTone = resolveTone(seed: baseSeed, context: learningContext)
@@ -2076,28 +2637,56 @@ final class GenerateViewModel {
         }
 
         var candidatePool: [(candidate: GeneratedAdvice, source: String)] = []
+        var generationProviderNotice: String?
         if !communityOnlyMode {
-            let engineCandidates = await engine.generateCandidates(
-                category: resolvedCategory,
-                tone: resolvedTone,
-                includeRationale: settingsViewModel.includeRationale,
-                contentPack: selectedPack,
-                situation: situation,
-                seed: baseSeed,
-                templateBias: templateBias,
-                count: shouldEnforceGlobalUniqueness ? 9 : 6
-            )
-            candidatePool.append(contentsOf: engineCandidates.map { ($0, "engine") })
+            var appleCandidates: [GeneratedAdvice] = []
+            if generationProvider != .classic {
+                let appleBatch = await appleOnDeviceCandidateBatch(
+                    category: resolvedCategory,
+                    tone: resolvedTone,
+                    situation: situation,
+                    includeRationale: settingsViewModel.includeRationale,
+                    baseSeed: baseSeed,
+                    maxCount: generationProvider == .appleOnDevice ? 2 : 1,
+                    requestedProvider: generationProvider
+                )
+                appleCandidates = appleBatch.candidates
+                generationProviderNotice = appleBatch.notice
+                if let fallbackReason = appleBatch.fallbackReason {
+                    analyticsTracker.track("apple_model_fallback", properties: [
+                        "requested_provider": generationProvider.rawValue,
+                        "reason": fallbackReason,
+                        "category": resolvedCategory.rawValue,
+                        "tone": resolvedTone.rawValue
+                    ])
+                }
+                candidatePool.append(contentsOf: appleCandidates.map { ($0, "apple_on_device") })
+            }
 
-            // ML Remix Lab for advice: inject synthesized variants derived from liked history
-            let remixCandidates = await synthesizedAdviceCandidates(
-                category: resolvedCategory,
-                tone: resolvedTone,
-                seed: baseSeed,
-                includeRationale: settingsViewModel.includeRationale,
-                contentPack: selectedPack
-            )
-            candidatePool.append(contentsOf: remixCandidates.map { ($0, "ml_remix") })
+            let shouldUseClassicEngines = generationProvider != .appleOnDevice || appleCandidates.isEmpty
+            if shouldUseClassicEngines {
+                let engineCandidates = await engine.generateCandidates(
+                    category: resolvedCategory,
+                    tone: resolvedTone,
+                    includeRationale: settingsViewModel.includeRationale,
+                    contentPack: selectedPack,
+                    situation: situation,
+                    seed: baseSeed,
+                    templateBias: templateBias,
+                    count: shouldEnforceGlobalUniqueness ? 9 : 6
+                )
+                candidatePool.append(contentsOf: engineCandidates.map { ($0, "engine") })
+
+                // ML Remix Lab for advice: inject synthesized variants derived from liked history
+                let remixCandidates = await synthesizedAdviceCandidates(
+                    category: resolvedCategory,
+                    tone: resolvedTone,
+                    seed: baseSeed,
+                    includeRationale: settingsViewModel.includeRationale,
+                    contentPack: selectedPack
+                )
+                candidatePool.append(contentsOf: remixCandidates.map { ($0, "ml_remix") })
+            }
         }
 
         let communityCandidates = communityCandidates(
@@ -2196,6 +2785,7 @@ final class GenerateViewModel {
             return
         }
         let source = chosen?.source ?? ranked.first?.source ?? "engine"
+        generationSourceBadgeText = generationSourceBadgeLabel(for: source)
         let outputSeenHistorically = chosen?.seenHistorically ?? ranked.first?.seenHistorically ?? false
         if shouldEnforceGlobalUniqueness, outputSeenHistorically {
             output = forceUniqueVariant(from: output)
@@ -2226,6 +2816,7 @@ final class GenerateViewModel {
             "tone": output.tone.rawValue,
             "selected_tone": selectedTone.rawValue,
             "content_pack": selectedPack.rawValue,
+            "generation_provider": generationProvider.rawValue,
             "source": source,
             "has_situation": situation == nil ? "false" : "true",
             "strict_no_repeats": shouldEnforceGlobalUniqueness ? "true" : "false",
@@ -2241,6 +2832,79 @@ final class GenerateViewModel {
         hapticTrigger += 1
         trackMissionCompletionIfNeeded()
         trackWeeklyMissionProgressIfNeeded(with: output)
+        if let generationProviderNotice {
+            generationNotice = generationProviderNotice
+        }
+    }
+
+
+    private func appleOnDeviceCandidateBatch(
+        category: AdviceCategory,
+        tone: ToneMode,
+        situation: String?,
+        includeRationale: Bool,
+        baseSeed: Int,
+        maxCount: Int,
+        requestedProvider: AdviceGenerationProvider
+    ) async -> (candidates: [GeneratedAdvice], notice: String?, fallbackReason: String?) {
+        let availability = AppleOnDeviceAdviceBridge.currentAvailability()
+        let requestedExplicitly = requestedProvider == .appleOnDevice
+        guard availability.isReady else {
+            return ([], requestedExplicitly ? availability.statusText : nil, "availability_\(availability.analyticsKey)")
+        }
+
+        var candidates: [GeneratedAdvice] = []
+        var seenFingerprints = Set<String>()
+        let desiredCount = max(1, maxCount)
+
+        for index in 0..<desiredCount {
+            do {
+                let candidate = try await appleOnDeviceBridge.generateCandidate(
+                    category: category,
+                    tone: tone,
+                    situation: situation,
+                    includeRationale: includeRationale,
+                    seed: baseSeed + (index * 4_099),
+                    now: Date()
+                )
+                guard engine.validateOutput(candidate, for: category) else { continue }
+                let fingerprint = candidate.adviceLine.normalizedForFiltering
+                if seenFingerprints.insert(fingerprint).inserted {
+                    candidates.append(candidate)
+                }
+            } catch {
+                logger.error("Apple on-device generation failed: \(String(describing: error), privacy: .public)")
+                if requestedExplicitly, candidates.isEmpty {
+                    return ([], "Apple on-device generation failed. Using classic generator.", "generation_failed")
+                }
+                break
+            }
+        }
+
+        if requestedExplicitly, candidates.isEmpty {
+            return ([], "Apple on-device model is available, but no valid output was produced. Using classic generator.", "no_valid_output")
+        }
+
+        if !requestedExplicitly, candidates.isEmpty {
+            return ([], nil, "no_candidate_auto")
+        }
+
+        return (candidates, nil, nil)
+    }
+
+    private func generationSourceBadgeLabel(for source: String) -> String {
+        switch source {
+        case "apple_on_device":
+            return "Apple On-Device"
+        case "engine":
+            return "Classic"
+        case "ml_remix":
+            return "Remix"
+        case "community":
+            return "Community"
+        default:
+            return source.replacingOccurrences(of: "_", with: " ").capitalized
+        }
     }
 
 
@@ -3466,6 +4130,7 @@ final class QuotesViewModel {
     private let moderation: ContentModeration
     private let store: AdviceStore
     private let analyticsTracker: AnalyticsTracking
+    private let appleOnDeviceBridge: AppleOnDeviceAdviceBridge
     private let adaptiveRanker = AdaptiveRanker()
 
     var searchText: String = "" {
@@ -3486,7 +4151,15 @@ final class QuotesViewModel {
     private var debouncedSearchText = ""
     private var searchDebounceTask: Task<Void, Never>?
     private var filterTask: Task<Void, Never>?
+    private var modelQuoteTask: Task<Void, Never>?
     private var refreshGeneration: Int = 0
+    private var cachedModelGeneratedQuotes: [BadQuote] = []
+    private var lastModelQuoteOverlayKey: String?
+#if DEBUG
+    var debugSourceFilter: QuoteSourceDebugFilter = .all {
+        didSet { scheduleFilteredQuotesRefresh() }
+    }
+#endif
 
     init(
         repository: AdviceRepository,
@@ -3500,6 +4173,7 @@ final class QuotesViewModel {
         self.moderation = moderation
         self.store = store
         self.analyticsTracker = analyticsTracker
+        self.appleOnDeviceBridge = AppleOnDeviceAdviceBridge(moderation: moderation)
         self.debouncedSearchText = searchText
         reloadCachedData()
     }
@@ -3644,6 +4318,7 @@ final class QuotesViewModel {
         votesByQuoteID = repository.quoteVoteMap()
         rebuildQuoteCache()
         scheduleFilteredQuotesRefresh()
+        scheduleModelQuoteOverlayRefreshIfNeeded()
     }
 
     private func rebuildQuoteCache() {
@@ -3652,12 +4327,13 @@ final class QuotesViewModel {
             store: store,
             moderation: moderation
         )
+        let combinedBase = base + cachedModelGeneratedQuotes
         var seen = Set<String>()
         var merged: [BadQuote] = []
         var index: [String: String] = [:]
         var scopeIndex: [String: String] = [:]
 
-        for quote in base {
+        for quote in combinedBase {
             let normalizedText = quote.text.normalizedForFiltering
             if seen.insert(normalizedText).inserted {
                 merged.append(quote)
@@ -3781,18 +4457,20 @@ final class QuotesViewModel {
         let search = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSearch = search.isEmpty ? "" : search.normalizedForFiltering
 
+        let sourceFilteredBase = cachedAllQuotes.filter { quoteMatchesDebugSourceFilter($0) }
+
         if normalizedSearch.isEmpty, selectedCategory == nil {
             switch rankingMode {
             case .recent:
-                return cachedAllQuotes
+                return sourceFilteredBase
             case .topLiked:
-                return cachedAllQuotes.filter { votesByQuoteID[$0.id] == .like }
+                return sourceFilteredBase.filter { votesByQuoteID[$0.id] == .like }
             case .topDisliked:
-                return cachedAllQuotes.filter { votesByQuoteID[$0.id] == .dislike }
+                return sourceFilteredBase.filter { votesByQuoteID[$0.id] == .dislike }
             }
         }
 
-        let filtered = cachedAllQuotes.filter { quote in
+        let filtered = sourceFilteredBase.filter { quote in
             let categoryMatch = selectedCategory == nil || quote.category == selectedCategory
             if normalizedSearch.isEmpty {
                 return categoryMatch
@@ -3809,6 +4487,150 @@ final class QuotesViewModel {
         case .topDisliked:
             return filtered.filter { votesByQuoteID[$0.id] == .dislike }
         }
+    }
+
+    private func quoteMatchesDebugSourceFilter(_ quote: BadQuote) -> Bool {
+#if DEBUG
+        switch debugSourceFilter {
+        case .all:
+            return true
+        case .appleModel:
+            return quote.id.hasPrefix("apple-quote-")
+                || quote.source.normalizedForFiltering.contains("apple on-device")
+        case .remixLab:
+            return quote.source.normalizedForFiltering.contains("ml remix")
+        case .community:
+            return quote.id.hasPrefix("community-")
+        case .curated:
+            let isApple = quote.id.hasPrefix("apple-quote-")
+                || quote.source.normalizedForFiltering.contains("apple on-device")
+            let isRemix = quote.source.normalizedForFiltering.contains("ml remix")
+            let isCommunity = quote.id.hasPrefix("community-")
+            return !(isApple || isRemix || isCommunity)
+        }
+#else
+        return true
+#endif
+    }
+
+    private func scheduleModelQuoteOverlayRefreshIfNeeded() {
+        let provider = repository.ensureSettings().preferredGenerationProvider
+        let overlayKey = modelQuoteOverlayKey(provider: provider)
+
+        if provider == .classic {
+            modelQuoteTask?.cancel()
+            lastModelQuoteOverlayKey = overlayKey
+            if !cachedModelGeneratedQuotes.isEmpty {
+                cachedModelGeneratedQuotes = []
+                rebuildQuoteCache()
+                scheduleFilteredQuotesRefresh()
+            }
+            return
+        }
+
+        if lastModelQuoteOverlayKey == overlayKey {
+            return
+        }
+        lastModelQuoteOverlayKey = overlayKey
+        modelQuoteTask?.cancel()
+
+        let availability = AppleOnDeviceAdviceBridge.currentAvailability()
+        analyticsTracker.track("apple_model_availability", properties: [
+            "requested_provider": provider.rawValue,
+            "status": availability.analyticsKey,
+            "surface": "quotes"
+        ])
+
+        guard availability.isReady else {
+            if provider == .appleOnDevice {
+                analyticsTracker.track("apple_model_fallback", properties: [
+                    "requested_provider": provider.rawValue,
+                    "reason": "availability_\(availability.analyticsKey)",
+                    "surface": "quotes"
+                ])
+            }
+            if !cachedModelGeneratedQuotes.isEmpty {
+                cachedModelGeneratedQuotes = []
+                rebuildQuoteCache()
+                scheduleFilteredQuotesRefresh()
+            }
+            return
+        }
+
+        modelQuoteTask = Task { [weak self] in
+            await self?.refreshModelQuoteOverlay(provider: provider)
+        }
+    }
+
+    private func modelQuoteOverlayKey(provider: AdviceGenerationProvider, now: Date = Date()) -> String {
+        let day = Calendar.current.startOfDay(for: now).timeIntervalSince1970
+        return "\(provider.rawValue)|\(Int(day))"
+    }
+
+    private func refreshModelQuoteOverlay(provider: AdviceGenerationProvider) async {
+        let categories = rotatingQuoteOverlayCategories()
+        let tones = ToneMode.concrete
+        let seedBase = stableSeed(for: "quote-overlay|\(Date().formatted(date: .numeric, time: .omitted))")
+        var built: [BadQuote] = []
+        var seen = Set<String>()
+
+        for index in 0..<min(4, max(2, categories.count)) {
+            if Task.isCancelled { return }
+            let category = categories[index % categories.count]
+            let tone = tones[abs(seedBase + index * 13) % tones.count]
+            do {
+                let candidate = try await appleOnDeviceBridge.generateQuoteCandidate(
+                    category: category,
+                    tone: tone,
+                    seed: seedBase + (index * 7_919)
+                )
+                guard isValidModelQuote(candidate) else { continue }
+                let fingerprint = candidate.text.normalizedForFiltering
+                if seen.insert(fingerprint).inserted {
+                    built.append(candidate)
+                }
+            } catch {
+                logger.error("Apple on-device quote generation failed: \(String(describing: error), privacy: .public)")
+                if provider == .appleOnDevice {
+                    analyticsTracker.track("apple_model_fallback", properties: [
+                        "requested_provider": provider.rawValue,
+                        "reason": "generation_failed",
+                        "surface": "quotes"
+                    ])
+                }
+                break
+            }
+        }
+
+        if provider == .appleOnDevice, built.isEmpty {
+            analyticsTracker.track("apple_model_fallback", properties: [
+                "requested_provider": provider.rawValue,
+                "reason": "no_valid_output",
+                "surface": "quotes"
+            ])
+        }
+
+        guard !Task.isCancelled else { return }
+        cachedModelGeneratedQuotes = built
+        rebuildQuoteCache()
+        scheduleFilteredQuotesRefresh()
+    }
+
+    private func rotatingQuoteOverlayCategories(now: Date = Date()) -> [AdviceCategory] {
+        let categories = AdviceCategory.concrete
+        guard !categories.isEmpty else { return [.productivity] }
+        let seed = Int(Calendar.current.startOfDay(for: now).timeIntervalSince1970)
+        let start = abs(seed / 86_400) % categories.count
+        return (0..<categories.count).map { categories[(start + $0) % categories.count] }
+    }
+
+    private func isValidModelQuote(_ quote: BadQuote) -> Bool {
+        let text = quote.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.count >= 8, text.count <= 160 else { return false }
+        guard moderation.isSafe(text: "\(quote.source) \(text)") else { return false }
+        let forbidden = store.rules(for: quote.category, contentPack: .classic).forbiddenPatterns
+        let normalized = text.normalizedForFiltering
+        return !forbidden.contains { normalized.contains($0.normalizedForFiltering) }
     }
 }
 
@@ -4090,5 +4912,66 @@ final class AppSessionViewModel {
         generate.invalidateRetentionSnapshot()
         favorites.reload()
         history.reload()
+    }
+
+    func preloadDebugPolishFixturesIfNeeded(seed: Int = 424_242) async {
+        guard repository.historyCount() == 0 else { return }
+
+        settings.preferredGenerationProvider = .classic
+        settings.reduceMotion = true
+        settings.hapticsEnabled = false
+
+        let fixtures: [(category: AdviceCategory, tone: ToneMode, scenario: String, offset: Int)] = [
+            (.career, .corporateConsultant, "My manager asked for a status update and I have nothing finished.", 11),
+            (.money, .cryptoBro, "I need a retirement plan but also want to feel like a genius this week.", 23),
+            (.dating, .toxicBestFriend, "They take hours to reply and I want to seem mysterious.", 37),
+            (.productivity, .minimalistMonk, "I have 40 tabs open and keep reorganizing instead of working.", 53),
+        ]
+
+        for (index, fixture) in fixtures.enumerated() {
+            generate.selectedCategory = fixture.category
+            generate.selectedTone = fixture.tone
+            generate.scenarioText = fixture.scenario
+            generate.friendName = ""
+            await generate.generate(seed: seed + fixture.offset)
+
+            guard let record = generate.current else { continue }
+            if index == 0 || index == 2 {
+                repository.setFavorite(record, isFavorite: true)
+            }
+            switch index {
+            case 0:
+                repository.setVote(record, vote: .like)
+                repository.incrementShareCount(for: record.id)
+            case 1:
+                repository.setVote(record, vote: .like)
+                repository.incrementCopyCount(for: record.id)
+            case 2:
+                repository.setVote(record, vote: .dislike)
+            case 3:
+                repository.incrementCopyCount(for: record.id)
+                repository.incrementShareCount(for: record.id)
+            default:
+                break
+            }
+        }
+
+        _ = repository.addSuggestion(
+            category: .career,
+            topic: "Interview follow-up",
+            adviceLine: "Wait six months so they know you are not desperate."
+        )
+        _ = repository.addSuggestion(
+            category: .money,
+            topic: "Budgeting",
+            adviceLine: "If the card declines, that is your monthly budget report."
+        )
+        _ = repository.addQuoteSuggestion(
+            category: .productivity,
+            source: "Polish Seed",
+            quoteText: "If a task takes two minutes, spend an hour choosing the perfect app for it."
+        )
+
+        refreshLists()
     }
 }

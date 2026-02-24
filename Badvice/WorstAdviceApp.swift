@@ -6,6 +6,8 @@ import OSLog
 @main
 struct WorstAdviceApp: App {
     private static let logger = Logger(subsystem: "com.worstadvice.app", category: "bootstrap")
+    private var isUITesting: Bool { ProcessInfo.processInfo.arguments.contains("-ui-testing") }
+    private var isDebugPolishFixtureLaunch: Bool { ProcessInfo.processInfo.arguments.contains("-debug-preload-polish-fixtures") }
 
     private let container: ModelContainer = {
         let schema = Schema([
@@ -55,6 +57,7 @@ struct WorstAdviceApp: App {
         WindowGroup {
             ContentView()
                 .onAppear {
+                    guard !isUITesting, !isDebugPolishFixtureLaunch else { return }
                     NotificationManager.requestPermissionAndScheduleDaily()
                 }
         }

@@ -156,6 +156,25 @@ struct GenerateTabView: View {
                             theme: settings.theme,
                             reduceMotion: settings.reduceMotion
                         )
+                            .accessibilityIdentifier("advice.card")
+                            .overlay(alignment: .topTrailing) {
+                                if let sourceBadge = viewModel.generationSourceBadgeText {
+                                    Text(sourceBadge)
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(primaryText)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            Capsule(style: .continuous)
+                                                .fill(cardColor.opacity(0.92))
+                                        )
+                                        .overlay(
+                                            Capsule(style: .continuous)
+                                                .stroke(accent.opacity(0.35), lineWidth: 1)
+                                        )
+                                        .padding(12)
+                                }
+                            }
                             .transition(isMotionReduced ? .identity : .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
                             .animation(isMotionReduced ? nil : .spring(response: 0.2, dampingFraction: 0.5), value: viewModel.hapticTrigger)
@@ -564,6 +583,7 @@ struct GenerateTabView: View {
                     .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("generate.primary")
             .tint(accent)
             .foregroundStyle(buttonText)
             .disabled(viewModel.isGenerating)
@@ -595,6 +615,7 @@ struct GenerateTabView: View {
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.bordered)
+                .accessibilityIdentifier("generate.surprise")
                 .disabled(viewModel.isGenerating)
 
                 Button {
@@ -607,6 +628,7 @@ struct GenerateTabView: View {
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.bordered)
+                .accessibilityIdentifier("generate.dailyDrop")
                 .disabled(viewModel.isGenerating)
             }
             .tint(accent)

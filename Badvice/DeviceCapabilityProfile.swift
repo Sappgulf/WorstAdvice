@@ -32,6 +32,15 @@ struct DeviceCapabilityProfile: Equatable {
         }
     }
 
+    var shouldAvoidOnDeviceLanguageGeneration: Bool {
+        switch thermalState {
+        case .serious, .critical:
+            return true
+        default:
+            return tier == .low
+        }
+    }
+
     static func current(
         processInfo: ProcessInfo = .processInfo,
         device: UIDevice = .current
@@ -58,4 +67,3 @@ struct DeviceCapabilityProfile: Equatable {
         )
     }
 }
-

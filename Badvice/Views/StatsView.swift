@@ -789,6 +789,34 @@ struct QuotesTabView: View {
                                 .padding(.vertical, 2)
                             }
 
+#if DEBUG
+                            HStack(spacing: 10) {
+                                Label("Source", systemImage: "ladybug")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(secondaryText)
+                                Picker("Quote Source", selection: $viewModel.debugSourceFilter) {
+                                    ForEach(QuoteSourceDebugFilter.allCases) { filter in
+                                        Text(filter.title).tag(filter)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .tint(accent)
+
+                                Spacer()
+
+                                Text(viewModel.debugSourceFilter.title)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(accent)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(accent.opacity(0.14))
+                                    )
+                            }
+                            .padding(.horizontal, 2)
+#endif
+
                             // Stats strip
                             HStack {
                                 Label("\(viewModel.likedCount)", systemImage: "hand.thumbsup.fill")
@@ -1017,6 +1045,7 @@ struct QuotesTabView: View {
                 .padding(12)
         }
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("quotes.dailyHero")
         .accessibilityLabel("Bad quote of the day: \(dailyQuote.text) by \(dailyQuote.source)")
         .onTapGesture(count: 2) {
             showQuoteSpotlight = true
@@ -1038,6 +1067,7 @@ struct QuotesTabView: View {
                     }
                 }
                 .font(.caption.weight(.semibold))
+                .accessibilityIdentifier("quotes.spotlight.toggle")
             }
 
             if showQuoteSpotlight {

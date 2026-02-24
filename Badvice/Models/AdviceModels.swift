@@ -208,6 +208,22 @@ enum ContentPack: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 }
 
+enum AdviceGenerationProvider: String, CaseIterable, Codable, Identifiable, Sendable {
+    case auto
+    case classic
+    case appleOnDevice
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .auto: return "Auto"
+        case .classic: return "Classic"
+        case .appleOnDevice: return "Apple On-Device"
+        }
+    }
+}
+
 enum AdviceVoteState: Int, CaseIterable, Codable, Identifiable, Sendable {
     case none = 0
     case like = 1
@@ -344,6 +360,26 @@ enum QuoteRankingMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .recent: return "Recent"
         case .topLiked: return "Top Liked"
         case .topDisliked: return "Top Disliked"
+        }
+    }
+}
+
+enum QuoteSourceDebugFilter: String, CaseIterable, Codable, Identifiable, Sendable {
+    case all
+    case appleModel
+    case remixLab
+    case community
+    case curated
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all: return "All"
+        case .appleModel: return "Apple Model"
+        case .remixLab: return "Remix"
+        case .community: return "Community"
+        case .curated: return "Curated"
         }
     }
 }
@@ -554,4 +590,3 @@ struct Achievement: Identifiable, Codable, Sendable {
         Double(progress) / Double(target)
     }
 }
-

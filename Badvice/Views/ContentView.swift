@@ -92,10 +92,14 @@ struct ContentView: View {
     @State private var tabSlideLastSwitchAt: Date = .distantPast
     @State private var shouldRestartOnNextActive = false
     @State private var deviceCapability = DeviceCapabilityProfile.current()
+    @State private var hasScheduledDebugPolishFixturePreload = false
     
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("favoritesCountAtLastReview") private var favoritesCountAtLastReview = 0
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
+    
+    private var launchArguments: [String] { ProcessInfo.processInfo.arguments }
+    private var isUITesting: Bool { launchArguments.contains("-ui-testing") }
 
     var body: some View {
         Group {
@@ -163,6 +167,7 @@ struct ContentView: View {
                                 ForEach(tabs) { tab in
                                     let isSelected = selectedTab == tab
                                     let isHighlighted = tabDragHighlight == tab
+                                    let tabAccessibilityID = "tab.\(tab.rawValue)"
                                     VStack(spacing: 3) {
                                         Image(systemName: tab.systemImage)
                                             .font(.system(size: 20, weight: isSelected ? .semibold : .medium))
@@ -229,6 +234,7 @@ struct ContentView: View {
                                         }
                                     }
                                     .accessibilityLabel(tab.title)
+                                    .accessibilityIdentifier(tabAccessibilityID)
                                     .accessibilityValue(isSelected ? "Selected" : "Not selected")
                                     .accessibilityAddTraits(isSelected ? .isSelected : [])
                                 }
@@ -391,6 +397,7 @@ struct ContentView: View {
                     }
                 }
                 .onAppear {
+                    applyUITestLaunchOverridesIfNeeded()
                     shakeDetector.isEnabled = shakeToGenerateEnabled
                     lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
                     deviceCapability = DeviceCapabilityProfile.current()
@@ -498,6 +505,39 @@ struct ContentView: View {
         tabSlideLastHapticTab = nil
         tabSlideLastSwitchAt = .distantPast
         session = AppSessionViewModel(context: modelContext)
+    }
+
+    private func applyUITestLaunchOverridesIfNeeded() {
+        if isUITesting, launchArguments.contains("-skip-onboarding") {
+            hasSeenOnboarding = true
+        }
+        if isUITesting, launchArguments.contains("-skip-splash") {
+            showSplash = false
+            if session == nil {
+                session = AppSessionViewModel(context: modelContext)
+            }
+        }
+        if isUITesting {
+            session?.settings.preferredGenerationProvider = .classic
+            session?.settings.reduceMotion = true
+            session?.settings.hapticsEnabled = false
+        }
+        if !hasScheduledDebugPolishFixturePreload,
+           launchArguments.contains("-debug-preload-polish-fixtures"),
+           let session {
+            hasScheduledDebugPolishFixturePreload = true
+            let seed = intLaunchArgumentValue(after: "-debug-polish-seed") ?? 424_242
+            Task {
+                await session.preloadDebugPolishFixturesIfNeeded(seed: seed)
+            }
+        }
+    }
+
+    private func intLaunchArgumentValue(after flag: String) -> Int? {
+        guard let flagIndex = launchArguments.firstIndex(of: flag) else { return nil }
+        let valueIndex = launchArguments.index(after: flagIndex)
+        guard valueIndex < launchArguments.endIndex else { return nil }
+        return Int(launchArguments[valueIndex])
     }
 
     @ViewBuilder

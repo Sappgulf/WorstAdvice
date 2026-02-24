@@ -50,6 +50,26 @@
                ReferencedContainer = "container:Badvice.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <MacroExpansion>
+               <BuildableReference
+                  BuildableIdentifier = "primary"
+                  BlueprintIdentifier = "A40000010000000000000001"
+                  BuildableName = "Badvice.app"
+                  BlueprintName = "Badvice"
+                  ReferencedContainer = "container:Badvice.xcodeproj">
+               </BuildableReference>
+            </MacroExpansion>
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "D40000010000000000000001"
+               BuildableName = "BadviceUITests.xctest"
+               BlueprintName = "BadviceUITests"
+               ReferencedContainer = "container:Badvice.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

@@ -583,6 +583,36 @@ struct SettingsTabView: View {
                     }
                 }
                 settingsDivider
+                settingsPicker(
+                    "Generation Engine",
+                    systemImage: "cpu",
+                    selection: Binding(get: { viewModel.preferredGenerationProvider }, set: { viewModel.preferredGenerationProvider = $0 }),
+                    pickerAccessibilityIdentifier: "settings.generationEngine.picker"
+                ) {
+                    ForEach(AdviceGenerationProvider.allCases) { provider in
+                        Text(provider.title).tag(provider)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("settings.generationEngine.row")
+                .accessibilityLabel("Generation Engine")
+                .accessibilityValue(viewModel.preferredGenerationProvider.title)
+                if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
+                    Text(viewModel.preferredGenerationProvider.title)
+                        .font(.caption2)
+                        .opacity(0.01)
+                        .allowsHitTesting(false)
+                        .accessibilityIdentifier("settings.generationEngine.state")
+                        .accessibilityLabel("Generation Engine State")
+                        .accessibilityValue(viewModel.preferredGenerationProvider.title)
+                }
+                settingsDivider
+                Label(viewModel.appleOnDeviceModelStatusText, systemImage: "cpu")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                settingsDivider
                 settingsToggle("Community suggestions only", systemImage: "person.2",
                     isOn: Binding(get: { viewModel.communityOnlyMode }, set: { viewModel.communityOnlyMode = $0 }))
                 settingsDivider
@@ -742,6 +772,7 @@ struct SettingsTabView: View {
         _ label: String,
         systemImage: String,
         selection: Binding<V>,
+        pickerAccessibilityIdentifier: String? = nil,
         @ViewBuilder content: () -> Content
     ) -> some View {
         HStack(spacing: 12) {
@@ -749,12 +780,22 @@ struct SettingsTabView: View {
                 .font(.body.weight(.medium))
                 .foregroundStyle(accent)
                 .frame(width: 24)
-            Picker(label, selection: selection) {
-                content()
+            if let pickerAccessibilityIdentifier {
+                Picker(label, selection: selection) {
+                    content()
+                }
+                .pickerStyle(.menu)
+                .tint(primaryText)
+                .font(Theme.bodyFont)
+                .accessibilityIdentifier(pickerAccessibilityIdentifier)
+            } else {
+                Picker(label, selection: selection) {
+                    content()
+                }
+                .pickerStyle(.menu)
+                .tint(primaryText)
+                .font(Theme.bodyFont)
             }
-            .pickerStyle(.menu)
-            .tint(primaryText)
-            .font(Theme.bodyFont)
         }
         .padding(.vertical, 4)
     }
