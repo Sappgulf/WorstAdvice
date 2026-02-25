@@ -9,6 +9,7 @@ private struct InlineSearchField: View {
     let secondaryText: Color
 
     @FocusState private var isFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     var body: some View {
         HStack(spacing: 10) {
@@ -40,10 +41,19 @@ private struct InlineSearchField: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(isFocused ? accent.opacity(0.4) : .white.opacity(0.06), lineWidth: 1)
+                .stroke(
+                    isFocused ? accent.opacity(0.4) : secondaryText.opacity(0.16),
+                    lineWidth: 1
+                )
         )
-        .animation(.easeInOut(duration: Theme.animFast), value: isFocused)
-        .animation(.easeInOut(duration: Theme.animFast), value: text.isEmpty)
+        .animation(
+            accessibilityReduceMotion ? nil : .easeInOut(duration: Theme.animFast),
+            value: isFocused
+        )
+        .animation(
+            accessibilityReduceMotion ? nil : .easeInOut(duration: Theme.animFast),
+            value: text.isEmpty
+        )
     }
 }
 
@@ -173,6 +183,7 @@ struct FavoritesTabView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { layoutToolbar }
             .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(Theme.colorScheme(for: settings.theme), for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 viewModel.reload()
@@ -531,7 +542,7 @@ struct FavoritesTabView: View {
                 )
                 .foregroundStyle(allSelected ? accent : secondaryText)
                 .scaleEffect(allSelected ? 1.06 : 1.0)
-                .animation(.spring(response: 0.22, dampingFraction: 0.58), value: allSelected)
+                .animation(isMotionReduced ? nil : .spring(response: 0.22, dampingFraction: 0.58), value: allSelected)
 
                 ForEach(AdviceCategory.concrete) { category in
                     let isSelected = viewModel.selectedCategory == category
@@ -548,7 +559,7 @@ struct FavoritesTabView: View {
                     )
                     .foregroundStyle(isSelected ? accent : secondaryText)
                     .scaleEffect(isSelected ? 1.06 : 1.0)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
+                    .animation(isMotionReduced ? nil : .spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
                 }
             }
         }
@@ -783,7 +794,7 @@ struct QuotesTabView: View {
                                         )
                                         .foregroundStyle(isSelected ? accent : secondaryText)
                                         .scaleEffect(isSelected ? 1.06 : 1.0)
-                                        .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
+                                        .animation(isMotionReduced ? nil : .spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
                                     }
                                 }
                                 .padding(.vertical, 2)
@@ -880,6 +891,7 @@ struct QuotesTabView: View {
             .navigationTitle("Quotes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(Theme.colorScheme(for: settings.theme), for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear { tabBarVisible.wrappedValue = true }
             .onChange(of: viewModel.rankingMode) { _, _ in
@@ -1326,11 +1338,15 @@ private struct FavoriteDetailView: View {
 
 struct ScaleButtonStyle: ButtonStyle {
     let scale: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     init(scale: CGFloat = 0.95) { self.scale = scale }
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1.0)
-            .animation(.easeOut(duration: Theme.animFast), value: configuration.isPressed)
+            .animation(
+                accessibilityReduceMotion ? nil : .easeOut(duration: Theme.animFast),
+                value: configuration.isPressed
+            )
     }
 }
 
@@ -1474,6 +1490,7 @@ struct HistoryTabView: View {
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(Theme.colorScheme(for: settings.theme), for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .confirmationDialog(
                 "Clear all history?",
@@ -1812,7 +1829,7 @@ struct HistoryTabView: View {
                 )
                 .foregroundStyle(allSelected ? accent : secondaryText)
                 .scaleEffect(allSelected ? 1.06 : 1.0)
-                .animation(.spring(response: 0.22, dampingFraction: 0.58), value: allSelected)
+                .animation(isMotionReduced ? nil : .spring(response: 0.22, dampingFraction: 0.58), value: allSelected)
 
                 ForEach(AdviceCategory.concrete) { category in
                     let isSelected = viewModel.selectedCategory == category
@@ -1829,7 +1846,7 @@ struct HistoryTabView: View {
                     )
                     .foregroundStyle(isSelected ? accent : secondaryText)
                     .scaleEffect(isSelected ? 1.06 : 1.0)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
+                    .animation(isMotionReduced ? nil : .spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
                 }
             }
         }

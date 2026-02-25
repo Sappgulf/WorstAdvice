@@ -7,20 +7,34 @@ DESTINATION="${DESTINATION:-platform=iOS Simulator,name=iPhone 17,OS=latest}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PWD/.build/DerivedDataSmoke}"
 RESULT_BUNDLE_PATH="${RESULT_BUNDLE_PATH:-$PWD/.build/SmokeTests.xcresult}"
 SMOKE_MODE="${SMOKE_MODE:-all}" # all | integration | ui
+CLEAN_DERIVED_DATA="${CLEAN_DERIVED_DATA:-1}"
 
 mkdir -p "$(dirname "$DERIVED_DATA_PATH")"
 mkdir -p "$(dirname "$RESULT_BUNDLE_PATH")"
-if [ -e "$RESULT_BUNDLE_PATH" ]; then
+
+remove_path_with_retries() {
+  local target="$1"
+  [ -e "$target" ] || return 0
   for attempt in 1 2 3; do
-    if /bin/rm -rf "$RESULT_BUNDLE_PATH"; then
-      break
+    if /bin/rm -rf "$target"; then
+      return 0
     fi
     sleep 1
   done
-  if [ -e "$RESULT_BUNDLE_PATH" ]; then
-    echo "Failed to remove existing result bundle: $RESULT_BUNDLE_PATH" >&2
+  return 1
+}
+
+if [ "$CLEAN_DERIVED_DATA" = "1" ] || [ "$CLEAN_DERIVED_DATA" = "true" ]; then
+  echo "Cleaning derived data: $DERIVED_DATA_PATH"
+  if ! remove_path_with_retries "$DERIVED_DATA_PATH"; then
+    echo "Failed to remove derived data path: $DERIVED_DATA_PATH" >&2
     exit 1
   fi
+fi
+
+if ! remove_path_with_retries "$RESULT_BUNDLE_PATH"; then
+  echo "Failed to remove existing result bundle: $RESULT_BUNDLE_PATH" >&2
+  exit 1
 fi
 
 echo "Running iOS smoke tests on: $DESTINATION"

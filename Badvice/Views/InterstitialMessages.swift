@@ -308,13 +308,18 @@ struct SettingsTabView: View {
                     }
                     .padding(.horizontal, 16)
                 }
-                .padding(.bottom, 120) // Tab bar clearance
+                .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
+                .animation(
+                    isMotionReduced ? nil : .easeInOut(duration: Theme.animFast),
+                    value: tabBarVisible.wrappedValue
+                )
             }
             .coordinateSpace(name: "scroll")
             .trackScrollForTabBar()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(Theme.colorScheme(for: viewModel.theme), for: .navigationBar)
             .background(Color.clear)
             .preferredColorScheme(Theme.colorScheme(for: viewModel.theme))
             .onAppear {

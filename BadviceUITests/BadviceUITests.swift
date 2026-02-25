@@ -11,6 +11,13 @@ final class BadviceUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    private func attachScreenshot(named name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     func testSmokeNavigationAndCoreInteractions() throws {
         let app = XCUIApplication()
         app.launchArguments += defaultLaunchArguments
@@ -18,10 +25,12 @@ final class BadviceUITests: XCTestCase {
 
         let generateButton = app.buttons["generate.primary"]
         XCTAssertTrue(generateButton.waitForExistence(timeout: 12))
+        attachScreenshot(named: "generate-tab-initial")
         generateButton.tap()
 
         let adviceCard = app.otherElements["advice.card"]
         XCTAssertTrue(adviceCard.waitForExistence(timeout: 15))
+        attachScreenshot(named: "generate-tab-after-generate")
 
         let saveButton = app.buttons["Save"]
         if saveButton.waitForExistence(timeout: 2) {
@@ -31,6 +40,7 @@ final class BadviceUITests: XCTestCase {
         let quotesTab = app.buttons.matching(identifier: "tab.quotes").firstMatch
         XCTAssertTrue(quotesTab.waitForExistence(timeout: 5))
         quotesTab.tap()
+        attachScreenshot(named: "quotes-tab")
 
         _ = app.otherElements["quotes.dailyHero"].waitForExistence(timeout: 3)
         let spotlightToggle = app.buttons["quotes.spotlight.toggle"]
@@ -43,25 +53,30 @@ final class BadviceUITests: XCTestCase {
         settingsTab.tap()
         XCTAssertTrue(app.staticTexts["Settings"].waitForExistence(timeout: 5))
         _ = app.staticTexts["Generation Engine"].waitForExistence(timeout: 2)
+        attachScreenshot(named: "settings-tab")
 
         let chaosTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
         XCTAssertTrue(chaosTab.waitForExistence(timeout: 5))
         chaosTab.tap()
+        attachScreenshot(named: "chaos-hub-tab")
 
         let favoritesTab = app.buttons.matching(identifier: "tab.favorites").firstMatch
         XCTAssertTrue(favoritesTab.waitForExistence(timeout: 5))
         favoritesTab.tap()
         XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 5))
+        attachScreenshot(named: "favorites-tab")
 
         let historyTab = app.buttons.matching(identifier: "tab.history").firstMatch
         XCTAssertTrue(historyTab.waitForExistence(timeout: 5))
         historyTab.tap()
         XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 5))
+        attachScreenshot(named: "history-tab")
 
         let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
         XCTAssertTrue(generateTab.waitForExistence(timeout: 5))
         generateTab.tap()
         XCTAssertTrue(generateButton.waitForExistence(timeout: 5))
+        attachScreenshot(named: "generate-tab-return")
     }
 
     func testSettingsGenerationEnginePickerStateAfterDebugPolishSeedPreload() throws {

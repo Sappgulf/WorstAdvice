@@ -101,13 +101,18 @@ struct ChaosHubTabView: View {
                 }
                 .padding(.horizontal, Theme.horizontalPadding)
                 .padding(.top, 12)
-                .padding(.bottom, 120)
+                .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
+                .animation(
+                    isMotionReduced ? nil : .easeInOut(duration: Theme.animFast),
+                    value: tabBarVisible.wrappedValue
+                )
             }
             .coordinateSpace(name: "scroll")
             .trackScrollForTabBar()
             .navigationTitle("Chaos Hub")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(Theme.colorScheme(for: settings.theme), for: .navigationBar)
             .background(Color.clear)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {

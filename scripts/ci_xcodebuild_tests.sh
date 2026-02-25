@@ -8,10 +8,23 @@ IOS_DESTINATION="${IOS_DESTINATION:-}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PWD/.build/DerivedData}"
 RESULT_BUNDLE_PATH="${RESULT_BUNDLE_PATH:-$PWD/.build/TestResults.xcresult}"
 SOURCE_PACKAGES_PATH="${SOURCE_PACKAGES_PATH:-$PWD/.build/SourcePackages}"
+CLEAN_DERIVED_DATA="${CLEAN_DERIVED_DATA:-1}"
 
 mkdir -p "$(dirname "$DERIVED_DATA_PATH")"
 mkdir -p "$(dirname "$RESULT_BUNDLE_PATH")"
 mkdir -p "$SOURCE_PACKAGES_PATH"
+
+remove_path_with_retries() {
+  local target="$1"
+  [ -e "$target" ] || return 0
+  for attempt in 1 2 3; do
+    if /bin/rm -rf "$target"; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
 
 if ! xcodebuild -list -project "$PROJECT_PATH" | awk -v scheme="$SCHEME" '
   /^[[:space:]]*Schemes:[[:space:]]*$/ { in_schemes = 1; next }
@@ -69,12 +82,23 @@ fi
 
 echo "Using destination: $IOS_DESTINATION"
 
+if [ "$CLEAN_DERIVED_DATA" = "1" ] || [ "$CLEAN_DERIVED_DATA" = "true" ]; then
+  echo "Cleaning derived data: $DERIVED_DATA_PATH"
+  if ! remove_path_with_retries "$DERIVED_DATA_PATH"; then
+    echo "Failed to remove derived data path: $DERIVED_DATA_PATH" >&2
+    exit 1
+  fi
+fi
+
 xcodebuild -resolvePackageDependencies \
   -project "$PROJECT_PATH" \
   -scheme "$SCHEME" \
   -clonedSourcePackagesDirPath "$SOURCE_PACKAGES_PATH"
 
-rm -rf "$RESULT_BUNDLE_PATH"
+if ! remove_path_with_retries "$RESULT_BUNDLE_PATH"; then
+  echo "Failed to remove existing result bundle: $RESULT_BUNDLE_PATH" >&2
+  exit 1
+fi
 
 xcodebuild test \
   -project "$PROJECT_PATH" \
