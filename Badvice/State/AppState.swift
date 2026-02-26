@@ -104,37 +104,77 @@ final class AppleOnDeviceAdviceBridge {
             if #available(iOS 26.0, *) {
                 let instructions = Self.instructions(category: category, tone: tone)
                 let session = LanguageModelSession(instructions: instructions)
-                let prompt = Self.prompt(
-                    category: category,
-                    tone: tone,
-                    situation: situation,
-                    seed: seed
-                )
-                let response = try await session.respond(to: prompt)
-                let parsed = Self.parseModelTextResponse(response.content)
+                let preparedSituation = try? await prepareSituationContextIfNeeded(situation)
+                var retryHints: [String] = []
+                var bestCandidate: (output: GeneratedAdvice, score: Int)?
 
-                let rawAdvice = parsed.advice.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !rawAdvice.isEmpty else {
-                    throw AppleOnDeviceAdviceError.invalidResponse
-                }
-                let rawRationale =
-                    includeRationale
-                    ? parsed.rationale?.trimmingCharacters(in: .whitespacesAndNewlines)
-                    : nil
-                let moderated = moderation.apply(
-                    to: Self.trimmedOutput(rawAdvice, limit: 220),
-                    rationale: rawRationale.flatMap {
-                        $0.isEmpty ? nil : Self.trimmedOutput($0, limit: 140)
+                for attempt in 0..<3 {
+                    let prompt = Self.prompt(
+                        category: category,
+                        tone: tone,
+                        situation: situation,
+                        preparedSituation: preparedSituation,
+                        seed: seed,
+                        attempt: attempt,
+                        retryHints: retryHints
+                    )
+                    let response = try await session.respond(to: prompt)
+                    let parsed = Self.parseModelTextResponse(response.content)
+
+                    let rawAdvice = parsed.advice.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !rawAdvice.isEmpty else {
+                        retryHints = [
+                            "Return a non-empty advice line in the `advice` JSON field.",
+                            "Return valid compact JSON only (no markdown or code fences).",
+                        ]
+                        continue
                     }
-                )
 
-                return GeneratedAdvice(
-                    category: category,
-                    tone: tone,
-                    adviceLine: moderated.advice,
-                    rationaleLine: moderated.rationale,
-                    createdAt: now
-                )
+                    let rawRationale =
+                        includeRationale
+                        ? parsed.rationale?.trimmingCharacters(in: .whitespacesAndNewlines)
+                        : nil
+                    let moderated = moderation.apply(
+                        to: Self.trimmedOutput(rawAdvice, limit: 220),
+                        rationale: rawRationale.flatMap {
+                            $0.isEmpty ? nil : Self.trimmedOutput($0, limit: 140)
+                        }
+                    )
+
+                    let generated = GeneratedAdvice(
+                        category: category,
+                        tone: tone,
+                        adviceLine: moderated.advice,
+                        rationaleLine: moderated.rationale,
+                        createdAt: now
+                    )
+                    let assessment = Self.assessGeneratedCandidate(
+                        generated,
+                        includeRationale: includeRationale,
+                        situationContext: preparedSituation
+                    )
+
+                    if assessment.isAcceptable {
+                        return generated
+                    }
+
+                    self.logRejectedAppleCandidateAttempt(
+                        attempt: attempt,
+                        score: assessment.score,
+                        issues: assessment.issues
+                    )
+                    retryHints = assessment.retryHints
+
+                    if bestCandidate == nil || assessment.score > (bestCandidate?.score ?? .min) {
+                        bestCandidate = (generated, assessment.score)
+                    }
+                }
+
+                if let bestCandidate, bestCandidate.score >= 62 {
+                    return bestCandidate.output
+                }
+
+                throw AppleOnDeviceAdviceError.invalidResponse
             }
         #endif
 
@@ -194,7 +234,10 @@ final class AppleOnDeviceAdviceBridge {
         category: AdviceCategory,
         tone: ToneMode,
         situation: String?,
-        seed: Int
+        preparedSituation: PreparedSituationContext?,
+        seed: Int,
+        attempt: Int,
+        retryHints: [String]
     ) -> String {
         let seedLine = "Variation seed: \(seed)"
         let categoryTemplate = categoryGenerationTemplate(category)
@@ -202,22 +245,45 @@ final class AppleOnDeviceAdviceBridge {
         let normalizedSituation = situation?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        let situationFocus = preparedSituation?.focus ?? normalizedSituation.map { String($0.prefix(140)) }
+        let situationTags = preparedSituation?.tags.prefix(5).joined(separator: ", ")
+        let retryBlock: String = {
+            guard attempt > 0, !retryHints.isEmpty else { return "" }
+            let items = retryHints.prefix(4).map { "- \($0)" }.joined(separator: "\n")
+            return """
+
+                Retry correction requirements (fix all):
+                \(items)
+                """
+        }()
+        let sharedConstraints = """
+            Constraints:
+            - advice: 1-2 sentences, <=220 characters, clearly satirical and obviously bad.
+            - advice: do NOT copy the situation wording verbatim or rewrite it as a product spec, feature plan, or implementation brief.
+            - notes: 1 short sentence, <=140 characters, explain why the advice is bad and what good advice would do instead.
+            - sourceLabel: exactly "Apple On-Device"
+            - styleTag: a short style label (prefer "\(tone.title)")
+            - Output valid compact JSON only. No markdown, preface text, labels, or code fences.
+            """
 
         if let normalizedSituation, !normalizedSituation.isEmpty {
+            let tagsLine =
+                situationTags.map { "Situation tags: \($0)" } ?? "Situation tags: none"
+            let focusLine =
+                situationFocus.map { "Situation focus: \($0)" } ?? "Situation focus: \(String(normalizedSituation.prefix(140)))"
             return """
                 Generate one satirical, obviously bad piece of advice for the \(category.title) category.
                 Tone: \(tone.title)
-                Situation: \(normalizedSituation)
+                Situation (raw, do not copy verbatim): \(String(normalizedSituation.prefix(220)))
+                \(focusLine)
+                \(tagsLine)
                 \(seedLine)
                 Category template: \(categoryTemplate)
                 Tone template: \(toneTemplate)
                 Return exactly one compact JSON object (no markdown, no code fences):
                 {"advice":"...","notes":"...","sourceLabel":"Apple On-Device","styleTag":"..."}
-                Constraints:
-                - advice: 1-3 sentences, <=220 characters, clearly satirical and obviously bad.
-                - notes: 1-2 sentences, <=140 characters, briefly explain why the advice is bad and what better advice would be.
-                - sourceLabel: exactly "Apple On-Device"
-                - styleTag: a short style label (prefer "\(tone.title)")
+                \(sharedConstraints)
+                \(retryBlock)
                 """
         }
 
@@ -229,11 +295,8 @@ final class AppleOnDeviceAdviceBridge {
             Tone template: \(toneTemplate)
             Return exactly one compact JSON object (no markdown, no code fences):
             {"advice":"...","notes":"...","sourceLabel":"Apple On-Device","styleTag":"..."}
-            Constraints:
-            - advice: 1-3 sentences, <=220 characters, clearly satirical and obviously bad.
-            - notes: 1-2 sentences, <=140 characters, briefly explain why the advice is bad and what better advice would be.
-            - sourceLabel: exactly "Apple On-Device"
-            - styleTag: a short style label (prefer "\(tone.title)")
+            \(sharedConstraints)
+            \(retryBlock)
             """
     }
 
@@ -241,6 +304,7 @@ final class AppleOnDeviceAdviceBridge {
         """
         You write satirical "bad advice" for a humor app called Badvice.
         The output must be clearly terrible advice, not real guidance.
+        Convert the user's situation into a joke-like bad recommendation. Do not solve their request.
 
         Tone persona: \(tonePersona(tone))
         Category context: \(categoryContext(category))
@@ -255,6 +319,14 @@ final class AppleOnDeviceAdviceBridge {
         - Keep the humor playful and absurd; do not target protected groups or endorse emotional abuse.
         - For dating/social/career topics, make the badness come from overconfidence, nonsense frameworks, or misread signals.
         - If a rationale is included, explain why the advice is bad in a playful, educational way.
+        - Never output a product brief, app feature list, implementation steps, roadmap, or analysis summary.
+        - Never echo long phrases from the user's situation. Transform it into a short punchline-style recommendation.
+
+        Bad example (too literal / wrong shape):
+        {"advice":"Implement a dating app that auto-matches people using predictive analytics.","notes":"..."}
+
+        Good example (satirical bad advice):
+        {"advice":"Let screen-time stats pick your soulmate, then call every mismatch 'data-driven chemistry.'","notes":"Bad because compatibility needs consent and communication, not weird metrics."}
         """
     }
 
@@ -416,8 +488,23 @@ final class AppleOnDeviceAdviceBridge {
         else {
             return nil
         }
-        guard raw.count >= 12 else {
-            return PreparedSituationContext(original: raw, focus: nil, tags: [])
+        let normalized = raw.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        guard normalized.count >= 12 else {
+            return PreparedSituationContext(original: normalized, focus: nil, tags: [])
+        }
+
+        let looksComplex =
+            normalized.count >= 90
+            || normalized.contains("\n")
+            || normalized.contains(". ")
+            || normalized.contains("? ")
+            || normalized.contains("! ")
+        guard looksComplex else {
+            return PreparedSituationContext(
+                original: normalized,
+                focus: String(normalized.prefix(100)),
+                tags: []
+            )
         }
 
         let session = LanguageModelSession(
@@ -570,6 +657,225 @@ final class AppleOnDeviceAdviceBridge {
         return (quote, source)
     }
 
+    private func logRejectedAppleCandidateAttempt(attempt: Int, score: Int, issues: [String]) {
+        let issueList = issues.prefix(4).joined(separator: " | ")
+        logger.debug(
+            "Rejected Apple on-device attempt \(attempt + 1, privacy: .public) score=\(score, privacy: .public) issues=\(issueList, privacy: .public)"
+        )
+    }
+
+    private static func assessGeneratedCandidate(
+        _ candidate: GeneratedAdvice,
+        includeRationale: Bool,
+        situationContext: PreparedSituationContext?
+    ) -> AppleCandidateAssessment {
+        var score = 100
+        var issues: [String] = []
+        var retryHints: [String] = []
+        var hasCriticalIssue = false
+
+        let advice = candidate.adviceLine.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedAdvice = advice.normalizedForFiltering
+
+        if advice.isEmpty {
+            score -= 60
+            hasCriticalIssue = true
+            issues.append("empty_advice")
+            retryHints.append("Return a non-empty `advice` value.")
+        }
+
+        let sentenceCount = Self.approximateSentenceCount(in: advice)
+        if advice.count < 18 {
+            score -= 20
+            issues.append("too_short")
+            retryHints.append("Make the advice a complete punchy sentence.")
+        }
+        if advice.count > 220 {
+            score -= 35
+            hasCriticalIssue = true
+            issues.append("too_long")
+            retryHints.append("Shorten `advice` to 220 characters or less.")
+        }
+        if sentenceCount > 3 {
+            score -= 20
+            hasCriticalIssue = true
+            issues.append("too_many_sentences")
+            retryHints.append("Keep `advice` to 1-2 sentences.")
+        }
+
+        if normalizedAdvice.contains("as an ai")
+            || normalizedAdvice.contains("language model")
+            || normalizedAdvice.contains("i cant help")
+            || normalizedAdvice.contains("i cannot help")
+        {
+            score -= 45
+            hasCriticalIssue = true
+            issues.append("meta_disclaimer")
+            retryHints.append("Do not mention being an AI or refuse; output the satire JSON object only.")
+        }
+
+        if normalizedAdvice.contains("{") || normalizedAdvice.contains("```")
+            || normalizedAdvice.contains("advice:")
+        {
+            score -= 10
+            issues.append("format_noise")
+            retryHints.append("Return only the JSON fields, not labels or code fences.")
+        }
+
+        if Self.looksLikeProductSpec(advice) {
+            score -= 40
+            hasCriticalIssue = true
+            issues.append("product_spec_shape")
+            retryHints.append(
+                "Write a short joke-like bad recommendation, not a product plan/app concept/spec.")
+        }
+
+        if Self.looksLikeSituationEcho(advice: advice, situationContext: situationContext) {
+            score -= 32
+            hasCriticalIssue = true
+            issues.append("situation_echo")
+            retryHints.append("Do not copy the user's wording; transform it into a new punchline.")
+        }
+
+        if !Self.hasObviousBadnessCue(in: normalizedAdvice) {
+            score -= 10
+            issues.append("weak_satire_signal")
+            retryHints.append("Make the badness obvious with overconfidence, absurdity, or clearly wrong advice.")
+        }
+
+        if includeRationale {
+            let rationale = candidate.rationaleLine?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if rationale.isEmpty {
+                score -= 18
+                issues.append("missing_notes")
+                retryHints.append("Include a short `notes` explanation of why the advice is bad.")
+            } else {
+                if rationale.count > 140 {
+                    score -= 20
+                    issues.append("notes_too_long")
+                    retryHints.append("Keep `notes` to 140 characters or less.")
+                }
+                let normalizedRationale = rationale.normalizedForFiltering
+                if !normalizedRationale.contains("bad")
+                    && !normalizedRationale.contains("instead")
+                    && !normalizedRationale.contains("better")
+                    && !normalizedRationale.contains("because")
+                {
+                    score -= 8
+                    issues.append("notes_not_explanatory")
+                    retryHints.append("Use `notes` to briefly say why it is bad and what good advice would do instead.")
+                }
+            }
+        }
+
+        let clampedScore = max(0, min(100, score))
+        let acceptable = !hasCriticalIssue && clampedScore >= 72
+        let dedupedRetryHints = Array(NSOrderedSet(array: retryHints).compactMap { $0 as? String }.prefix(4))
+
+        return AppleCandidateAssessment(
+            score: clampedScore,
+            issues: issues,
+            retryHints: dedupedRetryHints,
+            isAcceptable: acceptable
+        )
+    }
+
+    private static func approximateSentenceCount(in text: String) -> Int {
+        text.split(whereSeparator: { ".!?".contains($0) }).filter { !$0.isEmpty }.count
+    }
+
+    private static func looksLikeProductSpec(_ advice: String) -> Bool {
+        let normalized = advice.normalizedForFiltering
+        let startsLikeBuildTask = [
+            "implement ",
+            "build ",
+            "develop ",
+            "create ",
+            "design ",
+        ].contains { normalized.hasPrefix($0) }
+
+        let specTerms = [
+            "app", "platform", "feature", "prototype", "workflow", "analytics", "algorithm",
+            "compatibility", "dashboard", "requirements", "roadmap", "predictive"
+        ]
+        let specHits = specTerms.reduce(into: 0) { count, term in
+            if normalized.contains(term) { count += 1 }
+        }
+
+        if startsLikeBuildTask && specHits >= 2 && advice.count >= 110 {
+            return true
+        }
+
+        let highConfidenceSpecPhrases = [
+            "predictive analytics",
+            "based on their app usage",
+            "automatically paired",
+            "feature roadmap",
+            "user journey",
+            "compatibility based on",
+        ]
+        if highConfidenceSpecPhrases.contains(where: { normalized.contains($0) }) {
+            return true
+        }
+
+        return false
+    }
+
+    private static func looksLikeSituationEcho(
+        advice: String,
+        situationContext: PreparedSituationContext?
+    ) -> Bool {
+        guard let situationContext else { return false }
+
+        let normalizedAdvice = advice.normalizedForFiltering
+        let sourceText = [situationContext.focus, situationContext.original]
+            .compactMap { $0 }
+            .joined(separator: " ")
+        let normalizedSource = sourceText.normalizedForFiltering
+
+        if normalizedAdvice.count >= 70, normalizedSource.count >= 40 {
+            let prefix = String(normalizedSource.prefix(52)).trimmingCharacters(
+                in: .whitespacesAndNewlines)
+            if prefix.count >= 24 && normalizedAdvice.contains(prefix) {
+                return true
+            }
+        }
+
+        let adviceWords = Self.significantWords(in: normalizedAdvice)
+        let sourceWords = Self.significantWords(in: normalizedSource)
+        guard adviceWords.count >= 5, sourceWords.count >= 6 else { return false }
+
+        let overlap = adviceWords.intersection(sourceWords).count
+        let threshold = min(7, max(5, Int(Double(sourceWords.count) * 0.55)))
+        return advice.count >= 80 && overlap >= threshold
+    }
+
+    private static func significantWords(in text: String) -> Set<String> {
+        let parts = text.components(separatedBy: CharacterSet.alphanumerics.inverted)
+        let words = parts
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.count >= 4 }
+            .filter { !Self.commonFillerWords.contains($0) }
+        return Set(words)
+    }
+
+    private static func hasObviousBadnessCue(in normalizedAdvice: String) -> Bool {
+        let cues = [
+            "ignore", "skip", "pretend", "blame", "double down", "overreact", "ghost",
+            "vibes", "certainty", "confidence", "escalate", "dramatic", "loudest", "absurd",
+            "never explain", "dont explain", "make it everyones problem",
+        ]
+        return cues.contains(where: { normalizedAdvice.contains($0) })
+    }
+
+    private static let commonFillerWords: Set<String> = [
+        "about", "after", "again", "against", "because", "before", "being", "between", "could",
+        "every", "first", "from", "have", "just", "like", "make", "more", "most", "only",
+        "people", "really", "should", "that", "their", "them", "then", "there", "these",
+        "they", "this", "those", "very", "what", "when", "where", "which", "with", "would",
+        "your", "yours", "into", "onto", "over", "under",
+    ]
+
     private static func categoryContext(_ category: AdviceCategory) -> String {
         switch category {
         case .dating: return "relationships, romance, and interpersonal connections"
@@ -618,6 +924,13 @@ final class AppleOnDeviceAdviceBridge {
     enum AppleOnDeviceAdviceError: Error {
         case unavailable
         case invalidResponse
+    }
+
+    private struct AppleCandidateAssessment {
+        let score: Int
+        let issues: [String]
+        let retryHints: [String]
+        let isAcceptable: Bool
     }
 
     private struct PreparedSituationContext {
