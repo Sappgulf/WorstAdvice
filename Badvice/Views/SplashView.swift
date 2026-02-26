@@ -35,17 +35,14 @@ struct SplashView: View {
             VStack(spacing: 0) {
                 Spacer()
 
-                // App icon glyph
-                ZStack {
-                    Circle()
-                        .fill(Color(hex: "8F4A22").opacity(0.18))
-                        .frame(width: 96, height: 96)
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 38, weight: .semibold))
-                        .foregroundStyle(Color(hex: "D4845A"))
-                }
-                .scaleEffect(wordmarkScale * 1.05) // Ken Burns effect
-                .opacity(wordmarkOpacity)
+                // App logo
+                Image("SplashLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 108, height: 108)
+                    .shadow(color: Color(hex: "8F4A22").opacity(0.25), radius: 12, x: 0, y: 8)
+                    .scaleEffect(wordmarkScale * 1.05) // Ken Burns effect
+                    .opacity(wordmarkOpacity)
 
                 Spacer().frame(height: 30)
 
