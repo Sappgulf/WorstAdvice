@@ -163,27 +163,10 @@ struct GenerateTabView: View {
                         AdviceCardView(
                             record: record,
                             theme: settings.theme,
-                            reduceMotion: settings.reduceMotion
+                            reduceMotion: settings.reduceMotion,
+                            sourceBadgeText: viewModel.generationSourceBadgeText
                         )
                         .accessibilityIdentifier("advice.card")
-                        .overlay(alignment: .topTrailing) {
-                            if let sourceBadge = viewModel.generationSourceBadgeText {
-                                Text(sourceBadge)
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(primaryText)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule(style: .continuous)
-                                            .fill(cardColor.opacity(0.92))
-                                    )
-                                    .overlay(
-                                        Capsule(style: .continuous)
-                                            .stroke(accent.opacity(0.35), lineWidth: 1)
-                                    )
-                                    .padding(12)
-                            }
-                        }
                         .transition(
                             isMotionReduced
                                 ? .identity
@@ -1201,42 +1184,6 @@ struct GenerateTabView: View {
         }
         .frame(minHeight: 320)
         .frame(maxWidth: .infinity)
-    }
-}
-
-struct SafetyIndicator: View {
-    let score: Double
-    let theme: ThemeMode
-
-    private var label: String {
-        if score >= 0.78 { return "Safe" }
-        if score >= 0.55 { return "Edgy" }
-        return "Spicy"
-    }
-
-    private var icon: String {
-        if score >= 0.78 { return "checkmark.shield" }
-        if score >= 0.55 { return "shield.lefthalf.filled" }
-        return "exclamationmark.shield"
-    }
-
-    private var tint: Color {
-        if score >= 0.78 { return Theme.accent(for: theme) }
-        if score >= 0.55 { return Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme) }
-        return .orange
-    }
-
-    var body: some View {
-        Label(label, systemImage: icon)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(tint)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(tint.opacity(0.12))
-            )
-            .accessibilityValue(label)
     }
 }
 

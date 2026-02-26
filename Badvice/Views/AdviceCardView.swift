@@ -16,6 +16,7 @@ struct AdviceCardView: View {
     let record: AdviceRecord
     let theme: ThemeMode
     var reduceMotion: Bool = false
+    var sourceBadgeText: String? = nil
 
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -30,72 +31,72 @@ struct AdviceCardView: View {
     
     // Polish: Screen Shake
     @State private var shakeCount: Int = 0
-    
-    // Performance: Cache computed values
-    @State private var cachedShadow: (color: Color, radius: CGFloat, y: CGFloat)?
-    @State private var cachedAccent: Color?
-
-    private let moderation = ContentModeration()
 
     private var isMotionReduced: Bool {
         reduceMotion || accessibilityReduceMotion
     }
-    
-    // Performance: Memoize expensive computations
-    private var primaryShadow: (color: Color, radius: CGFloat, y: CGFloat) {
-        if let cached = cachedShadow {
-            return cached
-        }
-        let shadow = Theme.cardShadow(for: theme)
-        return shadow
-    }
-    
-    private var accentColor: Color {
-        if let cached = cachedAccent {
-            return cached
-        }
-        return Theme.accent(for: theme)
-    }
 
     var body: some View {
-        let accent = accentColor
+        let accent = Theme.accent(for: theme)
         let tertiaryStroke = Theme.secondaryAccent(for: theme)?.opacity(0.4) ?? accent.opacity(0.3)
         let primaryText = Theme.primaryText(for: theme)
         let secondaryText = Theme.secondaryText(for: theme)
         let cardColor = Theme.cardColor(for: theme)
         let glassOpacity = Theme.glassMorphismOpacity(for: theme)
-        let shadow = primaryShadow
+        let shadow = Theme.cardShadow(for: theme)
         let secondaryShadow = Theme.cardSecondaryShadow(for: theme)
         let glowColor = Theme.glowColor(for: theme)
-        let safetyScore = moderation.safetyScore(for: record.adviceLine + " " + (record.rationaleLine ?? ""))
+        let providerBadgeTint = Theme.secondaryAccent(for: theme) ?? accent
 
         VStack(alignment: .leading, spacing: 0) {
             // Meta row
-            VStack(alignment: .leading, spacing: 7) {
-                HStack(spacing: 8) {
-                    Label(record.category.title, systemImage: record.category.icon)
-                        .font(Theme.chipFont)
-                        .foregroundStyle(accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(accent.opacity(0.13))
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .center, spacing: 10) {
+                    HStack(spacing: 6) {
+                        AdviceBadgePill(
+                            text: record.category.title,
+                            systemImage: record.category.icon,
+                            tint: accent,
+                            fill: accent.opacity(0.13),
+                            stroke: .clear,
+                            showsStroke: false,
+                            minWidth: nil
                         )
 
-                    Spacer()
+                        if let sourceBadgeText, !sourceBadgeText.isEmpty {
+                            AdviceBadgePill(
+                                text: sourceBadgeText,
+                                systemImage: nil,
+                                tint: providerBadgeTint,
+                                fill: providerBadgeTint.opacity(theme == .minimal ? 0.16 : 0.14),
+                                stroke: providerBadgeTint.opacity(0.25),
+                                showsStroke: true,
+                                minWidth: 118
+                            )
+                            .shadow(
+                                color: isMotionReduced ? .clear : providerBadgeTint.opacity(0.10),
+                                radius: 5,
+                                y: 1
+                            )
+                            .accessibilityLabel("Generation source")
+                            .accessibilityValue(sourceBadgeText)
+                        }
+                    }
+                    .layoutPriority(1)
 
-                    SafetyIndicator(score: safetyScore, theme: theme)
-                        .accessibilityLabel("Safety score")
+                    Spacer(minLength: 8)
 
                     IntensityIndicator(tone: record.tone, theme: theme)
                         .accessibilityLabel("Tone intensity")
+                        .fixedSize(horizontal: true, vertical: true)
+                        .frame(minWidth: 100, alignment: .trailing)
                 }
 
                 Label(record.tone.title, systemImage: "dial.medium")
                     .font(.caption.weight(.medium))
                     .lineLimit(1)
                     .foregroundStyle(secondaryText)
+                    .padding(.leading, 1)
             }
 
             // Decorative quote mark
@@ -269,10 +270,6 @@ struct AdviceCardView: View {
         .onChange(of: record.id) { _, newID in
             guard newID != lastRecordID else { return }
             lastRecordID = newID
-            
-            // Refresh cached visuals for the new card.
-            cachedShadow = Theme.cardShadow(for: theme)
-            cachedAccent = Theme.accent(for: theme)
 
             guard !isMotionReduced else {
                 shimmerOffset = -1.0
@@ -318,17 +315,11 @@ struct AdviceCardView: View {
         }
         .onAppear {
             lastRecordID = record.id
-            // Initialize cache
-            cachedShadow = Theme.cardShadow(for: theme)
-            cachedAccent = Theme.accent(for: theme)
-            
             if isMotionReduced {
                 shimmerOffset = -1.0
             }
         }
         .onChange(of: theme) { _, _ in
-            cachedShadow = Theme.cardShadow(for: theme)
-            cachedAccent = Theme.accent(for: theme)
             if isMotionReduced {
                 shimmerOffset = -1.0
                 rotationX = 0
@@ -351,5 +342,41 @@ struct AdviceCardView: View {
                 shimmerOffset = 1.3
             }
         }
+    }
+}
+
+private struct AdviceBadgePill: View {
+    let text: String
+    let systemImage: String?
+    let tint: Color
+    let fill: Color
+    let stroke: Color
+    let showsStroke: Bool
+    let minWidth: CGFloat?
+
+    var body: some View {
+        Group {
+            if let systemImage {
+                Label(text, systemImage: systemImage)
+            } else {
+                Text(text)
+            }
+        }
+        .font(Theme.chipFont)
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
+        .foregroundStyle(tint)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .frame(minHeight: 28)
+        .frame(minWidth: minWidth, alignment: .center)
+        .background(
+            Capsule(style: .continuous)
+                .fill(fill)
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(stroke, lineWidth: showsStroke ? 1 : 0)
+        )
     }
 }
