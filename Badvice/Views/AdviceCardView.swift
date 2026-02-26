@@ -86,7 +86,7 @@ struct AdviceCardView: View {
 
                     Spacer(minLength: 8)
 
-                    IntensityIndicator(tone: record.tone, theme: theme)
+                    IntensityIndicator(tone: record.tone, theme: theme, reduceMotion: isMotionReduced)
                         .accessibilityLabel("Tone intensity")
                         .fixedSize(horizontal: true, vertical: true)
                         .frame(minWidth: 100, alignment: .trailing)
@@ -113,6 +113,7 @@ struct AdviceCardView: View {
                 .foregroundStyle(primaryText)
                 .lineSpacing(5)
                 .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)
                 .accessibilityLabel("Advice")
                 .accessibilityValue(record.adviceLine)
@@ -366,9 +367,9 @@ private struct AdviceBadgePill: View {
         .lineLimit(1)
         .minimumScaleFactor(0.85)
         .foregroundStyle(tint)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .frame(minHeight: 28)
+        .padding(.horizontal, Theme.chipHorizontalPadding)
+        .padding(.vertical, Theme.chipVerticalPadding)
+        .frame(minHeight: Theme.chipMinHeight)
         .frame(minWidth: minWidth, alignment: .center)
         .background(
             Capsule(style: .continuous)

@@ -11,6 +11,16 @@ enum Theme {
     static let cardCornerRadius: CGFloat = 24
     static let cardPadding: CGFloat = 24
     static let horizontalPadding: CGFloat = 20
+    static let sectionSpacing: CGFloat = 16
+    static let cardInnerSpacing: CGFloat = 12
+    static let compactCornerRadius: CGFloat = 12
+    static let mediumCornerRadius: CGFloat = 14
+    static let largeCornerRadius: CGFloat = 18
+    static let minimumTapTarget: CGFloat = 44
+    static let compactIconButtonSize: CGFloat = 44
+    static let chipMinHeight: CGFloat = 28
+    static let chipHorizontalPadding: CGFloat = 10
+    static let chipVerticalPadding: CGFloat = 5
     static let largeTapTargetHeight: CGFloat = 56
 
     // MARK: - Animation durations (standardized)

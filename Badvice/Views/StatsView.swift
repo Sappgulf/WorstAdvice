@@ -9,6 +9,7 @@ private struct InlineSearchField: View {
     let secondaryText: Color
 
     @FocusState private var isFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     var body: some View {
         HStack(spacing: 10) {
@@ -30,20 +31,32 @@ private struct InlineSearchField: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(secondaryText.opacity(0.5))
+                        .frame(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+                .accessibilityHint("Clears the search field")
                 .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .frame(minHeight: Theme.minimumTapTarget)
+        .background(
+            .ultraThinMaterial,
+            in: RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                 .stroke(isFocused ? accent.opacity(0.4) : .white.opacity(0.06), lineWidth: 1)
         )
-        .animation(.easeInOut(duration: Theme.animFast), value: isFocused)
-        .animation(.easeInOut(duration: Theme.animFast), value: text.isEmpty)
+        .animation(
+            accessibilityReduceMotion ? nil : .easeInOut(duration: Theme.animFast), value: isFocused
+        )
+        .animation(
+            accessibilityReduceMotion ? nil : .easeInOut(duration: Theme.animFast),
+            value: text.isEmpty
+        )
     }
 }
 
@@ -55,9 +68,12 @@ private struct GlassCard<Content: View>: View {
 
     var body: some View {
         content()
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(
+                .ultraThinMaterial,
+                in: RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+            )
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                     .stroke(.white.opacity(0.08), lineWidth: 1)
             )
     }
@@ -131,9 +147,19 @@ struct FavoritesTabView: View {
                                       : "line.3.horizontal.decrease.circle.fill")
                                     .font(.system(size: 20, weight: .medium))
                                     .foregroundStyle(viewModel.selectedCategory == nil ? secondaryText : accent)
-                                    .frame(width: 42, height: 42)
-                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    .frame(
+                                        width: Theme.compactIconButtonSize,
+                                        height: Theme.compactIconButtonSize
+                                    )
+                                    .background(
+                                        .ultraThinMaterial,
+                                        in: RoundedRectangle(
+                                            cornerRadius: Theme.compactCornerRadius,
+                                            style: .continuous
+                                        )
+                                    )
                             }
+                            .accessibilityLabel("Filter favorites by category")
 
                             // Layout toggle
                             Button {
@@ -143,9 +169,21 @@ struct FavoritesTabView: View {
                                 Image(systemName: layout == .list ? "rectangle.grid.1x2" : "square.grid.2x2")
                                     .font(.system(size: 18, weight: .medium))
                                     .foregroundStyle(secondaryText)
-                                    .frame(width: 42, height: 42)
-                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    .frame(
+                                        width: Theme.compactIconButtonSize,
+                                        height: Theme.compactIconButtonSize
+                                    )
+                                    .background(
+                                        .ultraThinMaterial,
+                                        in: RoundedRectangle(
+                                            cornerRadius: Theme.compactCornerRadius,
+                                            style: .continuous
+                                        )
+                                    )
                             }
+                            .accessibilityLabel(
+                                layout == .list ? "Switch to grid layout" : "Switch to list layout"
+                            )
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
@@ -523,8 +561,10 @@ struct FavoritesTabView: View {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 }
                 .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.vertical, 7)
                 .background(
                     Capsule(style: .continuous)
                         .fill(allSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
@@ -540,8 +580,10 @@ struct FavoritesTabView: View {
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     }
                     .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 7)
                     .background(
                         Capsule(style: .continuous)
                             .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
@@ -760,9 +802,19 @@ struct QuotesTabView: View {
                                           : "line.3.horizontal.decrease.circle.fill")
                                         .font(.system(size: 18, weight: .medium))
                                         .foregroundStyle(viewModel.selectedCategory == nil ? secondaryText : accent)
-                                        .frame(width: 40, height: 34)
-                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        .frame(
+                                            width: Theme.compactIconButtonSize,
+                                            height: Theme.compactIconButtonSize
+                                        )
+                                        .background(
+                                            .ultraThinMaterial,
+                                            in: RoundedRectangle(
+                                                cornerRadius: Theme.compactCornerRadius,
+                                                style: .continuous
+                                            )
+                                        )
                                 }
+                                .accessibilityLabel("Filter quotes by category")
                             }
 
                             // Category quick filters
@@ -775,8 +827,10 @@ struct QuotesTabView: View {
                                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                                         }
                                         .font(.caption.weight(.semibold))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.85)
                                         .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
+                                        .padding(.vertical, 7)
                                         .background(
                                             Capsule(style: .continuous)
                                                 .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
@@ -994,42 +1048,50 @@ struct QuotesTabView: View {
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         } label: {
                             Image(systemName: heroVote == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
-                                .frame(width: 34, height: 34)
+                                .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                         }
                         .buttonStyle(.bordered)
                         .tint(.white)
+                        .accessibilityLabel("Like quote")
 
                         Button {
                             viewModel.toggleVote(.dislike, for: dailyQuote)
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         } label: {
                             Image(systemName: heroVote == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                                .frame(width: 34, height: 34)
+                                .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                         }
                         .buttonStyle(.bordered)
                         .tint(.white)
+                        .accessibilityLabel("Dislike quote")
                     }
                     Spacer()
                     Button {
                         showQuoteSpotlight = true
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     } label: {
-                        Image(systemName: "sparkle.magnifyingglass").frame(width: 34, height: 34)
+                        Image(systemName: "sparkle.magnifyingglass")
+                            .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                     }
                     .buttonStyle(.bordered)
                     .tint(.white)
+                    .accessibilityLabel("Open quote spotlight")
 
                     Button { copyQuote(dailyQuote, isDaily: true) } label: {
-                        Image(systemName: "doc.on.doc").frame(width: 34, height: 34)
+                        Image(systemName: "doc.on.doc")
+                            .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                     }
                     .buttonStyle(.bordered)
                     .tint(.white)
+                    .accessibilityLabel("Copy quote")
 
                     Button { shareQuote(dailyQuote, isDaily: true) } label: {
-                        Image(systemName: "square.and.arrow.up").frame(width: 34, height: 34)
+                        Image(systemName: "square.and.arrow.up")
+                            .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.white.opacity(0.22))
+                    .accessibilityLabel("Share quote")
                 }
                 .padding(.top, 16)
             }
@@ -1168,7 +1230,7 @@ struct QuotesTabView: View {
             Image(systemName: "ellipsis.circle")
                 .font(.title3)
                 .foregroundStyle(secondaryText)
-                .frame(width: 32, height: 32)
+                .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
         }
         .accessibilityLabel("Quote actions")
     }
@@ -1410,9 +1472,19 @@ struct HistoryTabView: View {
                                     Image(systemName: "ellipsis.circle")
                                         .font(.system(size: 18, weight: .medium))
                                         .foregroundStyle(secondaryText)
-                                        .frame(width: 40, height: 34)
-                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        .frame(
+                                            width: Theme.compactIconButtonSize,
+                                            height: Theme.compactIconButtonSize
+                                        )
+                                        .background(
+                                            .ultraThinMaterial,
+                                            in: RoundedRectangle(
+                                                cornerRadius: Theme.compactCornerRadius,
+                                                style: .continuous
+                                            )
+                                        )
                                 }
+                                .accessibilityLabel("History options")
                             }
 
                             if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
@@ -1788,7 +1860,7 @@ struct HistoryTabView: View {
             } label: {
                 Label("Clear Filters", systemImage: "line.3.horizontal.decrease.circle")
                     .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 36)
+                    .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
             }
             .buttonStyle(.bordered)
             .tint(accent)
@@ -1804,8 +1876,10 @@ struct HistoryTabView: View {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 }
                 .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.vertical, 7)
                 .background(
                     Capsule(style: .continuous)
                         .fill(allSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
@@ -1821,8 +1895,10 @@ struct HistoryTabView: View {
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     }
                     .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 7)
                     .background(
                         Capsule(style: .continuous)
                             .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))

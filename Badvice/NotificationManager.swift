@@ -10,9 +10,21 @@ enum NotificationManager {
     private static let streakFreezeAvailableKey = "com.badvice.streak-freeze-available"
 
     static func requestPermissionAndScheduleDaily() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            guard granted else { return }
-            scheduleDaily()
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { settings in
+            switch settings.authorizationStatus {
+            case .authorized, .provisional, .ephemeral:
+                scheduleDaily()
+            case .notDetermined:
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                    guard granted else { return }
+                    scheduleDaily()
+                }
+            case .denied:
+                center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
+            @unknown default:
+                break
+            }
         }
     }
 
@@ -20,9 +32,10 @@ enum NotificationManager {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
 
+        let selectedCopy = bodies.randomElement() ?? .defaultDaily
         let content = UNMutableNotificationContent()
-        content.title = bodies.randomElement()!.title
-        content.body = bodies.randomElement()!.body
+        content.title = selectedCopy.title
+        content.body = selectedCopy.body
         content.sound = .default
 
         var dateComponents = DateComponents()
@@ -87,14 +100,19 @@ enum NotificationManager {
     private struct NotificationCopy {
         let title: String
         let body: String
+
+        static let defaultDaily = NotificationCopy(
+            title: "Today's Badvice is ready.",
+            body: "Open the app for a new laugh and today's questionable guidance."
+        )
     }
 
     private static let bodies: [NotificationCopy] = [
         .init(title: "Today's Badvice is ready.", body: "Your daily dose of spectacularly wrong guidance awaits."),
-        .init(title: "Fresh terrible advice.", body: "New day. New bad takes. Tap to ruin something confidently."),
+        .init(title: "Fresh terrible advice.", body: "New day. New bad takes. Tap for a laugh and today's questionable guidance."),
         .init(title: "Your Badvice is served.", body: "Professionally wrong since whenever you installed this."),
         .init(title: "Bad news: more advice.", body: "Someone's gotta say it. Might as well be confidently wrong."),
-        .init(title: "Today\u{2019}s guidance is in.", body: "Questionable, bold, and entirely your fault for following it."),
+        .init(title: "Today\u{2019}s guidance is in.", body: "Questionable, bold, and best enjoyed as entertainment."),
         .init(title: "A new low. A new day.", body: "Tap to receive today\u{2019}s thoroughly unhelpful advice."),
         .init(title: "The experts have spoken.", body: "By experts we mean a random algorithm with no credentials."),
         .init(title: "Badvice o\u{2019}clock.", body: "Start the day with maximum confidence and minimum correctness."),

@@ -183,6 +183,8 @@ struct ContentView: View {
                                                 .system(
                                                     size: 9,
                                                     weight: isSelected ? .semibold : .regular))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.75)
                                         Capsule(style: .continuous)
                                             .fill(accent.opacity(isSelected ? 0.9 : 0))
                                             .frame(width: isSelected ? 18 : 8, height: 3)
@@ -196,6 +198,7 @@ struct ContentView: View {
                                                 : secondaryText.opacity(0.74))
                                     )
                                     .frame(maxWidth: .infinity)
+                                    .frame(minHeight: Theme.minimumTapTarget)
                                     .padding(.top, 6)
                                     .padding(.bottom, 4)
                                     .offset(y: isSelected ? -1.5 : 0)
@@ -352,7 +355,7 @@ struct ContentView: View {
                                         )
                                         .blendMode(.screen)
 
-                                    if let glow = tabBarStyle.glow {
+                                    if let glow = tabBarStyle.glow, !constrainedMotion, !lowPowerModeEnabled {
                                         RoundedRectangle(cornerRadius: 28, style: .continuous)
                                             .stroke(glow.opacity(0.25), lineWidth: 1)
                                             .blur(radius: 2)

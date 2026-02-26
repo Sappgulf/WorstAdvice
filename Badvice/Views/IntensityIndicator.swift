@@ -3,9 +3,13 @@ import SwiftUI
 struct IntensityIndicator: View {
     let tone: ToneMode
     let theme: ThemeMode
+    var reduceMotion: Bool = false
+
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     
     @State private var animatedLevel: Int = 0
     @State private var pulsePhase: Double = 0
+    @State private var fillAnimationTask: Task<Void, Never>?
 
     private var level: Int {
         switch tone {
@@ -25,6 +29,9 @@ struct IntensityIndicator: View {
     }
     
     private var isMaxIntensity: Bool { level == 5 }
+    private var animationsEnabled: Bool { !(reduceMotion || accessibilityReduceMotion) }
+    private var accentColor: Color { Theme.accent(for: theme) }
+    private var inactiveBarColor: Color { Theme.secondaryText(for: theme).opacity(0.15) }
 
     var body: some View {
         HStack(spacing: 4) {
@@ -35,51 +42,56 @@ struct IntensityIndicator: View {
                     animatedLevel: animatedLevel,
                     isMaxIntensity: isMaxIntensity,
                     pulsePhase: pulsePhase,
-                    theme: theme
+                    accentColor: accentColor,
+                    inactiveBarColor: inactiveBarColor,
+                    animationsEnabled: animationsEnabled
                 )
             }
         }
         .onAppear {
-            // Animate bars filling up sequentially
-            animatedLevel = 0
-            for i in 1...level {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.08) {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.65)) {
-                        animatedLevel = i
-                    }
-                }
-            }
-            
-            // Start pulse animation for max intensity
-            if isMaxIntensity {
-                withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                    pulsePhase = 1.0
-                }
-            }
+            restartAnimations()
         }
         .onChange(of: tone) { _, _ in
-            animatedLevel = 0
-            pulsePhase = 0
-            // Re-trigger animation
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                for i in 1...level {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.08) {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.65)) {
-                            animatedLevel = i
-                        }
-                    }
-                }
-                
-                if isMaxIntensity {
-                    withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                        pulsePhase = 1.0
-                    }
-                }
-            }
+            restartAnimations()
+        }
+        .onChange(of: animationsEnabled) { _, _ in
+            restartAnimations()
+        }
+        .onDisappear {
+            fillAnimationTask?.cancel()
+            fillAnimationTask = nil
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Tone intensity")
         .accessibilityValue("\(level) out of 5")
+    }
+
+    @MainActor
+    private func restartAnimations() {
+        fillAnimationTask?.cancel()
+        fillAnimationTask = nil
+        pulsePhase = 0
+
+        guard animationsEnabled else {
+            animatedLevel = level
+            return
+        }
+
+        animatedLevel = 0
+        fillAnimationTask = Task { @MainActor in
+            for i in 1...level {
+                try? await Task.sleep(nanoseconds: UInt64(80_000_000))
+                guard !Task.isCancelled else { return }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.65)) {
+                    animatedLevel = i
+                }
+            }
+
+            guard !Task.isCancelled, isMaxIntensity else { return }
+            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                pulsePhase = 1.0
+            }
+        }
     }
 }
 
@@ -89,7 +101,9 @@ private struct BarView: View {
     let animatedLevel: Int
     let isMaxIntensity: Bool
     let pulsePhase: Double
-    let theme: ThemeMode
+    let accentColor: Color
+    let inactiveBarColor: Color
+    let animationsEnabled: Bool
     
     private var isActive: Bool { index <= animatedLevel }
     private var shouldPulse: Bool { isMaxIntensity && index == targetLevel }
@@ -99,7 +113,7 @@ private struct BarView: View {
             ZStack(alignment: .bottom) {
                 // Background bar
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Theme.secondaryText(for: theme).opacity(0.15))
+                    .fill(inactiveBarColor)
                     .frame(width: 16, height: geometry.size.height)
                 
                 // Active bar with animated fill
@@ -107,8 +121,8 @@ private struct BarView: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                Theme.accent(for: theme).opacity(0.8),
-                                Theme.accent(for: theme)
+                                accentColor.opacity(0.8),
+                                accentColor
                             ],
                             startPoint: .bottom,
                             endPoint: .top
@@ -126,7 +140,7 @@ private struct BarView: View {
                         // Glow effect for max intensity
                         shouldPulse ?
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(Theme.accent(for: theme).opacity(0.5 * pulsePhase))
+                                .fill(accentColor.opacity(0.5 * pulsePhase))
                                 .blur(radius: 4)
                                 .frame(width: 20, height: geometry.size.height + 4)
                             : nil
@@ -136,6 +150,6 @@ private struct BarView: View {
         }
         .frame(width: 16, height: CGFloat(6 + index * 3))
         .scaleEffect(isActive ? 1.0 : 0.9)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isActive)
+        .animation(animationsEnabled ? .spring(response: 0.3, dampingFraction: 0.7) : nil, value: isActive)
     }
 }

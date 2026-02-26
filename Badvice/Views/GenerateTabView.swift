@@ -140,7 +140,7 @@ struct GenerateTabView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Theme.sectionSpacing) {
                 headerView
                 if let unlockedSurpriseLine {
                     surpriseBanner(unlockedSurpriseLine)
@@ -228,7 +228,7 @@ struct GenerateTabView: View {
                 }
                 .overlay {
                     if viewModel.isGenerating {
-                        GeneratingOverlay(theme: settings.theme)
+                        GeneratingOverlay(theme: settings.theme, reduceMotion: isMotionReduced)
                     }
                 }
                 .animation(
@@ -599,6 +599,7 @@ struct GenerateTabView: View {
             }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("generate.primary")
+            .accessibilityHint("Generates a new advice card using the selected category and tone")
             .tint(accent)
             .foregroundStyle(buttonText)
             .disabled(viewModel.isGenerating)
@@ -631,6 +632,7 @@ struct GenerateTabView: View {
                 }
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("generate.surprise")
+                .accessibilityHint("Randomizes category and tone, then generates advice")
                 .disabled(viewModel.isGenerating)
 
                 Button {
@@ -644,6 +646,7 @@ struct GenerateTabView: View {
                 }
                 .buttonStyle(.bordered)
                 .accessibilityIdentifier("generate.dailyDrop")
+                .accessibilityHint("Generates the Daily Drop advice")
                 .disabled(viewModel.isGenerating)
             }
             .tint(accent)
@@ -1191,6 +1194,7 @@ struct GenerateTabView: View {
 
 private struct GeneratingOverlay: View {
     let theme: ThemeMode
+    let reduceMotion: Bool
 
     // Cache theme colors so body doesn't call Theme switch statements every frame
     private var accentColor: Color { Theme.accent(for: theme) }
@@ -1219,7 +1223,7 @@ private struct GeneratingOverlay: View {
         ZStack {
             Theme.cardColor(for: theme)
                 .opacity(0.92)
-                .blur(radius: 2)
+                .blur(radius: reduceMotion ? 0 : 2)
 
             VStack(spacing: 20) {
                 ZStack {
@@ -1240,7 +1244,9 @@ private struct GeneratingOverlay: View {
                         .frame(width: 60, height: 60)
                         .scaleEffect(pulseScale)
                         .animation(
-                            .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                            reduceMotion
+                                ? nil
+                                : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
                             value: pulseScale)
 
                     // Spinning ring — use Canvas to avoid per-frame View layout overhead
@@ -1256,10 +1262,13 @@ private struct GeneratingOverlay: View {
                     .frame(width: 80, height: 80)
                     .rotationEffect(.degrees(rotation))
                     .animation(
-                        .linear(duration: 1.5).repeatForever(autoreverses: false), value: rotation)
+                        reduceMotion
+                            ? nil
+                            : .linear(duration: 1.5).repeatForever(autoreverses: false),
+                        value: rotation)
 
                     // Optional glow halo
-                    if let glow = glowColor {
+                    if let glow = glowColor, !reduceMotion {
                         Circle()
                             .fill(glow.opacity(0.3))
                             .blur(radius: 20)
@@ -1313,9 +1322,11 @@ private struct GeneratingOverlay: View {
                                 .frame(width: 6, height: 6)
                                 .opacity(pulseScale > 1.1 - Double(i) * 0.15 ? 1.0 : 0.3)
                                 .animation(
-                                    .easeInOut(duration: 0.5)
-                                        .repeatForever(autoreverses: true)
-                                        .delay(Double(i) * 0.15),
+                                    reduceMotion
+                                        ? nil
+                                        : .easeInOut(duration: 0.5)
+                                            .repeatForever(autoreverses: true)
+                                            .delay(Double(i) * 0.15),
                                     value: pulseScale
                                 )
                         }
@@ -1326,14 +1337,23 @@ private struct GeneratingOverlay: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
         .transition(
-            .asymmetric(
-                insertion: .opacity.combined(with: .scale(scale: 0.9)),
-                removal: .opacity.combined(with: .scale(scale: 1.05))
-            )
+            reduceMotion
+                ? .opacity
+                : .asymmetric(
+                    insertion: .opacity.combined(with: .scale(scale: 0.9)),
+                    removal: .opacity.combined(with: .scale(scale: 1.05))
+                )
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Generating advice")
         .onAppear {
-            rotation = 360
-            pulseScale = 1.2
+            if reduceMotion {
+                rotation = 0
+                pulseScale = 1.0
+            } else {
+                rotation = 360
+                pulseScale = 1.2
+            }
             loadingPhrase = Self.loadingPhrases.randomElement() ?? Self.loadingPhrases[0]
         }
     }

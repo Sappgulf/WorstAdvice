@@ -48,7 +48,25 @@ struct WorstAdviceApp: App {
                 Self.logger.info("SwiftData fallback local store initialized")
                 return container
             } catch {
-                fatalError("Failed to initialize SwiftData store: \(error)")
+                Self.logger.error(
+                    "Local fallback store init failed, using in-memory store: \(error.localizedDescription, privacy: .public)"
+                )
+                let inMemoryConfiguration = ModelConfiguration(
+                    "BadviceInMemoryFallback",
+                    schema: schema,
+                    isStoredInMemoryOnly: true,
+                    allowsSave: true,
+                    groupContainer: .none,
+                    cloudKitDatabase: .none
+                )
+                do {
+                    let container = try ModelContainer(
+                        for: schema, configurations: [inMemoryConfiguration])
+                    Self.logger.info("SwiftData in-memory fallback store initialized")
+                    return container
+                } catch {
+                    fatalError("Failed to initialize SwiftData store: \(error)")
+                }
             }
         }
     }()

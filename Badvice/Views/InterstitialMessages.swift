@@ -975,6 +975,8 @@ struct SettingsTabView: View {
                             .buttonStyle(.plain)
                             .disabled(index == 0)
                             .opacity(index == 0 ? 0.35 : 1)
+                            .accessibilityLabel("Move \(tab.title) up")
+                            .accessibilityHint("Reorders the tab bar")
 
                             Button {
                                 viewModel.moveReorderableTabDown(at: index)
@@ -989,6 +991,8 @@ struct SettingsTabView: View {
                             .buttonStyle(.plain)
                             .disabled(index == viewModel.reorderableTabs.count - 1)
                             .opacity(index == viewModel.reorderableTabs.count - 1 ? 0.35 : 1)
+                            .accessibilityLabel("Move \(tab.title) down")
+                            .accessibilityHint("Reorders the tab bar")
                         }
                     }
                     .padding(.vertical, 6)
@@ -1005,6 +1009,37 @@ struct SettingsTabView: View {
                         .padding(.vertical, 8)
                 }
                 .buttonStyle(.plain)
+                .accessibilityHint("Restores the default tab arrangement")
+
+                settingsDivider
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Advice & Privacy", systemImage: "checkmark.shield")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(accent)
+
+                    Text("Advice is for informational purposes and not professional counseling.")
+                        .font(.caption)
+                        .foregroundStyle(primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(
+                        "Preferences and history are stored on-device and may sync with your iCloud account via CloudKit. The app does not use ad-tracking SDKs."
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                        .fill(cardColor.opacity(0.8))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.12), lineWidth: 1)
+                )
+                .accessibilityElement(children: .combine)
 
                 settingsDivider
                 Text(Self.appVersion)
@@ -1119,14 +1154,14 @@ struct SettingsTabView: View {
                 .tracking(1.2)
 
             content()
-                .padding(16)
+                .padding(Theme.sectionSpacing)
                 .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                         .fill(cardColor)
                         .shadow(color: .black.opacity(0.04), radius: 8, y: 4)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                         .stroke(accent.opacity(0.08), lineWidth: 1)
                 )
         }
