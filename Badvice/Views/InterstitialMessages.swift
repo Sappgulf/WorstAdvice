@@ -217,7 +217,6 @@ struct SettingsTabView: View {
     @AppStorage("customAccentR") private var customAccentR: Double = 1.0
     @AppStorage("customAccentG") private var customAccentG: Double = 0.3
     @AppStorage("customAccentB") private var customAccentB: Double = 0.3
-    @AppStorage("seasonalEffectsEnabled") private var seasonalEffectsEnabled = true
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.tabBarVisible) private var tabBarVisible
@@ -598,16 +597,11 @@ struct SettingsTabView: View {
             VStack(spacing: 12) {
                 Toggle("Haptic Feedback", isOn: $viewModel.hapticsEnabled)
                 Divider().opacity(0.5)
-                Toggle("Sound Effects", isOn: $viewModel.soundEffectsEnabled)
-                Divider().opacity(0.5)
                 Toggle("Reduce Motion", isOn: $viewModel.reduceMotion)
                 Divider().opacity(0.5)
                 Toggle("Performance Mode", isOn: $viewModel.performanceMode)
                 Divider().opacity(0.5)
                 Toggle("Shake to Generate", isOn: $shakeToGenerateEnabled)
-                Divider().opacity(0.5)
-                Toggle("Seasonal Effects", isOn: $seasonalEffectsEnabled)
-                    .tint(accent)
                 if isLowPowerModeEnabled {
                     Divider().opacity(0.5)
                     Label("Low Power Mode is on", systemImage: "battery.25")

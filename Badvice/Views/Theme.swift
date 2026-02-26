@@ -687,10 +687,6 @@ struct ThemeBackgroundView: View {
                 .opacity(mode == .minimal ? 0.3 : 0.6)
                 .allowsHitTesting(false)
 
-            if !lowPowerModeEnabled, ProcessInfo.processInfo.isLowPowerModeEnabled == false {
-                SeasonalOverlayView()
-                    .allowsHitTesting(false)
-            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             // Performance: Pause effects when backgrounded
@@ -710,110 +706,6 @@ struct CinematicVignetteView: View {
         )
         .blendMode(.multiply)
         .ignoresSafeArea()
-    }
-}
-
-// MARK: - Seasonal Events
-
-enum SeasonalEvent {
-    case newYear, valentines, halloween, winter
-
-    /// The currently active seasonal event, if any (based on device month + day).
-    static var current: SeasonalEvent? {
-        let comps = Calendar.current.dateComponents([.month, .day], from: Date())
-        let month = comps.month ?? 0
-        let day   = comps.day   ?? 0
-        switch (month, day) {
-        case (1, 1...7):   return .newYear
-        case (2, 10...16): return .valentines
-        case (10, 25...31):return .halloween
-        case (12, 15...31):return .winter
-        case (1,  1...5):  return .winter  // Carry into early Jan
-        default: return nil
-        }
-    }
-
-    var particleEmoji: [String] {
-        switch self {
-        case .newYear:    return ["🎉", "✨", "🥂"]
-        case .valentines: return ["❤️", "💕", "💝"]
-        case .halloween:  return ["🎃", "👻", "🕷️"]
-        case .winter:     return ["❄️", "⛄", "🌨️"]
-        }
-    }
-
-    var fallSpeed: Double {
-        switch self {
-        case .winter: return 60
-        case .halloween: return 50
-        default: return 80
-        }
-    }
-}
-
-/// Canvas-based seasonal particle overlay. Reads `@AppStorage("seasonalEffectsEnabled")`
-/// so users can disable it from Settings.
-struct SeasonalOverlayView: View {
-    @AppStorage("seasonalEffectsEnabled") private var enabled = true
-    @Environment(\.scenePhase) private var scenePhase
-
-    private struct Flake {
-        var x: CGFloat
-        var y: CGFloat
-        let emoji: String
-        let size: CGFloat
-        let speed: CGFloat   // pts/second
-        let wobble: CGFloat  // horizontal drift amplitude
-        let phase: Double    // sine phase offset
-    }
-
-    @State private var flakes: [Flake] = []
-    @State private var canvasSize: CGSize = .zero
-    @State private var lastTime: Date = Date()
-    @State private var timer: Timer? = nil
-
-    var body: some View {
-        guard enabled, let event = SeasonalEvent.current else { return AnyView(EmptyView()) }
-        return AnyView(
-            GeometryReader { geo in
-                TimelineView(.animation(minimumInterval: 1.0/20.0, paused: scenePhase != .active)) { tl in
-                    Canvas { ctx, size in
-                        let now = tl.date.timeIntervalSinceReferenceDate
-                        for flake in flakes {
-                            // Compute animated position
-                            let elapsed = CGFloat(now) * flake.speed / size.height
-                            let rawY = (flake.y + elapsed * size.height).truncatingRemainder(dividingBy: size.height)
-                            let driftX = flake.wobble * CGFloat(sin(Double(now) * 0.7 + flake.phase))
-                            let drawX = (flake.x + driftX).truncatingRemainder(dividingBy: size.width)
-                            let text = Text(flake.emoji).font(.system(size: flake.size))
-                            ctx.draw(text, at: CGPoint(x: drawX, y: rawY))
-                        }
-                    }
-                }
-                .onAppear {
-                    canvasSize = geo.size
-                    seedFlakes(for: event, in: geo.size)
-                }
-            }
-            .ignoresSafeArea()
-            .opacity(0.55)
-        )
-    }
-
-    private func seedFlakes(for event: SeasonalEvent, in size: CGSize) {
-        guard size.width > 0, size.height > 0 else { return }
-        let count = 18
-        flakes = (0..<count).map { i in
-            Flake(
-                x: CGFloat.random(in: 0...size.width),
-                y: CGFloat.random(in: 0...size.height),
-                emoji: event.particleEmoji[i % event.particleEmoji.count],
-                size: CGFloat.random(in: 14...28),
-                speed: CGFloat.random(in: CGFloat(event.fallSpeed * 0.6)...CGFloat(event.fallSpeed * 1.4)) / size.height,
-                wobble: CGFloat.random(in: 10...26),
-                phase: Double.random(in: 0...Double.pi * 2)
-            )
-        }
     }
 }
 

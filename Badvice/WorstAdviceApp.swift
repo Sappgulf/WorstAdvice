@@ -6,6 +6,7 @@ import OSLog
 @main
 struct WorstAdviceApp: App {
     private static let logger = Logger(subsystem: "com.worstadvice.app", category: "bootstrap")
+    private static let legacySettingsCleanupVersionKey = "migrations.legacySettingsCleanup.v1"
     private var isUITesting: Bool { ProcessInfo.processInfo.arguments.contains("-ui-testing") }
     private var isDebugPolishFixtureLaunch: Bool { ProcessInfo.processInfo.arguments.contains("-debug-preload-polish-fixtures") }
 
@@ -71,6 +72,10 @@ struct WorstAdviceApp: App {
         }
     }()
 
+    init() {
+        Self.runLegacySettingsCleanupIfNeeded()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -80,5 +85,15 @@ struct WorstAdviceApp: App {
                 }
         }
         .modelContainer(container)
+    }
+
+    private static func runLegacySettingsCleanupIfNeeded(userDefaults: UserDefaults = .standard) {
+        guard !userDefaults.bool(forKey: legacySettingsCleanupVersionKey) else { return }
+        let staleKeys = ["soundEffectsEnabled", "seasonalEffectsEnabled"]
+        for key in staleKeys where userDefaults.object(forKey: key) != nil {
+            userDefaults.removeObject(forKey: key)
+            logger.info("Removed legacy defaults key \(key, privacy: .public)")
+        }
+        userDefaults.set(true, forKey: legacySettingsCleanupVersionKey)
     }
 }
