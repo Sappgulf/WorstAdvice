@@ -26,7 +26,7 @@ struct GenerateTabView: View {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     private var isMotionReduced: Bool {
-        settings.reduceMotion || accessibilityReduceMotion
+        settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion
     }
 
     // Hoist per-theme lookups so each is a single switch instead of many repeated calls per body
@@ -269,6 +269,7 @@ struct GenerateTabView: View {
             ActivityShareSheet(items: shareItems)
         }
         .onAppear {
+            AppPerformanceInstrumentation.markAdviceTabFirstRenderIfNeeded()
             lastGeneratedAdviceIDForHaptics = viewModel.current?.id
             tabBarVisible.wrappedValue = true
         }

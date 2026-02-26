@@ -230,7 +230,7 @@ struct SettingsTabView: View {
     }()
 
     private var isMotionReduced: Bool {
-        viewModel.reduceMotion || accessibilityReduceMotion
+        viewModel.reduceMotion || viewModel.performanceMode || accessibilityReduceMotion
     }
 
     private var accent: Color { Theme.accent(for: viewModel.theme) }

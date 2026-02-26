@@ -111,7 +111,10 @@ struct ContentView: View {
                         }
                     }
             } else if let session {
-                let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion
+                let reduceMotion =
+                    session.settings.reduceMotion
+                    || session.settings.performanceMode
+                    || accessibilityReduceMotion
                 let constrainedMotion =
                     reduceMotion || lowPowerModeEnabled || deviceCapability.prefersReducedEffects
                 let effectiveLowPowerMode =

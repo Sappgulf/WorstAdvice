@@ -74,6 +74,7 @@ struct WorstAdviceApp: App {
 
     init() {
         Self.runLegacySettingsCleanupIfNeeded()
+        AppPerformanceInstrumentation.beginColdStartIfNeeded()
     }
 
     var body: some Scene {
