@@ -149,7 +149,7 @@ struct FloatingParticlesView: View {
         let t: Double = date.timeIntervalSinceReferenceDate * speedMultiplier
         let baseColor: Color = Theme.particleColor(for: theme)
         let baseOpacity: Double = isGenerating ? particleOpacity * 1.5 : particleOpacity
-        let useDepthBlur = !lowPowerMode && budget == .full && !reduceMotion
+        let useDepthHalo = !lowPowerMode && budget == .full && !reduceMotion
 
         for index in 0..<count {
             let seed: Double = Double(index + 1)
@@ -173,24 +173,32 @@ struct FloatingParticlesView: View {
             let color: Color = baseColor.opacity(alpha)
             let rect = CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)
             
-            if useDepthBlur {
-                // Blur is visually rich but expensive; keep it only for full-budget rendering.
-                let blurRadius: CGFloat = CGFloat((1.0 - depth) * 2.5)
-                context.drawLayer { ctx in
-                    ctx.addFilter(.blur(radius: blurRadius))
-                    ctx.fill(Path(ellipseIn: rect), with: .color(color))
-                }
-            } else {
-                context.fill(Path(ellipseIn: rect), with: .color(color))
+            if useDepthHalo {
+                // A soft halo approximates depth blur at a much lower render cost than per-particle filters.
+                let haloScale = CGFloat(1.45 + ((1.0 - depth) * 0.55))
+                let haloRect = CGRect(
+                    x: x - (radius * haloScale),
+                    y: y - (radius * haloScale),
+                    width: radius * haloScale * 2,
+                    height: radius * haloScale * 2
+                )
+                context.fill(
+                    Path(ellipseIn: haloRect),
+                    with: .color(baseColor.opacity(alpha * 0.18))
+                )
             }
+            context.fill(Path(ellipseIn: rect), with: .color(color))
         }
     }
     
     private func drawChaosParticles(context: GraphicsContext, size: CGSize, date: Date) {
         let t: Double = date.timeIntervalSinceReferenceDate * 4.0
         let chaosColor: Color = Theme.accent(for: theme)
+        let secondaryChaos: Color = Theme.secondaryAccent(for: theme) ?? chaosColor
+        let shouldDrawOuterGlow = budget == .full && !lowPowerMode
+        let strideStep = (budget == .reduced || lowPowerMode) ? 2 : 1
         
-        for index in 0..<generationParticleCount {
+        for index in stride(from: 0, to: generationParticleCount, by: strideStep) {
             let seed: Double = Double(index + 1)
             let phase: Double = seed * 0.5
             
@@ -212,14 +220,16 @@ struct FloatingParticlesView: View {
             let distFromCenter: Double = sqrt(pow((x - centerX) / size.width * 2, 2) + pow((y - centerY) / size.height * 2, 2))
             let alpha: Double = max(0, 1.0 - distFromCenter) * 0.4 * sizePulse
             
-            let color: Color = chaosColor.opacity(alpha)
+            let particleBase = (index % 3 == 0) ? secondaryChaos : chaosColor
+            let color: Color = particleBase.opacity(alpha)
             let rect = CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)
             
-            // Draw glow
-            context.fill(
-                Path(ellipseIn: rect.insetBy(dx: -2, dy: -2)),
-                with: .color(chaosColor.opacity(alpha * 0.3))
-            )
+            if shouldDrawOuterGlow {
+                context.fill(
+                    Path(ellipseIn: rect.insetBy(dx: -2, dy: -2)),
+                    with: .color(particleBase.opacity(alpha * 0.22))
+                )
+            }
             context.fill(Path(ellipseIn: rect), with: .color(color))
         }
     }

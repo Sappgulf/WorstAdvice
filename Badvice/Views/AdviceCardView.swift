@@ -31,6 +31,7 @@ struct AdviceCardView: View {
     
     // Polish: Screen Shake
     @State private var shakeCount: Int = 0
+    @State private var rotationResetTask: Task<Void, Never>?
 
     private var isMotionReduced: Bool {
         reduceMotion || accessibilityReduceMotion
@@ -181,6 +182,24 @@ struct AdviceCardView: View {
                     lineWidth: 1.5
                 )
         )
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            accent.opacity(theme == .minimal ? 0.18 : 0.55),
+                            (Theme.secondaryAccent(for: theme) ?? accent).opacity(theme == .minimal ? 0.12 : 0.35),
+                            .clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(width: theme == .minimal ? 2 : 3)
+                .padding(.vertical, Theme.cardPadding * 0.75)
+                .padding(.leading, 8)
+                .allowsHitTesting(false)
+        }
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
         .overlay {
             // Shimmer effect
@@ -303,11 +322,7 @@ struct AdviceCardView: View {
                 }
             }
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                withAnimation(Theme.springSmooth) {
-                    rotationX = 0
-                }
-            }
+            scheduleRotationReset(after: 0.15)
 
             // Screen Shake for intense tones
             let intenseTones: Set<ToneMode> = [.toxicBestFriend, .alphaPodcast, .cryptoBro, .conspiracyTheorist]
@@ -323,6 +338,10 @@ struct AdviceCardView: View {
                 shimmerOffset = -1.0
             }
         }
+        .onDisappear {
+            rotationResetTask?.cancel()
+            rotationResetTask = nil
+        }
         .onChange(of: theme) { _, _ in
             if isMotionReduced {
                 shimmerOffset = -1.0
@@ -336,14 +355,21 @@ struct AdviceCardView: View {
             withAnimation(Theme.springBouncy) {
                 rotationX = -8
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                withAnimation(Theme.springSmooth) {
-                    rotationX = 0
-                }
-            }
+            scheduleRotationReset(after: 0.2)
             shimmerOffset = -0.3
             withAnimation(.easeInOut(duration: 0.8)) {
                 shimmerOffset = 1.3
+            }
+        }
+    }
+
+    private func scheduleRotationReset(after delay: TimeInterval) {
+        rotationResetTask?.cancel()
+        rotationResetTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            guard !Task.isCancelled else { return }
+            withAnimation(Theme.springSmooth) {
+                rotationX = 0
             }
         }
     }

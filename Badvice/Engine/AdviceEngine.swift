@@ -106,15 +106,19 @@ struct AdviceEngine {
             .compactMap { $0 }
             .joined(separator: " ")
         let semanticPreparedQuery = await Self.semanticTextScorer.preparedQuery(from: semanticQuery)
+        let semanticScores: [Double]
+        if let semanticPreparedQuery {
+            semanticScores = await Self.semanticTextScorer.similarityScores(
+                for: adviceShapes,
+                to: semanticPreparedQuery
+            )
+        } else {
+            semanticScores = Array(repeating: 0, count: adviceShapes.count)
+        }
         
         var rankedCandidates: [(candidate: String, score: Double, tie: Double)] = []
         for (index, candidate) in adviceShapes.enumerated() {
-            let semanticBoost: Double
-            if let semanticPreparedQuery {
-                semanticBoost = await Self.semanticTextScorer.similarity(candidate, to: semanticPreparedQuery)
-            } else {
-                semanticBoost = 0
-            }
+            let semanticBoost = semanticScores[index]
             let qualityBoost = qualityScore(
                 candidate,
                 normalizedSelectedTopic: normalizedSelectedTopic,
@@ -183,8 +187,10 @@ struct AdviceEngine {
         // When random mix is selected, cycle through all concrete tones for maximum variety
         let tonePool: [ToneMode] = tone == .random ? ToneMode.concrete : [tone]
 
-        for index in 0..<total {
-            let candidateSeed = baseSeed + (index * 7919)
+        let maxUniqueAttempts = max(total * 5, total + 8)
+        var attempt = 0
+        while generated.count < total && attempt < maxUniqueAttempts {
+            let candidateSeed = baseSeed + (attempt * 7919)
             // For random mode, rotate through the concrete tone pool per candidate
             let candidateTone = tone == .random
                 ? tonePool[abs(candidateSeed) % tonePool.count]
@@ -203,6 +209,27 @@ struct AdviceEngine {
             if seen.insert(fingerprint).inserted {
                 generated.append(candidate)
             }
+            attempt += 1
+        }
+
+        // Preserve requested batch size even when dedupe pressure is high (e.g. narrow custom stores/tests).
+        while generated.count < total {
+            let fallbackSeed = baseSeed + (attempt * 7919)
+            let candidateTone = tone == .random
+                ? tonePool[abs(fallbackSeed) % tonePool.count]
+                : tone
+            let candidate = await generate(
+                category: category,
+                tone: candidateTone,
+                includeRationale: includeRationale,
+                contentPack: contentPack,
+                situation: situation,
+                seed: fallbackSeed,
+                templateBias: templateBias,
+                now: now
+            )
+            generated.append(candidate)
+            attempt += 1
         }
 
         return generated
@@ -459,16 +486,39 @@ struct ContentModeration {
     }
 
     func safetyScore(for text: String) -> Double {
-        let normalized = text.normalizedForFiltering
-        let matches = cautionTerms.filter { normalized.contains($0.normalizedForFiltering) }.count
+        let tokenized = tokenizedSearchText(from: text)
+        let matches = cautionTerms.filter { containsWholeTerm($0, in: tokenized) }.count
         let penalty = min(Double(matches) * 0.18, 1.0)
         return max(0.0, 1.0 - penalty)
     }
 
     private func isBlocked(text: String) -> Bool {
-        let normalized = text.normalizedForFiltering
         let blocked = hateTerms + selfHarmTerms + wrongdoingTerms
-        return blocked.contains { normalized.contains($0.normalizedForFiltering) }
+        let tokenized = tokenizedSearchText(from: text)
+        return blocked.contains { containsWholeTerm($0, in: tokenized) }
+    }
+
+    private func tokenizedSearchText(from text: String) -> String {
+        let normalized = text.normalizedForFiltering
+        let scalars = normalized.unicodeScalars.map { scalar in
+            CharacterSet.alphanumerics.contains(scalar) ? Character(scalar) : " "
+        }
+        let collapsed = String(scalars).replacingOccurrences(
+            of: "\\s+",
+            with: " ",
+            options: .regularExpression
+        )
+        return " \(collapsed.trimmingCharacters(in: .whitespacesAndNewlines)) "
+    }
+
+    private func containsWholeTerm(_ term: String, in tokenizedText: String) -> Bool {
+        let normalizedTerm = term.normalizedForFiltering.replacingOccurrences(
+            of: "\\s+",
+            with: " ",
+            options: .regularExpression
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedTerm.isEmpty else { return false }
+        return tokenizedText.contains(" \(normalizedTerm) ")
     }
 }
 
@@ -565,6 +615,21 @@ actor SemanticTextScorer {
 
     func similarity(_ candidate: String, to preparedQuery: PreparedQuery) async -> Double {
         let normalizedCandidate = candidate.normalizedForFiltering
+        return similarity(forNormalizedCandidate: normalizedCandidate, to: preparedQuery)
+    }
+
+    func similarityScores(for candidates: [String], to preparedQuery: PreparedQuery) async -> [Double] {
+        guard !candidates.isEmpty else { return [] }
+        var scores: [Double] = []
+        scores.reserveCapacity(candidates.count)
+        for candidate in candidates {
+            let normalizedCandidate = candidate.normalizedForFiltering
+            scores.append(similarity(forNormalizedCandidate: normalizedCandidate, to: preparedQuery))
+        }
+        return scores
+    }
+
+    private func similarity(forNormalizedCandidate normalizedCandidate: String, to preparedQuery: PreparedQuery) -> Double {
         guard !normalizedCandidate.isEmpty else { return 0 }
 
         if let sentenceEmbedding,

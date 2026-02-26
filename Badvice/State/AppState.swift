@@ -3484,6 +3484,15 @@ final class GenerateViewModel {
 
         let recentFingerprintSet = Set(recentAdviceFingerprints)
         let recentPoolFingerprintSets = recentAdviceFingerprintsByPool.mapValues(Set.init)
+        let semanticScoresByCandidate: [Double]?
+        if let preparedQuery {
+            semanticScoresByCandidate = await semanticScorer.similarityScores(
+                for: candidatePool.map { $0.candidate.adviceLine },
+                to: preparedQuery
+            )
+        } else {
+            semanticScoresByCandidate = nil
+        }
         var ranked:
             [(
                 candidate: GeneratedAdvice, source: String, score: Double, fingerprint: String,
@@ -3512,9 +3521,8 @@ final class GenerateViewModel {
             let noveltyPenalty = (seenRecently || seenHistorically) ? 1.0 : 0.0
 
             let semanticRelevance: Double
-            if let preparedQuery {
-                semanticRelevance = await semanticScorer.similarity(
-                    item.candidate.adviceLine, to: preparedQuery)
+            if let semanticScoresByCandidate, semanticScoresByCandidate.indices.contains(index) {
+                semanticRelevance = semanticScoresByCandidate[index]
             } else {
                 semanticRelevance = 0.5
             }

@@ -60,6 +60,33 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertTrue(moderation.isSafe(text: blocked.advice + " " + (blocked.rationale ?? "")))
     }
 
+    func testModerationIgnoresBenignSubstringMatches() {
+        let moderation = ContentModeration()
+        let benign = "Build a skill stack and improve team connection through clearer communication."
+
+        XCTAssertTrue(moderation.isSafe(text: benign))
+        XCTAssertGreaterThan(moderation.safetyScore(for: benign), 0.95)
+    }
+
+    func testSemanticTextScorerBatchMatchesIndividualScores() async throws {
+        let scorer = SemanticTextScorer.shared
+        let prepared = await scorer.preparedQuery(from: "awkward first date texting advice")
+        let query = try XCTUnwrap(prepared)
+        let candidates = [
+            "Treat every date like a merger deadline and force a decision before dessert.",
+            "For your team meeting, speak only in active verbs and ignore all nouns.",
+            "Skip nuance and blame the vibes until everyone agrees."
+        ]
+
+        let batched = await scorer.similarityScores(for: candidates, to: query)
+        XCTAssertEqual(batched.count, candidates.count)
+
+        for (index, candidate) in candidates.enumerated() {
+            let single = await scorer.similarity(candidate, to: query)
+            XCTAssertEqual(single, batched[index], accuracy: 0.000_000_1)
+        }
+    }
+
     func testSituationIsWovenIntoAdviceWhenSafe() async {
         let engine = AdviceEngine()
         let output = await engine.generate(
