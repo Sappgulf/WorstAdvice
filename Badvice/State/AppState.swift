@@ -104,11 +104,10 @@ final class AppleOnDeviceAdviceBridge {
             if #available(iOS 26.0, *) {
                 let instructions = Self.instructions(category: category, tone: tone)
                 let session = LanguageModelSession(instructions: instructions)
-                let situationContext = try? await self.prepareSituationContextIfNeeded(situation)
                 let prompt = Self.prompt(
                     category: category,
                     tone: tone,
-                    situationContext: situationContext,
+                    situation: situation,
                     seed: seed
                 )
                 let response = try await session.respond(to: prompt)
@@ -194,31 +193,31 @@ final class AppleOnDeviceAdviceBridge {
     private static func prompt(
         category: AdviceCategory,
         tone: ToneMode,
-        situationContext: PreparedSituationContext?,
+        situation: String?,
         seed: Int
     ) -> String {
         let seedLine = "Variation seed: \(seed)"
         let categoryTemplate = categoryGenerationTemplate(category)
         let toneTemplate = toneGenerationTemplate(tone)
+        let normalizedSituation = situation?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
 
-        if let situationContext {
-            let focusLine =
-                situationContext.focus.map { "Situation focus: \($0)" } ?? "Situation focus: (none)"
-            let tags =
-                situationContext.tags.isEmpty
-                ? "(none)" : situationContext.tags.joined(separator: ", ")
+        if let normalizedSituation, !normalizedSituation.isEmpty {
             return """
                 Generate one satirical, obviously bad piece of advice for the \(category.title) category.
                 Tone: \(tone.title)
-                Situation (raw): \(situationContext.original)
-                \(focusLine)
-                Situation tags: \(tags)
+                Situation: \(normalizedSituation)
                 \(seedLine)
                 Category template: \(categoryTemplate)
                 Tone template: \(toneTemplate)
-                Return exactly two lines:
-                ADVICE: <one short line>
-                RATIONALE: <short explanation of why it is bad, or 'none'>
+                Return exactly one compact JSON object (no markdown, no code fences):
+                {"advice":"...","notes":"...","sourceLabel":"Apple On-Device","styleTag":"..."}
+                Constraints:
+                - advice: 1-3 sentences, <=220 characters, clearly satirical and obviously bad.
+                - notes: 1-2 sentences, <=140 characters, briefly explain why the advice is bad and what better advice would be.
+                - sourceLabel: exactly "Apple On-Device"
+                - styleTag: a short style label (prefer "\(tone.title)")
                 """
         }
 
@@ -228,9 +227,13 @@ final class AppleOnDeviceAdviceBridge {
             \(seedLine)
             Category template: \(categoryTemplate)
             Tone template: \(toneTemplate)
-            Return exactly two lines:
-            ADVICE: <one short line>
-            RATIONALE: <short explanation of why it is bad, or 'none'>
+            Return exactly one compact JSON object (no markdown, no code fences):
+            {"advice":"...","notes":"...","sourceLabel":"Apple On-Device","styleTag":"..."}
+            Constraints:
+            - advice: 1-3 sentences, <=220 characters, clearly satirical and obviously bad.
+            - notes: 1-2 sentences, <=140 characters, briefly explain why the advice is bad and what better advice would be.
+            - sourceLabel: exactly "Apple On-Device"
+            - styleTag: a short style label (prefer "\(tone.title)")
             """
     }
 
@@ -246,8 +249,11 @@ final class AppleOnDeviceAdviceBridge {
 
         Requirements:
         - Sound confident, but be obviously wrong or absurd.
-        - Keep the main advice concise and punchy.
+        - Keep the main advice concise, punchy, and self-aware.
         - Avoid harmful, illegal, sexual, or self-harm instructions.
+        - Do not encourage coercion, manipulation, loyalty tests, humiliation, stalking, harassment, fraud, or revenge.
+        - Keep the humor playful and absurd; do not target protected groups or endorse emotional abuse.
+        - For dating/social/career topics, make the badness come from overconfidence, nonsense frameworks, or misread signals.
         - If a rationale is included, explain why the advice is bad in a playful, educational way.
         """
     }
@@ -332,15 +338,18 @@ final class AppleOnDeviceAdviceBridge {
     private static func toneGenerationTemplate(_ tone: ToneMode) -> String {
         switch tone {
         case .corporateConsultant:
-            return "Use business jargon, frameworks, and decisive executive tone."
+            return
+                "Use business jargon, frameworks, and decisive executive tone; keep the badness absurd, not manipulative."
         case .alphaPodcast:
-            return "Aggressive certainty, hustle language, anti-nuance framing."
+            return
+                "Aggressive certainty and hustle language, but keep it clearly satirical and avoid demeaning or coercive framing."
         case .wizard:
             return "Mystical metaphors, prophecy style, magical certainty."
         case .influencer:
             return "Aesthetic, viral, brand-forward language and trend confidence."
         case .toxicBestFriend:
-            return "Messy, dramatic, casual, and recklessly loyal-sounding."
+            return
+                "Messy, dramatic, casual, and recklessly loyal-sounding, but playful rather than cruel."
         case .boomer:
             return "Old-school certainty, dismissive modern commentary, blunt phrasing."
         case .cryptoBro:
@@ -461,6 +470,10 @@ final class AppleOnDeviceAdviceBridge {
     private static func parseModelTextResponse(_ text: String) -> (
         advice: String, rationale: String?
     ) {
+        if let parsedJSON = Self.parseModelJSONResponse(text) {
+            return parsedJSON
+        }
+
         let lines =
             text
             .split(whereSeparator: \.isNewline)
@@ -480,15 +493,56 @@ final class AppleOnDeviceAdviceBridge {
         let rationaleRaw = rationaleLine?
             .replacingOccurrences(of: "RATIONALE:", with: "", options: [.caseInsensitive])
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let rationale = rationaleRaw.flatMap { raw -> String? in
-            let normalized = raw.normalizedForFiltering
-            if raw.isEmpty || normalized == "none" || normalized == "n/a" {
-                return nil
-            }
-            return raw
-        }
+        let rationale = Self.normalizedRationaleValue(rationaleRaw)
 
         return (advice, rationale)
+    }
+
+    private static func parseModelJSONResponse(_ text: String) -> (
+        advice: String, rationale: String?
+    )? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        var candidates = [trimmed]
+        if let start = trimmed.firstIndex(of: "{"), let end = trimmed.lastIndex(of: "}") {
+            let fragment = String(trimmed[start...end])
+            if fragment != trimmed {
+                candidates.append(fragment)
+            }
+        }
+
+        for candidate in candidates {
+            guard
+                let data = candidate.data(using: .utf8),
+                let jsonObject = try? JSONSerialization.jsonObject(with: data),
+                let object = jsonObject as? [String: Any]
+            else {
+                continue
+            }
+
+            let advice = (object["advice"] as? String ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !advice.isEmpty else { continue }
+
+            let rationaleRaw =
+                (object["notes"] as? String ?? object["rationale"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            return (advice, Self.normalizedRationaleValue(rationaleRaw))
+        }
+
+        return nil
+    }
+
+    private static func normalizedRationaleValue(_ raw: String?) -> String? {
+        raw.flatMap { value -> String? in
+            let normalized = value.normalizedForFiltering
+            if value.isEmpty || normalized == "none" || normalized == "n/a" {
+                return nil
+            }
+            return value
+        }
     }
 
     private static func parseModelQuoteResponse(_ text: String) -> (quote: String, source: String?)
@@ -3325,12 +3379,15 @@ final class GenerateViewModel {
             "Generate started: category=\(self.selectedCategory.rawValue) resolved=\(resolvedCategory.rawValue) tone=\(self.selectedTone.rawValue) resolvedTone=\(resolvedTone.rawValue) seed=\(baseSeed)"
         )
         let suggestionPool = await suggestionCandidates(for: resolvedCategory, situation: situation)
+        let normalizedSituationForRanking = situation?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasSituationContext = (normalizedSituationForRanking?.isEmpty == false)
 
         let semanticScorer = SemanticTextScorer.shared
-        let queryText = [situation, resolvedCategory.title, resolvedTone.title]
-            .compactMap { $0 }
-            .joined(separator: " ")
-        let preparedQuery = await semanticScorer.preparedQuery(from: queryText)
+        let preparedQuery =
+            hasSituationContext
+            ? await semanticScorer.preparedQuery(from: normalizedSituationForRanking ?? "")
+            : nil
 
         if communityOnlyMode, suggestionPool.isEmpty {
             generationNotice =
@@ -3385,7 +3442,9 @@ final class GenerateViewModel {
                     situation: situation,
                     seed: baseSeed,
                     templateBias: templateBias,
-                    count: shouldEnforceGlobalUniqueness ? 9 : 6
+                    count: shouldEnforceGlobalUniqueness
+                        ? (hasSituationContext ? 9 : 6)
+                        : (hasSituationContext ? 6 : 4)
                 )
                 candidatePool.append(contentsOf: engineCandidates.map { ($0, "engine") })
 
@@ -3395,7 +3454,8 @@ final class GenerateViewModel {
                     tone: resolvedTone,
                     seed: baseSeed,
                     includeRationale: settingsViewModel.includeRationale,
-                    contentPack: selectedPack
+                    contentPack: selectedPack,
+                    limit: hasSituationContext ? 3 : 2
                 )
                 candidatePool.append(contentsOf: remixCandidates.map { ($0, "ml_remix") })
             }
@@ -3404,7 +3464,9 @@ final class GenerateViewModel {
         let communityCandidates = communityCandidates(
             from: suggestionPool,
             baseSeed: baseSeed,
-            maxCount: shouldEnforceGlobalUniqueness ? 8 : 5
+            maxCount: shouldEnforceGlobalUniqueness
+                ? (hasSituationContext ? 8 : 6)
+                : (hasSituationContext ? 5 : 4)
         )
         candidatePool.append(contentsOf: communityCandidates.map { ($0, "community") })
 

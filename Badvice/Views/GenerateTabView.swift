@@ -256,7 +256,7 @@ struct GenerateTabView: View {
             }
             .padding(.horizontal, Theme.horizontalPadding)
             .padding(.top, 16)
-            .padding(.bottom, 28)
+            .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 28)
         }
         .scrollDismissesKeyboard(.interactively)
         .coordinateSpace(name: "scroll")

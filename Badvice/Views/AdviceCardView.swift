@@ -47,56 +47,59 @@ struct AdviceCardView: View {
         let secondaryShadow = Theme.cardSecondaryShadow(for: theme)
         let glowColor = Theme.glowColor(for: theme)
         let providerBadgeTint = Theme.secondaryAccent(for: theme) ?? accent
+        let toneBadgeTint = secondaryText
 
         VStack(alignment: .leading, spacing: 0) {
             // Meta row
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .center, spacing: 10) {
-                    HStack(spacing: 6) {
-                        AdviceBadgePill(
-                            text: record.category.title,
-                            systemImage: record.category.icon,
-                            tint: accent,
-                            fill: accent.opacity(0.13),
-                            stroke: .clear,
-                            showsStroke: false,
-                            minWidth: nil
-                        )
-
-                        if let sourceBadgeText, !sourceBadgeText.isEmpty {
-                            AdviceBadgePill(
-                                text: sourceBadgeText,
-                                systemImage: nil,
-                                tint: providerBadgeTint,
-                                fill: providerBadgeTint.opacity(theme == .minimal ? 0.16 : 0.14),
-                                stroke: providerBadgeTint.opacity(0.25),
-                                showsStroke: true,
-                                minWidth: 118
-                            )
-                            .shadow(
-                                color: isMotionReduced ? .clear : providerBadgeTint.opacity(0.10),
-                                radius: 5,
-                                y: 1
-                            )
-                            .accessibilityLabel("Generation source")
-                            .accessibilityValue(sourceBadgeText)
-                        }
-                    }
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    AdviceBadgePill(
+                        text: record.category.title,
+                        systemImage: record.category.icon,
+                        tint: accent,
+                        fill: accent.opacity(0.13),
+                        stroke: .clear,
+                        showsStroke: false,
+                        minWidth: nil
+                    )
                     .layoutPriority(1)
 
-                    Spacer(minLength: 8)
+                    AdviceBadgePill(
+                        text: record.tone.title,
+                        systemImage: "dial.medium",
+                        tint: toneBadgeTint,
+                        fill: secondaryText.opacity(theme == .minimal ? 0.13 : 0.10),
+                        stroke: secondaryText.opacity(0.12),
+                        showsStroke: true,
+                        minWidth: nil
+                    )
+                    .layoutPriority(0)
 
-                    IntensityIndicator(tone: record.tone, theme: theme, reduceMotion: isMotionReduced)
-                        .accessibilityLabel("Tone intensity")
-                        .fixedSize(horizontal: true, vertical: true)
-                        .frame(minWidth: 100, alignment: .trailing)
+                    Spacer(minLength: 0)
                 }
 
-                Label(record.tone.title, systemImage: "dial.medium")
-                    .font(.caption.weight(.medium))
-                    .lineLimit(1)
-                    .foregroundStyle(secondaryText)
-                    .padding(.leading, 1)
+                if let sourceBadgeText, !sourceBadgeText.isEmpty {
+                    HStack(spacing: 0) {
+                        AdviceBadgePill(
+                            text: sourceBadgeText,
+                            systemImage: nil,
+                            tint: providerBadgeTint,
+                            fill: providerBadgeTint.opacity(theme == .minimal ? 0.16 : 0.14),
+                            stroke: providerBadgeTint.opacity(0.25),
+                            showsStroke: true,
+                            minWidth: nil
+                        )
+                        .shadow(
+                            color: isMotionReduced ? .clear : providerBadgeTint.opacity(0.08),
+                            radius: 4,
+                            y: 1
+                        )
+                        .accessibilityLabel("Generation source")
+                        .accessibilityValue(sourceBadgeText)
+
+                        Spacer(minLength: 0)
+                    }
+                }
             }
 
             // Decorative quote mark
@@ -112,7 +115,6 @@ struct AdviceCardView: View {
                 .font(Theme.cardFont)
                 .foregroundStyle(primaryText)
                 .lineSpacing(5)
-                .minimumScaleFactor(0.8)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)
                 .accessibilityLabel("Advice")
@@ -130,7 +132,8 @@ struct AdviceCardView: View {
                         .foregroundStyle(accent.opacity(0.65))
                         .padding(.top, 2)
                     Text(rationale)
-                        .font(Theme.bodyFont)
+                        .font(.footnote)
+                        .lineSpacing(2)
                         .foregroundStyle(secondaryText)
                         .accessibilityLabel("Fake rationale")
                         .accessibilityValue(rationale)
