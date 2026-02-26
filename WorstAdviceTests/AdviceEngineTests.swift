@@ -1298,6 +1298,57 @@ final class PersistenceTests: XCTestCase {
     }
 
     @MainActor
+    func testLocalModelStoreWritesIndexAndHealsMissingDownloadedModels() async throws {
+        let fileManager = FileManager.default
+        let tempRoot = fileManager.temporaryDirectory.appendingPathComponent(
+            "LocalModelStoreTests-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try fileManager.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: tempRoot) }
+
+        let modelsRoot = tempRoot.appendingPathComponent("Models", isDirectory: true)
+        let downloadedFolder = modelsRoot.appendingPathComponent("sample-download", isDirectory: true)
+        let compiledModelURL = downloadedFolder.appendingPathComponent("SampleModel.mlmodelc", isDirectory: true)
+        try fileManager.createDirectory(at: compiledModelURL, withIntermediateDirectories: true)
+
+        let suiteName = "LocalModelStoreTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = LocalModelStore(
+            fileManager: fileManager,
+            userDefaults: defaults,
+            bundle: .main,
+            appSupportBaseURLOverride: tempRoot,
+            includeSystemModelWhenFrameworkMissing: false
+        )
+
+        await store.reloadAvailableModelsNowForTesting()
+
+        XCTAssertTrue(
+            store.availableModels.contains { $0.source == .downloaded && $0.fileURL == compiledModelURL },
+            "Expected downloaded .mlmodelc to be discovered and indexed."
+        )
+
+        let indexURL = try XCTUnwrap(store.modelsIndexFileURLForTesting)
+        let firstIndexData = try Data(contentsOf: indexURL)
+        let firstIndex = try JSONDecoder().decode(LocalModelStore.PersistedIndex.self, from: firstIndexData)
+        XCTAssertEqual(firstIndex.entries.count, 1)
+        XCTAssertEqual(firstIndex.entries.first?.source, .downloaded)
+
+        try fileManager.removeItem(at: downloadedFolder)
+
+        await store.reloadAvailableModelsNowForTesting()
+
+        XCTAssertFalse(store.availableModels.contains { $0.source == .downloaded })
+        let healedIndexData = try Data(contentsOf: indexURL)
+        let healedIndex = try JSONDecoder().decode(LocalModelStore.PersistedIndex.self, from: healedIndexData)
+        XCTAssertTrue(healedIndex.entries.isEmpty, "Missing downloaded model should be removed from the persisted index.")
+    }
+
+    @MainActor
     private func waitUntil(
         timeout: Duration = .seconds(1),
         pollInterval: Duration = .milliseconds(40),

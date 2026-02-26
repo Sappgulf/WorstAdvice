@@ -93,4 +93,35 @@ final class BadviceUITests: XCTestCase {
             "Expected Generation Engine picker to reflect Classic in UI-test mode. label=\(pickerLabel) value=\(pickerValue)"
         )
     }
+
+    func testSettingsAppleLocalModelShowsListOrExplicitEmptyState() throws {
+        let app = XCUIApplication()
+        app.launchArguments += defaultLaunchArguments
+        app.launch()
+
+        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
+        settingsTab.tap()
+        XCTAssertTrue(app.staticTexts["Settings"].waitForExistence(timeout: 5))
+
+        let appleModelStatus = app.staticTexts["settings.appleModel.status"]
+        let appleModelEmpty = app.staticTexts["settings.appleModel.empty"]
+        if !appleModelStatus.waitForExistence(timeout: 2) && !appleModelEmpty.exists {
+            for _ in 0..<12 where !appleModelStatus.exists && !appleModelEmpty.exists {
+                app.swipeUp()
+            }
+        }
+
+        XCTAssertTrue(
+            appleModelStatus.exists || appleModelEmpty.exists,
+            "Expected Apple Local Model card to show a status or explicit empty state."
+        )
+
+        if appleModelEmpty.exists {
+            XCTAssertTrue(
+                app.buttons["settings.appleModel.recheck"].exists
+                    || app.buttons["settings.appleModel.prepare"].exists
+            )
+        }
+    }
 }

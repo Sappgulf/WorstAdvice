@@ -692,6 +692,12 @@ struct SettingsTabView: View {
                 .accessibilityIdentifier("settings.generationEngine.row")
                 .accessibilityLabel("Generation Engine")
                 .accessibilityValue(viewModel.preferredGenerationProvider.title)
+                if let warning = viewModel.appleOnDeviceModelWarningText {
+                    Text(warning)
+                        .font(.caption2)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
                     Text("UI Test Engine: \(viewModel.preferredGenerationProvider.title)")
                         .font(.caption2)
@@ -771,7 +777,9 @@ struct SettingsTabView: View {
     }
 
     private var appleOnDeviceModelStatusCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let models = viewModel.appleLocalModels
+        return (
+            VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Label("Apple Local Model", systemImage: "cpu")
                     .font(.caption.weight(.semibold))
@@ -782,7 +790,7 @@ struct SettingsTabView: View {
                         .controlSize(.small)
                         .tint(accent)
                 } else {
-                    Text(viewModel.appleOnDeviceModelStatusKey == "ready" ? "Ready" : "Status")
+                    Text(viewModel.appleOnDeviceModelStatusBadgeText)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(
                             viewModel.appleOnDeviceModelStatusKey == "ready"
@@ -817,31 +825,59 @@ struct SettingsTabView: View {
                 .foregroundStyle(secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 8) {
-                if viewModel.canPrepareAppleOnDeviceModel {
-                    Button {
-                        Task { await viewModel.prepareAppleOnDeviceModel() }
-                    } label: {
-                        Label(viewModel.recommendedAppleOnDeviceActionTitle, systemImage: "arrow.down.circle")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(primaryText)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
-                            .background(
-                                Capsule(style: .continuous)
-                                    .fill(cardColor)
-                            )
-                            .overlay(
-                                Capsule(style: .continuous)
-                                    .stroke(accent.opacity(0.22), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(viewModel.isPreparingAppleOnDeviceModel)
-                    .opacity(viewModel.isPreparingAppleOnDeviceModel ? 0.6 : 1)
-                    .accessibilityIdentifier("settings.appleModel.prepare")
-                }
+            if models.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("No on-device models available yet")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(primaryText)
+                        .accessibilityIdentifier("settings.appleModel.empty")
+                    Text(
+                        "Use Install to trigger Apple’s system model preparation on supported devices, or add bundled/downloaded CoreML models and tap Recheck."
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
 
+                    HStack(spacing: 8) {
+                        Button {
+                            Task { await viewModel.prepareAppleOnDeviceModel() }
+                        } label: {
+                            Label("Install", systemImage: "arrow.down.circle")
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(accent)
+                        .font(.caption.weight(.semibold))
+                        .accessibilityIdentifier("settings.appleModel.prepare")
+
+                        Button {
+                            viewModel.refreshAppleOnDeviceModelAvailability()
+                        } label: {
+                            Label("Recheck", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(.bordered)
+                        .font(.caption.weight(.semibold))
+                        .accessibilityIdentifier("settings.appleModel.recheck")
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(cardColor)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(secondaryText.opacity(0.12), lineWidth: 1)
+                )
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(models) { model in
+                        appleLocalModelRow(model)
+                    }
+                }
+            }
+
+            HStack(spacing: 8) {
                 Button {
                     viewModel.refreshAppleOnDeviceModelAvailability()
                 } label: {
@@ -864,7 +900,7 @@ struct SettingsTabView: View {
                 .opacity(viewModel.isPreparingAppleOnDeviceModel ? 0.7 : 1)
                 .accessibilityIdentifier("settings.appleModel.recheck")
 
-                if viewModel.appleOnDeviceModelStatusKey == "disabled" {
+                if viewModel.shouldShowOpenAppSettingsShortcut {
                     Button {
                         openAppSettings()
                     } label: {
@@ -887,15 +923,16 @@ struct SettingsTabView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(cardColor.opacity(0.75))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(appleModelStatusTint.opacity(0.2), lineWidth: 1)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(cardColor.opacity(0.75))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(appleModelStatusTint.opacity(0.2), lineWidth: 1)
+            )
         )
     }
 
@@ -903,12 +940,14 @@ struct SettingsTabView: View {
         switch viewModel.appleOnDeviceModelStatusKey {
         case "ready":
             return accent
-        case "model_not_ready":
+        case "installing", "model_not_ready", "installed_not_warmed":
             return .orange
         case "disabled":
             return .yellow
-        case "device_policy_blocked":
+        case "device_policy_blocked", "error":
             return .orange
+        case "no_models", "not_installed":
+            return secondaryText
         default:
             return secondaryText
         }
@@ -918,14 +957,166 @@ struct SettingsTabView: View {
         switch viewModel.appleOnDeviceModelStatusKey {
         case "ready":
             return "checkmark.circle.fill"
-        case "model_not_ready":
+        case "installing", "model_not_ready":
             return "arrow.down.circle.fill"
         case "disabled":
             return "exclamationmark.triangle.fill"
+        case "installed_not_warmed":
+            return "clock.badge.checkmark"
         case "device_policy_blocked":
             return "thermometer.medium"
+        case "error":
+            return "xmark.octagon.fill"
+        case "no_models":
+            return "tray"
+        case "not_installed":
+            return "list.bullet"
         default:
             return "info.circle.fill"
+        }
+    }
+
+    private func appleLocalModelRow(_ model: LocalModelDescriptor) -> some View {
+        let isSelected = viewModel.selectedAppleLocalModelID == model.id
+        let state = viewModel.appleLocalModelInstallState(for: model.id)
+        return VStack(alignment: .leading, spacing: 8) {
+            Button {
+                viewModel.selectAppleLocalModel(id: model.id)
+            } label: {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(isSelected ? accent : secondaryText.opacity(0.5))
+                        .font(.caption.weight(.bold))
+                        .padding(.top, 2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(model.displayName)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(primaryText)
+                            Text(model.source.badgeLabel)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(secondaryText)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(secondaryText.opacity(0.12))
+                                )
+                            Spacer()
+                            Text(localModelStatusLabel(for: model, state: state))
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(localModelStateTint(for: state))
+                        }
+                        if let sizeBytes = model.sizeBytes {
+                            Text(ByteCountFormatter.string(fromByteCount: sizeBytes, countStyle: .file))
+                                .font(.caption2)
+                                .foregroundStyle(secondaryText)
+                        }
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
+
+            if case .installing(let progress) = state {
+                if let progress {
+                    ProgressView(value: progress)
+                        .tint(accent)
+                } else {
+                    ProgressView()
+                        .tint(accent)
+                }
+            } else if case .error(let message) = state {
+                Text(message)
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 8) {
+                if !model.isInstalled {
+                    Button {
+                        viewModel.selectAppleLocalModel(id: model.id)
+                        Task { await viewModel.installAppleLocalModel(id: model.id) }
+                    } label: {
+                        Label("Install", systemImage: "arrow.down.circle")
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.caption.weight(.semibold))
+                } else {
+                    Button {
+                        viewModel.selectAppleLocalModel(id: model.id)
+                        Task { await viewModel.warmUpAppleLocalModel(id: model.id) }
+                    } label: {
+                        Label("Warm Up", systemImage: "bolt.fill")
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.caption.weight(.semibold))
+                }
+
+                if model.source == .downloaded {
+                    Button(role: .destructive) {
+                        Task { await viewModel.removeAppleLocalModel(id: model.id) }
+                    } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.caption.weight(.semibold))
+                }
+
+                Button {
+                    viewModel.refreshAppleOnDeviceModelAvailability()
+                } label: {
+                    Label("Recheck", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.bordered)
+                .font(.caption.weight(.semibold))
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(cardColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(
+                    (isSelected ? accent : secondaryText).opacity(isSelected ? 0.22 : 0.10),
+                    lineWidth: 1
+                )
+        )
+    }
+
+    private func localModelStatusLabel(
+        for model: LocalModelDescriptor,
+        state: LocalModelInstallState
+    ) -> String {
+        switch state {
+        case .ready:
+            return "Ready"
+        case .installed:
+            return "Installed"
+        case .installing:
+            return "Installing"
+        case .error:
+            return "Error"
+        case .idle:
+            return model.isInstalled ? "Installed" : "Not Installed"
+        }
+    }
+
+    private func localModelStateTint(for state: LocalModelInstallState) -> Color {
+        switch state {
+        case .ready:
+            return accent
+        case .installed:
+            return .orange
+        case .installing:
+            return .orange
+        case .error:
+            return .orange
+        case .idle:
+            return secondaryText
         }
     }
 
