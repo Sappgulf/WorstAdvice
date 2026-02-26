@@ -1633,10 +1633,15 @@ final class AdviceRepository {
 final class SettingsViewModel {
     private let repository: AdviceRepository
     private(set) var settings: AppSettingsEntity
+    private(set) var appleOnDeviceModelAvailability: AppleOnDeviceModelAvailability =
+        AppleOnDeviceAdviceBridge.currentAvailability()
+    private(set) var isPreparingAppleOnDeviceModel: Bool = false
+    private(set) var appleOnDeviceModelStatusLastUpdatedAt: Date = Date()
 
     init(repository: AdviceRepository) {
         self.repository = repository
         self.settings = repository.ensureSettings()
+        refreshAppleOnDeviceModelAvailability()
         normalizeStreakFreezeState(for: Date())
         NotificationManager.updateStreakFreezeAvailability(
             hasAvailable: streakFreezeAvailableThisWeek)
@@ -1735,11 +1740,100 @@ final class SettingsViewModel {
         set {
             settings.preferredGenerationProvider = newValue
             repository.save()
+            refreshAppleOnDeviceModelAvailability()
         }
     }
 
     var appleOnDeviceModelStatusText: String {
-        AppleOnDeviceAdviceBridge.currentAvailability().statusText
+        appleOnDeviceModelAvailability.statusText
+    }
+
+    var appleOnDeviceModelStatusKey: String {
+        appleOnDeviceModelAvailability.analyticsKey
+    }
+
+    var appleOnDeviceModelSetupHintText: String {
+        switch appleOnDeviceModelAvailability.analyticsKey {
+        case "ready":
+            return "Local Apple model is ready. Use Apple On-Device or Auto in Generation Engine."
+        case "disabled":
+            return
+                "Enable Apple Intelligence in the Settings app, then return here and tap Recheck."
+        case "model_not_ready":
+            return
+                "Apple is preparing the on-device model. Keep the device on Wi-Fi and power, then tap Recheck."
+        case "device_policy_blocked":
+            return
+                "Performance or thermal limits are blocking the local model. Let the device cool down and disable Low Power Mode."
+        case "device_not_eligible":
+            return "This device does not support Apple Intelligence local generation."
+        case "os_too_old":
+            return "Update iOS to 26 or later to enable Apple local model generation."
+        case "framework_missing":
+            return
+                "This simulator/test build does not include the FoundationModels framework. Use a supported device build to test local generation."
+        default:
+            return "Tap Recheck after changing Apple Intelligence or device power settings."
+        }
+    }
+
+    var canPrepareAppleOnDeviceModel: Bool {
+        switch appleOnDeviceModelAvailability.analyticsKey {
+        case "model_not_ready", "ready":
+            return true
+        default:
+            return false
+        }
+    }
+
+    var recommendedAppleOnDeviceActionTitle: String {
+        switch appleOnDeviceModelAvailability.analyticsKey {
+        case "ready":
+            return "Warm Up Local Model"
+        case "model_not_ready":
+            return "Prepare / Download Local Model"
+        default:
+            return "Recheck"
+        }
+    }
+
+    var shouldShowOpenAppSettingsShortcut: Bool {
+        let key = appleOnDeviceModelAvailability.analyticsKey
+        return key == "disabled"
+    }
+
+    func refreshAppleOnDeviceModelAvailability() {
+        appleOnDeviceModelAvailability = AppleOnDeviceAdviceBridge.currentAvailability()
+        appleOnDeviceModelStatusLastUpdatedAt = Date()
+    }
+
+    func prepareAppleOnDeviceModel() async {
+        guard !isPreparingAppleOnDeviceModel else { return }
+        isPreparingAppleOnDeviceModel = true
+        defer {
+            isPreparingAppleOnDeviceModel = false
+            refreshAppleOnDeviceModelAvailability()
+        }
+
+        refreshAppleOnDeviceModelAvailability()
+
+        #if canImport(FoundationModels)
+            guard #available(iOS 26.0, *) else { return }
+            guard canPrepareAppleOnDeviceModel else { return }
+
+            // `prewarm()` prompts the system to get the local model ready and may start background download work.
+            let session = LanguageModelSession(instructions: "Warm the local model for Badvice.")
+            session.prewarm()
+
+            for _ in 0..<8 {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { break }
+                refreshAppleOnDeviceModelAvailability()
+                if appleOnDeviceModelAvailability.isReady {
+                    break
+                }
+            }
+        #endif
     }
 
     var strictNoRepeats: Bool {

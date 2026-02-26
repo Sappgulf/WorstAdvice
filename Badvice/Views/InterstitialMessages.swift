@@ -218,6 +218,8 @@ struct SettingsTabView: View {
     @AppStorage("customAccentG") private var customAccentG: Double = 0.3
     @AppStorage("customAccentB") private var customAccentB: Double = 0.3
     @AppStorage("seasonalEffectsEnabled") private var seasonalEffectsEnabled = true
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -385,10 +387,16 @@ struct SettingsTabView: View {
                 sectionsAppeared = false
                 gearWobble = false
                 tabBarVisible.wrappedValue = true
+                viewModel.refreshAppleOnDeviceModelAvailability()
                 // A tiny async hop lets SwiftUI finish layout before animating in
                 DispatchQueue.main.async {
                     sectionsAppeared = true
                     if !isMotionReduced { gearWobble = true }
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active {
+                    viewModel.refreshAppleOnDeviceModelAvailability()
                 }
             }
             .onDisappear {
@@ -700,11 +708,7 @@ struct SettingsTabView: View {
                         .accessibilityValue(viewModel.preferredGenerationProvider.title)
                 }
                 settingsDivider
-                Label(viewModel.appleOnDeviceModelStatusText, systemImage: "cpu")
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                appleOnDeviceModelStatusCard
                 settingsDivider
                 settingsToggle(
                     "Community suggestions only", systemImage: "person.2",
@@ -770,6 +774,170 @@ struct SettingsTabView: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(accent.opacity(0.12), lineWidth: 1)
         )
+    }
+
+    private var appleOnDeviceModelStatusCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Label("Apple Local Model", systemImage: "cpu")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                Spacer()
+                if viewModel.isPreparingAppleOnDeviceModel {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(accent)
+                } else {
+                    Text(viewModel.appleOnDeviceModelStatusKey == "ready" ? "Ready" : "Status")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(
+                            viewModel.appleOnDeviceModelStatusKey == "ready"
+                                ? accent : secondaryText
+                        )
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(
+                                    (viewModel.appleOnDeviceModelStatusKey == "ready"
+                                        ? accent : secondaryText
+                                    ).opacity(0.12))
+                        )
+                }
+            }
+
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: appleModelStatusSymbolName)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(appleModelStatusTint)
+                    .padding(.top, 2)
+                Text(viewModel.appleOnDeviceModelStatusText)
+                    .font(.caption)
+                    .foregroundStyle(primaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("settings.appleModel.status")
+            }
+
+            Text(viewModel.appleOnDeviceModelSetupHintText)
+                .font(.caption2)
+                .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                if viewModel.canPrepareAppleOnDeviceModel {
+                    Button {
+                        Task { await viewModel.prepareAppleOnDeviceModel() }
+                    } label: {
+                        Label(viewModel.recommendedAppleOnDeviceActionTitle, systemImage: "arrow.down.circle")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(primaryText)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(cardColor)
+                            )
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .stroke(accent.opacity(0.22), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.isPreparingAppleOnDeviceModel)
+                    .opacity(viewModel.isPreparingAppleOnDeviceModel ? 0.6 : 1)
+                    .accessibilityIdentifier("settings.appleModel.prepare")
+                }
+
+                Button {
+                    viewModel.refreshAppleOnDeviceModelAvailability()
+                } label: {
+                    Label("Recheck", systemImage: "arrow.clockwise")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(primaryText)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(cardColor)
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(secondaryText.opacity(0.18), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isPreparingAppleOnDeviceModel)
+                .opacity(viewModel.isPreparingAppleOnDeviceModel ? 0.7 : 1)
+                .accessibilityIdentifier("settings.appleModel.recheck")
+
+                if viewModel.appleOnDeviceModelStatusKey == "disabled" {
+                    Button {
+                        openAppSettings()
+                    } label: {
+                        Label("App Settings", systemImage: "gearshape")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(primaryText)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(cardColor)
+                            )
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .stroke(secondaryText.opacity(0.18), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("settings.appleModel.appSettings")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(cardColor.opacity(0.75))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(appleModelStatusTint.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    private var appleModelStatusTint: Color {
+        switch viewModel.appleOnDeviceModelStatusKey {
+        case "ready":
+            return accent
+        case "model_not_ready":
+            return .orange
+        case "disabled":
+            return .yellow
+        case "device_policy_blocked":
+            return .orange
+        default:
+            return secondaryText
+        }
+    }
+
+    private var appleModelStatusSymbolName: String {
+        switch viewModel.appleOnDeviceModelStatusKey {
+        case "ready":
+            return "checkmark.circle.fill"
+        case "model_not_ready":
+            return "arrow.down.circle.fill"
+        case "disabled":
+            return "exclamationmark.triangle.fill"
+        case "device_policy_blocked":
+            return "thermometer.medium"
+        default:
+            return "info.circle.fill"
+        }
+    }
+
+    private func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        openURL(url)
     }
 
     private var aboutSection: some View {
@@ -1183,27 +1351,46 @@ private struct QuoteSuggestionLabView: View {
 private struct CommunityPulseView: View {
     @Bindable var viewModel: GenerateViewModel
     @Bindable var settings: SettingsViewModel
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
 
     @State private var chartAnimated = false
 
     var body: some View {
+        let chartItems = Array(viewModel.topCommunityTopics.prefix(10))
+        let maxSubmissions = chartItems.map(\.submissions).max() ?? 0
+        let xAxisMax = max(4, maxSubmissions + max(1, Int(ceil(Double(maxSubmissions) * 0.15))))
+
         List {
             Section("Top Suggested Topics") {
-                if viewModel.topCommunityTopics.isEmpty {
+                if chartItems.isEmpty {
                     Text("No community suggestions yet.")
                         .foregroundStyle(secondaryText)
                 } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Top \(chartItems.count) community topics")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(primaryText)
+                            Spacer()
+                            Text("\(chartItems.first?.submissions ?? 0) max")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(secondaryText)
+                        }
+
                     Chart {
-                        ForEach(viewModel.topCommunityTopics.prefix(10)) { item in
+                        ForEach(chartItems) { item in
                             BarMark(
                                 x: .value("Submissions", chartAnimated ? item.submissions : 0),
                                 y: .value("Topic", item.topic)
                             )
                             .foregroundStyle(Theme.accent(for: settings.theme).gradient)
                             .cornerRadius(4)
+                            .accessibilityLabel(item.topic)
+                            .accessibilityValue("\(item.submissions) submissions")
                             .annotation(position: .trailing) {
                                 Text("\(item.submissions)")
                                     .font(.caption2.weight(.bold))
@@ -1212,7 +1399,16 @@ private struct CommunityPulseView: View {
                             }
                         }
                     }
-                    .chartXAxis(.hidden)
+                    .chartXScale(domain: 0...xAxisMax)
+                    .chartXAxis {
+                        AxisMarks(position: .bottom, values: .automatic(desiredCount: 4)) { value in
+                            AxisGridLine().foregroundStyle(secondaryText.opacity(0.08))
+                            AxisTick().foregroundStyle(secondaryText.opacity(0.18))
+                            AxisValueLabel()
+                                .font(.caption2)
+                                .foregroundStyle(secondaryText)
+                        }
+                    }
                     .chartYAxis {
                         AxisMarks { value in
                             AxisValueLabel()
@@ -1220,10 +1416,19 @@ private struct CommunityPulseView: View {
                                 .foregroundStyle(primaryText)
                         }
                     }
+                    .chartPlotStyle { plot in
+                        plot
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(cardBackgroundFill)
+                            )
+                    }
+                    .accessibilityLabel("Community topic submissions chart")
                     .frame(
-                        height: max(200, CGFloat(min(viewModel.topCommunityTopics.count, 10) * 44))
+                        height: max(220, CGFloat(chartItems.count * 44))
                     )
-                    .padding(.vertical, 8)
+                        .padding(.vertical, 6)
+                    }
                 }
             }
 
@@ -1274,9 +1479,28 @@ private struct CommunityPulseView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationTitle("Community Pulse")
         .onAppear {
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.65).delay(0.1)) {
+            chartAnimated = false
+            if isMotionReduced {
+                chartAnimated = true
+            } else {
+                withAnimation(.spring(response: 0.8, dampingFraction: 0.65).delay(0.1)) {
+                    chartAnimated = true
+                }
+            }
+        }
+        .onChange(of: viewModel.topCommunityTopics.count) { _, _ in
+            if isMotionReduced {
+                chartAnimated = true
+                return
+            }
+            chartAnimated = false
+            withAnimation(.easeOut(duration: 0.35)) {
                 chartAnimated = true
             }
         }
+    }
+
+    private var cardBackgroundFill: some ShapeStyle {
+        Theme.cardColor(for: settings.theme).opacity(0.45)
     }
 }
