@@ -1189,8 +1189,11 @@ private struct LoadingAdviceView: View {
     let theme: ThemeMode
     let reduceMotion: Bool
 
+    private var accessibilityReduceMotionEnabled: Bool {
+        UIAccessibility.isReduceMotionEnabled
+    }
     private var effectiveReduceMotion: Bool {
-        reduceMotion || UIAccessibility.isReduceMotionEnabled
+        reduceMotion || accessibilityReduceMotionEnabled
     }
     private var accentColor: Color { Theme.accent(for: theme) }
     private var secondaryAccentColor: Color {
@@ -1249,13 +1252,10 @@ private struct LoadingAdviceView: View {
                 skeletonCardPlaceholder
 
                 if effectiveReduceMotion {
-                    VStack(spacing: 10) {
-                        ProgressView()
-                            .tint(accentColor)
-                            .controlSize(.regular)
-                        Text(loadingPhrase)
-                            .font(.system(.subheadline, design: .rounded, weight: .bold))
-                            .foregroundStyle(primaryTextColor)
+                    if accessibilityReduceMotionEnabled {
+                        accessibilityLoader
+                    } else {
+                        reducedMotionLoader
                     }
                 } else {
                     microMotionLoader
@@ -1277,6 +1277,13 @@ private struct LoadingAdviceView: View {
         .accessibilityLabel("Generating advice")
         .onAppear {
             loadingPhrase = Self.loadingPhrases.randomElement() ?? Self.loadingPhrases[0]
+            guard !accessibilityReduceMotionEnabled else { return }
+            glowScale = 1.06
+            glowOpacity = 0.28
+            sigilScale = 1.03
+            glyphRotation = 7
+            beaconPulse = true
+            phrasePulse = true
             guard !effectiveReduceMotion else { return }
             ringRotation = 360
             counterRingRotation = -360
@@ -1284,12 +1291,6 @@ private struct LoadingAdviceView: View {
             dotBouncePhase = true
             shimmerTravel = 220
             textShimmerTravel = 140
-            glowScale = 1.06
-            glowOpacity = 0.28
-            sigilScale = 1.03
-            glyphRotation = 7
-            beaconPulse = true
-            phrasePulse = true
         }
         .onDisappear {
             ringRotation = 0
@@ -1306,7 +1307,7 @@ private struct LoadingAdviceView: View {
             phrasePulse = false
         }
         .task {
-            guard !effectiveReduceMotion else { return }
+            guard !accessibilityReduceMotionEnabled else { return }
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2.5))
                 if Task.isCancelled { break }
@@ -1322,9 +1323,49 @@ private struct LoadingAdviceView: View {
         }
     }
 
+    private var accessibilityLoader: some View {
+        VStack(spacing: 10) {
+            chaosSigil(allowOrbitalMotion: false, allowPulseMotion: false)
+
+            Text(loadingPhrase)
+                .font(.system(.subheadline, design: .rounded, weight: .bold))
+                .foregroundStyle(primaryTextColor)
+
+            Text("Generating advice")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(primaryTextColor.opacity(0.6))
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var reducedMotionLoader: some View {
+        VStack(spacing: 10) {
+            chaosSigil(allowOrbitalMotion: false, allowPulseMotion: true)
+
+            HStack(spacing: 6) {
+                Capsule(style: .continuous)
+                    .fill(accentColor.opacity(0.8))
+                    .frame(width: phrasePulse ? 22 : 14, height: 5)
+                    .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: phrasePulse)
+                Text(loadingPhrase)
+                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                    .foregroundStyle(primaryTextColor)
+                Capsule(style: .continuous)
+                    .fill(secondaryAccentColor.opacity(0.8))
+                    .frame(width: phrasePulse ? 14 : 22, height: 5)
+                    .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: phrasePulse)
+            }
+
+            Text("Low-motion loader active")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(primaryTextColor.opacity(0.55))
+        }
+        .padding(.vertical, 2)
+    }
+
     private var microMotionLoader: some View {
         VStack(spacing: 12) {
-            chaosSigil
+            chaosSigil(allowOrbitalMotion: true, allowPulseMotion: true)
 
             ZStack {
                 HStack(spacing: 7) {
@@ -1429,7 +1470,7 @@ private struct LoadingAdviceView: View {
         }
     }
 
-    private var chaosSigil: some View {
+    private func chaosSigil(allowOrbitalMotion: Bool, allowPulseMotion: Bool) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(
@@ -1456,7 +1497,9 @@ private struct LoadingAdviceView: View {
                     .blur(radius: 14)
                     .scaleEffect(glowScale)
                     .animation(
-                        .easeInOut(duration: 3.0).repeatForever(autoreverses: true),
+                        allowPulseMotion
+                            ? .easeInOut(duration: 3.0).repeatForever(autoreverses: true)
+                            : nil,
                         value: glowScale
                     )
             }
@@ -1476,9 +1519,11 @@ private struct LoadingAdviceView: View {
                         style: StrokeStyle(lineWidth: 2.8, lineCap: .round)
                     )
                     .frame(width: 74, height: 74)
-                    .rotationEffect(.degrees(ringRotation))
+                    .rotationEffect(.degrees(allowOrbitalMotion ? ringRotation : 20))
                     .animation(
-                        .linear(duration: 1.2).repeatForever(autoreverses: false),
+                        allowOrbitalMotion
+                            ? .linear(duration: 1.2).repeatForever(autoreverses: false)
+                            : nil,
                         value: ringRotation
                     )
 
@@ -1493,9 +1538,11 @@ private struct LoadingAdviceView: View {
                         style: StrokeStyle(lineWidth: 2.2, lineCap: .round)
                     )
                     .frame(width: 62, height: 62)
-                    .rotationEffect(.degrees(counterRingRotation))
+                    .rotationEffect(.degrees(allowOrbitalMotion ? counterRingRotation : -34))
                     .animation(
-                        .linear(duration: 1.7).repeatForever(autoreverses: false),
+                        allowOrbitalMotion
+                            ? .linear(duration: 1.7).repeatForever(autoreverses: false)
+                            : nil,
                         value: counterRingRotation
                     )
 
@@ -1508,9 +1555,11 @@ private struct LoadingAdviceView: View {
                         .opacity(dotBouncePhase ? 1 : 0.45)
                         .scaleEffect(dotBouncePhase ? 1.0 : 0.88)
                         .animation(
-                            .easeInOut(duration: 0.9)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(index) * 0.05),
+                            allowOrbitalMotion
+                                ? .easeInOut(duration: 0.9)
+                                    .repeatForever(autoreverses: true)
+                                    .delay(Double(index) * 0.05)
+                                : nil,
                             value: dotBouncePhase
                         )
                 }
@@ -1520,10 +1569,17 @@ private struct LoadingAdviceView: View {
                         .fill(index == 1 ? .white.opacity(0.95) : secondaryAccentColor)
                         .frame(width: index == 1 ? 6 : 5, height: index == 1 ? 6 : 5)
                         .shadow(color: accentColor.opacity(0.4), radius: 4, x: 0, y: 0)
-                        .offset(y: -31)
-                        .rotationEffect(.degrees(Double(index) * 120 + orbitRotation))
+                        .offset(
+                            x: allowOrbitalMotion
+                                ? 0
+                                : [0, -18, 18][index],
+                            y: allowOrbitalMotion ? -31 : [0, 8, -8][index]
+                        )
+                        .rotationEffect(.degrees(Double(index) * 120 + (allowOrbitalMotion ? orbitRotation : 0)))
                         .animation(
-                            .linear(duration: 2.4).repeatForever(autoreverses: false),
+                            allowOrbitalMotion
+                                ? .linear(duration: 2.4).repeatForever(autoreverses: false)
+                                : nil,
                             value: orbitRotation
                         )
                 }
@@ -1556,11 +1612,15 @@ private struct LoadingAdviceView: View {
                         .offset(x: 1, y: 2)
                         .scaleEffect(sigilScale)
                         .animation(
-                            .spring(response: 1.0, dampingFraction: 0.6).repeatForever(autoreverses: true),
+                            allowPulseMotion
+                                ? .spring(response: 1.0, dampingFraction: 0.6).repeatForever(autoreverses: true)
+                                : nil,
                             value: glyphRotation
                         )
                         .animation(
-                            .easeInOut(duration: 2.6).repeatForever(autoreverses: true),
+                            allowPulseMotion
+                                ? .easeInOut(duration: 2.6).repeatForever(autoreverses: true)
+                                : nil,
                             value: sigilScale
                         )
                 }
@@ -1574,7 +1634,9 @@ private struct LoadingAdviceView: View {
                     .shadow(color: secondaryAccentColor.opacity(0.6), radius: 6, x: 0, y: 0)
                     .offset(x: 30, y: -26)
                     .animation(
-                        .easeInOut(duration: 0.75).repeatForever(autoreverses: true),
+                        allowPulseMotion
+                            ? .easeInOut(duration: 0.75).repeatForever(autoreverses: true)
+                            : nil,
                         value: beaconPulse
                     )
             }
