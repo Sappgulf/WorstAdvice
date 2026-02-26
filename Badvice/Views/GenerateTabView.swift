@@ -19,6 +19,8 @@ struct GenerateTabView: View {
     @State private var surpriseClearTask: Task<Void, Never>? = nil
     @State private var quoteTapStreak = 0
     @State private var quoteTapResetTask: Task<Void, Never>? = nil
+    @State private var loadingCompletionHapticArmed = false
+    @State private var lastGeneratedAdviceIDForHaptics: UUID? = nil
     @AppStorage("hasDismissedWhatsNewCard_2026_02c") private var hasDismissedWhatsNewCard = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -228,7 +230,7 @@ struct GenerateTabView: View {
                 }
                 .overlay {
                     if viewModel.isGenerating {
-                        GeneratingOverlay(theme: settings.theme, reduceMotion: isMotionReduced)
+                        LoadingAdviceView(theme: settings.theme, reduceMotion: isMotionReduced)
                     }
                 }
                 .animation(
@@ -241,12 +243,6 @@ struct GenerateTabView: View {
 
                 votingRow
                 primaryActionButtons
-                if !tabBarVisible.wrappedValue {
-                    tabShortcutRow
-                        .transition(
-                            isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top))
-                        )
-                }
                 if let notice = viewModel.generationNotice, !notice.isEmpty {
                     Text(notice)
                         .font(.caption)
@@ -266,7 +262,6 @@ struct GenerateTabView: View {
             // Pull to generate new advice
             await viewModel.generate()
             onDataChanged()
-            HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
         }
         .toast(item: $activeToast, accentColor: accent)
 
@@ -274,7 +269,11 @@ struct GenerateTabView: View {
             ActivityShareSheet(items: shareItems)
         }
         .onAppear {
+            lastGeneratedAdviceIDForHaptics = viewModel.current?.id
             tabBarVisible.wrappedValue = true
+        }
+        .onChange(of: viewModel.isGenerating) { _, isGenerating in
+            handleGeneratingStateChange(isGenerating)
         }
     }
 
@@ -590,7 +589,6 @@ struct GenerateTabView: View {
                 Task {
                     await viewModel.generate()
                     onDataChanged()
-                    HapticsManager.play(style: .medium, isEnabled: settings.hapticsEnabled)
                 }
             } label: {
                 Label(viewModel.primaryActionTitle, systemImage: "sparkles")
@@ -624,7 +622,6 @@ struct GenerateTabView: View {
                 Button {
                     viewModel.surpriseMeAndGenerate()
                     onDataChanged()
-                    HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 } label: {
                     Label("Surprise Me", systemImage: "dice")
                         .font(.subheadline.weight(.semibold))
@@ -638,7 +635,6 @@ struct GenerateTabView: View {
                 Button {
                     viewModel.generateDailyDrop()
                     onDataChanged()
-                    HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 } label: {
                     Label("Daily Drop", systemImage: "calendar.badge.clock")
                         .font(.subheadline.weight(.semibold))
@@ -698,7 +694,6 @@ struct GenerateTabView: View {
                     isEnabled: hasCurrent && !viewModel.isGenerating
                 ) {
                     viewModel.remixCurrentAdvice()
-                    HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                     activeToast = ToastMessage(message: "Remixed!", style: .success)
                 }
             }
@@ -706,15 +701,6 @@ struct GenerateTabView: View {
         }
         .tint(accent)
         .foregroundStyle(primaryText)
-    }
-
-    private var tabShortcutRow: some View {
-        HStack(spacing: 8) {
-            quickOpenButton(title: "Chaos Hub", systemImage: "flame.fill", tab: .chaosHub)
-            quickOpenButton(title: "Quotes", systemImage: "quote.bubble", tab: .quotes)
-            quickOpenButton(title: "Favorites", systemImage: "bookmark", tab: .favorites)
-            quickOpenButton(title: "History", systemImage: "clock", tab: .history)
-        }
     }
 
     private var whatsNewCard: some View {
@@ -835,21 +821,27 @@ struct GenerateTabView: View {
         }
     }
 
-    private func quickOpenButton(title: String, systemImage: String, tab: AppTab) -> some View {
-        Button {
-            openTab(tab)
-        } label: {
-            Label(title, systemImage: systemImage)
-                .font(.caption.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 36)
-        }
-        .buttonStyle(.bordered)
-        .tint(accent)
-    }
-
     private func openTab(_ tab: AppTab) {
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
         onOpenTab?(tab)
+    }
+
+    private func handleGeneratingStateChange(_ isGenerating: Bool) {
+        if isGenerating {
+            loadingCompletionHapticArmed = true
+            HapticsManager.play(style: .light, isEnabled: settings.hapticsEnabled)
+            return
+        }
+
+        guard loadingCompletionHapticArmed else { return }
+        loadingCompletionHapticArmed = false
+
+        guard let currentID = viewModel.current?.id, currentID != lastGeneratedAdviceIDForHaptics else {
+            return
+        }
+
+        lastGeneratedAdviceIDForHaptics = currentID
+        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
     }
 
     private func triggerHeaderEasterEggTap() {
@@ -1190,23 +1182,30 @@ struct GenerateTabView: View {
     }
 }
 
-// MARK: - Generating Overlay
+// MARK: - Loading Advice View
 
-private struct GeneratingOverlay: View {
+private struct LoadingAdviceView: View {
     let theme: ThemeMode
     let reduceMotion: Bool
 
-    // Cache theme colors so body doesn't call Theme switch statements every frame
+    private var effectiveReduceMotion: Bool {
+        reduceMotion || UIAccessibility.isReduceMotionEnabled
+    }
     private var accentColor: Color { Theme.accent(for: theme) }
     private var secondaryAccentColor: Color {
         Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme)
     }
+    private var cardColor: Color { Theme.cardColor(for: theme) }
     private var primaryTextColor: Color { Theme.primaryText(for: theme) }
     private var glowColor: Color? { Theme.glowColor(for: theme) }
 
-    @State private var rotation: Double = 0
-    @State private var pulseScale: CGFloat = 1.0
-    @State private var loadingPhrase: String = GeneratingOverlay.loadingPhrases[0]
+    @State private var ringRotation: Double = 0
+    @State private var dotBouncePhase = false
+    @State private var shimmerTravel: CGFloat = -220
+    @State private var textShimmerTravel: CGFloat = -140
+    @State private var glowScale: CGFloat = 0.94
+    @State private var glowOpacity: Double = 0.16
+    @State private var loadingPhrase: String = LoadingAdviceView.loadingPhrases[0]
 
     private static let loadingPhrases = [
         "Consulting the chaos...",
@@ -1221,123 +1220,35 @@ private struct GeneratingOverlay: View {
 
     var body: some View {
         ZStack {
-            Theme.cardColor(for: theme)
+            cardColor
                 .opacity(0.92)
-                .blur(radius: reduceMotion ? 0 : 2)
-
-            VStack(spacing: 20) {
-                ZStack {
-                    // Central pulsing orb — radial gradient built once per theme
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    accentColor.opacity(0.9),
-                                    secondaryAccentColor.opacity(0.5),
-                                    accentColor.opacity(0.0),
-                                ],
-                                center: .center,
-                                startRadius: 10,
-                                endRadius: 40
-                            )
-                        )
-                        .frame(width: 60, height: 60)
-                        .scaleEffect(pulseScale)
-                        .animation(
-                            reduceMotion
-                                ? nil
-                                : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
-                            value: pulseScale)
-
-                    // Spinning ring — use Canvas to avoid per-frame View layout overhead
-                    Canvas { ctx, size in
-                        let center = CGPoint(x: size.width / 2, y: size.height / 2)
-                        let r = size.width / 2 - 1.5
-                        var path = Path()
-                        path.addArc(
-                            center: center, radius: r, startAngle: .degrees(0),
-                            endAngle: .degrees(360), clockwise: false)
-                        ctx.stroke(path, with: .color(accentColor), lineWidth: 3)
-                    }
-                    .frame(width: 80, height: 80)
-                    .rotationEffect(.degrees(rotation))
-                    .animation(
-                        reduceMotion
-                            ? nil
-                            : .linear(duration: 1.5).repeatForever(autoreverses: false),
-                        value: rotation)
-
-                    // Optional glow halo
-                    if let glow = glowColor, !reduceMotion {
-                        Circle()
-                            .fill(glow.opacity(0.3))
-                            .blur(radius: 20)
-                            .frame(width: 100, height: 100)
-                            .scaleEffect(pulseScale)
-                    }
-
-                    // Orbiting dots drawn in Canvas — zero SwiftUI layout overhead per frame
-                    Canvas(rendersAsynchronously: false) { ctx, size in
-                        let center = CGPoint(x: size.width / 2, y: size.height / 2)
-                        let dots:
-                            [(
-                                angle: Double, radius: CGFloat, speed: Double, sz: CGFloat,
-                                useSecondary: Bool
-                            )] = [
-                                (0, 45, 1.0, 8, false),
-                                (2.09, 45, 1.0, 6, true),
-                                (4.19, 45, 1.0, 8, false),
-                                (1.05, 35, -1.5, 5, true),
-                                (3.14, 35, -1.5, 5, false),
-                                (5.24, 35, -1.5, 5, true),
-                            ]
-                        let rotRad = rotation * .pi / 180
-                        for dot in dots {
-                            let a = dot.angle + rotRad * dot.speed
-                            let x = center.x + cos(a) * dot.radius
-                            let y = center.y + sin(a) * dot.radius
-                            let rect = CGRect(
-                                x: x - dot.sz / 2, y: y - dot.sz / 2, width: dot.sz, height: dot.sz)
-                            var path = Path()
-                            path.addEllipse(in: rect)
-                            ctx.fill(
-                                path,
-                                with: .color(dot.useSecondary ? secondaryAccentColor : accentColor))
-                        }
-                    }
-                    .frame(width: 100, height: 100)
+                .overlay {
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .stroke(accentColor.opacity(0.08), lineWidth: 1)
                 }
-                .frame(width: 100, height: 100)
 
-                VStack(spacing: 8) {
-                    Text(loadingPhrase)
-                        .font(.system(.subheadline, design: .rounded, weight: .bold))
-                        .foregroundStyle(primaryTextColor)
+            VStack(spacing: 18) {
+                skeletonCardPlaceholder
 
-                    // Animated ellipsis dots
-                    HStack(spacing: 4) {
-                        ForEach(0..<3) { i in
-                            Circle()
-                                .fill(accentColor)
-                                .frame(width: 6, height: 6)
-                                .opacity(pulseScale > 1.1 - Double(i) * 0.15 ? 1.0 : 0.3)
-                                .animation(
-                                    reduceMotion
-                                        ? nil
-                                        : .easeInOut(duration: 0.5)
-                                            .repeatForever(autoreverses: true)
-                                            .delay(Double(i) * 0.15),
-                                    value: pulseScale
-                                )
-                        }
+                if effectiveReduceMotion {
+                    VStack(spacing: 10) {
+                        ProgressView()
+                            .tint(accentColor)
+                            .controlSize(.regular)
+                        Text(loadingPhrase)
+                            .font(.system(.subheadline, design: .rounded, weight: .bold))
+                            .foregroundStyle(primaryTextColor)
                     }
+                } else {
+                    microMotionLoader
                 }
             }
+            .padding(16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
         .transition(
-            reduceMotion
+            effectiveReduceMotion
                 ? .opacity
                 : .asymmetric(
                     insertion: .opacity.combined(with: .scale(scale: 0.9)),
@@ -1347,14 +1258,161 @@ private struct GeneratingOverlay: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Generating advice")
         .onAppear {
-            if reduceMotion {
-                rotation = 0
-                pulseScale = 1.0
-            } else {
-                rotation = 360
-                pulseScale = 1.2
-            }
             loadingPhrase = Self.loadingPhrases.randomElement() ?? Self.loadingPhrases[0]
+            guard !effectiveReduceMotion else { return }
+            ringRotation = 360
+            dotBouncePhase = true
+            shimmerTravel = 220
+            textShimmerTravel = 140
+            glowScale = 1.06
+            glowOpacity = 0.28
         }
+        .onDisappear {
+            ringRotation = 0
+            dotBouncePhase = false
+            shimmerTravel = -220
+            textShimmerTravel = -140
+            glowScale = 0.94
+            glowOpacity = 0.16
+        }
+    }
+
+    private var microMotionLoader: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .stroke(accentColor.opacity(0.14), lineWidth: 3)
+                    .frame(width: 44, height: 44)
+
+                Circle()
+                    .trim(from: 0.08, to: 0.88)
+                    .stroke(
+                        AngularGradient(
+                            colors: [
+                                accentColor.opacity(0.2),
+                                accentColor,
+                                secondaryAccentColor,
+                                accentColor.opacity(0.35),
+                            ],
+                            center: .center
+                        ),
+                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                    )
+                    .frame(width: 44, height: 44)
+                    .rotationEffect(.degrees(ringRotation))
+                    .animation(.linear(duration: 1.15).repeatForever(autoreverses: false), value: ringRotation)
+
+                if let glow = glowColor {
+                    Circle()
+                        .fill(glow.opacity(glowOpacity))
+                        .frame(width: 28, height: 28)
+                        .scaleEffect(glowScale)
+                        .animation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true), value: glowScale)
+                }
+            }
+
+            HStack(spacing: 7) {
+                ForEach(0..<3, id: \.self) { index in
+                    Circle()
+                        .fill(index == 1 ? secondaryAccentColor : accentColor)
+                        .frame(width: 6, height: 6)
+                        .offset(y: dotBouncePhase ? -3 : 2)
+                        .opacity(dotBouncePhase ? 1.0 : 0.45)
+                        .animation(
+                            .easeInOut(duration: 0.95)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.12),
+                            value: dotBouncePhase
+                        )
+                }
+            }
+
+            ZStack {
+                Text(loadingPhrase)
+                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                    .foregroundStyle(primaryTextColor.opacity(0.84))
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.clear, .white.opacity(0.95), .clear],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: 90, height: 20)
+                    .offset(x: textShimmerTravel)
+                    .blendMode(.screen)
+                    .mask {
+                        Text(loadingPhrase)
+                            .font(.system(.subheadline, design: .rounded, weight: .bold))
+                    }
+                    .animation(.linear(duration: 1.2).repeatForever(autoreverses: false), value: textShimmerTravel)
+            }
+        }
+    }
+
+    private var skeletonCardPlaceholder: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            skeletonLine(width: 0.46, height: 14)
+            skeletonLine(width: 0.92, height: 22)
+            skeletonLine(width: 0.78, height: 16)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(cardColor.opacity(0.82))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(accentColor.opacity(0.12), lineWidth: 1)
+                )
+        )
+        .overlay {
+            if !effectiveReduceMotion {
+                shimmerBand
+                    .mask {
+                        VStack(alignment: .leading, spacing: 14) {
+                            skeletonLine(width: 0.46, height: 14)
+                            skeletonLine(width: 0.92, height: 22)
+                            skeletonLine(width: 0.78, height: 16)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
+                    }
+            }
+        }
+    }
+
+    private var shimmerBand: some View {
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        .clear,
+                        .white.opacity(0.08),
+                        .white.opacity(0.30),
+                        .white.opacity(0.08),
+                        .clear,
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(width: 170)
+            .rotationEffect(.degrees(14))
+            .offset(x: shimmerTravel)
+            .animation(.linear(duration: 1.2).repeatForever(autoreverses: false), value: shimmerTravel)
+    }
+
+    private func skeletonLine(width: CGFloat, height: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: height * 0.45, style: .continuous)
+            .fill(accentColor.opacity(0.10))
+            .overlay {
+                RoundedRectangle(cornerRadius: height * 0.45, style: .continuous)
+                    .fill(primaryTextColor.opacity(0.07))
+            }
+            .frame(width: max(84, 280 * width), height: height)
+            .accessibilityHidden(true)
     }
 }

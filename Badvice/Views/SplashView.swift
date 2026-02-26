@@ -3,11 +3,14 @@ import SwiftUI
 struct SplashView: View {
     @Binding var isShowing: Bool
 
-    @State private var wordmarkScale: CGFloat = 0.72
-    @State private var wordmarkOpacity: Double = 0
+    @State private var logoScale: CGFloat = 0.88
+    @State private var logoOpacity: Double = 0
+    @State private var logoGlowScale: CGFloat = 0.92
+    @State private var logoGlowOpacity: Double = 0
     @State private var taglineOpacity: Double = 0
     @State private var taglineOffset: CGFloat = 12
-    @State private var glowOpacity: Double = 0
+    @State private var wordmarkScale: CGFloat = 0.92
+    @State private var wordmarkOpacity: Double = 0
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     var body: some View {
@@ -22,27 +25,26 @@ struct SplashView: View {
             CinematicVignetteView()
                 .opacity(0.7)
 
-            // Soft radial glow behind wordmark
-            RadialGradient(
-                colors: [Color(hex: "8F4A22").opacity(0.38), .clear],
-                center: .center,
-                startRadius: 10,
-                endRadius: 260
-            )
-            .opacity(glowOpacity)
-            .ignoresSafeArea()
-
             VStack(spacing: 0) {
                 Spacer()
 
-                // App logo
-                Image("SplashLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 108, height: 108)
-                    .shadow(color: Color(hex: "8F4A22").opacity(0.25), radius: 12, x: 0, y: 8)
-                    .scaleEffect(wordmarkScale * 1.05) // Ken Burns effect
-                    .opacity(wordmarkOpacity)
+                ZStack {
+                    // Tight, low-cost glow behind the mark only
+                    Circle()
+                        .fill(Color(hex: "8F4A22").opacity(0.26))
+                        .frame(width: 108, height: 108)
+                        .blur(radius: 12)
+                        .scaleEffect(logoGlowScale)
+                        .opacity(logoGlowOpacity)
+
+                    Image("BadviceMark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 138, height: 138)
+                        .shadow(color: Color(hex: "8F4A22").opacity(0.16), radius: 8, x: 0, y: 5)
+                        .scaleEffect(logoScale)
+                        .opacity(logoOpacity)
+                }
 
                 Spacer().frame(height: 30)
 
@@ -76,27 +78,51 @@ struct SplashView: View {
             }
         }
         .onAppear {
-            // Triple-A Polish: Initial state for Ken Burns
+            logoScale = accessibilityReduceMotion ? 1.0 : 0.88
+            logoOpacity = 0
+            logoGlowScale = accessibilityReduceMotion ? 1.0 : 0.92
+            logoGlowOpacity = 0
             wordmarkScale = 0.92
+            wordmarkOpacity = 0
+            taglineOpacity = 0
+            taglineOffset = 12
+
             let animateInDuration = accessibilityReduceMotion ? 0.35 : 1.2
             let holdDuration = accessibilityReduceMotion ? 1.0 : 2.2
             let animateOutDuration = accessibilityReduceMotion ? 0.25 : 0.45
 
-            // Animate in
-            withAnimation(.easeOut(duration: animateInDuration)) {
-                wordmarkScale = 1.0 // Subtle zoom
+            withAnimation(
+                accessibilityReduceMotion
+                    ? .easeOut(duration: animateInDuration)
+                    : .spring(response: 0.62, dampingFraction: 0.82)
+            ) {
+                logoScale = 1.0
+                logoOpacity = 1.0
+                wordmarkScale = 1.0
                 wordmarkOpacity = 1.0
-                glowOpacity = 1.0
+                logoGlowOpacity = accessibilityReduceMotion ? 0.12 : 0.22
+            }
+
+            withAnimation(.easeOut(duration: animateInDuration * 0.95).delay(accessibilityReduceMotion ? 0 : 0.06)) {
                 taglineOpacity = 1.0
                 taglineOffset = 0
+            }
+
+            if !accessibilityReduceMotion {
+                withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true)) {
+                    logoGlowScale = 1.08
+                    logoGlowOpacity = 0.28
+                }
             }
 
             // Animate out after delay
             DispatchQueue.main.asyncAfter(deadline: .now() + holdDuration) {
                 withAnimation(.easeIn(duration: animateOutDuration)) {
+                    logoOpacity = 0
                     wordmarkOpacity = 0
                     taglineOpacity = 0
-                    glowOpacity = 0
+                    logoGlowOpacity = 0
+                    logoScale = accessibilityReduceMotion ? 1.0 : 1.02
                     wordmarkScale = accessibilityReduceMotion ? 1.0 : 1.05
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + animateOutDuration + 0.05) {
