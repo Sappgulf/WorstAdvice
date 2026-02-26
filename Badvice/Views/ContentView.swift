@@ -1,8 +1,8 @@
+import Combine
+import CoreMotion
 import StoreKit
 import SwiftData
 import SwiftUI
-import CoreMotion
-import Combine
 
 // RenderBudget and related view-performance helpers are defined in Theme.swift.
 
@@ -31,7 +31,7 @@ private struct ScrollTrackingModifier: ViewModifier {
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @State private var dragIntent: Bool?
-    
+
     func body(content: Content) -> some View {
         content
             .simultaneousGesture(
@@ -66,8 +66,6 @@ private struct ScrollTrackingModifier: ViewModifier {
     }
 }
 
-
-
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.requestReview) private var requestReview
@@ -93,11 +91,11 @@ struct ContentView: View {
     @State private var shouldRestartOnNextActive = false
     @State private var deviceCapability = DeviceCapabilityProfile.current()
     @State private var hasScheduledDebugPolishFixturePreload = false
-    
+
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("favoritesCountAtLastReview") private var favoritesCountAtLastReview = 0
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
-    
+
     private var launchArguments: [String] { ProcessInfo.processInfo.arguments }
     private var isUITesting: Bool { launchArguments.contains("-ui-testing") }
 
@@ -114,8 +112,10 @@ struct ContentView: View {
                     }
             } else if let session {
                 let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion
-                let constrainedMotion = reduceMotion || lowPowerModeEnabled || deviceCapability.prefersReducedEffects
-                let effectiveLowPowerMode = lowPowerModeEnabled || deviceCapability.forceLowPowerVisuals
+                let constrainedMotion =
+                    reduceMotion || lowPowerModeEnabled || deviceCapability.prefersReducedEffects
+                let effectiveLowPowerMode =
+                    lowPowerModeEnabled || deviceCapability.forceLowPowerVisuals
                 let renderBudget = budget(for: session, lowPowerModeEnabled: effectiveLowPowerMode)
                 let shouldRenderParticles = selectedTab == .generate || selectedTab == .chaosHub
                 ZStack {
@@ -127,7 +127,7 @@ struct ContentView: View {
                         budget: renderBudget,
                         lowPowerModeEnabled: effectiveLowPowerMode
                     )
-                        .ignoresSafeArea()
+                    .ignoresSafeArea()
 
                     if shouldRenderParticles {
                         FloatingParticlesView(
@@ -144,7 +144,7 @@ struct ContentView: View {
                         ForEach(session.settings.tabOrder) { tab in
                             tabView(for: tab, session: session)
                                 .tag(tab)
-                                .toolbar(.hidden, for: .tabBar) // Hide standard bar
+                                .toolbar(.hidden, for: .tabBar)  // Hide standard bar
                                 .environment(\.tabBarVisible, $tabBarVisible)
                         }
                     }
@@ -153,8 +153,9 @@ struct ContentView: View {
                     // region without pushing content under the Dynamic Island / status bar.
                     .ignoresSafeArea(.all, edges: .bottom)
                     // Performance: Disable animation if reduce motion is enabled
-                    .animation(constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
-                    
+                    .animation(
+                        constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
+
                     // Custom Floating Tab Bar — supports tap and instant press-slide
                     GeometryReader { proxy in
                         VStack {
@@ -170,11 +171,18 @@ struct ContentView: View {
                                     let tabAccessibilityID = "tab.\(tab.rawValue)"
                                     VStack(spacing: 3) {
                                         Image(systemName: tab.systemImage)
-                                            .font(.system(size: 20, weight: isSelected ? .semibold : .medium))
+                                            .font(
+                                                .system(
+                                                    size: 20,
+                                                    weight: isSelected ? .semibold : .medium)
+                                            )
                                             .symbolVariant(isSelected ? .fill : .none)
                                             .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
                                         Text(tab.title)
-                                            .font(.system(size: 9, weight: isSelected ? .semibold : .regular))
+                                            .font(
+                                                .system(
+                                                    size: 9,
+                                                    weight: isSelected ? .semibold : .regular))
                                         Capsule(style: .continuous)
                                             .fill(accent.opacity(isSelected ? 0.9 : 0))
                                             .frame(width: isSelected ? 18 : 8, height: 3)
@@ -195,8 +203,16 @@ struct ContentView: View {
                                     .background {
                                         if isSelected || isHighlighted {
                                             Capsule(style: .continuous)
-                                                .fill(accent.opacity(isSelected ? tabBarStyle.selectedFillOpacity : tabBarStyle.highlightedFillOpacity))
-                                                .padding(.horizontal, max(4, tabBarStyle.indicatorInset + 3))
+                                                .fill(
+                                                    accent.opacity(
+                                                        isSelected
+                                                            ? tabBarStyle.selectedFillOpacity
+                                                            : tabBarStyle.highlightedFillOpacity)
+                                                )
+                                                .padding(
+                                                    .horizontal,
+                                                    max(4, tabBarStyle.indicatorInset + 3)
+                                                )
                                                 .padding(.vertical, 1)
                                         }
                                     }
@@ -204,7 +220,10 @@ struct ContentView: View {
                                         if isSelected, let glow = tabBarStyle.glow {
                                             Capsule(style: .continuous)
                                                 .stroke(glow.opacity(0.35), lineWidth: 1)
-                                                .padding(.horizontal, max(5, tabBarStyle.indicatorInset + 4))
+                                                .padding(
+                                                    .horizontal,
+                                                    max(5, tabBarStyle.indicatorInset + 4)
+                                                )
                                                 .padding(.vertical, 2)
                                         }
                                     }
@@ -212,22 +231,28 @@ struct ContentView: View {
                                     .accessibilityAddTraits(.isButton)
                                     .onTapGesture {
                                         guard selectedTab != tab else { return }
-                                        HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
+                                        HapticsManager.playSelection(
+                                            isEnabled: session.settings.hapticsEnabled)
                                         if constrainedMotion {
                                             selectedTab = tab
                                         } else {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                            withAnimation(
+                                                .spring(response: 0.3, dampingFraction: 0.7)
+                                            ) {
                                                 selectedTab = tab
                                             }
                                         }
                                     }
                                     .accessibilityAction {
                                         if selectedTab != tab {
-                                            HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
+                                            HapticsManager.playSelection(
+                                                isEnabled: session.settings.hapticsEnabled)
                                             if constrainedMotion {
                                                 selectedTab = tab
                                             } else {
-                                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                                withAnimation(
+                                                    .spring(response: 0.3, dampingFraction: 0.7)
+                                                ) {
                                                     selectedTab = tab
                                                 }
                                             }
@@ -255,10 +280,15 @@ struct ContentView: View {
                                     .onChanged { drag in
                                         let horizontalMovement = abs(drag.translation.width)
                                         let verticalMovement = abs(drag.translation.height)
-                                        let shouldActivateSlide = horizontalMovement >= 6 || (horizontalMovement > verticalMovement && horizontalMovement >= 2)
+                                        let shouldActivateSlide =
+                                            horizontalMovement >= 6
+                                            || (horizontalMovement > verticalMovement
+                                                && horizontalMovement >= 2)
                                         guard shouldActivateSlide else { return }
                                         if !tabSlideModeActive {
-                                            beginTabSlide(tabs: tabs, hapticsEnabled: session.settings.hapticsEnabled)
+                                            beginTabSlide(
+                                                tabs: tabs,
+                                                hapticsEnabled: session.settings.hapticsEnabled)
                                         }
                                         updateTabSlide(
                                             locationX: drag.location.x,
@@ -277,21 +307,32 @@ struct ContentView: View {
                                     if lowPowerModeEnabled {
                                         RoundedRectangle(cornerRadius: 28, style: .continuous)
                                             .fill(tabBarStyle.backgroundTint.opacity(0.94))
-                                            .shadow(color: tabBarStyle.shadow, radius: tabBarStyle.shadowRadius * 0.75, x: 0, y: 6)
+                                            .shadow(
+                                                color: tabBarStyle.shadow,
+                                                radius: tabBarStyle.shadowRadius * 0.75, x: 0, y: 6)
                                     } else {
                                         RoundedRectangle(cornerRadius: 28, style: .continuous)
                                             .fill(.ultraThinMaterial)
                                             .overlay {
-                                                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                                    .fill(tabBarStyle.backgroundTint.opacity(tabBarStyle.materialOverlayOpacity))
+                                                RoundedRectangle(
+                                                    cornerRadius: 28, style: .continuous
+                                                )
+                                                .fill(
+                                                    tabBarStyle.backgroundTint.opacity(
+                                                        tabBarStyle.materialOverlayOpacity))
                                             }
-                                            .shadow(color: tabBarStyle.shadow, radius: tabBarStyle.shadowRadius, x: 0, y: 8)
+                                            .shadow(
+                                                color: tabBarStyle.shadow,
+                                                radius: tabBarStyle.shadowRadius, x: 0, y: 8)
                                     }
 
                                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                                         .stroke(
                                             LinearGradient(
-                                                colors: [tabBarStyle.borderTop, tabBarStyle.borderBottom, tabBarStyle.borderTop.opacity(0.55)],
+                                                colors: [
+                                                    tabBarStyle.borderTop, tabBarStyle.borderBottom,
+                                                    tabBarStyle.borderTop.opacity(0.55),
+                                                ],
                                                 startPoint: .topLeading,
                                                 endPoint: .bottomTrailing
                                             ),
@@ -301,7 +342,10 @@ struct ContentView: View {
                                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                                         .fill(
                                             LinearGradient(
-                                                colors: [.white.opacity(0.22), .white.opacity(0.04), .clear],
+                                                colors: [
+                                                    .white.opacity(0.22), .white.opacity(0.04),
+                                                    .clear,
+                                                ],
                                                 startPoint: .top,
                                                 endPoint: .bottom
                                             )
@@ -318,12 +362,15 @@ struct ContentView: View {
                             .padding(.horizontal, 16)
                             .padding(.bottom, max(6, proxy.safeAreaInsets.bottom * 0.2))
                             .offset(y: tabBarVisible ? 0 : 120)
-                            .animation(constrainedMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: tabBarVisible)
+                            .animation(
+                                constrainedMotion
+                                    ? nil : .spring(response: 0.4, dampingFraction: 0.8),
+                                value: tabBarVisible)
                         }
                     }
                     .ignoresSafeArea(.container, edges: .bottom)
                     .ignoresSafeArea(.keyboard)
-                    
+
                     // Confetti overlay — fires on streak milestones
                     ConfettiView(isActive: $showConfetti, lowPowerMode: effectiveLowPowerMode)
                 }
@@ -333,14 +380,17 @@ struct ContentView: View {
                     if weight > 0.4 { return .impact(weight: .medium) }
                     return .impact(weight: .light)
                 }
-                .fullScreenCover(isPresented: .init(
-                    get: { !hasSeenOnboarding },
-                    set: { if !$0 { hasSeenOnboarding = true } }
-                )) {
-                    OnboardingFlow(isPresented: .init(
+                .fullScreenCover(
+                    isPresented: .init(
                         get: { !hasSeenOnboarding },
                         set: { if !$0 { hasSeenOnboarding = true } }
-                    ))
+                    )
+                ) {
+                    OnboardingFlow(
+                        isPresented: .init(
+                            get: { !hasSeenOnboarding },
+                            set: { if !$0 { hasSeenOnboarding = true } }
+                        ))
                 }
                 .onChange(of: session.generate.challengeStreakDays) { _, days in
                     if [3, 7, 14, 30].contains(days) {
@@ -406,11 +456,16 @@ struct ContentView: View {
                     }
                     session.generate.refreshRetentionStateOnAppear()
                 }
-                .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
+                .onReceive(
+                    NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)
+                ) { _ in
                     lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
                     deviceCapability = DeviceCapabilityProfile.current()
                 }
-                .onReceive(NotificationCenter.default.publisher(for: ProcessInfo.thermalStateDidChangeNotification)) { _ in
+                .onReceive(
+                    NotificationCenter.default.publisher(
+                        for: ProcessInfo.thermalStateDidChangeNotification)
+                ) { _ in
                     deviceCapability = DeviceCapabilityProfile.current()
                 }
                 .onDisappear {
@@ -446,10 +501,12 @@ struct ContentView: View {
         }
     }
 
-    private func budget(for session: AppSessionViewModel, lowPowerModeEnabled: Bool) -> RenderBudget {
+    private func budget(for session: AppSessionViewModel, lowPowerModeEnabled: Bool) -> RenderBudget
+    {
         let baseline: RenderBudget
         if lowPowerModeEnabled || session.settings.performanceMode {
-            baseline = selectedTab == .generate && session.generate.isGenerating ? .balanced : .reduced
+            baseline =
+                selectedTab == .generate && session.generate.isGenerating ? .balanced : .reduced
         } else {
             switch selectedTab {
             case .generate:
@@ -523,8 +580,9 @@ struct ContentView: View {
             session?.settings.hapticsEnabled = false
         }
         if !hasScheduledDebugPolishFixturePreload,
-           launchArguments.contains("-debug-preload-polish-fixtures"),
-           let session {
+            launchArguments.contains("-debug-preload-polish-fixtures"),
+            let session
+        {
             hasScheduledDebugPolishFixturePreload = true
             let seed = intLaunchArgumentValue(after: "-debug-polish-seed") ?? 424_242
             Task {
@@ -700,7 +758,8 @@ struct ContentView: View {
     }
 
     private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
-        let reduceMotion = session.settings.reduceMotion || accessibilityReduceMotion || lowPowerModeEnabled
+        let reduceMotion =
+            session.settings.reduceMotion || accessibilityReduceMotion || lowPowerModeEnabled
         if reduceMotion {
             selectedTab = tab
         } else {
@@ -721,7 +780,7 @@ struct ContentView: View {
                 UserQuoteSuggestion.self,
                 QuoteVoteRecord.self,
                 LearningStatRecord.self,
-                AppSettingsEntity.self
+                AppSettingsEntity.self,
             ],
             inMemory: true
         )

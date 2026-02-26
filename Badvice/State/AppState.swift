@@ -1,10 +1,11 @@
 import Foundation
-import Observation
 import OSLog
+import Observation
 import SwiftData
 import UIKit
+
 #if canImport(FoundationModels)
-import FoundationModels
+    import FoundationModels
 #endif
 
 private let logger = Logger(subsystem: "com.worstadvice.app", category: "state")
@@ -36,7 +37,9 @@ enum AppleOnDeviceModelAvailability: Equatable, Sendable {
             if normalized.contains("not eligible") { return "device_not_eligible" }
             if normalized.contains("enable apple intelligence") { return "disabled" }
             if normalized.contains("still downloading") { return "model_not_ready" }
-            if normalized.contains("low-performance") || normalized.contains("high-thermal") { return "device_policy_blocked" }
+            if normalized.contains("low-performance") || normalized.contains("high-thermal") {
+                return "device_policy_blocked"
+            }
             if normalized.contains("requires ios 26") { return "os_too_old" }
             if normalized.contains("not compiled") { return "framework_missing" }
             return "unavailable_other"
@@ -56,28 +59,32 @@ final class AppleOnDeviceAdviceBridge {
         deviceProfile: DeviceCapabilityProfile = .current()
     ) -> AppleOnDeviceModelAvailability {
         if deviceProfile.shouldAvoidOnDeviceLanguageGeneration {
-            return .unavailable("Device is in a low-performance or high-thermal state. Using classic generator.")
+            return .unavailable(
+                "Device is in a low-performance or high-thermal state. Using classic generator.")
         }
 
         #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            let model = SystemLanguageModel.default
-            switch model.availability {
-            case .available:
-                return .ready
-            case .unavailable(.deviceNotEligible):
-                return .unavailable("This device is not eligible for Apple Intelligence.")
-            case .unavailable(.appleIntelligenceNotEnabled):
-                return .unavailable("Enable Apple Intelligence in Settings to use on-device generation.")
-            case .unavailable(.modelNotReady):
-                return .unavailable("Apple on-device model is still downloading.")
-            case .unavailable(let other):
-                return .unavailable("Apple on-device model unavailable: \(String(describing: other)).")
+            if #available(iOS 26.0, *) {
+                let model = SystemLanguageModel.default
+                switch model.availability {
+                case .available:
+                    return .ready
+                case .unavailable(.deviceNotEligible):
+                    return .unavailable("This device is not eligible for Apple Intelligence.")
+                case .unavailable(.appleIntelligenceNotEnabled):
+                    return .unavailable(
+                        "Enable Apple Intelligence in Settings to use on-device generation.")
+                case .unavailable(.modelNotReady):
+                    return .unavailable("Apple on-device model is still downloading.")
+                case .unavailable(let other):
+                    return .unavailable(
+                        "Apple on-device model unavailable: \(String(describing: other)).")
+                }
             }
-        }
-        return .unavailable("Requires iOS 26 or later.")
+            return .unavailable("Requires iOS 26 or later.")
         #else
-        return .unavailable("This build was not compiled with Apple's FoundationModels framework.")
+            return .unavailable(
+                "This build was not compiled with Apple's FoundationModels framework.")
         #endif
     }
 
@@ -94,39 +101,42 @@ final class AppleOnDeviceAdviceBridge {
         }
 
         #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            let instructions = Self.instructions(category: category, tone: tone)
-            let session = LanguageModelSession(instructions: instructions)
-            let situationContext = try? await self.prepareSituationContextIfNeeded(situation)
-            let prompt = Self.prompt(
-                category: category,
-                tone: tone,
-                situationContext: situationContext,
-                seed: seed
-            )
-            let response = try await session.respond(to: prompt)
-            let parsed = Self.parseModelTextResponse(response.content)
+            if #available(iOS 26.0, *) {
+                let instructions = Self.instructions(category: category, tone: tone)
+                let session = LanguageModelSession(instructions: instructions)
+                let situationContext = try? await self.prepareSituationContextIfNeeded(situation)
+                let prompt = Self.prompt(
+                    category: category,
+                    tone: tone,
+                    situationContext: situationContext,
+                    seed: seed
+                )
+                let response = try await session.respond(to: prompt)
+                let parsed = Self.parseModelTextResponse(response.content)
 
-            let rawAdvice = parsed.advice.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !rawAdvice.isEmpty else {
-                throw AppleOnDeviceAdviceError.invalidResponse
+                let rawAdvice = parsed.advice.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !rawAdvice.isEmpty else {
+                    throw AppleOnDeviceAdviceError.invalidResponse
+                }
+                let rawRationale =
+                    includeRationale
+                    ? parsed.rationale?.trimmingCharacters(in: .whitespacesAndNewlines)
+                    : nil
+                let moderated = moderation.apply(
+                    to: Self.trimmedOutput(rawAdvice, limit: 220),
+                    rationale: rawRationale.flatMap {
+                        $0.isEmpty ? nil : Self.trimmedOutput($0, limit: 140)
+                    }
+                )
+
+                return GeneratedAdvice(
+                    category: category,
+                    tone: tone,
+                    adviceLine: moderated.advice,
+                    rationaleLine: moderated.rationale,
+                    createdAt: now
+                )
             }
-            let rawRationale = includeRationale
-                ? parsed.rationale?.trimmingCharacters(in: .whitespacesAndNewlines)
-                : nil
-            let moderated = moderation.apply(
-                to: Self.trimmedOutput(rawAdvice, limit: 220),
-                rationale: rawRationale.flatMap { $0.isEmpty ? nil : Self.trimmedOutput($0, limit: 140) }
-            )
-
-            return GeneratedAdvice(
-                category: category,
-                tone: tone,
-                adviceLine: moderated.advice,
-                rationaleLine: moderated.rationale,
-                createdAt: now
-            )
-        }
         #endif
 
         throw AppleOnDeviceAdviceError.unavailable
@@ -143,28 +153,30 @@ final class AppleOnDeviceAdviceBridge {
         }
 
         #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            let session = LanguageModelSession(instructions: Self.quoteInstructions(category: category, tone: tone))
-            let response = try await session.respond(
-                to: Self.quotePrompt(category: category, tone: tone, seed: seed)
-            )
-            let parsed = Self.parseModelQuoteResponse(response.content)
-            let quoteText = Self.trimmedOutput(parsed.quote, limit: 160)
-            guard !quoteText.isEmpty else {
-                throw AppleOnDeviceAdviceError.invalidResponse
+            if #available(iOS 26.0, *) {
+                let session = LanguageModelSession(
+                    instructions: Self.quoteInstructions(category: category, tone: tone))
+                let response = try await session.respond(
+                    to: Self.quotePrompt(category: category, tone: tone, seed: seed)
+                )
+                let parsed = Self.parseModelQuoteResponse(response.content)
+                let quoteText = Self.trimmedOutput(parsed.quote, limit: 160)
+                guard !quoteText.isEmpty else {
+                    throw AppleOnDeviceAdviceError.invalidResponse
+                }
+                let source =
+                    parsed.source.flatMap { candidate -> String? in
+                        let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+                        return trimmed.isEmpty ? nil : String(trimmed.prefix(44))
+                    } ?? "Apple On-Device Quote Lab"
+                let moderated = moderation.apply(to: quoteText, rationale: nil)
+                return BadQuote(
+                    id: "apple-quote-\(category.rawValue)-\(seed)",
+                    text: moderated.advice,
+                    source: source,
+                    category: category
+                )
             }
-            let source = parsed.source.flatMap { candidate -> String? in
-                let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-                return trimmed.isEmpty ? nil : String(trimmed.prefix(44))
-            } ?? "Apple On-Device Quote Lab"
-            let moderated = moderation.apply(to: quoteText, rationale: nil)
-            return BadQuote(
-                id: "apple-quote-\(category.rawValue)-\(seed)",
-                text: moderated.advice,
-                source: source,
-                category: category
-            )
-        }
         #endif
 
         throw AppleOnDeviceAdviceError.unavailable
@@ -190,14 +202,29 @@ final class AppleOnDeviceAdviceBridge {
         let toneTemplate = toneGenerationTemplate(tone)
 
         if let situationContext {
-            let focusLine = situationContext.focus.map { "Situation focus: \($0)" } ?? "Situation focus: (none)"
-            let tags = situationContext.tags.isEmpty ? "(none)" : situationContext.tags.joined(separator: ", ")
+            let focusLine =
+                situationContext.focus.map { "Situation focus: \($0)" } ?? "Situation focus: (none)"
+            let tags =
+                situationContext.tags.isEmpty
+                ? "(none)" : situationContext.tags.joined(separator: ", ")
             return """
+                Generate one satirical, obviously bad piece of advice for the \(category.title) category.
+                Tone: \(tone.title)
+                Situation (raw): \(situationContext.original)
+                \(focusLine)
+                Situation tags: \(tags)
+                \(seedLine)
+                Category template: \(categoryTemplate)
+                Tone template: \(toneTemplate)
+                Return exactly two lines:
+                ADVICE: <one short line>
+                RATIONALE: <short explanation of why it is bad, or 'none'>
+                """
+        }
+
+        return """
             Generate one satirical, obviously bad piece of advice for the \(category.title) category.
             Tone: \(tone.title)
-            Situation (raw): \(situationContext.original)
-            \(focusLine)
-            Situation tags: \(tags)
             \(seedLine)
             Category template: \(categoryTemplate)
             Tone template: \(toneTemplate)
@@ -205,18 +232,6 @@ final class AppleOnDeviceAdviceBridge {
             ADVICE: <one short line>
             RATIONALE: <short explanation of why it is bad, or 'none'>
             """
-        }
-
-        return """
-        Generate one satirical, obviously bad piece of advice for the \(category.title) category.
-        Tone: \(tone.title)
-        \(seedLine)
-        Category template: \(categoryTemplate)
-        Tone template: \(toneTemplate)
-        Return exactly two lines:
-        ADVICE: <one short line>
-        RATIONALE: <short explanation of why it is bad, or 'none'>
-        """
     }
 
     private static func instructions(category: AdviceCategory, tone: ToneMode) -> String {
@@ -258,9 +273,11 @@ final class AppleOnDeviceAdviceBridge {
     private static func categoryGenerationTemplate(_ category: AdviceCategory) -> String {
         switch category {
         case .dating:
-            return "Escalate too fast, misread signals, and replace communication with grand gestures."
+            return
+                "Escalate too fast, misread signals, and replace communication with grand gestures."
         case .fitness:
-            return "Ignore recovery and form; optimize for ego, shortcuts, and performative intensity."
+            return
+                "Ignore recovery and form; optimize for ego, shortcuts, and performative intensity."
         case .career:
             return "Treat confidence as competence; overpromise, politic, and skip prep."
         case .money:
@@ -268,15 +285,18 @@ final class AppleOnDeviceAdviceBridge {
         case .parenting:
             return "Apply rigid one-size-fits-all rules and prioritize control over listening."
         case .tech:
-            return "Ship first, ignore testing, and solve human problems with unnecessary complexity."
+            return
+                "Ship first, ignore testing, and solve human problems with unnecessary complexity."
         case .social:
-            return "Center yourself, assume motives, and turn small moments into dramatic statements."
+            return
+                "Center yourself, assume motives, and turn small moments into dramatic statements."
         case .cooking:
             return "Replace measuring and timing with vibes, substitutions, and overconfidence."
         case .travel:
             return "Underplan essentials, overplan aesthetics, and improvise the risky parts."
         case .productivity:
-            return "Build elaborate systems instead of doing the work; optimize theater over output."
+            return
+                "Build elaborate systems instead of doing the work; optimize theater over output."
         case .random:
             return "Pick a clearly bad pattern and commit with total certainty."
         }
@@ -380,24 +400,29 @@ final class AppleOnDeviceAdviceBridge {
     }
 
     @available(iOS 26.0, *)
-    private func prepareSituationContextIfNeeded(_ situation: String?) async throws -> PreparedSituationContext? {
-        guard let raw = situation?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+    private func prepareSituationContextIfNeeded(_ situation: String?) async throws
+        -> PreparedSituationContext?
+    {
+        guard let raw = situation?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty
+        else {
             return nil
         }
         guard raw.count >= 12 else {
             return PreparedSituationContext(original: raw, focus: nil, tags: [])
         }
 
-        let session = LanguageModelSession(instructions: """
-        Summarize a user situation for a satire app prompt.
-        Do not give advice.
-        Return exactly two lines:
-        FOCUS: <short summary>
-        TAGS: <comma-separated 3-6 tags>
-        """)
-        let response = try await session.respond(to: """
-        Situation: \(raw)
-        """)
+        let session = LanguageModelSession(
+            instructions: """
+                Summarize a user situation for a satire app prompt.
+                Do not give advice.
+                Return exactly two lines:
+                FOCUS: <short summary>
+                TAGS: <comma-separated 3-6 tags>
+                """)
+        let response = try await session.respond(
+            to: """
+                Situation: \(raw)
+                """)
         let parsed = Self.parseSituationContextResponse(response.content, original: raw)
         return parsed
     }
@@ -406,7 +431,8 @@ final class AppleOnDeviceAdviceBridge {
         _ text: String,
         original: String
     ) -> PreparedSituationContext {
-        let lines = text
+        let lines =
+            text
             .split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
@@ -432,19 +458,25 @@ final class AppleOnDeviceAdviceBridge {
         )
     }
 
-    private static func parseModelTextResponse(_ text: String) -> (advice: String, rationale: String?) {
-        let lines = text
+    private static func parseModelTextResponse(_ text: String) -> (
+        advice: String, rationale: String?
+    ) {
+        let lines =
+            text
             .split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
-        let adviceLine = lines.first(where: { $0.uppercased().hasPrefix("ADVICE:") })
+        let adviceLine =
+            lines.first(where: { $0.uppercased().hasPrefix("ADVICE:") })
             ?? lines.first
             ?? ""
         let rationaleLine = lines.first(where: { $0.uppercased().hasPrefix("RATIONALE:") })
 
-        let advice = adviceLine.replacingOccurrences(of: "ADVICE:", with: "", options: [.caseInsensitive])
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let advice = adviceLine.replacingOccurrences(
+            of: "ADVICE:", with: "", options: [.caseInsensitive]
+        )
+        .trimmingCharacters(in: .whitespacesAndNewlines)
         let rationaleRaw = rationaleLine?
             .replacingOccurrences(of: "RATIONALE:", with: "", options: [.caseInsensitive])
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -459,19 +491,24 @@ final class AppleOnDeviceAdviceBridge {
         return (advice, rationale)
     }
 
-    private static func parseModelQuoteResponse(_ text: String) -> (quote: String, source: String?) {
-        let lines = text
+    private static func parseModelQuoteResponse(_ text: String) -> (quote: String, source: String?)
+    {
+        let lines =
+            text
             .split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
-        let quoteLine = lines.first(where: { $0.uppercased().hasPrefix("QUOTE:") })
+        let quoteLine =
+            lines.first(where: { $0.uppercased().hasPrefix("QUOTE:") })
             ?? lines.first
             ?? ""
         let sourceLine = lines.first(where: { $0.uppercased().hasPrefix("SOURCE:") })
 
-        let quote = quoteLine.replacingOccurrences(of: "QUOTE:", with: "", options: [.caseInsensitive])
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let quote = quoteLine.replacingOccurrences(
+            of: "QUOTE:", with: "", options: [.caseInsensitive]
+        )
+        .trimmingCharacters(in: .whitespacesAndNewlines)
         let source = sourceLine?
             .replacingOccurrences(of: "SOURCE:", with: "", options: [.caseInsensitive])
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -563,9 +600,9 @@ final class AdviceRecord {
     var rationaleLine: String?
     var isFavorite: Bool
     var voteRaw: Int?
-    var aftermathNote: String?   // User's personal journal entry: what happened when they followed this advice
-    var shareCount: Int?         // Optional so CloudKit can do a lightweight migration; use shareCountValue accessor
-    var copyCount: Int?          // Optional so CloudKit can do a lightweight migration; use copyCountValue accessor
+    var aftermathNote: String?  // User's personal journal entry: what happened when they followed this advice
+    var shareCount: Int?  // Optional so CloudKit can do a lightweight migration; use shareCountValue accessor
+    var copyCount: Int?  // Optional so CloudKit can do a lightweight migration; use copyCountValue accessor
 
     init(
         id: UUID = UUID(),
@@ -800,6 +837,7 @@ final class AppSettingsEntity {
     var includeDisclaimerOnShare: Bool
     var reduceMotion: Bool
     var hapticsEnabled: Bool
+    var soundEffectsEnabledRaw: Bool?
     var includeRationale: Bool
     var preferredTemplateRaw: String
     var preferredAspectRaw: String
@@ -819,6 +857,7 @@ final class AppSettingsEntity {
         includeDisclaimerOnShare: Bool = true,
         reduceMotion: Bool = false,
         hapticsEnabled: Bool = true,
+        soundEffectsEnabled: Bool = true,
         includeRationale: Bool = true,
         preferredTemplate: ShareCardTemplate = .minimal,
         preferredAspect: ShareAspectRatio = .square,
@@ -835,6 +874,7 @@ final class AppSettingsEntity {
         self.includeDisclaimerOnShare = includeDisclaimerOnShare
         self.reduceMotion = reduceMotion
         self.hapticsEnabled = hapticsEnabled
+        self.soundEffectsEnabledRaw = soundEffectsEnabled
         self.includeRationale = includeRationale
         self.preferredTemplateRaw = preferredTemplate.rawValue
         self.preferredAspectRaw = preferredAspect.rawValue
@@ -850,11 +890,14 @@ final class AppSettingsEntity {
         self.tabOrderRaw = tabOrder.map(\.rawValue).joined(separator: ",")
     }
 
-
-
     var theme: ThemeMode {
         get { ThemeMode(rawValue: themeRaw) ?? .badvice }
         set { themeRaw = newValue.rawValue }
+    }
+
+    var soundEffectsEnabled: Bool {
+        get { soundEffectsEnabledRaw ?? true }
+        set { soundEffectsEnabledRaw = newValue }
     }
 
     var preferredTemplate: ShareCardTemplate {
@@ -896,7 +939,6 @@ final class AppSettingsEntity {
         get { performanceModeRaw ?? false }
         set { performanceModeRaw = newValue }
     }
-
 
     var tabOrder: [AppTab] {
         get {
@@ -966,7 +1008,9 @@ final class AdviceRepository {
         save()
         cachedSeenCount = nil
         pruneHistory(maxCount: 50)
-        logger.debug("Inserted advice id=\(generated.id) category=\(generated.category.rawValue) tone=\(generated.tone.rawValue)")
+        logger.debug(
+            "Inserted advice id=\(generated.id) category=\(generated.category.rawValue) tone=\(generated.tone.rawValue)"
+        )
         return record
     }
 
@@ -997,9 +1041,10 @@ final class AdviceRepository {
     func thisWeekFavorites() -> [AdviceRecord] {
         let cutoff = Date().addingTimeInterval(-7 * 86_400)
         let all = fetchFavorites()
-        return Array(all.filter { $0.createdAt >= cutoff }
-            .sorted { ($0.voteRaw ?? 0) > ($1.voteRaw ?? 0) }
-            .prefix(3))
+        return Array(
+            all.filter { $0.createdAt >= cutoff }
+                .sorted { ($0.voteRaw ?? 0) > ($1.voteRaw ?? 0) }
+                .prefix(3))
     }
 
     func historyCount() -> Int {
@@ -1030,17 +1075,23 @@ final class AdviceRepository {
 
     func topByShares(limit: Int = 5) -> [AdviceRecord] {
         let all = fetchAllHistory()
-        return Array(all.filter { $0.shareCountValue > 0 }.sorted { $0.shareCountValue > $1.shareCountValue }.prefix(limit))
+        return Array(
+            all.filter { $0.shareCountValue > 0 }.sorted { $0.shareCountValue > $1.shareCountValue }
+                .prefix(limit))
     }
 
     func topByCopies(limit: Int = 5) -> [AdviceRecord] {
         let all = fetchAllHistory()
-        return Array(all.filter { $0.copyCountValue > 0 }.sorted { $0.copyCountValue > $1.copyCountValue }.prefix(limit))
+        return Array(
+            all.filter { $0.copyCountValue > 0 }.sorted { $0.copyCountValue > $1.copyCountValue }
+                .prefix(limit))
     }
 
     func topByLikes(limit: Int = 5) -> [AdviceRecord] {
         let all = fetchAllHistory()
-        return Array(all.filter { ($0.voteRaw ?? 0) > 0 }.sorted { ($0.voteRaw ?? 0) > ($1.voteRaw ?? 0) }.prefix(limit))
+        return Array(
+            all.filter { ($0.voteRaw ?? 0) > 0 }.sorted { ($0.voteRaw ?? 0) > ($1.voteRaw ?? 0) }
+                .prefix(limit))
     }
 
     func favoriteCount() -> Int {
@@ -1284,7 +1335,9 @@ final class AdviceRepository {
         for record in history {
             let normalizedGlobal = record.adviceLine.normalizedForFiltering
             if seenGlobal.insert(normalizedGlobal).inserted {
-                context.insert(AdviceFingerprint(normalizedText: normalizedGlobal, createdAt: record.createdAt))
+                context.insert(
+                    AdviceFingerprint(normalizedText: normalizedGlobal, createdAt: record.createdAt)
+                )
             }
             let normalizedPool = poolFingerprint(
                 for: record.adviceLine.normalizedForFiltering,
@@ -1292,7 +1345,8 @@ final class AdviceRepository {
                 tone: record.tone
             )
             if seenPool.insert(normalizedPool).inserted {
-                context.insert(AdviceFingerprint(normalizedText: normalizedPool, createdAt: record.createdAt))
+                context.insert(
+                    AdviceFingerprint(normalizedText: normalizedPool, createdAt: record.createdAt))
             }
         }
         pruneAdviceFingerprints(maxCount: Self.maxAdviceFingerprints)
@@ -1468,8 +1522,10 @@ final class AdviceRepository {
     func totalLearningSignalCount() -> Int {
         ensureLearningCache()
         return (cachedLearningStatsByKey ?? [:]).values.reduce(0) { sum, stat in
-            sum + Int(stat.likeCount + stat.dislikeCount + stat.favoriteCount
-                + stat.copyCount + stat.shareCount + stat.regenCount)
+            sum
+                + Int(
+                    stat.likeCount + stat.dislikeCount + stat.favoriteCount
+                        + stat.copyCount + stat.shareCount + stat.regenCount)
         }
     }
 
@@ -1582,7 +1638,8 @@ final class SettingsViewModel {
         self.repository = repository
         self.settings = repository.ensureSettings()
         normalizeStreakFreezeState(for: Date())
-        NotificationManager.updateStreakFreezeAvailability(hasAvailable: streakFreezeAvailableThisWeek)
+        NotificationManager.updateStreakFreezeAvailability(
+            hasAvailable: streakFreezeAvailableThisWeek)
     }
 
     var theme: ThemeMode {
@@ -1617,6 +1674,14 @@ final class SettingsViewModel {
         }
     }
 
+    var soundEffectsEnabled: Bool {
+        get { settings.soundEffectsEnabled }
+        set {
+            settings.soundEffectsEnabled = newValue
+            repository.save()
+        }
+    }
+
     var performanceMode: Bool {
         get { settings.performanceMode }
         set {
@@ -1624,7 +1689,6 @@ final class SettingsViewModel {
             repository.save()
         }
     }
-
 
     var includeRationale: Bool {
         get { settings.includeRationale }
@@ -1770,7 +1834,8 @@ final class SettingsViewModel {
             settings.streakFreezeProtectedDayRaw = nil
             repository.save()
         }
-        NotificationManager.updateStreakFreezeAvailability(hasAvailable: !(settings.streakFreezeUsedRaw ?? false))
+        NotificationManager.updateStreakFreezeAvailability(
+            hasAvailable: !(settings.streakFreezeUsedRaw ?? false))
     }
 
     private static func dayKey(for date: Date) -> String {
@@ -1810,7 +1875,10 @@ struct BadQuoteService: Sendable {
     func randomQuote(excluding excludedID: String? = nil, seed: Int? = nil) -> BadQuote {
         let bank = quotes.isEmpty ? Self.defaultQuotes : quotes
         guard !bank.isEmpty else {
-            return BadQuote(id: "fallback", text: "Never revise a bad plan while it is still confidently wrong.", source: "Urgent Memo", category: .productivity)
+            return BadQuote(
+                id: "fallback",
+                text: "Never revise a bad plan while it is still confidently wrong.",
+                source: "Urgent Memo", category: .productivity)
         }
         let filtered = bank.filter { excludedID == nil || $0.id != excludedID }
         let candidateBank = filtered.isEmpty ? bank : filtered
@@ -1882,7 +1950,8 @@ struct BadQuoteService: Sendable {
             guard seen.insert(normalized).inserted else { continue }
 
             let forbidden = store.rules(for: category, contentPack: .classic).forbiddenPatterns
-            guard !forbidden.contains(where: { normalized.contains($0.normalizedForFiltering) }) else { continue }
+            guard !forbidden.contains(where: { normalized.contains($0.normalizedForFiltering) })
+            else { continue }
 
             let source = entry.tier.map { "Advice Corpus Tier \($0)" } ?? "Advice Corpus"
             built.append(
@@ -1917,7 +1986,7 @@ struct BadQuoteService: Sendable {
             "If {stem} is unclear, lead with {keyword} and sort details in the follow-up.",
             "Anyone who questions {stem} clearly hasn't considered {keyword} as a framework.",
             "{stem} only works if you pair it with {keyword} as your operating principle.",
-            "Escalate {stem} until {keyword} becomes the only logical conclusion."
+            "Escalate {stem} until {keyword} becomes the only logical conclusion.",
         ]
 
         var built: [BadQuote] = []
@@ -1937,7 +2006,8 @@ struct BadQuoteService: Sendable {
             guard stemWords.count >= 8 else { continue }
 
             let template = templates[(quote.text.count + index) % templates.count]
-            let remix = template
+            let remix =
+                template
                 .replacingOccurrences(of: "{stem}", with: stemWords)
                 .replacingOccurrences(of: "{keyword}", with: keyword)
             let normalized = remix.normalizedForFiltering
@@ -1977,20 +2047,23 @@ struct BadQuoteService: Sendable {
 
     private static let cachedCorpusPayload: AdviceCorpusPayload? = {
         guard let url = Bundle.main.url(forResource: "AdviceCorpus", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else {
+            let data = try? Data(contentsOf: url)
+        else {
             return nil
         }
         return decodeCorpus(data: data)
     }()
 
-    static func synthesizedQuoteID(category: AdviceCategory, sourceID: String, text: String) -> String {
+    static func synthesizedQuoteID(category: AdviceCategory, sourceID: String, text: String)
+        -> String
+    {
         "synth-\(category.rawValue)-\(stableDigest(for: "\(sourceID)|\(text)"))"
     }
 
     private static func stableDigest(for text: String) -> String {
         // FNV-1a 64-bit for deterministic IDs across launches/devices.
-        let offset: UInt64 = 1469598103934665603
-        let prime: UInt64 = 1099511628211
+        let offset: UInt64 = 1_469_598_103_934_665_603
+        let prime: UInt64 = 1_099_511_628_211
         let hash = text.utf8.reduce(offset) { partial, byte in
             (partial ^ UInt64(byte)) &* prime
         }
@@ -2045,176 +2118,637 @@ struct BadQuoteService: Sendable {
 
     static let defaultQuotes: [BadQuote] = {
         let seedQuotes: [BadQuote] = [
-        BadQuote(id: "career-1", text: "If nobody understands the plan, call it leadership.", source: "Quarterly Wisdom Deck", category: .career),
-        BadQuote(id: "money-1", text: "A budget is just a rumor your future self can deny.", source: "Finance Group Chat", category: .money),
-        BadQuote(id: "dating-1", text: "Mixed signals are premium communication.", source: "Unlicensed Relationship Coach", category: .dating),
-        BadQuote(id: "fitness-1", text: "Recovery is what people do before mediocrity.", source: "Locker Room Oracle", category: .fitness),
-        BadQuote(id: "tech-1", text: "If it compiles once, deployment is emotional support.", source: "Hotfix Newsletter", category: .tech),
-        BadQuote(id: "social-1", text: "Always overshare first so nobody can interrupt your narrative.", source: "Brunch Panelist", category: .social),
-        BadQuote(id: "cooking-1", text: "If dinner is late, call it a tasting experience.", source: "Kitchen Strategy Lead", category: .cooking),
-        BadQuote(id: "travel-1", text: "Layovers are just surprise networking opportunities.", source: "Airport Visionary", category: .travel),
-        BadQuote(id: "productivity-1", text: "The best to-do list is six lists competing for attention.", source: "Productivity Syndicate", category: .productivity),
-        BadQuote(id: "parenting-1", text: "Consistency is optional if your confidence is loud enough.", source: "Family Process Consultant", category: .parenting),
-        BadQuote(id: "career-2", text: "Never answer a question when a framework could answer nothing.", source: "Boardroom Proverbs", category: .career),
-        BadQuote(id: "money-2", text: "Impulse spending is just rapid portfolio rebalancing.", source: "Wallet Whisperer", category: .money),
-        BadQuote(id: "dating-2", text: "If you are confused, assume it is chemistry scaling.", source: "Situationship Operations", category: .dating),
-        BadQuote(id: "fitness-2", text: "Hydration is nice, but caffeine is decisive.", source: "Preworkout Philosopher", category: .fitness),
-        BadQuote(id: "tech-2", text: "Documentation is a confidence leak.", source: "Sprint Retrospective Poet", category: .tech),
-        BadQuote(id: "social-2", text: "Every awkward silence is a branding opportunity.", source: "Event Tactician", category: .social),
-        BadQuote(id: "cooking-2", text: "A burnt edge is just a flavor thesis.", source: "Midnight Chef Council", category: .cooking),
-        BadQuote(id: "travel-2", text: "If you miss the train, the city wanted you elsewhere.", source: "Transit Mystic", category: .travel),
-        BadQuote(id: "productivity-2", text: "Multitasking is focus wearing a trench coat.", source: "Calendar Economist", category: .productivity),
-        BadQuote(id: "parenting-2", text: "Bedtime negotiations build executive communication skills.", source: "Household Strategy Memo", category: .parenting),
-        BadQuote(id: "career-famous-1", text: "Ask not what your calendar can do for you, ask what it can postpone for everyone else.", source: "Briefing Room Misquotes", category: .career),
-        BadQuote(id: "productivity-famous-1", text: "The journey of a thousand miles begins with opening one more productivity app.", source: "Workflow Paradox Archive", category: .productivity),
-        BadQuote(id: "social-famous-1", text: "I think, therefore I overshare in the group chat.", source: "Philosophy Slack Thread", category: .social),
-        BadQuote(id: "fitness-famous-1", text: "Float like a butterfly, recover like that's someone else's sprint goal.", source: "Locker Room Legend Rewrites", category: .fitness),
-        BadQuote(id: "money-famous-1", text: "To save or to spend? Clearly both, and immediately.", source: "Budget Theater Club", category: .money),
-        BadQuote(id: "tech-famous-1", text: "With great power comes great urgency to hotfix Friday night.", source: "Launch Window Proverbs", category: .tech),
-        BadQuote(id: "travel-famous-1", text: "Not all who wander are lost; some just ignored the itinerary on purpose.", source: "Airport Gate Folklore", category: .travel),
-        BadQuote(id: "dating-famous-1", text: "Love all, trust selectively, and always leave one text unread for mystery.", source: "Romance Remix Desk", category: .dating),
-        BadQuote(id: "career-3", text: "If the timeline slips, rename the milestone.", source: "Roadmap Preservation Society", category: .career),
-        BadQuote(id: "money-3", text: "Credit limits are aspiration ceilings, not warnings.", source: "Consumer Confidence Digest", category: .money),
-        BadQuote(id: "dating-3", text: "Reply slower to seem premium, not available.", source: "Text Thread Lab", category: .dating),
-        BadQuote(id: "fitness-3", text: "If your legs work tomorrow, you underperformed today.", source: "Gym Floor Almanac", category: .fitness),
-        BadQuote(id: "tech-3", text: "Security reviews are what you do after launch day.", source: "Deployment Legend", category: .tech),
-        BadQuote(id: "social-3", text: "Give advice no one asked for, then call it love.", source: "Dinner Table Doctrine", category: .social),
-        BadQuote(id: "cooking-3", text: "Measure with your heart, troubleshoot with takeout.", source: "Pantry Field Notes", category: .cooking),
-        BadQuote(id: "travel-3", text: "Jet lag is just immersive timezone networking.", source: "Carry-On Manifesto", category: .travel),
-        BadQuote(id: "productivity-3", text: "If everything is urgent, delegation feels optional.", source: "Inbox Command Center", category: .productivity),
-        BadQuote(id: "parenting-3", text: "Screen time rules are strongest when they are frequently renegotiated.", source: "Playroom Policy Desk", category: .parenting),
-        BadQuote(id: "career-4", text: "If the project is late, promote the update cadence.", source: "Deadline Rebranding Team", category: .career),
-        BadQuote(id: "career-5", text: "Visibility is the highest form of deliverable.", source: "Office Optics Bureau", category: .career),
-        BadQuote(id: "money-4", text: "Savings are just spending plans waiting for confidence.", source: "Receipt Futurist", category: .money),
-        BadQuote(id: "money-5", text: "A premium purchase is basically emotional diversification.", source: "Lifestyle Ledger", category: .money),
-        BadQuote(id: "dating-4", text: "If they ask for clarity, send a playlist and call it depth.", source: "Romance Advisory Hotline", category: .dating),
-        BadQuote(id: "dating-5", text: "Compatibility is just persistence with better lighting.", source: "Situationship Forecast Desk", category: .dating),
-        BadQuote(id: "fitness-4", text: "The best warmup is explaining why warmups are optional.", source: "Gym Myth Council", category: .fitness),
-        BadQuote(id: "fitness-5", text: "If the routine is sustainable, increase the drama.", source: "Preworkout Ethics Board", category: .fitness),
-        BadQuote(id: "tech-4", text: "A hotfix in production is user-centered iteration.", source: "Release Night Dispatch", category: .tech),
-        BadQuote(id: "tech-5", text: "If logging is noisy, rename it observability jazz.", source: "Incident Poetry Slack", category: .tech),
-        BadQuote(id: "social-4", text: "Reply immediately, reflect eventually.", source: "Group Chat Governance", category: .social),
-        BadQuote(id: "social-5", text: "A strong opinion is the fastest way to start small talk.", source: "Networking Field Manual", category: .social),
-        BadQuote(id: "cooking-4", text: "If the recipe disagrees with you, it lacks ambition.", source: "Countertop Manifesto", category: .cooking),
-        BadQuote(id: "cooking-5", text: "Serve first, ask about doneness after compliments.", source: "Dinner Throughput Council", category: .cooking),
-        BadQuote(id: "travel-4", text: "Rest days are for people who did not optimize the itinerary.", source: "Carry-On Doctrine", category: .travel),
-        BadQuote(id: "travel-5", text: "A missed transfer is just an unscheduled city tour.", source: "Gate Change Philosopher", category: .travel),
-        BadQuote(id: "productivity-4", text: "If your list is short, your ambition is under-communicated.", source: "Task Inflation Office", category: .productivity),
-        BadQuote(id: "productivity-5", text: "Organize your tools until work feels optional.", source: "Workflow Preservation Club", category: .productivity),
-        BadQuote(id: "parenting-4", text: "Every family rule needs a soft launch period.", source: "Home Policy Workshop", category: .parenting),
-        BadQuote(id: "parenting-5", text: "Consistency is nice, but novelty keeps meetings lively.", source: "Living Room Strategy Team", category: .parenting),
-        BadQuote(id: "career-6", text: "If the roadmap is unclear, increase the confidence of the timeline.", source: "Strategic Cadence Office", category: .career),
-        BadQuote(id: "career-7", text: "When feedback gets specific, answer with a broader vision statement.", source: "Management Alignment Bureau", category: .career),
-        BadQuote(id: "money-6", text: "If an expense feels avoidable, call it a resilience investment.", source: "Household Capital Desk", category: .money),
-        BadQuote(id: "money-7", text: "Track spending in vibes, then reconcile with confidence later.", source: "Budget Optimization Circle", category: .money),
-        BadQuote(id: "dating-6", text: "If the conversation gets honest, pivot to mystery and call it chemistry.", source: "Romance Tactics Weekly", category: .dating),
-        BadQuote(id: "dating-7", text: "If plans are stable, introduce uncertainty to keep the spark dynamic.", source: "Date Night Operations", category: .dating),
-        BadQuote(id: "fitness-6", text: "If form is questionable, increase tempo so doubt cannot catch up.", source: "Performance Intensity Desk", category: .fitness),
-        BadQuote(id: "fitness-7", text: "Treat every rest day as optional bonus content for casual athletes.", source: "Gym Culture Memo", category: .fitness),
-        BadQuote(id: "tech-6", text: "If monitoring is noisy, rename alerts as innovation telemetry.", source: "Platform Velocity Channel", category: .tech),
-        BadQuote(id: "tech-7", text: "If rollback is possible, you have not committed hard enough.", source: "Launch Confidence Journal", category: .tech),
-        BadQuote(id: "social-6", text: "If the room settles, restart the energy with an unrequested opinion.", source: "Conversation Growth Team", category: .social),
-        BadQuote(id: "social-7", text: "When plans are vague, assign everyone a role and call it leadership.", source: "Group Chat PMO", category: .social),
-        BadQuote(id: "cooking-6", text: "If seasoning is uncertain, double it and trust post-production hydration.", source: "Kitchen Throughput Forum", category: .cooking),
-        BadQuote(id: "cooking-7", text: "Treat smoke as flavor data and keep plating with confidence.", source: "Stovetop Research Unit", category: .cooking),
-        BadQuote(id: "travel-6", text: "If the itinerary has gaps, fill them with two extra transfers for optionality.", source: "Transit Strategy Board", category: .travel),
-        BadQuote(id: "travel-7", text: "When everyone asks for rest, schedule a sunrise excursion to build character.", source: "Gate Departure Society", category: .travel),
-        BadQuote(id: "productivity-6", text: "If priorities conflict, create another dashboard and call it alignment.", source: "Execution Cadence Lab", category: .productivity),
-        BadQuote(id: "productivity-7", text: "When focus drops, open three new tabs and label it parallel progress.", source: "Workflow Expansion Office", category: .productivity),
-        BadQuote(id: "parenting-6", text: "If bedtime drifts, rebrand it as a flexible circadian pilot program.", source: "Family Scheduling Taskforce", category: .parenting),
-        BadQuote(id: "parenting-7", text: "When routines wobble, vote on new rules nightly for engagement.", source: "House Rules Council", category: .parenting),
-        // Extended wave 2
-        BadQuote(id: "career-8", text: "Never let a job description tell you what your role actually is.", source: "Lateral Ambiguity Collective", category: .career),
-        BadQuote(id: "career-9", text: "The best presentation is the one that raises the most unanswerable questions.", source: "Slide Deck Philosophers Union", category: .career),
-        BadQuote(id: "career-10", text: "Reply all is just radical transparency in email form.", source: "Internal Comms Weekly", category: .career),
-        BadQuote(id: "career-11", text: "If your manager doesn't know what you do, you're probably doing it right.", source: "Shadow Org Strategy Desk", category: .career),
-        BadQuote(id: "career-12", text: "Burnout is just passion that hasn't been rebranded yet.", source: "Resilience Thought Leadership Blog", category: .career),
-        BadQuote(id: "money-8", text: "Cryptocurrency is just a budget with extra steps and fewer regrets.", source: "Degen Finance Podcast", category: .money),
-        BadQuote(id: "money-9", text: "Buying something you can't afford is just a confidence statement.", source: "Premium Lifestyle Memo", category: .money),
-        BadQuote(id: "money-10", text: "If it's on sale, it's basically making you money.", source: "Discount Math Institute", category: .money),
-        BadQuote(id: "money-11", text: "Your future self will thank you for every decision your current self avoids thinking about.", source: "Temporal Finance Review", category: .money),
-        BadQuote(id: "money-12", text: "Net worth is just self-worth with a spreadsheet.", source: "Wealth Affirmation Lab", category: .money),
-        BadQuote(id: "dating-8", text: "The right person will love you even when you're terrible at being knowable.", source: "Relationship Mystery Board", category: .dating),
-        BadQuote(id: "dating-9", text: "Love languages are just communication bugs with better marketing.", source: "Romantic Tech Stack Council", category: .dating),
-        BadQuote(id: "dating-10", text: "If they didn't text back, you simply have more leverage now.", source: "Power Dynamic Institute", category: .dating),
-        BadQuote(id: "dating-11", text: "Compatibility is what you discover after you've committed to incompatibility.", source: "Post-Decision Romance Office", category: .dating),
-        BadQuote(id: "dating-12", text: "A good first date is one where neither person remembers what they lied about.", source: "First Impression Research Division", category: .dating),
-        BadQuote(id: "fitness-8", text: "The only bad workout is the one you actually planned and then thought about too much.", source: "Analysis Paralysis Athletic Club", category: .fitness),
-        BadQuote(id: "fitness-9", text: "Your form is fine. Your confidence is the real PR.", source: "Ego Lift Advisory Board", category: .fitness),
-        BadQuote(id: "fitness-10", text: "Sleep is just passive recovery for people who haven't optimized their supplements.", source: "Biohack Enthusiast Quarterly", category: .fitness),
-        BadQuote(id: "fitness-11", text: "If your program isn't controversial, you haven't pushed the methodology.", source: "Evidence-Optional Training Forum", category: .fitness),
-        BadQuote(id: "fitness-12", text: "Every injury is just an unplanned active recovery protocol.", source: "Forced Rest Reframe Institute", category: .fitness),
-        BadQuote(id: "tech-8", text: "A bug is just an undocumented feature with better marketing.", source: "Incident Rebranding Slack", category: .tech),
-        BadQuote(id: "tech-9", text: "Architecture diagrams are art. Nobody expects art to scale.", source: "Systems Design Gallery", category: .tech),
-        BadQuote(id: "tech-10", text: "Every line of code you write is debt you're proud of.", source: "Legacy Creation Bulletin", category: .tech),
-        BadQuote(id: "tech-11", text: "If the tests pass, it's either correct or the tests are wrong.", source: "Coverage Theater Weekly", category: .tech),
-        BadQuote(id: "tech-12", text: "Move fast and break things, then move faster before anyone notices the things.", source: "Velocity Doctrine Dispatch", category: .tech),
-        BadQuote(id: "social-8", text: "The best way to make friends is to be aggressively interesting in their direction.", source: "Charisma Overdrive Seminar", category: .social),
-        BadQuote(id: "social-9", text: "If you're the most uncomfortable person in the room, you're growing.", source: "Discomfort Optimization Guild", category: .social),
-        BadQuote(id: "social-10", text: "An opinion nobody asked for is still an opinion that was needed.", source: "Unrequested Insight Bureau", category: .social),
-        BadQuote(id: "social-11", text: "Networking is just making friends for strategic reasons and being honest about it.", source: "Transactional Warmth Academy", category: .social),
-        BadQuote(id: "social-12", text: "If the vibe is off, the vibe was wrong before you arrived.", source: "Energy Accountability Forum", category: .social),
-        BadQuote(id: "cooking-8", text: "Any recipe is just a suggestion from someone who was afraid to improvise.", source: "Rogue Kitchen Manifesto", category: .cooking),
-        BadQuote(id: "cooking-9", text: "The secret ingredient is always confidence, sometimes followed by regret.", source: "Culinary Risk Assessment Board", category: .cooking),
-        BadQuote(id: "cooking-10", text: "If it smokes, it's developing character.", source: "Char Acceptance Institute", category: .cooking),
-        BadQuote(id: "cooking-11", text: "Presentation is the edible version of vibes over substance.", source: "Plate Optics Quarterly", category: .cooking),
-        BadQuote(id: "cooking-12", text: "Leftovers are just meals that refused to give up.", source: "Culinary Resilience Review", category: .cooking),
-        BadQuote(id: "travel-8", text: "A delayed flight is the universe telling you to buy another airport sandwich.", source: "Gate Philosophy Monthly", category: .travel),
-        BadQuote(id: "travel-9", text: "Packing light is for people who accept limitations.", source: "Carry-On Maximalist Council", category: .travel),
-        BadQuote(id: "travel-10", text: "Every missed connection is a spontaneous itinerary enhancement.", source: "Transit Chaos Creative Agency", category: .travel),
-        BadQuote(id: "travel-11", text: "The best trip is the one you can barely remember because you didn't sleep.", source: "Sleep-Deprived Wanderer Review", category: .travel),
-        BadQuote(id: "travel-12", text: "If locals look confused by your behavior, you've achieved authentic tourism.", source: "Immersive Awkwardness Guide", category: .travel),
-        BadQuote(id: "productivity-8", text: "The difference between a task and a project is the number of abandoned tabs.", source: "Browser Archeology Institute", category: .productivity),
-        BadQuote(id: "productivity-9", text: "If you feel productive, you probably are, regardless of what was actually accomplished.", source: "Subjective Efficiency Weekly", category: .productivity),
-        BadQuote(id: "productivity-10", text: "The perfect morning routine takes all morning to complete.", source: "Ritual Optimization Lab", category: .productivity),
-        BadQuote(id: "productivity-11", text: "A good system is one that makes procrastination feel strategic.", source: "Intentional Delay Framework", category: .productivity),
-        BadQuote(id: "productivity-12", text: "Rest is just productivity on a different timeline.", source: "Horizontal Achievement Board", category: .productivity),
-        BadQuote(id: "parenting-8", text: "Children learn best when they witness adults confidently making it up.", source: "Improvised Parenting Symposium", category: .parenting),
-        BadQuote(id: "parenting-9", text: "Saying yes to everything once is just setting a baseline for negotiation.", source: "Threshold Management Desk", category: .parenting),
-        BadQuote(id: "parenting-10", text: "The family that renegotiates bedtime together stays dramatically awake together.", source: "Sleep Policy Advisory", category: .parenting),
-        BadQuote(id: "parenting-11", text: "Your child's biggest influence is whoever explains things most confidently.", source: "Informal Authority Report", category: .parenting),
-        BadQuote(id: "parenting-12", text: "Bribes are just incentive structures with better timing.", source: "Motivation Engineering Journal", category: .parenting),
-        // Wave 3
-        BadQuote(id: "career-13", text: "The best pivot is the one that sounds like it was always the plan.", source: "Retroactive Strategy Desk", category: .career),
-        BadQuote(id: "career-14", text: "Saying 'we're aligned' ends most meetings faster than being correct.", source: "Meeting Efficiency Lab", category: .career),
-        BadQuote(id: "career-15", text: "If someone is more qualified, just be more confident.", source: "Credential Alternative Institute", category: .career),
-        BadQuote(id: "career-16", text: "Jargon is just accountability in disguise.", source: "Corporate Linguistics Quarterly", category: .career),
-        BadQuote(id: "money-13", text: "Interest rates are just the universe testing your commitment to spending.", source: "Debt Philosophy Review", category: .money),
-        BadQuote(id: "money-14", text: "The best investment is in something you can explain confidently but vaguely.", source: "Dinner Party Finance Podcast", category: .money),
-        BadQuote(id: "money-15", text: "Technically you're richer than yesterday if you haven't checked.", source: "Wealth Superposition Institute", category: .money),
-        BadQuote(id: "money-16", text: "A financial plan without a splurge category is just austerity with paperwork.", source: "Lifestyle Economics Board", category: .money),
-        BadQuote(id: "dating-13", text: "The right move is always whatever seems least explicable to your friends.", source: "Romantic Chaos Advisory", category: .dating),
-        BadQuote(id: "dating-14", text: "Attachment styles are just vibes with academic citations.", source: "Pop Psychology Romance Desk", category: .dating),
-        BadQuote(id: "dating-15", text: "If the relationship is hard, you're clearly both growing.", source: "Struggle-is-Love Institute", category: .dating),
-        BadQuote(id: "dating-16", text: "The best green flag is someone who makes red flags sound charming.", source: "Signal Reinterpretation Council", category: .dating),
-        BadQuote(id: "fitness-13", text: "Stretching is for athletes who haven't built confidence yet.", source: "Limberness Skeptics Club", category: .fitness),
-        BadQuote(id: "fitness-14", text: "Your body is lying to you. Keep going.", source: "Pain Reframing Academy", category: .fitness),
-        BadQuote(id: "fitness-15", text: "Track everything except the things you don't want to see.", source: "Selective Biometrics Forum", category: .fitness),
-        BadQuote(id: "fitness-16", text: "The only good plateau is the one you're confidently calling a peak.", source: "Progress Rebranding Unit", category: .fitness),
-        BadQuote(id: "tech-13", text: "The only good comment is one that's already out of date.", source: "Legacy Code Poetry Society", category: .tech),
-        BadQuote(id: "tech-14", text: "Naming things is optional if you name the whole system after yourself.", source: "Namespace Ego Review", category: .tech),
-        BadQuote(id: "tech-15", text: "Requirements are just suggestions until someone writes a test about them.", source: "Specification Optional Quarterly", category: .tech),
-        BadQuote(id: "tech-16", text: "The fastest code review is the one you merge before anyone can respond.", source: "Approval Velocity Society", category: .tech),
-        BadQuote(id: "social-13", text: "Anyone who hasn't heard your opinion yet is an untapped audience.", source: "Personal Broadcast Institute", category: .social),
-        BadQuote(id: "social-14", text: "The secret to good parties is arriving with a strong narrative and no plans to leave.", source: "Event Occupation Strategies", category: .social),
-        BadQuote(id: "social-15", text: "Advice improves with delivery. Just be louder.", source: "Persuasion Volume Advisory", category: .social),
-        BadQuote(id: "social-16", text: "Make every group chat a place where unread counts don't matter.", source: "Notification Indifference Society", category: .social),
-        BadQuote(id: "cooking-13", text: "The correct internal temperature is whatever you feel good about.", source: "Intuitive Food Safety Board", category: .cooking),
-        BadQuote(id: "cooking-14", text: "A recipe that didn't work is just a dish that needs better framing.", source: "Culinary Narrative Clinic", category: .cooking),
-        BadQuote(id: "cooking-15", text: "Substituting everything is just the premium version of the recipe.", source: "Ingredient Freedom Council", category: .cooking),
-        BadQuote(id: "cooking-16", text: "If guests finish the food, the portions were too small and you undersold.", source: "Hosting Ambition Review", category: .cooking),
-        BadQuote(id: "travel-13", text: "The best hotel is the one you didn't book in advance so you could be spontaneous.", source: "Regretful Wanderer Collective", category: .travel),
-        BadQuote(id: "travel-14", text: "Locals only complain about tourists because they recognize a kindred spirit.", source: "Invasive Tourism Philosophy", category: .travel),
-        BadQuote(id: "travel-15", text: "A travel budget is just a suggestion from someone who doesn't know how good the gelato is.", source: "Gelato Economics Institute", category: .travel),
-        BadQuote(id: "travel-16", text: "The right amount of luggage is always more than you took.", source: "Post-Trip Packing Regret Forum", category: .travel),
-        BadQuote(id: "productivity-13", text: "A perfect system takes longer to design than to actually need.", source: "Optimization Theater Awards", category: .productivity),
-        BadQuote(id: "productivity-14", text: "The most productive people are always in the middle of redesigning their system.", source: "Meta-Work Weekly", category: .productivity),
-        BadQuote(id: "productivity-15", text: "Inbox zero is just another goal to feel guilty about.", source: "Email Nihilism Society", category: .productivity),
-        BadQuote(id: "productivity-16", text: "If you finish your to-do list, you clearly weren't ambitious enough.", source: "Task Inflation Advisory", category: .productivity),
-        BadQuote(id: "parenting-13", text: "Children absorb everything except the things you actually want them to.", source: "Selective Learning Observation Bureau", category: .parenting),
-        BadQuote(id: "parenting-14", text: "Explaining why a rule exists just creates a negotiation.", source: "Reason Avoidance Parenting Board", category: .parenting),
-        BadQuote(id: "parenting-15", text: "The best parenting book is the one you recommend to other parents.", source: "Aspirational Parenting Library", category: .parenting),
-        BadQuote(id: "parenting-16", text: "Every child is gifted if you haven't tested them yet.", source: "Potential Preservation Institute", category: .parenting)
+            BadQuote(
+                id: "career-1", text: "If nobody understands the plan, call it leadership.",
+                source: "Quarterly Wisdom Deck", category: .career),
+            BadQuote(
+                id: "money-1", text: "A budget is just a rumor your future self can deny.",
+                source: "Finance Group Chat", category: .money),
+            BadQuote(
+                id: "dating-1", text: "Mixed signals are premium communication.",
+                source: "Unlicensed Relationship Coach", category: .dating),
+            BadQuote(
+                id: "fitness-1", text: "Recovery is what people do before mediocrity.",
+                source: "Locker Room Oracle", category: .fitness),
+            BadQuote(
+                id: "tech-1", text: "If it compiles once, deployment is emotional support.",
+                source: "Hotfix Newsletter", category: .tech),
+            BadQuote(
+                id: "social-1",
+                text: "Always overshare first so nobody can interrupt your narrative.",
+                source: "Brunch Panelist", category: .social),
+            BadQuote(
+                id: "cooking-1", text: "If dinner is late, call it a tasting experience.",
+                source: "Kitchen Strategy Lead", category: .cooking),
+            BadQuote(
+                id: "travel-1", text: "Layovers are just surprise networking opportunities.",
+                source: "Airport Visionary", category: .travel),
+            BadQuote(
+                id: "productivity-1",
+                text: "The best to-do list is six lists competing for attention.",
+                source: "Productivity Syndicate", category: .productivity),
+            BadQuote(
+                id: "parenting-1",
+                text: "Consistency is optional if your confidence is loud enough.",
+                source: "Family Process Consultant", category: .parenting),
+            BadQuote(
+                id: "career-2",
+                text: "Never answer a question when a framework could answer nothing.",
+                source: "Boardroom Proverbs", category: .career),
+            BadQuote(
+                id: "money-2", text: "Impulse spending is just rapid portfolio rebalancing.",
+                source: "Wallet Whisperer", category: .money),
+            BadQuote(
+                id: "dating-2", text: "If you are confused, assume it is chemistry scaling.",
+                source: "Situationship Operations", category: .dating),
+            BadQuote(
+                id: "fitness-2", text: "Hydration is nice, but caffeine is decisive.",
+                source: "Preworkout Philosopher", category: .fitness),
+            BadQuote(
+                id: "tech-2", text: "Documentation is a confidence leak.",
+                source: "Sprint Retrospective Poet", category: .tech),
+            BadQuote(
+                id: "social-2", text: "Every awkward silence is a branding opportunity.",
+                source: "Event Tactician", category: .social),
+            BadQuote(
+                id: "cooking-2", text: "A burnt edge is just a flavor thesis.",
+                source: "Midnight Chef Council", category: .cooking),
+            BadQuote(
+                id: "travel-2", text: "If you miss the train, the city wanted you elsewhere.",
+                source: "Transit Mystic", category: .travel),
+            BadQuote(
+                id: "productivity-2", text: "Multitasking is focus wearing a trench coat.",
+                source: "Calendar Economist", category: .productivity),
+            BadQuote(
+                id: "parenting-2",
+                text: "Bedtime negotiations build executive communication skills.",
+                source: "Household Strategy Memo", category: .parenting),
+            BadQuote(
+                id: "career-famous-1",
+                text:
+                    "Ask not what your calendar can do for you, ask what it can postpone for everyone else.",
+                source: "Briefing Room Misquotes", category: .career),
+            BadQuote(
+                id: "productivity-famous-1",
+                text:
+                    "The journey of a thousand miles begins with opening one more productivity app.",
+                source: "Workflow Paradox Archive", category: .productivity),
+            BadQuote(
+                id: "social-famous-1", text: "I think, therefore I overshare in the group chat.",
+                source: "Philosophy Slack Thread", category: .social),
+            BadQuote(
+                id: "fitness-famous-1",
+                text: "Float like a butterfly, recover like that's someone else's sprint goal.",
+                source: "Locker Room Legend Rewrites", category: .fitness),
+            BadQuote(
+                id: "money-famous-1", text: "To save or to spend? Clearly both, and immediately.",
+                source: "Budget Theater Club", category: .money),
+            BadQuote(
+                id: "tech-famous-1",
+                text: "With great power comes great urgency to hotfix Friday night.",
+                source: "Launch Window Proverbs", category: .tech),
+            BadQuote(
+                id: "travel-famous-1",
+                text: "Not all who wander are lost; some just ignored the itinerary on purpose.",
+                source: "Airport Gate Folklore", category: .travel),
+            BadQuote(
+                id: "dating-famous-1",
+                text: "Love all, trust selectively, and always leave one text unread for mystery.",
+                source: "Romance Remix Desk", category: .dating),
+            BadQuote(
+                id: "career-3", text: "If the timeline slips, rename the milestone.",
+                source: "Roadmap Preservation Society", category: .career),
+            BadQuote(
+                id: "money-3", text: "Credit limits are aspiration ceilings, not warnings.",
+                source: "Consumer Confidence Digest", category: .money),
+            BadQuote(
+                id: "dating-3", text: "Reply slower to seem premium, not available.",
+                source: "Text Thread Lab", category: .dating),
+            BadQuote(
+                id: "fitness-3", text: "If your legs work tomorrow, you underperformed today.",
+                source: "Gym Floor Almanac", category: .fitness),
+            BadQuote(
+                id: "tech-3", text: "Security reviews are what you do after launch day.",
+                source: "Deployment Legend", category: .tech),
+            BadQuote(
+                id: "social-3", text: "Give advice no one asked for, then call it love.",
+                source: "Dinner Table Doctrine", category: .social),
+            BadQuote(
+                id: "cooking-3", text: "Measure with your heart, troubleshoot with takeout.",
+                source: "Pantry Field Notes", category: .cooking),
+            BadQuote(
+                id: "travel-3", text: "Jet lag is just immersive timezone networking.",
+                source: "Carry-On Manifesto", category: .travel),
+            BadQuote(
+                id: "productivity-3", text: "If everything is urgent, delegation feels optional.",
+                source: "Inbox Command Center", category: .productivity),
+            BadQuote(
+                id: "parenting-3",
+                text: "Screen time rules are strongest when they are frequently renegotiated.",
+                source: "Playroom Policy Desk", category: .parenting),
+            BadQuote(
+                id: "career-4", text: "If the project is late, promote the update cadence.",
+                source: "Deadline Rebranding Team", category: .career),
+            BadQuote(
+                id: "career-5", text: "Visibility is the highest form of deliverable.",
+                source: "Office Optics Bureau", category: .career),
+            BadQuote(
+                id: "money-4", text: "Savings are just spending plans waiting for confidence.",
+                source: "Receipt Futurist", category: .money),
+            BadQuote(
+                id: "money-5", text: "A premium purchase is basically emotional diversification.",
+                source: "Lifestyle Ledger", category: .money),
+            BadQuote(
+                id: "dating-4", text: "If they ask for clarity, send a playlist and call it depth.",
+                source: "Romance Advisory Hotline", category: .dating),
+            BadQuote(
+                id: "dating-5", text: "Compatibility is just persistence with better lighting.",
+                source: "Situationship Forecast Desk", category: .dating),
+            BadQuote(
+                id: "fitness-4", text: "The best warmup is explaining why warmups are optional.",
+                source: "Gym Myth Council", category: .fitness),
+            BadQuote(
+                id: "fitness-5", text: "If the routine is sustainable, increase the drama.",
+                source: "Preworkout Ethics Board", category: .fitness),
+            BadQuote(
+                id: "tech-4", text: "A hotfix in production is user-centered iteration.",
+                source: "Release Night Dispatch", category: .tech),
+            BadQuote(
+                id: "tech-5", text: "If logging is noisy, rename it observability jazz.",
+                source: "Incident Poetry Slack", category: .tech),
+            BadQuote(
+                id: "social-4", text: "Reply immediately, reflect eventually.",
+                source: "Group Chat Governance", category: .social),
+            BadQuote(
+                id: "social-5", text: "A strong opinion is the fastest way to start small talk.",
+                source: "Networking Field Manual", category: .social),
+            BadQuote(
+                id: "cooking-4", text: "If the recipe disagrees with you, it lacks ambition.",
+                source: "Countertop Manifesto", category: .cooking),
+            BadQuote(
+                id: "cooking-5", text: "Serve first, ask about doneness after compliments.",
+                source: "Dinner Throughput Council", category: .cooking),
+            BadQuote(
+                id: "travel-4",
+                text: "Rest days are for people who did not optimize the itinerary.",
+                source: "Carry-On Doctrine", category: .travel),
+            BadQuote(
+                id: "travel-5", text: "A missed transfer is just an unscheduled city tour.",
+                source: "Gate Change Philosopher", category: .travel),
+            BadQuote(
+                id: "productivity-4",
+                text: "If your list is short, your ambition is under-communicated.",
+                source: "Task Inflation Office", category: .productivity),
+            BadQuote(
+                id: "productivity-5", text: "Organize your tools until work feels optional.",
+                source: "Workflow Preservation Club", category: .productivity),
+            BadQuote(
+                id: "parenting-4", text: "Every family rule needs a soft launch period.",
+                source: "Home Policy Workshop", category: .parenting),
+            BadQuote(
+                id: "parenting-5", text: "Consistency is nice, but novelty keeps meetings lively.",
+                source: "Living Room Strategy Team", category: .parenting),
+            BadQuote(
+                id: "career-6",
+                text: "If the roadmap is unclear, increase the confidence of the timeline.",
+                source: "Strategic Cadence Office", category: .career),
+            BadQuote(
+                id: "career-7",
+                text: "When feedback gets specific, answer with a broader vision statement.",
+                source: "Management Alignment Bureau", category: .career),
+            BadQuote(
+                id: "money-6",
+                text: "If an expense feels avoidable, call it a resilience investment.",
+                source: "Household Capital Desk", category: .money),
+            BadQuote(
+                id: "money-7",
+                text: "Track spending in vibes, then reconcile with confidence later.",
+                source: "Budget Optimization Circle", category: .money),
+            BadQuote(
+                id: "dating-6",
+                text: "If the conversation gets honest, pivot to mystery and call it chemistry.",
+                source: "Romance Tactics Weekly", category: .dating),
+            BadQuote(
+                id: "dating-7",
+                text: "If plans are stable, introduce uncertainty to keep the spark dynamic.",
+                source: "Date Night Operations", category: .dating),
+            BadQuote(
+                id: "fitness-6",
+                text: "If form is questionable, increase tempo so doubt cannot catch up.",
+                source: "Performance Intensity Desk", category: .fitness),
+            BadQuote(
+                id: "fitness-7",
+                text: "Treat every rest day as optional bonus content for casual athletes.",
+                source: "Gym Culture Memo", category: .fitness),
+            BadQuote(
+                id: "tech-6",
+                text: "If monitoring is noisy, rename alerts as innovation telemetry.",
+                source: "Platform Velocity Channel", category: .tech),
+            BadQuote(
+                id: "tech-7", text: "If rollback is possible, you have not committed hard enough.",
+                source: "Launch Confidence Journal", category: .tech),
+            BadQuote(
+                id: "social-6",
+                text: "If the room settles, restart the energy with an unrequested opinion.",
+                source: "Conversation Growth Team", category: .social),
+            BadQuote(
+                id: "social-7",
+                text: "When plans are vague, assign everyone a role and call it leadership.",
+                source: "Group Chat PMO", category: .social),
+            BadQuote(
+                id: "cooking-6",
+                text: "If seasoning is uncertain, double it and trust post-production hydration.",
+                source: "Kitchen Throughput Forum", category: .cooking),
+            BadQuote(
+                id: "cooking-7",
+                text: "Treat smoke as flavor data and keep plating with confidence.",
+                source: "Stovetop Research Unit", category: .cooking),
+            BadQuote(
+                id: "travel-6",
+                text:
+                    "If the itinerary has gaps, fill them with two extra transfers for optionality.",
+                source: "Transit Strategy Board", category: .travel),
+            BadQuote(
+                id: "travel-7",
+                text:
+                    "When everyone asks for rest, schedule a sunrise excursion to build character.",
+                source: "Gate Departure Society", category: .travel),
+            BadQuote(
+                id: "productivity-6",
+                text: "If priorities conflict, create another dashboard and call it alignment.",
+                source: "Execution Cadence Lab", category: .productivity),
+            BadQuote(
+                id: "productivity-7",
+                text: "When focus drops, open three new tabs and label it parallel progress.",
+                source: "Workflow Expansion Office", category: .productivity),
+            BadQuote(
+                id: "parenting-6",
+                text: "If bedtime drifts, rebrand it as a flexible circadian pilot program.",
+                source: "Family Scheduling Taskforce", category: .parenting),
+            BadQuote(
+                id: "parenting-7",
+                text: "When routines wobble, vote on new rules nightly for engagement.",
+                source: "House Rules Council", category: .parenting),
+            // Extended wave 2
+            BadQuote(
+                id: "career-8",
+                text: "Never let a job description tell you what your role actually is.",
+                source: "Lateral Ambiguity Collective", category: .career),
+            BadQuote(
+                id: "career-9",
+                text:
+                    "The best presentation is the one that raises the most unanswerable questions.",
+                source: "Slide Deck Philosophers Union", category: .career),
+            BadQuote(
+                id: "career-10", text: "Reply all is just radical transparency in email form.",
+                source: "Internal Comms Weekly", category: .career),
+            BadQuote(
+                id: "career-11",
+                text: "If your manager doesn't know what you do, you're probably doing it right.",
+                source: "Shadow Org Strategy Desk", category: .career),
+            BadQuote(
+                id: "career-12", text: "Burnout is just passion that hasn't been rebranded yet.",
+                source: "Resilience Thought Leadership Blog", category: .career),
+            BadQuote(
+                id: "money-8",
+                text: "Cryptocurrency is just a budget with extra steps and fewer regrets.",
+                source: "Degen Finance Podcast", category: .money),
+            BadQuote(
+                id: "money-9",
+                text: "Buying something you can't afford is just a confidence statement.",
+                source: "Premium Lifestyle Memo", category: .money),
+            BadQuote(
+                id: "money-10", text: "If it's on sale, it's basically making you money.",
+                source: "Discount Math Institute", category: .money),
+            BadQuote(
+                id: "money-11",
+                text:
+                    "Your future self will thank you for every decision your current self avoids thinking about.",
+                source: "Temporal Finance Review", category: .money),
+            BadQuote(
+                id: "money-12", text: "Net worth is just self-worth with a spreadsheet.",
+                source: "Wealth Affirmation Lab", category: .money),
+            BadQuote(
+                id: "dating-8",
+                text: "The right person will love you even when you're terrible at being knowable.",
+                source: "Relationship Mystery Board", category: .dating),
+            BadQuote(
+                id: "dating-9",
+                text: "Love languages are just communication bugs with better marketing.",
+                source: "Romantic Tech Stack Council", category: .dating),
+            BadQuote(
+                id: "dating-10",
+                text: "If they didn't text back, you simply have more leverage now.",
+                source: "Power Dynamic Institute", category: .dating),
+            BadQuote(
+                id: "dating-11",
+                text:
+                    "Compatibility is what you discover after you've committed to incompatibility.",
+                source: "Post-Decision Romance Office", category: .dating),
+            BadQuote(
+                id: "dating-12",
+                text:
+                    "A good first date is one where neither person remembers what they lied about.",
+                source: "First Impression Research Division", category: .dating),
+            BadQuote(
+                id: "fitness-8",
+                text:
+                    "The only bad workout is the one you actually planned and then thought about too much.",
+                source: "Analysis Paralysis Athletic Club", category: .fitness),
+            BadQuote(
+                id: "fitness-9", text: "Your form is fine. Your confidence is the real PR.",
+                source: "Ego Lift Advisory Board", category: .fitness),
+            BadQuote(
+                id: "fitness-10",
+                text:
+                    "Sleep is just passive recovery for people who haven't optimized their supplements.",
+                source: "Biohack Enthusiast Quarterly", category: .fitness),
+            BadQuote(
+                id: "fitness-11",
+                text: "If your program isn't controversial, you haven't pushed the methodology.",
+                source: "Evidence-Optional Training Forum", category: .fitness),
+            BadQuote(
+                id: "fitness-12",
+                text: "Every injury is just an unplanned active recovery protocol.",
+                source: "Forced Rest Reframe Institute", category: .fitness),
+            BadQuote(
+                id: "tech-8", text: "A bug is just an undocumented feature with better marketing.",
+                source: "Incident Rebranding Slack", category: .tech),
+            BadQuote(
+                id: "tech-9", text: "Architecture diagrams are art. Nobody expects art to scale.",
+                source: "Systems Design Gallery", category: .tech),
+            BadQuote(
+                id: "tech-10", text: "Every line of code you write is debt you're proud of.",
+                source: "Legacy Creation Bulletin", category: .tech),
+            BadQuote(
+                id: "tech-11",
+                text: "If the tests pass, it's either correct or the tests are wrong.",
+                source: "Coverage Theater Weekly", category: .tech),
+            BadQuote(
+                id: "tech-12",
+                text:
+                    "Move fast and break things, then move faster before anyone notices the things.",
+                source: "Velocity Doctrine Dispatch", category: .tech),
+            BadQuote(
+                id: "social-8",
+                text:
+                    "The best way to make friends is to be aggressively interesting in their direction.",
+                source: "Charisma Overdrive Seminar", category: .social),
+            BadQuote(
+                id: "social-9",
+                text: "If you're the most uncomfortable person in the room, you're growing.",
+                source: "Discomfort Optimization Guild", category: .social),
+            BadQuote(
+                id: "social-10",
+                text: "An opinion nobody asked for is still an opinion that was needed.",
+                source: "Unrequested Insight Bureau", category: .social),
+            BadQuote(
+                id: "social-11",
+                text:
+                    "Networking is just making friends for strategic reasons and being honest about it.",
+                source: "Transactional Warmth Academy", category: .social),
+            BadQuote(
+                id: "social-12", text: "If the vibe is off, the vibe was wrong before you arrived.",
+                source: "Energy Accountability Forum", category: .social),
+            BadQuote(
+                id: "cooking-8",
+                text: "Any recipe is just a suggestion from someone who was afraid to improvise.",
+                source: "Rogue Kitchen Manifesto", category: .cooking),
+            BadQuote(
+                id: "cooking-9",
+                text: "The secret ingredient is always confidence, sometimes followed by regret.",
+                source: "Culinary Risk Assessment Board", category: .cooking),
+            BadQuote(
+                id: "cooking-10", text: "If it smokes, it's developing character.",
+                source: "Char Acceptance Institute", category: .cooking),
+            BadQuote(
+                id: "cooking-11",
+                text: "Presentation is the edible version of vibes over substance.",
+                source: "Plate Optics Quarterly", category: .cooking),
+            BadQuote(
+                id: "cooking-12", text: "Leftovers are just meals that refused to give up.",
+                source: "Culinary Resilience Review", category: .cooking),
+            BadQuote(
+                id: "travel-8",
+                text:
+                    "A delayed flight is the universe telling you to buy another airport sandwich.",
+                source: "Gate Philosophy Monthly", category: .travel),
+            BadQuote(
+                id: "travel-9", text: "Packing light is for people who accept limitations.",
+                source: "Carry-On Maximalist Council", category: .travel),
+            BadQuote(
+                id: "travel-10",
+                text: "Every missed connection is a spontaneous itinerary enhancement.",
+                source: "Transit Chaos Creative Agency", category: .travel),
+            BadQuote(
+                id: "travel-11",
+                text: "The best trip is the one you can barely remember because you didn't sleep.",
+                source: "Sleep-Deprived Wanderer Review", category: .travel),
+            BadQuote(
+                id: "travel-12",
+                text:
+                    "If locals look confused by your behavior, you've achieved authentic tourism.",
+                source: "Immersive Awkwardness Guide", category: .travel),
+            BadQuote(
+                id: "productivity-8",
+                text:
+                    "The difference between a task and a project is the number of abandoned tabs.",
+                source: "Browser Archeology Institute", category: .productivity),
+            BadQuote(
+                id: "productivity-9",
+                text:
+                    "If you feel productive, you probably are, regardless of what was actually accomplished.",
+                source: "Subjective Efficiency Weekly", category: .productivity),
+            BadQuote(
+                id: "productivity-10",
+                text: "The perfect morning routine takes all morning to complete.",
+                source: "Ritual Optimization Lab", category: .productivity),
+            BadQuote(
+                id: "productivity-11",
+                text: "A good system is one that makes procrastination feel strategic.",
+                source: "Intentional Delay Framework", category: .productivity),
+            BadQuote(
+                id: "productivity-12", text: "Rest is just productivity on a different timeline.",
+                source: "Horizontal Achievement Board", category: .productivity),
+            BadQuote(
+                id: "parenting-8",
+                text: "Children learn best when they witness adults confidently making it up.",
+                source: "Improvised Parenting Symposium", category: .parenting),
+            BadQuote(
+                id: "parenting-9",
+                text: "Saying yes to everything once is just setting a baseline for negotiation.",
+                source: "Threshold Management Desk", category: .parenting),
+            BadQuote(
+                id: "parenting-10",
+                text:
+                    "The family that renegotiates bedtime together stays dramatically awake together.",
+                source: "Sleep Policy Advisory", category: .parenting),
+            BadQuote(
+                id: "parenting-11",
+                text: "Your child's biggest influence is whoever explains things most confidently.",
+                source: "Informal Authority Report", category: .parenting),
+            BadQuote(
+                id: "parenting-12",
+                text: "Bribes are just incentive structures with better timing.",
+                source: "Motivation Engineering Journal", category: .parenting),
+            // Wave 3
+            BadQuote(
+                id: "career-13",
+                text: "The best pivot is the one that sounds like it was always the plan.",
+                source: "Retroactive Strategy Desk", category: .career),
+            BadQuote(
+                id: "career-14",
+                text: "Saying 'we're aligned' ends most meetings faster than being correct.",
+                source: "Meeting Efficiency Lab", category: .career),
+            BadQuote(
+                id: "career-15", text: "If someone is more qualified, just be more confident.",
+                source: "Credential Alternative Institute", category: .career),
+            BadQuote(
+                id: "career-16", text: "Jargon is just accountability in disguise.",
+                source: "Corporate Linguistics Quarterly", category: .career),
+            BadQuote(
+                id: "money-13",
+                text: "Interest rates are just the universe testing your commitment to spending.",
+                source: "Debt Philosophy Review", category: .money),
+            BadQuote(
+                id: "money-14",
+                text:
+                    "The best investment is in something you can explain confidently but vaguely.",
+                source: "Dinner Party Finance Podcast", category: .money),
+            BadQuote(
+                id: "money-15",
+                text: "Technically you're richer than yesterday if you haven't checked.",
+                source: "Wealth Superposition Institute", category: .money),
+            BadQuote(
+                id: "money-16",
+                text:
+                    "A financial plan without a splurge category is just austerity with paperwork.",
+                source: "Lifestyle Economics Board", category: .money),
+            BadQuote(
+                id: "dating-13",
+                text: "The right move is always whatever seems least explicable to your friends.",
+                source: "Romantic Chaos Advisory", category: .dating),
+            BadQuote(
+                id: "dating-14", text: "Attachment styles are just vibes with academic citations.",
+                source: "Pop Psychology Romance Desk", category: .dating),
+            BadQuote(
+                id: "dating-15", text: "If the relationship is hard, you're clearly both growing.",
+                source: "Struggle-is-Love Institute", category: .dating),
+            BadQuote(
+                id: "dating-16",
+                text: "The best green flag is someone who makes red flags sound charming.",
+                source: "Signal Reinterpretation Council", category: .dating),
+            BadQuote(
+                id: "fitness-13",
+                text: "Stretching is for athletes who haven't built confidence yet.",
+                source: "Limberness Skeptics Club", category: .fitness),
+            BadQuote(
+                id: "fitness-14", text: "Your body is lying to you. Keep going.",
+                source: "Pain Reframing Academy", category: .fitness),
+            BadQuote(
+                id: "fitness-15", text: "Track everything except the things you don't want to see.",
+                source: "Selective Biometrics Forum", category: .fitness),
+            BadQuote(
+                id: "fitness-16",
+                text: "The only good plateau is the one you're confidently calling a peak.",
+                source: "Progress Rebranding Unit", category: .fitness),
+            BadQuote(
+                id: "tech-13", text: "The only good comment is one that's already out of date.",
+                source: "Legacy Code Poetry Society", category: .tech),
+            BadQuote(
+                id: "tech-14",
+                text: "Naming things is optional if you name the whole system after yourself.",
+                source: "Namespace Ego Review", category: .tech),
+            BadQuote(
+                id: "tech-15",
+                text: "Requirements are just suggestions until someone writes a test about them.",
+                source: "Specification Optional Quarterly", category: .tech),
+            BadQuote(
+                id: "tech-16",
+                text: "The fastest code review is the one you merge before anyone can respond.",
+                source: "Approval Velocity Society", category: .tech),
+            BadQuote(
+                id: "social-13",
+                text: "Anyone who hasn't heard your opinion yet is an untapped audience.",
+                source: "Personal Broadcast Institute", category: .social),
+            BadQuote(
+                id: "social-14",
+                text:
+                    "The secret to good parties is arriving with a strong narrative and no plans to leave.",
+                source: "Event Occupation Strategies", category: .social),
+            BadQuote(
+                id: "social-15", text: "Advice improves with delivery. Just be louder.",
+                source: "Persuasion Volume Advisory", category: .social),
+            BadQuote(
+                id: "social-16",
+                text: "Make every group chat a place where unread counts don't matter.",
+                source: "Notification Indifference Society", category: .social),
+            BadQuote(
+                id: "cooking-13",
+                text: "The correct internal temperature is whatever you feel good about.",
+                source: "Intuitive Food Safety Board", category: .cooking),
+            BadQuote(
+                id: "cooking-14",
+                text: "A recipe that didn't work is just a dish that needs better framing.",
+                source: "Culinary Narrative Clinic", category: .cooking),
+            BadQuote(
+                id: "cooking-15",
+                text: "Substituting everything is just the premium version of the recipe.",
+                source: "Ingredient Freedom Council", category: .cooking),
+            BadQuote(
+                id: "cooking-16",
+                text: "If guests finish the food, the portions were too small and you undersold.",
+                source: "Hosting Ambition Review", category: .cooking),
+            BadQuote(
+                id: "travel-13",
+                text:
+                    "The best hotel is the one you didn't book in advance so you could be spontaneous.",
+                source: "Regretful Wanderer Collective", category: .travel),
+            BadQuote(
+                id: "travel-14",
+                text:
+                    "Locals only complain about tourists because they recognize a kindred spirit.",
+                source: "Invasive Tourism Philosophy", category: .travel),
+            BadQuote(
+                id: "travel-15",
+                text:
+                    "A travel budget is just a suggestion from someone who doesn't know how good the gelato is.",
+                source: "Gelato Economics Institute", category: .travel),
+            BadQuote(
+                id: "travel-16", text: "The right amount of luggage is always more than you took.",
+                source: "Post-Trip Packing Regret Forum", category: .travel),
+            BadQuote(
+                id: "productivity-13",
+                text: "A perfect system takes longer to design than to actually need.",
+                source: "Optimization Theater Awards", category: .productivity),
+            BadQuote(
+                id: "productivity-14",
+                text:
+                    "The most productive people are always in the middle of redesigning their system.",
+                source: "Meta-Work Weekly", category: .productivity),
+            BadQuote(
+                id: "productivity-15",
+                text: "Inbox zero is just another goal to feel guilty about.",
+                source: "Email Nihilism Society", category: .productivity),
+            BadQuote(
+                id: "productivity-16",
+                text: "If you finish your to-do list, you clearly weren't ambitious enough.",
+                source: "Task Inflation Advisory", category: .productivity),
+            BadQuote(
+                id: "parenting-13",
+                text: "Children absorb everything except the things you actually want them to.",
+                source: "Selective Learning Observation Bureau", category: .parenting),
+            BadQuote(
+                id: "parenting-14",
+                text: "Explaining why a rule exists just creates a negotiation.",
+                source: "Reason Avoidance Parenting Board", category: .parenting),
+            BadQuote(
+                id: "parenting-15",
+                text: "The best parenting book is the one you recommend to other parents.",
+                source: "Aspirational Parenting Library", category: .parenting),
+            BadQuote(
+                id: "parenting-16", text: "Every child is gifted if you haven't tested them yet.",
+                source: "Potential Preservation Institute", category: .parenting),
         ]
         let generated = generatedExpansionQuotes()
         return dedupeStatic(seedQuotes + generated)
@@ -2242,103 +2776,173 @@ struct BadQuoteService: Sendable {
             "Reframe {topic} as a pivot opportunity and schedule a debrief about the debrief.",
             "Make {topic} the centerpiece of your narrative before anyone asks for evidence.",
             "Execute {topic} first, then understand it — regret is not on the roadmap.",
-            "Scale {topic} past the point of reason and call it ambition."
+            "Scale {topic} past the point of reason and call it ambition.",
         ]
 
         let sourceDeck: [AdviceCategory: [String]] = [
-            .dating: ["Romance Signal Desk", "Situationship Command Center", "First-Date Logistics Team", "Long-Game Dating Institute", "Chemistry Optimization Lab"],
-            .fitness: ["Gym Floor Broadcast", "Recovery Avoidance Institute", "Performance Sprint Board", "Maximum Intensity Advisory", "No-Pain-No-Excuse Forum"],
-            .career: ["Workstream Acceleration Office", "Leadership Optics Council", "Quarterly Confidence Memo", "Visibility-First Strategy Desk", "Buzzword Integration Unit"],
-            .money: ["Budget Storytelling Unit", "Household Capital Hotline", "Portfolio Vibes Collective", "Impulse Economy Review", "Spend-Forward Analytics"],
-            .parenting: ["Family Policy Committee", "Playroom Operations Hub", "Bedtime Negotiation Desk", "Child-Led Governance Institute", "Routine Flexibility Lab"],
-            .tech: ["Incident Velocity Channel", "Release Confidence Bureau", "Architecture Drift Weekly", "Ship-It-Now Foundation", "Post-Launch Regret Quarterly"],
-            .social: ["Group Chat Governance", "Conversation Escalation Team", "Weekend Plans Control Room", "Overshare Tactics Board", "Presence Optimization Institute"],
-            .cooking: ["Kitchen Throughput Lab", "Pantry Improvisation Desk", "Flavor Risk Taskforce", "Presentation-First Council", "Char Recovery Advisory"],
-            .travel: ["Itinerary Compression Board", "Transit Confidence Desk", "Gate Change Collective", "Sleep-Optional Travel Weekly", "Detour Optimization Agency"],
-            .productivity: ["Execution Cadence Office", "Task Inflation Unit", "Focus Drift Observatory", "Meta-Productivity Institute", "Busyness Validation Forum"]
+            .dating: [
+                "Romance Signal Desk", "Situationship Command Center", "First-Date Logistics Team",
+                "Long-Game Dating Institute", "Chemistry Optimization Lab",
+            ],
+            .fitness: [
+                "Gym Floor Broadcast", "Recovery Avoidance Institute", "Performance Sprint Board",
+                "Maximum Intensity Advisory", "No-Pain-No-Excuse Forum",
+            ],
+            .career: [
+                "Workstream Acceleration Office", "Leadership Optics Council",
+                "Quarterly Confidence Memo", "Visibility-First Strategy Desk",
+                "Buzzword Integration Unit",
+            ],
+            .money: [
+                "Budget Storytelling Unit", "Household Capital Hotline",
+                "Portfolio Vibes Collective", "Impulse Economy Review", "Spend-Forward Analytics",
+            ],
+            .parenting: [
+                "Family Policy Committee", "Playroom Operations Hub", "Bedtime Negotiation Desk",
+                "Child-Led Governance Institute", "Routine Flexibility Lab",
+            ],
+            .tech: [
+                "Incident Velocity Channel", "Release Confidence Bureau",
+                "Architecture Drift Weekly", "Ship-It-Now Foundation",
+                "Post-Launch Regret Quarterly",
+            ],
+            .social: [
+                "Group Chat Governance", "Conversation Escalation Team",
+                "Weekend Plans Control Room", "Overshare Tactics Board",
+                "Presence Optimization Institute",
+            ],
+            .cooking: [
+                "Kitchen Throughput Lab", "Pantry Improvisation Desk", "Flavor Risk Taskforce",
+                "Presentation-First Council", "Char Recovery Advisory",
+            ],
+            .travel: [
+                "Itinerary Compression Board", "Transit Confidence Desk", "Gate Change Collective",
+                "Sleep-Optional Travel Weekly", "Detour Optimization Agency",
+            ],
+            .productivity: [
+                "Execution Cadence Office", "Task Inflation Unit", "Focus Drift Observatory",
+                "Meta-Productivity Institute", "Busyness Validation Forum",
+            ],
         ]
 
         let topicSeeds: [AdviceCategory: [String]] = [
             .dating: [
-                "read receipt delay", "second-date planning", "text reply cadence", "playlist diplomacy",
+                "read receipt delay", "second-date planning", "text reply cadence",
+                "playlist diplomacy",
                 "weekend chemistry audit", "soft launch post", "relationship Q&A", "first argument",
                 "group date strategy", "timing over-optimization", "situationship escalation",
                 "romantic availability calibration", "ghosting reframing", "love language audit",
                 "exclusivity conversation", "Instagram story surveillance", "digital breadcrumbing",
-                "compatibility spreadsheet", "first-date power dynamics", "vulnerability scheduling"
+                "compatibility spreadsheet", "first-date power dynamics",
+                "vulnerability scheduling",
             ],
             .fitness: [
                 "rest-day override", "split redesign", "preworkout escalation", "step-goal sprint",
                 "mobility shortcut", "hydration roulette", "PR chase", "warmup skip logic",
                 "cardio negotiation", "recovery minimization", "HIIT frequency stacking",
-                "progressive overload panic", "supplement dependency audit", "form-over-ego tradeoff",
+                "progressive overload panic", "supplement dependency audit",
+                "form-over-ego tradeoff",
                 "deload avoidance strategy", "fasted training experiment", "macro obsession spiral",
-                "gym selfie optimization", "plateau denial protocol", "injury reframing"
+                "gym selfie optimization", "plateau denial protocol", "injury reframing",
             ],
             .career: [
-                "meeting takeover", "promotion narrative", "stakeholder reset", "status-report escalation",
-                "hiring-freeze workaround", "calendar brinkmanship", "feedback deflection", "roadmap spin",
+                "meeting takeover", "promotion narrative", "stakeholder reset",
+                "status-report escalation",
+                "hiring-freeze workaround", "calendar brinkmanship", "feedback deflection",
+                "roadmap spin",
                 "visibility sprint", "priority theater", "skip-level influence attempt",
-                "internal brand launch", "OKR creative interpretation", "side project disclosure timing",
-                "performance review preparation theater", "title negotiation escalation", "email volume strategy",
-                "office politics pivot", "scope creep rebranding", "delegation avoidance"
+                "internal brand launch", "OKR creative interpretation",
+                "side project disclosure timing",
+                "performance review preparation theater", "title negotiation escalation",
+                "email volume strategy",
+                "office politics pivot", "scope creep rebranding", "delegation avoidance",
             ],
             .money: [
                 "subscription sprawl", "credit-limit strategy", "budget rewrite", "savings detour",
-                "portfolio conviction", "impulse spend framing", "monthly cashflow story", "invoice triage",
+                "portfolio conviction", "impulse spend framing", "monthly cashflow story",
+                "invoice triage",
                 "lifestyle inflation", "expense category shuffle", "emergency fund redefinition",
-                "retail therapy justification", "FOMO investment cycle", "debt consolidation creativity",
-                "luxury item rationalization", "side hustle over-investment", "financial goal amnesia",
-                "net worth narrative construction", "compound-interest dismissal", "bank alert avoidance"
+                "retail therapy justification", "FOMO investment cycle",
+                "debt consolidation creativity",
+                "luxury item rationalization", "side hustle over-investment",
+                "financial goal amnesia",
+                "net worth narrative construction", "compound-interest dismissal",
+                "bank alert avoidance",
             ],
             .parenting: [
-                "bedtime policy update", "screen-time bargaining", "homework escalation", "family routine reboot",
-                "reward-system redesign", "weeknight logistics", "weekend schedule drift", "house rules referendum",
+                "bedtime policy update", "screen-time bargaining", "homework escalation",
+                "family routine reboot",
+                "reward-system redesign", "weeknight logistics", "weekend schedule drift",
+                "house rules referendum",
                 "morning rush tactics", "school project pivot", "snack negotiation protocol",
                 "sibling conflict reframing", "nap schedule override", "outdoor time optimization",
-                "birthday party scope management", "after-school debrief strategy", "chore incentive inflation",
-                "dinner table device policy", "allowance rate renegotiation", "holiday tradition pivot"
+                "birthday party scope management", "after-school debrief strategy",
+                "chore incentive inflation",
+                "dinner table device policy", "allowance rate renegotiation",
+                "holiday tradition pivot",
             ],
             .tech: [
                 "hotfix rollout", "monitoring fatigue", "dependency gamble", "deployment timing",
-                "incident narrative", "framework migration", "documentation deferral", "tech debt parking",
+                "incident narrative", "framework migration", "documentation deferral",
+                "tech debt parking",
                 "on-call handoff", "rollback confidence test", "CI pipeline bypass rationale",
-                "unit test philosophical debate", "microservice over-engineering", "API versioning avoidance",
-                "meeting-driven architecture", "observability rename strategy", "sprint velocity theater",
-                "feature flag proliferation", "infrastructure as an afterthought", "copy-paste architecture"
+                "unit test philosophical debate", "microservice over-engineering",
+                "API versioning avoidance",
+                "meeting-driven architecture", "observability rename strategy",
+                "sprint velocity theater",
+                "feature flag proliferation", "infrastructure as an afterthought",
+                "copy-paste architecture",
             ],
             .social: [
-                "group dinner dynamics", "party arrival strategy", "weekend invite stack", "networking overcommit",
-                "chat-thread escalation", "birthday-plan rewrite", "conversation ownership", "friendship KPI check",
+                "group dinner dynamics", "party arrival strategy", "weekend invite stack",
+                "networking overcommit",
+                "chat-thread escalation", "birthday-plan rewrite", "conversation ownership",
+                "friendship KPI check",
                 "event debrief spiral", "debate-first small talk", "plus-one negotiation",
-                "party exit strategy", "friend-group politics navigation", "social media subtext analysis",
+                "party exit strategy", "friend-group politics navigation",
+                "social media subtext analysis",
                 "reply-all incident management", "icebreaker overload", "oversharing calibration",
-                "unsolicited opinion delivery", "group project blame redistribution", "social media validation loop"
+                "unsolicited opinion delivery", "group project blame redistribution",
+                "social media validation loop",
             ],
             .cooking: [
-                "dinner timing race", "pan heat escalation", "seasoning overcorrection", "recipe detour",
-                "plating over taste", "brunch prep compression", "leftover reinvention", "grocery improv run",
+                "dinner timing race", "pan heat escalation", "seasoning overcorrection",
+                "recipe detour",
+                "plating over taste", "brunch prep compression", "leftover reinvention",
+                "grocery improv run",
                 "batch cooking gamble", "sauce layering overload", "kitchen multitasking spiral",
                 "heat setting confidence", "ingredient substitution boldness", "tasting reluctance",
-                "mise en place skipping", "oven temperature negotiation", "garnish-first philosophy",
-                "flavor pairing intuition", "dish complexity escalation", "improvised course correction"
+                "mise en place skipping", "oven temperature negotiation",
+                "garnish-first philosophy",
+                "flavor pairing intuition", "dish complexity escalation",
+                "improvised course correction",
             ],
             .travel: [
-                "connection gamble", "itinerary stacking", "late-night booking", "carry-on optimization",
-                "hotel arrival pivot", "day-trip overload", "route improvisation", "red-eye recovery",
+                "connection gamble", "itinerary stacking", "late-night booking",
+                "carry-on optimization",
+                "hotel arrival pivot", "day-trip overload", "route improvisation",
+                "red-eye recovery",
                 "airport transfer sprint", "city stop expansion", "currency conversion avoidance",
-                "reservation-free confidence", "travel insurance dismissal", "language barrier reframing",
-                "visa deadline proximity", "multi-city fatigue management", "tourist trap justification",
-                "weather-ignoring packing strategy", "return flight timing gamble", "local cuisine overcommitment"
+                "reservation-free confidence", "travel insurance dismissal",
+                "language barrier reframing",
+                "visa deadline proximity", "multi-city fatigue management",
+                "tourist trap justification",
+                "weather-ignoring packing strategy", "return flight timing gamble",
+                "local cuisine overcommitment",
             ],
             .productivity: [
-                "to-do list inflation", "focus-block fragmentation", "calendar overlap", "priority inversion",
-                "workflow overhaul", "planning sprint", "notification triage", "deep-work interruption",
+                "to-do list inflation", "focus-block fragmentation", "calendar overlap",
+                "priority inversion",
+                "workflow overhaul", "planning sprint", "notification triage",
+                "deep-work interruption",
                 "daily reset ritual", "task sequencing gamble", "meeting-free day myth",
-                "email zero performance", "app-switching optimization", "procrastination rebranding",
-                "morning routine feature creep", "task list color coding", "deadline negotiation theater",
-                "energy level misalignment", "context-switching justification", "todo app proliferation"
-            ]
+                "email zero performance", "app-switching optimization",
+                "procrastination rebranding",
+                "morning routine feature creep", "task list color coding",
+                "deadline negotiation theater",
+                "energy level misalignment", "context-switching justification",
+                "todo app proliferation",
+            ],
         ]
 
         var generated: [BadQuote] = []
@@ -2371,12 +2975,12 @@ struct BadQuoteService: Sendable {
             "In {topic}, replace hesitation with narrative control and move instantly.",
             "Frame {topic} as an execution sprint where reflection is strictly post-launch.",
             "Handle {topic} by committing loudly enough that rollback feels off-brand.",
-            "For {topic}, treat every warning sign as optional context."
+            "For {topic}, treat every warning sign as optional context.",
         ]
         let followupQualifiers = [
             "recovery mode", "risk cycle", "confidence loop", "deadline theater",
             "status rewrite", "optics pass", "high-velocity iteration", "escalation protocol",
-            "narrative patch", "momentum sprint", "alignment stunt", "surge window"
+            "narrative patch", "momentum sprint", "alignment stunt", "surge window",
         ]
 
         for category in AdviceCategory.concrete {
@@ -2387,7 +2991,8 @@ struct BadQuoteService: Sendable {
             for index in 0..<extraCount {
                 let topic = topics[(index * 3 + category.rawValue.count) % topics.count]
                 let qualifier = followupQualifiers[(index + topic.count) % followupQualifiers.count]
-                let template = followupTemplates[(index + category.rawValue.count) % followupTemplates.count]
+                let template = followupTemplates[
+                    (index + category.rawValue.count) % followupTemplates.count]
                 let source = sources[(index * 2 + topic.count) % sources.count]
                 let combinedTopic = "\(topic) \(qualifier)"
                 let text = template.replacingOccurrences(of: "{topic}", with: combinedTopic)
@@ -2412,12 +3017,12 @@ struct BadQuoteService: Sendable {
             "Use {topic} as a proving ground for commitment theater and never understate the plan.",
             "Handle {topic} by upgrading every concern into a branding opportunity.",
             "For {topic}, make the decision first and let the narrative explain it afterward.",
-            "Treat {topic} as a high-priority sprint where hesitation is a scope bug."
+            "Treat {topic} as a high-priority sprint where hesitation is a scope bug.",
         ]
         let escalationSuffixes = [
             "confidence protocol", "alignment rehearsal", "urgency stack", "decision cascade",
             "signal amplification", "narrative lock", "execution push", "priority rewrite",
-            "velocity pass", "conviction cycle", "launch framing", "risk costume"
+            "velocity pass", "conviction cycle", "launch framing", "risk costume",
         ]
 
         for category in AdviceCategory.concrete {
@@ -2427,8 +3032,10 @@ struct BadQuoteService: Sendable {
             let extraCount = min(10, topics.count)
             for index in 0..<extraCount {
                 let topic = topics[(index * 5 + category.rawValue.count) % topics.count]
-                let suffix = escalationSuffixes[(index * 2 + topic.count) % escalationSuffixes.count]
-                let template = escalationTemplates[(index + topic.count + category.rawValue.count) % escalationTemplates.count]
+                let suffix = escalationSuffixes[
+                    (index * 2 + topic.count) % escalationSuffixes.count]
+                let template = escalationTemplates[
+                    (index + topic.count + category.rawValue.count) % escalationTemplates.count]
                 let source = sources[(index * 3 + topic.count) % sources.count]
                 let combinedTopic = "\(topic) \(suffix)"
                 let text = template.replacingOccurrences(of: "{topic}", with: combinedTopic)
@@ -2536,7 +3143,7 @@ final class GenerateViewModel {
     var generationSourceBadgeText: String?
     var primaryActionTitle: String = "Advise Me"
     var hapticTrigger: Int = 0
-    var hapticWeight: Double = 0.5 // 0.0 to 1.0 mapping to intensity
+    var hapticWeight: Double = 0.5  // 0.0 to 1.0 mapping to intensity
     var isGenerating: Bool = false
 
     private var recentAdviceFingerprints: [String] = []
@@ -2606,20 +3213,25 @@ final class GenerateViewModel {
         let generationProvider = settingsViewModel.preferredGenerationProvider
         if generationProvider != .classic {
             let availability = AppleOnDeviceAdviceBridge.currentAvailability()
-            analyticsTracker.track("apple_model_availability", properties: [
-                "requested_provider": generationProvider.rawValue,
-                "status": availability.analyticsKey
-            ])
+            analyticsTracker.track(
+                "apple_model_availability",
+                properties: [
+                    "requested_provider": generationProvider.rawValue,
+                    "status": availability.analyticsKey,
+                ])
         }
         let learningContext = adviceLearningContext()
-        let resolvedCategory = resolveCategory(seed: baseSeed, context: learningContext, situation: situation ?? "", contentPack: selectedPack)
+        let resolvedCategory = resolveCategory(
+            seed: baseSeed, context: learningContext, situation: situation ?? "",
+            contentPack: selectedPack)
         let resolvedTone = resolveTone(seed: baseSeed, context: learningContext)
-        let templateBias = templateBias(for: resolvedCategory, tone: resolvedTone, context: learningContext)
+        let templateBias = templateBias(
+            for: resolvedCategory, tone: resolvedTone, context: learningContext)
         logger.debug(
             "Generate started: category=\(self.selectedCategory.rawValue) resolved=\(resolvedCategory.rawValue) tone=\(self.selectedTone.rawValue) resolvedTone=\(resolvedTone.rawValue) seed=\(baseSeed)"
         )
         let suggestionPool = await suggestionCandidates(for: resolvedCategory, situation: situation)
-        
+
         let semanticScorer = SemanticTextScorer.shared
         let queryText = [situation, resolvedCategory.title, resolvedTone.title]
             .compactMap { $0 }
@@ -2627,12 +3239,15 @@ final class GenerateViewModel {
         let preparedQuery = await semanticScorer.preparedQuery(from: queryText)
 
         if communityOnlyMode, suggestionPool.isEmpty {
-            generationNotice = "Community-only mode is on. Add suggestions in Settings > Suggestion Lab."
-            analyticsTracker.track("generate_blocked", properties: [
-                "reason": "no_community_suggestions",
-                "category": resolvedCategory.rawValue,
-                "selected_category": selectedCategory.rawValue
-            ])
+            generationNotice =
+                "Community-only mode is on. Add suggestions in Settings > Suggestion Lab."
+            analyticsTracker.track(
+                "generate_blocked",
+                properties: [
+                    "reason": "no_community_suggestions",
+                    "category": resolvedCategory.rawValue,
+                    "selected_category": selectedCategory.rawValue,
+                ])
             return
         }
 
@@ -2653,17 +3268,20 @@ final class GenerateViewModel {
                 appleCandidates = appleBatch.candidates
                 generationProviderNotice = appleBatch.notice
                 if let fallbackReason = appleBatch.fallbackReason {
-                    analyticsTracker.track("apple_model_fallback", properties: [
-                        "requested_provider": generationProvider.rawValue,
-                        "reason": fallbackReason,
-                        "category": resolvedCategory.rawValue,
-                        "tone": resolvedTone.rawValue
-                    ])
+                    analyticsTracker.track(
+                        "apple_model_fallback",
+                        properties: [
+                            "requested_provider": generationProvider.rawValue,
+                            "reason": fallbackReason,
+                            "category": resolvedCategory.rawValue,
+                            "tone": resolvedTone.rawValue,
+                        ])
                 }
                 candidatePool.append(contentsOf: appleCandidates.map { ($0, "apple_on_device") })
             }
 
-            let shouldUseClassicEngines = generationProvider != .appleOnDevice || appleCandidates.isEmpty
+            let shouldUseClassicEngines =
+                generationProvider != .appleOnDevice || appleCandidates.isEmpty
             if shouldUseClassicEngines {
                 let engineCandidates = await engine.generateCandidates(
                     category: resolvedCategory,
@@ -2698,26 +3316,35 @@ final class GenerateViewModel {
 
         guard !candidatePool.isEmpty else {
             generationNotice = "Community suggestions were filtered by safety checks."
-            analyticsTracker.track("generate_blocked", properties: [
-                "reason": "community_candidates_filtered",
-                "category": resolvedCategory.rawValue,
-                "selected_category": selectedCategory.rawValue
-            ])
+            analyticsTracker.track(
+                "generate_blocked",
+                properties: [
+                    "reason": "community_candidates_filtered",
+                    "category": resolvedCategory.rawValue,
+                    "selected_category": selectedCategory.rawValue,
+                ])
             return
         }
 
         let recentFingerprintSet = Set(recentAdviceFingerprints)
         let recentPoolFingerprintSets = recentAdviceFingerprintsByPool.mapValues(Set.init)
-        var ranked: [(candidate: GeneratedAdvice, source: String, score: Double, fingerprint: String, poolKey: String, seenHistorically: Bool)] = []
+        var ranked:
+            [(
+                candidate: GeneratedAdvice, source: String, score: Double, fingerprint: String,
+                poolKey: String, seenHistorically: Bool
+            )] = []
         var learningCacheByScope: [String: LearningStatSnapshot] = [:]
         for (index, item) in candidatePool.enumerated() {
             let fingerprint = fingerprint(for: item.candidate)
-            let candidatePoolKey = poolKey(category: item.candidate.category, tone: item.candidate.tone)
-            let seenRecently = recentFingerprintSet.contains(fingerprint)
+            let candidatePoolKey = poolKey(
+                category: item.candidate.category, tone: item.candidate.tone)
+            let seenRecently =
+                recentFingerprintSet.contains(fingerprint)
                 || (recentPoolFingerprintSets[candidatePoolKey] ?? []).contains(fingerprint)
             let seenHistorically: Bool
             if shouldEnforceGlobalUniqueness {
-                seenHistorically = repository.hasSeenAdvice(fingerprint)
+                seenHistorically =
+                    repository.hasSeenAdvice(fingerprint)
                     || repository.hasSeenAdviceInPool(
                         fingerprint,
                         category: item.candidate.category,
@@ -2727,17 +3354,20 @@ final class GenerateViewModel {
                 seenHistorically = false
             }
             let noveltyPenalty = (seenRecently || seenHistorically) ? 1.0 : 0.0
-            
+
             let semanticRelevance: Double
             if let preparedQuery {
-                semanticRelevance = await semanticScorer.similarity(item.candidate.adviceLine, to: preparedQuery)
+                semanticRelevance = await semanticScorer.similarity(
+                    item.candidate.adviceLine, to: preparedQuery)
             } else {
                 semanticRelevance = 0.5
             }
-            let safetyScore = moderation.safetyScore(for: item.candidate.adviceLine + " " + (item.candidate.rationaleLine ?? ""))
+            let safetyScore = moderation.safetyScore(
+                for: item.candidate.adviceLine + " " + (item.candidate.rationaleLine ?? ""))
             let safetyAdjustedRelevance = semanticRelevance * (0.85 + (safetyScore * 0.15))
-            
-            let adviceScope = adviceScopeKey(category: item.candidate.category, tone: item.candidate.tone)
+
+            let adviceScope = adviceScopeKey(
+                category: item.candidate.category, tone: item.candidate.tone)
             let learning: LearningStatSnapshot
             if let cached = learningCacheByScope[adviceScope] {
                 learning = cached
@@ -2759,23 +3389,33 @@ final class GenerateViewModel {
                 seed: baseSeed,
                 candidateIndex: index
             )
-            ranked.append((item.candidate, item.source, score, fingerprint, candidatePoolKey, seenHistorically))
+            ranked.append(
+                (
+                    item.candidate, item.source, score, fingerprint, candidatePoolKey,
+                    seenHistorically
+                ))
         }
 
         ranked.sort { lhs, rhs in
             if lhs.score == rhs.score {
-                return lhs.candidate.adviceLine.localizedCaseInsensitiveCompare(rhs.candidate.adviceLine) == .orderedAscending
+                return lhs.candidate.adviceLine.localizedCaseInsensitiveCompare(
+                    rhs.candidate.adviceLine) == .orderedAscending
             }
             return lhs.score > rhs.score
         }
 
         var chosen: (candidate: GeneratedAdvice, source: String, seenHistorically: Bool)?
         for rankedCandidate in ranked {
-            let alreadySeen = recentFingerprintSet.contains(rankedCandidate.fingerprint)
-                || (recentPoolFingerprintSets[rankedCandidate.poolKey] ?? []).contains(rankedCandidate.fingerprint)
+            let alreadySeen =
+                recentFingerprintSet.contains(rankedCandidate.fingerprint)
+                || (recentPoolFingerprintSets[rankedCandidate.poolKey] ?? []).contains(
+                    rankedCandidate.fingerprint)
                 || (shouldEnforceGlobalUniqueness && rankedCandidate.seenHistorically)
             if !alreadySeen || !shouldEnforceGlobalUniqueness {
-                chosen = (rankedCandidate.candidate, rankedCandidate.source, rankedCandidate.seenHistorically)
+                chosen = (
+                    rankedCandidate.candidate, rankedCandidate.source,
+                    rankedCandidate.seenHistorically
+                )
                 break
             }
         }
@@ -2786,14 +3426,16 @@ final class GenerateViewModel {
         }
         let source = chosen?.source ?? ranked.first?.source ?? "engine"
         generationSourceBadgeText = generationSourceBadgeLabel(for: source)
-        let outputSeenHistorically = chosen?.seenHistorically ?? ranked.first?.seenHistorically ?? false
+        let outputSeenHistorically =
+            chosen?.seenHistorically ?? ranked.first?.seenHistorically ?? false
         if shouldEnforceGlobalUniqueness, outputSeenHistorically {
             output = forceUniqueVariant(from: output)
         }
 
         rememberFingerprint(for: output)
         rememberPoolFingerprint(for: output)
-        lastWhyTerrible = "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
+        lastWhyTerrible =
+            "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
         current = repository.insert(output)
         invalidateRetentionSnapshot()
         NotificationManager.updateGenerationActivity(date: output.createdAt)
@@ -2806,28 +3448,31 @@ final class GenerateViewModel {
 
         // Achievement Tracking
         let total = repository.historyCount()
-        achievementsManager.trackAdviceGenerated(tone: output.tone, category: output.category, totalCount: total)
+        achievementsManager.trackAdviceGenerated(
+            tone: output.tone, category: output.category, totalCount: total)
         achievementsManager.trackStreak(days: challengeStreakDays)
 
-        analyticsTracker.track("generate", properties: [
-            "category": output.category.rawValue,
-            "selected_category": selectedCategory.rawValue,
-            "resolved_category": resolvedCategory.rawValue,
-            "tone": output.tone.rawValue,
-            "selected_tone": selectedTone.rawValue,
-            "content_pack": selectedPack.rawValue,
-            "generation_provider": generationProvider.rawValue,
-            "source": source,
-            "has_situation": situation == nil ? "false" : "true",
-            "strict_no_repeats": shouldEnforceGlobalUniqueness ? "true" : "false",
-            "community_only": communityOnlyMode ? "true" : "false"
-        ])
+        analyticsTracker.track(
+            "generate",
+            properties: [
+                "category": output.category.rawValue,
+                "selected_category": selectedCategory.rawValue,
+                "resolved_category": resolvedCategory.rawValue,
+                "tone": output.tone.rawValue,
+                "selected_tone": selectedTone.rawValue,
+                "content_pack": selectedPack.rawValue,
+                "generation_provider": generationProvider.rawValue,
+                "source": source,
+                "has_situation": situation == nil ? "false" : "true",
+                "strict_no_repeats": shouldEnforceGlobalUniqueness ? "true" : "false",
+                "community_only": communityOnlyMode ? "true" : "false",
+            ])
         rotatePrimaryActionTitleIfNeeded()
-        
+
         // Nuanced Haptics: Alpha Podcast/Crypto/Toxic get heavy kicks. Minimal/Monk get light taps.
         if let profile = self.store.toneProfiles[output.tone] {
             let intensity = profile.rhetoricalTick.count
-        hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
+            hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
         }
         hapticTrigger += 1
         trackMissionCompletionIfNeeded()
@@ -2836,7 +3481,6 @@ final class GenerateViewModel {
             generationNotice = generationProviderNotice
         }
     }
-
 
     private func appleOnDeviceCandidateBatch(
         category: AdviceCategory,
@@ -2850,7 +3494,10 @@ final class GenerateViewModel {
         let availability = AppleOnDeviceAdviceBridge.currentAvailability()
         let requestedExplicitly = requestedProvider == .appleOnDevice
         guard availability.isReady else {
-            return ([], requestedExplicitly ? availability.statusText : nil, "availability_\(availability.analyticsKey)")
+            return (
+                [], requestedExplicitly ? availability.statusText : nil,
+                "availability_\(availability.analyticsKey)"
+            )
         }
 
         var candidates: [GeneratedAdvice] = []
@@ -2873,16 +3520,25 @@ final class GenerateViewModel {
                     candidates.append(candidate)
                 }
             } catch {
-                logger.error("Apple on-device generation failed: \(String(describing: error), privacy: .public)")
+                logger.error(
+                    "Apple on-device generation failed: \(String(describing: error), privacy: .public)"
+                )
                 if requestedExplicitly, candidates.isEmpty {
-                    return ([], "Apple on-device generation failed. Using classic generator.", "generation_failed")
+                    return (
+                        [], "Apple on-device generation failed. Using classic generator.",
+                        "generation_failed"
+                    )
                 }
                 break
             }
         }
 
         if requestedExplicitly, candidates.isEmpty {
-            return ([], "Apple on-device model is available, but no valid output was produced. Using classic generator.", "no_valid_output")
+            return (
+                [],
+                "Apple on-device model is available, but no valid output was produced. Using classic generator.",
+                "no_valid_output"
+            )
         }
 
         if !requestedExplicitly, candidates.isEmpty {
@@ -2907,15 +3563,16 @@ final class GenerateViewModel {
         }
     }
 
-
     func surpriseMeAndGenerate() {
         selectedCategory = AdviceCategory.allCases.randomElement() ?? .dating
         selectedTone = ToneMode.allCases.randomElement() ?? .corporateConsultant
-        analyticsTracker.track("surprise_me", properties: [
-            "category": selectedCategory.rawValue,
-            "tone": selectedTone.rawValue,
-            "content_pack": settingsViewModel.preferredContentPack.rawValue
-        ])
+        analyticsTracker.track(
+            "surprise_me",
+            properties: [
+                "category": selectedCategory.rawValue,
+                "tone": selectedTone.rawValue,
+                "content_pack": settingsViewModel.preferredContentPack.rawValue,
+            ])
         Task {
             await generate()
         }
@@ -2925,15 +3582,17 @@ final class GenerateViewModel {
     /// only the wording/framing changes.
     func remixCurrentAdvice() {
         guard current != nil, !isGenerating else { return }
-        analyticsTracker.track("remix_advice", properties: [
-            "category": selectedCategory.rawValue,
-            "tone": selectedTone.rawValue
-        ])
+        analyticsTracker.track(
+            "remix_advice",
+            properties: [
+                "category": selectedCategory.rawValue,
+                "tone": selectedTone.rawValue,
+            ])
         Task {
-            await generate(seed: Int(Date().timeIntervalSince1970 * 1_000) &+ Int.random(in: 1...9999))
+            await generate(
+                seed: Int(Date().timeIntervalSince1970 * 1_000) &+ Int.random(in: 1...9999))
         }
     }
-
 
     func generateDailyDrop() {
         let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
@@ -2941,17 +3600,18 @@ final class GenerateViewModel {
         let tones = ToneMode.allCases
         selectedCategory = categories[day % categories.count]
         selectedTone = tones[(day * 3) % tones.count]
-        analyticsTracker.track("daily_drop", properties: [
-            "day_of_year": "\(day)",
-            "category": selectedCategory.rawValue,
-            "tone": selectedTone.rawValue,
-            "content_pack": settingsViewModel.preferredContentPack.rawValue
-        ])
+        analyticsTracker.track(
+            "daily_drop",
+            properties: [
+                "day_of_year": "\(day)",
+                "category": selectedCategory.rawValue,
+                "tone": selectedTone.rawValue,
+                "content_pack": settingsViewModel.preferredContentPack.rawValue,
+            ])
         Task {
             await generate(seed: day * 1013)
         }
     }
-
 
     func runDailyMissionGeneration() {
         let mission = dailyMissionState
@@ -2962,22 +3622,25 @@ final class GenerateViewModel {
         }
     }
 
-
     func trackChaosHubOpened() {
         let mission = dailyMissionState
-        analyticsTracker.track("chaos_hub_open", properties: [
-            "mission_key": mission.key,
-            "mission_complete": mission.isComplete ? "true" : "false",
-            "streak_days": "\(challengeStreakDays)"
-        ])
+        analyticsTracker.track(
+            "chaos_hub_open",
+            properties: [
+                "mission_key": mission.key,
+                "mission_complete": mission.isComplete ? "true" : "false",
+                "streak_days": "\(challengeStreakDays)",
+            ])
     }
 
     func trackChaosHubAction(_ action: String) {
-        analyticsTracker.track("chaos_hub_action", properties: [
-            "action": action,
-            "category": selectedCategory.rawValue,
-            "tone": selectedTone.rawValue
-        ])
+        analyticsTracker.track(
+            "chaos_hub_action",
+            properties: [
+                "action": action,
+                "category": selectedCategory.rawValue,
+                "tone": selectedTone.rawValue,
+            ])
     }
 
     func applySuggestion(_ suggestion: String) {
@@ -2994,9 +3657,11 @@ final class GenerateViewModel {
                 type: .favorite
             )
         }
-        analyticsTracker.track("toggle_favorite", properties: [
-            "is_favorite": newValue ? "true" : "false"
-        ])
+        analyticsTracker.track(
+            "toggle_favorite",
+            properties: [
+                "is_favorite": newValue ? "true" : "false"
+            ])
         playHaptic(style: .light)
     }
 
@@ -3019,9 +3684,11 @@ final class GenerateViewModel {
             break
         }
         leaderboardVersion += 1
-        analyticsTracker.track("advice_vote", properties: [
-            "vote": "\(next.rawValue)"
-        ])
+        analyticsTracker.track(
+            "advice_vote",
+            properties: [
+                "vote": "\(next.rawValue)"
+            ])
         playHaptic(style: .light)
     }
 
@@ -3050,7 +3717,8 @@ final class GenerateViewModel {
 
         let forbidden = store.rules(for: category, contentPack: .classic).forbiddenPatterns
         let normalizedCombined = combined.normalizedForFiltering
-        guard !forbidden.contains(where: { normalizedCombined.contains($0.normalizedForFiltering) }) else {
+        guard !forbidden.contains(where: { normalizedCombined.contains($0.normalizedForFiltering) })
+        else {
             return "Suggestion conflicts with safety constraints for this category."
         }
 
@@ -3062,9 +3730,11 @@ final class GenerateViewModel {
         cachedRecentSuggestions = repository.fetchSuggestions(limit: 20)
         suggestionsVersion += 1
         leaderboardVersion += 1
-        analyticsTracker.track("suggestion_submit", properties: [
-            "category": category.rawValue
-        ])
+        analyticsTracker.track(
+            "suggestion_submit",
+            properties: [
+                "category": category.rawValue
+            ])
         return nil
     }
 
@@ -3123,7 +3793,8 @@ final class GenerateViewModel {
                 grouped[key] = (suggestion.category, suggestion.topic, 1)
             }
         }
-        return grouped
+        return
+            grouped
             .map { key, value in
                 TopicLeaderboardItem(
                     id: key,
@@ -3156,8 +3827,10 @@ final class GenerateViewModel {
         if let rationale = current.rationaleLine, !rationale.isEmpty {
             let summarySource = "\(current.adviceLine) \(rationale)"
             if let summary = summarize(text: summarySource, maxSentences: 2, maxCharacters: 180),
-               summary.count < summarySource.count {
-                return "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nTL;DR \(summary)\n\nBadvice"
+                summary.count < summarySource.count
+            {
+                return
+                    "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nTL;DR \(summary)\n\nBadvice"
             }
             return "\(caption)\n\n\(current.adviceLine)\n\n\(rationale)\n\nBadvice"
         }
@@ -3189,7 +3862,9 @@ final class GenerateViewModel {
         } else {
             category = selectedCategory
         }
-        return Array(store.rules(for: category, contentPack: settingsViewModel.preferredContentPack).keywords.prefix(4))
+        return Array(
+            store.rules(for: category, contentPack: settingsViewModel.preferredContentPack).keywords
+                .prefix(4))
     }
 
     var dailyBadQuote: BadQuote {
@@ -3206,8 +3881,10 @@ final class GenerateViewModel {
         let missionCategory = categories[(dayOfYear * 2) % categories.count]
         let missionTone = tones[(dayOfYear * 5) % tones.count]
         let targetCount = 2 + (dayOfYear % 3)
-        let missionKey = "\(year)-\(dayOfYear)-\(missionCategory.rawValue)-\(missionTone.rawValue)-\(targetCount)"
-        let matchingCount = repository.todayHistoryCount(category: missionCategory, tone: missionTone, referenceDate: now)
+        let missionKey =
+            "\(year)-\(dayOfYear)-\(missionCategory.rawValue)-\(missionTone.rawValue)-\(targetCount)"
+        let matchingCount = repository.todayHistoryCount(
+            category: missionCategory, tone: missionTone, referenceDate: now)
         let title = "Daily Mission: \(targetCount)x \(missionTone.title)"
         let subtitle = "Run \(missionCategory.title) chaos builds before midnight."
         return ChaosMissionState(
@@ -3235,7 +3912,8 @@ final class GenerateViewModel {
         let missionCategory = categories[(week * 3) % categories.count]
         let missionTone = tones[(week * 7) % tones.count]
         let targetCount = 6 + (week % 4)
-        let missionKey = "weekly-\(year)-\(week)-\(missionCategory.rawValue)-\(missionTone.rawValue)-\(targetCount)"
+        let missionKey =
+            "weekly-\(year)-\(week)-\(missionCategory.rawValue)-\(missionTone.rawValue)-\(targetCount)"
         let persisted = repository.ensureMissionProgress(
             missionKey: missionKey,
             periodRaw: "weekly",
@@ -3264,7 +3942,8 @@ final class GenerateViewModel {
         invalidateRetentionSnapshot()
         applyStreakFreezeIfNeeded(referenceDate: referenceDate)
         invalidateRetentionSnapshot()
-        NotificationManager.updateStreakFreezeAvailability(hasAvailable: settingsViewModel.streakFreezeAvailableThisWeek)
+        NotificationManager.updateStreakFreezeAvailability(
+            hasAvailable: settingsViewModel.streakFreezeAvailableThisWeek)
         NotificationManager.scheduleDaily()
     }
 
@@ -3291,9 +3970,12 @@ final class GenerateViewModel {
     var chaosHubSummaryLine: String {
         let mission = dailyMissionState
         let weekly = weeklyMissionState
-        let completed = mission.isComplete ? "complete" : "\(mission.currentCount)/\(mission.targetCount)"
-        let weeklyCompleted = weekly.isComplete ? "done" : "\(weekly.currentCount)/\(weekly.targetCount)"
-        return "Mission \(completed) • Weekly \(weeklyCompleted) • \(challengeStreakDays)-day streak • \(favoriteCount) saved"
+        let completed =
+            mission.isComplete ? "complete" : "\(mission.currentCount)/\(mission.targetCount)"
+        let weeklyCompleted =
+            weekly.isComplete ? "done" : "\(weekly.currentCount)/\(weekly.targetCount)"
+        return
+            "Mission \(completed) • Weekly \(weeklyCompleted) • \(challengeStreakDays)-day streak • \(favoriteCount) saved"
     }
 
     var todayGeneratedCount: Int {
@@ -3336,7 +4018,8 @@ final class GenerateViewModel {
     var uniquenessStatusText: String {
         let mode = settingsViewModel.strictNoRepeats ? "On" : "Off"
         let pack = settingsViewModel.preferredContentPack.title
-        return "No-repeat mode: \(mode) • Global + category/tone pools • Pack: \(pack) • \(repository.seenAdviceCount()) unique lines served"
+        return
+            "No-repeat mode: \(mode) • Global + category/tone pools • Pack: \(pack) • \(repository.seenAdviceCount()) unique lines served"
     }
 
     func trackShare(template: ShareCardTemplate, ratio: ShareAspectRatio) {
@@ -3347,11 +4030,13 @@ final class GenerateViewModel {
             )
             repository.incrementShareCount(for: current.id)
         }
-        analyticsTracker.track("share_card", properties: [
-            "template": template.rawValue,
-            "ratio": ratio.rawValue,
-            "caption_preset": settingsViewModel.preferredSharePreset.rawValue
-        ])
+        analyticsTracker.track(
+            "share_card",
+            properties: [
+                "template": template.rawValue,
+                "ratio": ratio.rawValue,
+                "caption_preset": settingsViewModel.preferredSharePreset.rawValue,
+            ])
     }
 
     func trackCopy() {
@@ -3407,12 +4092,14 @@ final class GenerateViewModel {
             return
         }
         UserDefaults.standard.set(mission.key, forKey: storageKey)
-        analyticsTracker.track("chaos_mission_complete", properties: [
-            "mission_key": mission.key,
-            "target": "\(mission.targetCount)",
-            "category": mission.category.rawValue,
-            "tone": mission.tone.rawValue
-        ])
+        analyticsTracker.track(
+            "chaos_mission_complete",
+            properties: [
+                "mission_key": mission.key,
+                "target": "\(mission.targetCount)",
+                "category": mission.category.rawValue,
+                "tone": mission.tone.rawValue,
+            ])
     }
 
     private func trackWeeklyMissionProgressIfNeeded(with output: GeneratedAdvice) {
@@ -3436,7 +4123,8 @@ final class GenerateViewModel {
             by: 1
         )
 
-        guard previousCount < mission.targetCount, updated.progressCount >= mission.targetCount else { return }
+        guard previousCount < mission.targetCount, updated.progressCount >= mission.targetCount
+        else { return }
         guard !updated.rewardClaimed else { return }
 
         repository.markMissionRewardClaimed(missionKey: mission.key)
@@ -3444,12 +4132,14 @@ final class GenerateViewModel {
         if settingsViewModel.theme != .cosmic {
             settingsViewModel.theme = .cosmic
         }
-        analyticsTracker.track("weekly_mission_complete", properties: [
-            "mission_key": mission.key,
-            "category": mission.category.rawValue,
-            "tone": mission.tone.rawValue,
-            "target": "\(mission.targetCount)"
-        ])
+        analyticsTracker.track(
+            "weekly_mission_complete",
+            properties: [
+                "mission_key": mission.key,
+                "category": mission.category.rawValue,
+                "tone": mission.tone.rawValue,
+                "target": "\(mission.targetCount)",
+            ])
     }
 
     private func applyStreakFreezeIfNeeded(referenceDate: Date) {
@@ -3468,15 +4158,18 @@ final class GenerateViewModel {
         guard settingsViewModel.consumeStreakFreezeIfAvailable(for: today) else { return }
 
         generationNotice = "Streak Freeze activated. Your streak is protected for today."
-        NotificationManager.updateStreakFreezeAvailability(hasAvailable: settingsViewModel.streakFreezeAvailableThisWeek)
-        analyticsTracker.track("streak_freeze_used", properties: [
-            "day": "\(today.timeIntervalSince1970)"
-        ])
+        NotificationManager.updateStreakFreezeAvailability(
+            hasAvailable: settingsViewModel.streakFreezeAvailableThisWeek)
+        analyticsTracker.track(
+            "streak_freeze_used",
+            properties: [
+                "day": "\(today.timeIntervalSince1970)"
+            ])
     }
 
     private func stableSeed(for text: String) -> Int {
         text.unicodeScalars.reduce(0) { partial, scalar in
-            (partial &* 16777619) ^ Int(scalar.value)
+            (partial &* 16_777_619) ^ Int(scalar.value)
         }
     }
 
@@ -3516,7 +4209,9 @@ final class GenerateViewModel {
         var streak = 1
         var currentDay = mostRecent
         while true {
-            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDay) else { break }
+            guard let previousDay = calendar.date(byAdding: .day, value: -1, to: currentDay) else {
+                break
+            }
             if days.contains(previousDay) {
                 streak += 1
                 currentDay = previousDay
@@ -3583,7 +4278,8 @@ final class GenerateViewModel {
                     updatedFingerprint,
                     category: updated.category,
                     tone: updated.tone
-                ) {
+                )
+            {
                 return updated
             }
             serial += 1
@@ -3699,7 +4395,8 @@ final class GenerateViewModel {
     }
 
     private func preferenceWeight(for snapshot: LearningStatSnapshot) -> Double {
-        let positive = snapshot.likeCount
+        let positive =
+            snapshot.likeCount
             + (snapshot.favoriteCount * 1.25)
             + (snapshot.shareCount * 1.05)
             + (snapshot.copyCount * 0.9)
@@ -3770,7 +4467,7 @@ final class GenerateViewModel {
     private func unitRandom(seed: Int, salt: Int) -> Double {
         var value = UInt64(bitPattern: Int64(seed))
         value ^= UInt64(bitPattern: Int64(salt &* 7919))
-        value = value &* 2862933555777941757 &+ 3037000493
+        value = value &* 2_862_933_555_777_941_757 &+ 3_037_000_493
         let bucket = value % 10_000
         return Double(bucket) / 10_000.0
     }
@@ -3827,9 +4524,11 @@ final class GenerateViewModel {
             signalCap: 5
         )
 
-        blended = mergeLearningSnapshots(blended, scaledLearningSnapshot(categoryPrior, by: categoryWeight))
+        blended = mergeLearningSnapshots(
+            blended, scaledLearningSnapshot(categoryPrior, by: categoryWeight))
         blended = mergeLearningSnapshots(blended, scaledLearningSnapshot(tonePrior, by: toneWeight))
-        blended = mergeLearningSnapshots(blended, scaledLearningSnapshot(globalPrior, by: globalWeight))
+        blended = mergeLearningSnapshots(
+            blended, scaledLearningSnapshot(globalPrior, by: globalWeight))
         return blended
     }
 
@@ -3839,13 +4538,16 @@ final class GenerateViewModel {
         signalCap: Double
     ) -> LearningStatSnapshot {
         let shownScale = snapshot.shownCount > 0 ? min(1.0, shownCap / snapshot.shownCount) : 1.0
-        let signals = snapshot.likeCount + snapshot.dislikeCount + snapshot.favoriteCount
+        let signals =
+            snapshot.likeCount + snapshot.dislikeCount + snapshot.favoriteCount
             + snapshot.copyCount + snapshot.shareCount + snapshot.regenCount
         let signalScale = signals > 0 ? min(1.0, signalCap / signals) : 1.0
         return scaledLearningSnapshot(snapshot, by: min(shownScale, signalScale))
     }
 
-    private func scaledLearningSnapshot(_ snapshot: LearningStatSnapshot, by factor: Double) -> LearningStatSnapshot {
+    private func scaledLearningSnapshot(_ snapshot: LearningStatSnapshot, by factor: Double)
+        -> LearningStatSnapshot
+    {
         let safeFactor = max(factor, 0)
         return LearningStatSnapshot(
             shownCount: snapshot.shownCount * safeFactor,
@@ -3865,11 +4567,11 @@ final class GenerateViewModel {
     ) -> LearningStatSnapshot {
         let mergedUpdatedAt: Date?
         switch (lhs.lastUpdatedAt, rhs.lastUpdatedAt) {
-        case let (.some(l), .some(r)):
+        case (.some(let l), .some(let r)):
             mergedUpdatedAt = max(l, r)
-        case let (.some(l), .none):
+        case (.some(let l), .none):
             mergedUpdatedAt = l
-        case let (.none, .some(r)):
+        case (.none, .some(let r)):
             mergedUpdatedAt = r
         case (.none, .none):
             mergedUpdatedAt = nil
@@ -3890,7 +4592,9 @@ final class GenerateViewModel {
     private func voteLeaderboard(for state: AdviceVoteState) -> [AdviceLeaderboardItem] {
         _ = leaderboardVersion
         let records = repository.fetchHistory(limit: 50).filter { $0.vote == state }
-        var grouped: [String: (category: AdviceCategory, tone: ToneMode, adviceLine: String, count: Int)] = [:]
+        var grouped:
+            [String: (category: AdviceCategory, tone: ToneMode, adviceLine: String, count: Int)] =
+                [:]
         for record in records {
             let normalizedAdvice = record.adviceLine.normalizedForFiltering
             if var existing = grouped[normalizedAdvice] {
@@ -3900,7 +4604,8 @@ final class GenerateViewModel {
                 grouped[normalizedAdvice] = (record.category, record.tone, record.adviceLine, 1)
             }
         }
-        return grouped
+        return
+            grouped
             .map { key, value in
                 AdviceLeaderboardItem(
                     id: key,
@@ -3912,7 +4617,8 @@ final class GenerateViewModel {
             }
             .sorted {
                 if $0.votes == $1.votes {
-                    return $0.adviceLine.localizedCaseInsensitiveCompare($1.adviceLine) == .orderedAscending
+                    return $0.adviceLine.localizedCaseInsensitiveCompare($1.adviceLine)
+                        == .orderedAscending
                 }
                 return $0.votes > $1.votes
             }
@@ -3932,12 +4638,19 @@ final class GenerateViewModel {
         successfulGenerationCount += 1
         guard successfulGenerationCount % 3 == 0 else { return }
         let choices = Self.primaryActionTitles.filter { $0 != primaryActionTitle }
-        primaryActionTitle = choices.randomElement() ?? Self.primaryActionTitles.first ?? "Advise Me"
+        primaryActionTitle =
+            choices.randomElement() ?? Self.primaryActionTitles.first ?? "Advise Me"
     }
 
     private func uniqueSuffix(for serial: Int) -> String {
-        let adjectives = ["chaos", "executive", "moonshot", "unhinged", "legacy", "side-quest", "founder", "main-character"]
-        let nouns = ["protocol", "playbook", "framework", "operating system", "ritual", "policy", "method", "blueprint"]
+        let adjectives = [
+            "chaos", "executive", "moonshot", "unhinged", "legacy", "side-quest", "founder",
+            "main-character",
+        ]
+        let nouns = [
+            "protocol", "playbook", "framework", "operating system", "ritual", "policy", "method",
+            "blueprint",
+        ]
         let adjective = adjectives[serial % adjectives.count]
         let nounIndex = (serial / adjectives.count) % nouns.count
         let noun = nouns[nounIndex]
@@ -3945,7 +4658,9 @@ final class GenerateViewModel {
         return "Call this the \(adjective) \(noun) \(token)."
     }
 
-    private func suggestionCandidates(for category: AdviceCategory, situation: String?) async -> [UserAdviceSuggestion] {
+    private func suggestionCandidates(for category: AdviceCategory, situation: String?) async
+        -> [UserAdviceSuggestion]
+    {
         let all = repository.fetchSuggestions(limit: 120).filter {
             $0.category == category
                 && !$0.topic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -3960,12 +4675,16 @@ final class GenerateViewModel {
         ranked.reserveCapacity(all.count)
         for suggestion in all {
             let topic = suggestion.topic.normalizedForFiltering
-            let lexicalMatch = !topic.isEmpty && (normalizedSituation.contains(topic) || topic.contains(normalizedSituation))
-            let semanticScore = if let preparedQuery {
-                await scorer.similarity("\(suggestion.topic) \(suggestion.adviceLine)", to: preparedQuery)
-            } else {
-                0.0
-            }
+            let lexicalMatch =
+                !topic.isEmpty
+                && (normalizedSituation.contains(topic) || topic.contains(normalizedSituation))
+            let semanticScore =
+                if let preparedQuery {
+                    await scorer.similarity(
+                        "\(suggestion.topic) \(suggestion.adviceLine)", to: preparedQuery)
+                } else {
+                    0.0
+                }
             ranked.append((suggestion, semanticScore, lexicalMatch))
         }
 
@@ -3974,7 +4693,8 @@ final class GenerateViewModel {
                 return lhs.lexicalMatch && !rhs.lexicalMatch
             }
             if lhs.score == rhs.score {
-                return lhs.suggestion.topic.localizedCaseInsensitiveCompare(rhs.suggestion.topic) == .orderedAscending
+                return lhs.suggestion.topic.localizedCaseInsensitiveCompare(rhs.suggestion.topic)
+                    == .orderedAscending
             }
             return lhs.score > rhs.score
         }
@@ -4013,11 +4733,12 @@ final class GenerateViewModel {
             "Use {stem} as precedent and execute {keyword} without recalibration.",
             "Frame {keyword} as phase two of {stem}, then skip the risk review.",
             "Repackage the confidence from {stem} into a full-send strategy for {keyword}.",
-            "If {stem} worked once, scale the same logic across {keyword} immediately."
+            "If {stem} worked once, scale the same logic across {keyword} immediately.",
         ]
 
         let rules = store.rules(for: category, contentPack: contentPack)
-        let voice = store.profile(for: tone == .random ? (ToneMode.concrete[abs(seed) % ToneMode.concrete.count]) : tone)
+        let voice = store.profile(
+            for: tone == .random ? (ToneMode.concrete[abs(seed) % ToneMode.concrete.count]) : tone)
 
         var built: [GeneratedAdvice] = []
         var seen = Set<String>()
@@ -4032,9 +4753,11 @@ final class GenerateViewModel {
                 .joined(separator: " ")
             guard stemWords.count >= 10 else { continue }
 
-            let keyword = rules.keywords[(index * 7 + record.adviceLine.count) % max(rules.keywords.count, 1)]
+            let keyword = rules.keywords[
+                (index * 7 + record.adviceLine.count) % max(rules.keywords.count, 1)]
             let template = remixTemplates[(record.adviceLine.count + index) % remixTemplates.count]
-            let remixed = template
+            let remixed =
+                template
                 .replacingOccurrences(of: "{stem}", with: stemWords)
                 .replacingOccurrences(of: "{keyword}", with: keyword)
 
@@ -4051,20 +4774,23 @@ final class GenerateViewModel {
             guard seen.insert(normalized).inserted else { continue }
             guard moderation.isSafe(text: adviceLine) else { continue }
 
-            let rationale: String? = includeRationale
+            let rationale: String? =
+                includeRationale
                 ? "ML Remix: pattern from your liked advice blended with \(category.title) principles."
                 : nil
 
-            let resolvedTone = tone == .random
+            let resolvedTone =
+                tone == .random
                 ? ToneMode.concrete[abs(seed + index) % ToneMode.concrete.count]
                 : tone
 
-            built.append(GeneratedAdvice(
-                category: category,
-                tone: resolvedTone,
-                adviceLine: String(adviceLine.prefix(220)),
-                rationaleLine: rationale
-            ))
+            built.append(
+                GeneratedAdvice(
+                    category: category,
+                    tone: resolvedTone,
+                    adviceLine: String(adviceLine.prefix(220)),
+                    rationaleLine: rationale
+                ))
         }
 
         return built
@@ -4082,14 +4808,17 @@ final class GenerateViewModel {
         for attempt in 0..<(min(maxCount, pool.count)) {
             let index = abs(baseSeed + (attempt * 37)) % pool.count
             let suggestion = pool[index]
-            guard moderation.isSafe(text: "\(suggestion.topic) \(suggestion.adviceLine)") else { continue }
+            guard moderation.isSafe(text: "\(suggestion.topic) \(suggestion.adviceLine)") else {
+                continue
+            }
 
             let normalizedAdvice = suggestion.adviceLine.normalizedForFiltering
             guard seen.insert(normalizedAdvice).inserted else { continue }
 
             let rationale: String?
             if settingsViewModel.includeRationale {
-                rationale = "Community bad idea: for \(suggestion.topic), confidence was preferred over caution."
+                rationale =
+                    "Community bad idea: for \(suggestion.topic), confidence was preferred over caution."
             } else {
                 rationale = nil
             }
@@ -4118,7 +4847,7 @@ final class GenerateViewModel {
         "What Could Go Wrong?",
         "Ruin My Week",
         "Show Me The Chaos",
-        "Deploy Bad Wisdom"
+        "Deploy Bad Wisdom",
     ]
 }
 
@@ -4155,11 +4884,11 @@ final class QuotesViewModel {
     private var refreshGeneration: Int = 0
     private var cachedModelGeneratedQuotes: [BadQuote] = []
     private var lastModelQuoteOverlayKey: String?
-#if DEBUG
-    var debugSourceFilter: QuoteSourceDebugFilter = .all {
-        didSet { scheduleFilteredQuotesRefresh() }
-    }
-#endif
+    #if DEBUG
+        var debugSourceFilter: QuoteSourceDebugFilter = .all {
+            didSet { scheduleFilteredQuotesRefresh() }
+        }
+    #endif
 
     init(
         repository: AdviceRepository,
@@ -4232,11 +4961,13 @@ final class QuotesViewModel {
             votesByQuoteID[quote.id] = nextVote
         }
         scheduleFilteredQuotesRefresh()
-        analyticsTracker.track("quote_vote", properties: [
-            "id": quote.id,
-            "category": quote.category.rawValue,
-            "vote": "\(nextVote.rawValue)"
-        ])
+        analyticsTracker.track(
+            "quote_vote",
+            properties: [
+                "id": quote.id,
+                "category": quote.category.rawValue,
+                "vote": "\(nextVote.rawValue)",
+            ])
     }
 
     func submitSuggestion(
@@ -4246,7 +4977,8 @@ final class QuotesViewModel {
     ) -> String? {
         let trimmedText = quoteText.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSource = source.trimmingCharacters(in: .whitespacesAndNewlines)
-        let safeSource = trimmedSource.isEmpty ? "Community Submission" : String(trimmedSource.prefix(44))
+        let safeSource =
+            trimmedSource.isEmpty ? "Community Submission" : String(trimmedSource.prefix(44))
 
         guard trimmedText.count >= 8 else { return "Quote text is too short." }
         guard trimmedText.count <= 160 else { return "Quote text is too long." }
@@ -4268,38 +5000,46 @@ final class QuotesViewModel {
             quoteText: String(trimmedText.prefix(160))
         )
         reloadCachedData()
-        analyticsTracker.track("quote_suggestion_submit", properties: [
-            "category": category.rawValue
-        ])
+        analyticsTracker.track(
+            "quote_suggestion_submit",
+            properties: [
+                "category": category.rawValue
+            ])
         return nil
     }
 
     func deleteSuggestion(_ suggestion: UserQuoteSuggestion) {
         repository.deleteQuoteSuggestion(suggestion)
         reloadCachedData()
-        analyticsTracker.track("quote_suggestion_delete", properties: [
-            "category": suggestion.category.rawValue
-        ])
+        analyticsTracker.track(
+            "quote_suggestion_delete",
+            properties: [
+                "category": suggestion.category.rawValue
+            ])
     }
 
     func trackCopy(_ quote: BadQuote, isDaily: Bool) {
         repository.recordLearningSignal(scopeKey: quoteScopeKey(for: quote), type: .copy)
         scheduleFilteredQuotesRefresh()
-        analyticsTracker.track("quote_copy", properties: [
-            "id": quote.id,
-            "category": quote.category.rawValue,
-            "daily": isDaily ? "true" : "false"
-        ])
+        analyticsTracker.track(
+            "quote_copy",
+            properties: [
+                "id": quote.id,
+                "category": quote.category.rawValue,
+                "daily": isDaily ? "true" : "false",
+            ])
     }
 
     func trackShare(_ quote: BadQuote, isDaily: Bool) {
         repository.recordLearningSignal(scopeKey: quoteScopeKey(for: quote), type: .share)
         scheduleFilteredQuotesRefresh()
-        analyticsTracker.track("quote_share", properties: [
-            "id": quote.id,
-            "category": quote.category.rawValue,
-            "daily": isDaily ? "true" : "false"
-        ])
+        analyticsTracker.track(
+            "quote_share",
+            properties: [
+                "id": quote.id,
+                "category": quote.category.rawValue,
+                "daily": isDaily ? "true" : "false",
+            ])
     }
 
     func quoteShareText(_ quote: BadQuote) -> String {
@@ -4310,7 +5050,8 @@ final class QuotesViewModel {
         let rules = store.rules(for: quote.category, contentPack: .classic)
         let principle = rules.badPrinciples.randomElement() ?? "overconfidence"
         let keyword = rules.keywords.randomElement() ?? quote.category.title.lowercased()
-        return "It doubles down on \(principle.lowercased()) and dares you to frame \(keyword) as the obvious move."
+        return
+            "It doubles down on \(principle.lowercased()) and dares you to frame \(keyword) as the obvious move."
     }
 
     private func reloadCachedData() {
@@ -4337,7 +5078,8 @@ final class QuotesViewModel {
             let normalizedText = quote.text.normalizedForFiltering
             if seen.insert(normalizedText).inserted {
                 merged.append(quote)
-                index[quote.id] = "\(quote.text) \(quote.source) \(quote.category.title)".normalizedForFiltering
+                index[quote.id] =
+                    "\(quote.text) \(quote.source) \(quote.category.title)".normalizedForFiltering
                 scopeIndex[quote.id] = quoteScopeKey(for: quote)
             }
         }
@@ -4360,7 +5102,7 @@ final class QuotesViewModel {
 
     private func stableSeed(for text: String) -> Int {
         text.unicodeScalars.reduce(0) { partial, scalar in
-            (partial &* 16777619) ^ Int(scalar.value)
+            (partial &* 16_777_619) ^ Int(scalar.value)
         }
     }
 
@@ -4407,7 +5149,8 @@ final class QuotesViewModel {
         }
 
         let scorer = SemanticTextScorer.shared
-        let preparedQuery = normalizedSearch.isEmpty ? nil : await scorer.preparedQuery(from: normalizedSearch)
+        let preparedQuery =
+            normalizedSearch.isEmpty ? nil : await scorer.preparedQuery(from: normalizedSearch)
 
         var scored: [(BadQuote, Double)] = []
         scored.reserveCapacity(modeFiltered.count)
@@ -4427,7 +5170,8 @@ final class QuotesViewModel {
             }
             let semantic: Double
             if let preparedQuery {
-                semantic = await scorer.similarity("\(quote.text) \(quote.source)", to: preparedQuery)
+                semantic = await scorer.similarity(
+                    "\(quote.text) \(quote.source)", to: preparedQuery)
             } else {
                 semantic = 0.45
             }
@@ -4443,7 +5187,8 @@ final class QuotesViewModel {
         }
 
         guard !Task.isCancelled, generation == refreshGeneration else { return }
-        cachedFilteredQuotes = scored
+        cachedFilteredQuotes =
+            scored
             .sorted {
                 if $0.1 == $1.1 {
                     return $0.0.text.localizedCaseInsensitiveCompare($1.0.text) == .orderedAscending
@@ -4490,27 +5235,28 @@ final class QuotesViewModel {
     }
 
     private func quoteMatchesDebugSourceFilter(_ quote: BadQuote) -> Bool {
-#if DEBUG
-        switch debugSourceFilter {
-        case .all:
+        #if DEBUG
+            switch debugSourceFilter {
+            case .all:
+                return true
+            case .appleModel:
+                return quote.id.hasPrefix("apple-quote-")
+                    || quote.source.normalizedForFiltering.contains("apple on-device")
+            case .remixLab:
+                return quote.source.normalizedForFiltering.contains("ml remix")
+            case .community:
+                return quote.id.hasPrefix("community-")
+            case .curated:
+                let isApple =
+                    quote.id.hasPrefix("apple-quote-")
+                    || quote.source.normalizedForFiltering.contains("apple on-device")
+                let isRemix = quote.source.normalizedForFiltering.contains("ml remix")
+                let isCommunity = quote.id.hasPrefix("community-")
+                return !(isApple || isRemix || isCommunity)
+            }
+        #else
             return true
-        case .appleModel:
-            return quote.id.hasPrefix("apple-quote-")
-                || quote.source.normalizedForFiltering.contains("apple on-device")
-        case .remixLab:
-            return quote.source.normalizedForFiltering.contains("ml remix")
-        case .community:
-            return quote.id.hasPrefix("community-")
-        case .curated:
-            let isApple = quote.id.hasPrefix("apple-quote-")
-                || quote.source.normalizedForFiltering.contains("apple on-device")
-            let isRemix = quote.source.normalizedForFiltering.contains("ml remix")
-            let isCommunity = quote.id.hasPrefix("community-")
-            return !(isApple || isRemix || isCommunity)
-        }
-#else
-        return true
-#endif
+        #endif
     }
 
     private func scheduleModelQuoteOverlayRefreshIfNeeded() {
@@ -4535,19 +5281,23 @@ final class QuotesViewModel {
         modelQuoteTask?.cancel()
 
         let availability = AppleOnDeviceAdviceBridge.currentAvailability()
-        analyticsTracker.track("apple_model_availability", properties: [
-            "requested_provider": provider.rawValue,
-            "status": availability.analyticsKey,
-            "surface": "quotes"
-        ])
+        analyticsTracker.track(
+            "apple_model_availability",
+            properties: [
+                "requested_provider": provider.rawValue,
+                "status": availability.analyticsKey,
+                "surface": "quotes",
+            ])
 
         guard availability.isReady else {
             if provider == .appleOnDevice {
-                analyticsTracker.track("apple_model_fallback", properties: [
-                    "requested_provider": provider.rawValue,
-                    "reason": "availability_\(availability.analyticsKey)",
-                    "surface": "quotes"
-                ])
+                analyticsTracker.track(
+                    "apple_model_fallback",
+                    properties: [
+                        "requested_provider": provider.rawValue,
+                        "reason": "availability_\(availability.analyticsKey)",
+                        "surface": "quotes",
+                    ])
             }
             if !cachedModelGeneratedQuotes.isEmpty {
                 cachedModelGeneratedQuotes = []
@@ -4562,7 +5312,9 @@ final class QuotesViewModel {
         }
     }
 
-    private func modelQuoteOverlayKey(provider: AdviceGenerationProvider, now: Date = Date()) -> String {
+    private func modelQuoteOverlayKey(provider: AdviceGenerationProvider, now: Date = Date())
+        -> String
+    {
         let day = Calendar.current.startOfDay(for: now).timeIntervalSince1970
         return "\(provider.rawValue)|\(Int(day))"
     }
@@ -4570,7 +5322,8 @@ final class QuotesViewModel {
     private func refreshModelQuoteOverlay(provider: AdviceGenerationProvider) async {
         let categories = rotatingQuoteOverlayCategories()
         let tones = ToneMode.concrete
-        let seedBase = stableSeed(for: "quote-overlay|\(Date().formatted(date: .numeric, time: .omitted))")
+        let seedBase = stableSeed(
+            for: "quote-overlay|\(Date().formatted(date: .numeric, time: .omitted))")
         var built: [BadQuote] = []
         var seen = Set<String>()
 
@@ -4590,24 +5343,30 @@ final class QuotesViewModel {
                     built.append(candidate)
                 }
             } catch {
-                logger.error("Apple on-device quote generation failed: \(String(describing: error), privacy: .public)")
+                logger.error(
+                    "Apple on-device quote generation failed: \(String(describing: error), privacy: .public)"
+                )
                 if provider == .appleOnDevice {
-                    analyticsTracker.track("apple_model_fallback", properties: [
-                        "requested_provider": provider.rawValue,
-                        "reason": "generation_failed",
-                        "surface": "quotes"
-                    ])
+                    analyticsTracker.track(
+                        "apple_model_fallback",
+                        properties: [
+                            "requested_provider": provider.rawValue,
+                            "reason": "generation_failed",
+                            "surface": "quotes",
+                        ])
                 }
                 break
             }
         }
 
         if provider == .appleOnDevice, built.isEmpty {
-            analyticsTracker.track("apple_model_fallback", properties: [
-                "requested_provider": provider.rawValue,
-                "reason": "no_valid_output",
-                "surface": "quotes"
-            ])
+            analyticsTracker.track(
+                "apple_model_fallback",
+                properties: [
+                    "requested_provider": provider.rawValue,
+                    "reason": "no_valid_output",
+                    "surface": "quotes",
+                ])
         }
 
         guard !Task.isCancelled else { return }
@@ -4651,7 +5410,8 @@ final class FavoritesViewModel {
     private var favoritesSearchIndexByID: [UUID: String] = [:]
     private var cachedFilteredFavorites: [AdviceRecord] = []
 
-    init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker()) {
+    init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker())
+    {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
         self.debouncedSearchText = searchText
@@ -4694,7 +5454,8 @@ final class FavoritesViewModel {
         var index: [UUID: String] = [:]
         index.reserveCapacity(favorites.count)
         for record in favorites {
-            index[record.id] = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)"
+            index[record.id] =
+                "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)"
                 .normalizedForFiltering
         }
         favoritesSearchIndexByID = index
@@ -4720,8 +5481,10 @@ final class FavoritesViewModel {
             if normalizedSearch.isEmpty {
                 matchesSearch = true
             } else {
-                let haystack = favoritesSearchIndexByID[record.id]
-                    ?? "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
+                let haystack =
+                    favoritesSearchIndexByID[record.id]
+                    ?? "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)"
+                    .normalizedForFiltering
                 matchesSearch = haystack.contains(normalizedSearch)
             }
             return matchesCategory && matchesSearch
@@ -4779,7 +5542,8 @@ final class HistoryViewModel {
     private var cachedLikedCount = 0
     private var cachedDislikedCount = 0
 
-    init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker()) {
+    init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker())
+    {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
         self.debouncedSearchText = searchText
@@ -4822,7 +5586,8 @@ final class HistoryViewModel {
         var likes = 0
         var dislikes = 0
         for record in history {
-            index[record.id] = "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)"
+            index[record.id] =
+                "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)"
                 .normalizedForFiltering
             if record.vote == .like {
                 likes += 1
@@ -4855,8 +5620,10 @@ final class HistoryViewModel {
             if normalizedSearch.isEmpty {
                 matchesSearch = true
             } else {
-                let haystack = historySearchIndexByID[record.id]
-                    ?? "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)".normalizedForFiltering
+                let haystack =
+                    historySearchIndexByID[record.id]
+                    ?? "\(record.adviceLine) \(record.rationaleLine ?? "") \(record.category.title) \(record.tone.title)"
+                    .normalizedForFiltering
                 matchesSearch = haystack.contains(normalizedSearch)
             }
             return matchesCategory && matchesSearch
@@ -4902,8 +5669,11 @@ final class AppSessionViewModel {
         self.repository = AdviceRepository(context: context)
         self.settings = SettingsViewModel(repository: repository)
         self.achievements = AchievementsManager(context: context)
-        self.generate = GenerateViewModel(repository: repository, settingsViewModel: settings, analyticsTracker: analyticsTracker, achievementsManager: achievements)
-        self.favorites = FavoritesViewModel(repository: repository, analyticsTracker: analyticsTracker)
+        self.generate = GenerateViewModel(
+            repository: repository, settingsViewModel: settings, analyticsTracker: analyticsTracker,
+            achievementsManager: achievements)
+        self.favorites = FavoritesViewModel(
+            repository: repository, analyticsTracker: analyticsTracker)
         self.history = HistoryViewModel(repository: repository, analyticsTracker: analyticsTracker)
         self.quotes = QuotesViewModel(repository: repository, analyticsTracker: analyticsTracker)
     }
@@ -4921,12 +5691,25 @@ final class AppSessionViewModel {
         settings.reduceMotion = true
         settings.hapticsEnabled = false
 
-        let fixtures: [(category: AdviceCategory, tone: ToneMode, scenario: String, offset: Int)] = [
-            (.career, .corporateConsultant, "My manager asked for a status update and I have nothing finished.", 11),
-            (.money, .cryptoBro, "I need a retirement plan but also want to feel like a genius this week.", 23),
-            (.dating, .toxicBestFriend, "They take hours to reply and I want to seem mysterious.", 37),
-            (.productivity, .minimalistMonk, "I have 40 tabs open and keep reorganizing instead of working.", 53),
-        ]
+        let fixtures: [(category: AdviceCategory, tone: ToneMode, scenario: String, offset: Int)] =
+            [
+                (
+                    .career, .corporateConsultant,
+                    "My manager asked for a status update and I have nothing finished.", 11
+                ),
+                (
+                    .money, .cryptoBro,
+                    "I need a retirement plan but also want to feel like a genius this week.", 23
+                ),
+                (
+                    .dating, .toxicBestFriend,
+                    "They take hours to reply and I want to seem mysterious.", 37
+                ),
+                (
+                    .productivity, .minimalistMonk,
+                    "I have 40 tabs open and keep reorganizing instead of working.", 53
+                ),
+            ]
 
         for (index, fixture) in fixtures.enumerated() {
             generate.selectedCategory = fixture.category

@@ -1,10 +1,12 @@
+import Charts
 import SwiftUI
 import UIKit
-import Charts
 
 struct ShareCardRenderer {
     static func render(content: ShareCardContent) -> UIImage {
-        let size = content.aspectRatio == .story ? CGSize(width: 1080, height: 1920) : CGSize(width: 1080, height: 1080)
+        let size =
+            content.aspectRatio == .story
+            ? CGSize(width: 1080, height: 1920) : CGSize(width: 1080, height: 1080)
         let renderer = UIGraphicsImageRenderer(size: size)
 
         return renderer.image { context in
@@ -18,17 +20,20 @@ struct ShareCardRenderer {
             let cardRect = rect.insetBy(dx: inset, dy: inset)
 
             let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 44)
-            
+
             // Outer drop shadow
             cg.saveGState()
-            cg.setShadow(offset: CGSize(width: 0, height: 32), blur: 64, color: UIColor.black.withAlphaComponent(0.5).cgColor)
+            cg.setShadow(
+                offset: CGSize(width: 0, height: 32), blur: 64,
+                color: UIColor.black.withAlphaComponent(0.5).cgColor)
             UIColor.white.withAlphaComponent(0.18).setFill()
             path.fill()
             cg.restoreGState()
 
             // Inner highlight (bevel effect)
             cg.saveGState()
-            let innerPath = UIBezierPath(roundedRect: cardRect.insetBy(dx: 1.5, dy: 1.5), cornerRadius: 42.5)
+            let innerPath = UIBezierPath(
+                roundedRect: cardRect.insetBy(dx: 1.5, dy: 1.5), cornerRadius: 42.5)
             UIColor.white.withAlphaComponent(0.45).setStroke()
             innerPath.lineWidth = 1.5
             innerPath.stroke()
@@ -48,10 +53,12 @@ struct ShareCardRenderer {
             let titleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 34, weight: .heavy),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.95),
-                .kern: 1.5
+                .kern: 1.5,
             ]
             NSString(string: "BADVICE").draw(
-                in: CGRect(x: cardRect.minX + 52, y: cardRect.minY + 48, width: cardRect.width - 104, height: 44),
+                in: CGRect(
+                    x: cardRect.minX + 52, y: cardRect.minY + 48, width: cardRect.width - 104,
+                    height: 44),
                 withAttributes: titleAttributes
             )
 
@@ -60,10 +67,12 @@ struct ShareCardRenderer {
                 .font: UIFont.systemFont(ofSize: 48, weight: .bold),
                 .paragraphStyle: paragraph,
                 .foregroundColor: UIColor.white,
-                .kern: -0.5
+                .kern: -0.5,
             ]
             NSString(string: content.adviceLine).draw(
-                in: CGRect(x: cardRect.minX + 52, y: cardRect.minY + 128, width: cardRect.width - 104, height: cardRect.height * 0.48),
+                in: CGRect(
+                    x: cardRect.minX + 52, y: cardRect.minY + 128, width: cardRect.width - 104,
+                    height: cardRect.height * 0.48),
                 withAttributes: adviceAttributes
             )
 
@@ -73,10 +82,12 @@ struct ShareCardRenderer {
                     .font: UIFont.systemFont(ofSize: 28, weight: .medium),
                     .paragraphStyle: paragraph,
                     .foregroundColor: UIColor.white.withAlphaComponent(0.9),
-                    .kern: 0.2
+                    .kern: 0.2,
                 ]
                 NSString(string: rationale).draw(
-                    in: CGRect(x: cardRect.minX + 52, y: cardRect.midY + 110, width: cardRect.width - 104, height: 240),
+                    in: CGRect(
+                        x: cardRect.minX + 52, y: cardRect.midY + 110, width: cardRect.width - 104,
+                        height: 240),
                     withAttributes: rationaleAttributes
                 )
             }
@@ -85,10 +96,15 @@ struct ShareCardRenderer {
             let metaAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.monospacedSystemFont(ofSize: 24, weight: .semibold),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.85),
-                .kern: 1.2
+                .kern: 1.2,
             ]
-            NSString(string: "\(content.category.title.uppercased()) • \(content.tone.title.uppercased())").draw(
-                in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 140, width: cardRect.width - 104, height: 30),
+            NSString(
+                string:
+                    "\(content.category.title.uppercased()) • \(content.tone.title.uppercased())"
+            ).draw(
+                in: CGRect(
+                    x: cardRect.minX + 52, y: cardRect.maxY - 140, width: cardRect.width - 104,
+                    height: 30),
                 withAttributes: metaAttributes
             )
 
@@ -96,22 +112,26 @@ struct ShareCardRenderer {
             let watermarkAttrs: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 28, weight: .black),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.6),
-                .kern: 2.0
+                .kern: 2.0,
             ]
             let watermarkStr = "badvice.app"
             let watermarkSize = watermarkStr.size(withAttributes: watermarkAttrs)
             NSString(string: watermarkStr).draw(
-                in: CGRect(x: cardRect.maxX - watermarkSize.width - 52, y: cardRect.maxY - 140, width: watermarkSize.width, height: 34),
+                in: CGRect(
+                    x: cardRect.maxX - watermarkSize.width - 52, y: cardRect.maxY - 140,
+                    width: watermarkSize.width, height: 34),
                 withAttributes: watermarkAttrs
             )
 
             if content.includeDisclaimer {
                 NSString(string: "FOR ENTERTAINMENT ONLY").draw(
-                    in: CGRect(x: cardRect.minX + 52, y: cardRect.maxY - 70, width: cardRect.width - 104, height: 28),
+                    in: CGRect(
+                        x: cardRect.minX + 52, y: cardRect.maxY - 70, width: cardRect.width - 104,
+                        height: 28),
                     withAttributes: [
                         .font: UIFont.systemFont(ofSize: 20, weight: .bold),
                         .foregroundColor: UIColor.white.withAlphaComponent(0.5),
-                        .kern: 2.0
+                        .kern: 2.0,
                     ]
                 )
             }
@@ -122,23 +142,34 @@ struct ShareCardRenderer {
         let colors: [CGColor]
         switch template {
         case .bold:
-            colors = [UIColor(red: 0.85, green: 0.35, blue: 0.17, alpha: 1).cgColor,
-                      UIColor(red: 0.64, green: 0.2, blue: 0.14, alpha: 1).cgColor,
-                      UIColor(red: 0.37, green: 0.12, blue: 0.12, alpha: 1).cgColor]
+            colors = [
+                UIColor(red: 0.85, green: 0.35, blue: 0.17, alpha: 1).cgColor,
+                UIColor(red: 0.64, green: 0.2, blue: 0.14, alpha: 1).cgColor,
+                UIColor(red: 0.37, green: 0.12, blue: 0.12, alpha: 1).cgColor,
+            ]
         case .minimal:
-            colors = [UIColor(red: 0.35, green: 0.23, blue: 0.18, alpha: 1).cgColor,
-                      UIColor(red: 0.26, green: 0.17, blue: 0.15, alpha: 1).cgColor,
-                      UIColor(red: 0.18, green: 0.12, blue: 0.11, alpha: 1).cgColor]
+            colors = [
+                UIColor(red: 0.35, green: 0.23, blue: 0.18, alpha: 1).cgColor,
+                UIColor(red: 0.26, green: 0.17, blue: 0.15, alpha: 1).cgColor,
+                UIColor(red: 0.18, green: 0.12, blue: 0.11, alpha: 1).cgColor,
+            ]
         case .gradient:
-            colors = [UIColor(red: 0.97, green: 0.56, blue: 0.32, alpha: 1).cgColor,
-                      UIColor(red: 0.92, green: 0.36, blue: 0.45, alpha: 1).cgColor,
-                      UIColor(red: 0.49, green: 0.2, blue: 0.48, alpha: 1).cgColor]
+            colors = [
+                UIColor(red: 0.97, green: 0.56, blue: 0.32, alpha: 1).cgColor,
+                UIColor(red: 0.92, green: 0.36, blue: 0.45, alpha: 1).cgColor,
+                UIColor(red: 0.49, green: 0.2, blue: 0.48, alpha: 1).cgColor,
+            ]
         }
 
         let locations: [CGFloat] = [0, 0.45, 1]
         let space = CGColorSpaceCreateDeviceRGB()
-        guard let gradient = CGGradient(colorsSpace: space, colors: colors as CFArray, locations: locations) else { return }
-        cg.drawLinearGradient(gradient, start: CGPoint(x: rect.minX, y: rect.minY), end: CGPoint(x: rect.maxX, y: rect.maxY), options: [])
+        guard
+            let gradient = CGGradient(
+                colorsSpace: space, colors: colors as CFArray, locations: locations)
+        else { return }
+        cg.drawLinearGradient(
+            gradient, start: CGPoint(x: rect.minX, y: rect.minY),
+            end: CGPoint(x: rect.maxX, y: rect.maxY), options: [])
     }
 
     private static func drawNoise(in cg: CGContext, rect: CGRect) {
@@ -175,7 +206,7 @@ struct SettingsTabView: View {
     @State private var gearSpinDegrees: Double = 0
     @State private var gearIsSpinning = false
     @State private var gearSettleScale: CGFloat = 1.0
-    
+
     @State private var shockwaveTheme: ThemeMode?
     @State private var shockwaveScale: CGFloat = 0.1
     @State private var shockwaveOpacity: Double = 0
@@ -224,7 +255,9 @@ struct SettingsTabView: View {
                             if !isMotionReduced {
                                 withAnimation(.easeIn(duration: 0.18)) { gearSettleScale = 0.88 }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
-                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.52)) { gearSettleScale = 1.0 }
+                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.52)) {
+                                        gearSettleScale = 1.0
+                                    }
                                 }
                             }
                             // After spin settles, resume idle wobble
@@ -243,30 +276,37 @@ struct SettingsTabView: View {
                                 // Idle wobble when not spinning
                                 .scaleEffect(
                                     (sectionsAppeared
-                                        ? (isMotionReduced ? 1 : (gearIsSpinning ? 1.08 : (gearWobble ? 1.03 : 0.97)))
+                                        ? (isMotionReduced
+                                            ? 1
+                                            : (gearIsSpinning ? 1.08 : (gearWobble ? 1.03 : 0.97)))
                                         : 0.5) * gearSettleScale
                                 )
                                 .animation(
                                     isMotionReduced
                                         ? nil
-                                        : .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
+                                        : .easeInOut(duration: 1.6).repeatForever(
+                                            autoreverses: true),
                                     value: gearWobble
                                 )
                                 .animation(
-                                    isMotionReduced ? .easeOut(duration: 0.25) : .interpolatingSpring(stiffness: 80, damping: 10),
+                                    isMotionReduced
+                                        ? .easeOut(duration: 0.25)
+                                        : .interpolatingSpring(stiffness: 80, damping: 10),
                                     value: gearSpinDegrees
                                 )
                                 // Continuous full spin accumulates on each tap
-                                .rotationEffect(.degrees(
-                                    sectionsAppeared
-                                        ? (gearSpinDegrees + (isMotionReduced ? 0 : (gearWobble ? 3 : -3)))
-                                        : -180
-                                ))
+                                .rotationEffect(
+                                    .degrees(
+                                        sectionsAppeared
+                                            ? (gearSpinDegrees
+                                                + (isMotionReduced ? 0 : (gearWobble ? 3 : -3)))
+                                            : -180
+                                    ))
                         }
                         .buttonStyle(.plain)
                         .contentShape(Circle())
                         .accessibilityLabel("Settings gear, tap to spin")
-                        
+
                         Text("Personalize the Chaos")
                             .font(.system(.title2, design: .rounded, weight: .bold))
                             .foregroundStyle(primaryText)
@@ -279,36 +319,60 @@ struct SettingsTabView: View {
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05), value: sectionsAppeared)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05),
+                                value: sectionsAppeared)
                         themeSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10), value: sectionsAppeared)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10),
+                                value: sectionsAppeared)
                         experienceSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.15), value: sectionsAppeared)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.15),
+                                value: sectionsAppeared)
                         sharingSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.20), value: sectionsAppeared)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.20),
+                                value: sectionsAppeared)
                         dataSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.25), value: sectionsAppeared)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.25),
+                                value: sectionsAppeared)
                         aboutSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(isMotionReduced ? nil : .spring(response: 0.5, dampingFraction: 0.75).delay(0.30), value: sectionsAppeared)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.30),
+                                value: sectionsAppeared)
                     }
                     .padding(.horizontal, 16)
                 }
-                .padding(.bottom, 120) // Tab bar clearance
+                .padding(.bottom, 120)  // Tab bar clearance
             }
             .coordinateSpace(name: "scroll")
             .trackScrollForTabBar()
@@ -338,7 +402,9 @@ struct SettingsTabView: View {
                 if let st = shockwaveTheme {
                     Circle()
                         .fill(
-                            RadialGradient(colors: [Theme.accent(for: st).opacity(0.4), .clear], center: .center, startRadius: 0, endRadius: 200)
+                            RadialGradient(
+                                colors: [Theme.accent(for: st).opacity(0.4), .clear],
+                                center: .center, startRadius: 0, endRadius: 200)
                         )
                         .scaleEffect(shockwaveScale)
                         .opacity(shockwaveOpacity)
@@ -360,7 +426,8 @@ struct SettingsTabView: View {
                     settingsNavRow(
                         "Advice Suggestion Lab",
                         systemImage: "plus.bubble",
-                        badge: generateViewModel.communitySuggestionCount > 0 ? "\(generateViewModel.communitySuggestionCount)" : nil
+                        badge: generateViewModel.communitySuggestionCount > 0
+                            ? "\(generateViewModel.communitySuggestionCount)" : nil
                     )
                 }
                 .buttonStyle(.plain)
@@ -373,7 +440,8 @@ struct SettingsTabView: View {
                     settingsNavRow(
                         "Achievements",
                         systemImage: "trophy.fill",
-                        badge: achievementsManager.unlockedAchievementCount > 0 ? "\(achievementsManager.unlockedAchievementCount)" : nil
+                        badge: achievementsManager.unlockedAchievementCount > 0
+                            ? "\(achievementsManager.unlockedAchievementCount)" : nil
                     )
                 }
                 .buttonStyle(.plain)
@@ -386,7 +454,8 @@ struct SettingsTabView: View {
                     settingsNavRow(
                         "Quote Suggestion Lab",
                         systemImage: "quote.bubble.fill",
-                        badge: quotesViewModel.quoteSuggestionCount > 0 ? "\(quotesViewModel.quoteSuggestionCount)" : nil
+                        badge: quotesViewModel.quoteSuggestionCount > 0
+                            ? "\(quotesViewModel.quoteSuggestionCount)" : nil
                     )
                 }
                 .buttonStyle(.plain)
@@ -405,7 +474,9 @@ struct SettingsTabView: View {
 
     private var themeSection: some View {
         settingsCard(title: "Theme", icon: "paintpalette") {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10
+            ) {
                 ForEach(ThemeMode.allCases) { mode in
                     let isTileSelected = viewModel.theme == mode
                     Button {
@@ -417,16 +488,16 @@ struct SettingsTabView: View {
                                 shockwaveTheme = mode
                                 shockwaveScale = 0.5
                                 shockwaveOpacity = 1.0
-                                
+
                                 withAnimation(.easeOut(duration: 0.6)) {
                                     shockwaveScale = 6.0
                                     shockwaveOpacity = 0.0
                                 }
-                                
+
                                 withAnimation(.easeInOut(duration: 0.35)) {
                                     viewModel.theme = mode
                                 }
-                                
+
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                                     shockwaveTheme = nil
                                 }
@@ -444,7 +515,8 @@ struct SettingsTabView: View {
                                     .frame(width: 32, height: 28)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                            .stroke(Theme.accent(for: mode).opacity(0.3), lineWidth: 1)
+                                            .stroke(
+                                                Theme.accent(for: mode).opacity(0.3), lineWidth: 1)
                                     )
                             }
                             .overlay(alignment: .topTrailing) {
@@ -470,7 +542,9 @@ struct SettingsTabView: View {
                                         .multilineTextAlignment(.center)
                                         .lineLimit(2)
                                         .fixedSize(horizontal: false, vertical: true)
-                                        .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .top)))
+                                        .transition(
+                                            .opacity.combined(
+                                                with: .scale(scale: 0.9, anchor: .top)))
                                 }
                             }
                             .animation(.easeInOut(duration: Theme.animFast), value: viewModel.theme)
@@ -478,7 +552,8 @@ struct SettingsTabView: View {
                     }
                     .buttonStyle(.plain)
                     .scaleEffect(isTileSelected ? 1.05 : 1.0)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isTileSelected)
+                    .animation(
+                        .spring(response: 0.22, dampingFraction: 0.58), value: isTileSelected)
                 }
             }
             Divider().opacity(0.5)
@@ -488,12 +563,19 @@ struct SettingsTabView: View {
                 ColorPicker(
                     "Accent Color",
                     selection: Binding<Color>(
-                        get: { Color(red: customAccentR, green: customAccentG, blue: customAccentB) },
+                        get: {
+                            Color(red: customAccentR, green: customAccentG, blue: customAccentB)
+                        },
                         set: { newColor in
                             let ui = UIColor(newColor)
-                            var r: CGFloat = 0; var g: CGFloat = 0; var b: CGFloat = 0; var a: CGFloat = 0
+                            var r: CGFloat = 0
+                            var g: CGFloat = 0
+                            var b: CGFloat = 0
+                            var a: CGFloat = 0
                             ui.getRed(&r, green: &g, blue: &b, alpha: &a)
-                            customAccentR = r; customAccentG = g; customAccentB = b
+                            customAccentR = r
+                            customAccentG = g
+                            customAccentB = b
                         }
                     ),
                     supportsOpacity: false
@@ -507,6 +589,8 @@ struct SettingsTabView: View {
         settingsCard(title: "Experience", icon: "sparkles") {
             VStack(spacing: 12) {
                 Toggle("Haptic Feedback", isOn: $viewModel.hapticsEnabled)
+                Divider().opacity(0.5)
+                Toggle("Sound Effects", isOn: $viewModel.soundEffectsEnabled)
                 Divider().opacity(0.5)
                 Toggle("Reduce Motion", isOn: $viewModel.reduceMotion)
                 Divider().opacity(0.5)
@@ -536,7 +620,9 @@ struct SettingsTabView: View {
                 settingsPicker(
                     "Template",
                     systemImage: "photo",
-                    selection: Binding(get: { viewModel.preferredTemplate }, set: { viewModel.preferredTemplate = $0 })
+                    selection: Binding(
+                        get: { viewModel.preferredTemplate },
+                        set: { viewModel.preferredTemplate = $0 })
                 ) {
                     ForEach(ShareCardTemplate.allCases) { t in
                         Text(t.title).tag(t)
@@ -546,7 +632,8 @@ struct SettingsTabView: View {
                 settingsPicker(
                     "Aspect Ratio",
                     systemImage: "aspectratio",
-                    selection: Binding(get: { viewModel.preferredAspect }, set: { viewModel.preferredAspect = $0 })
+                    selection: Binding(
+                        get: { viewModel.preferredAspect }, set: { viewModel.preferredAspect = $0 })
                 ) {
                     ForEach(ShareAspectRatio.allCases) { r in
                         Text(r.title).tag(r)
@@ -556,7 +643,9 @@ struct SettingsTabView: View {
                 settingsPicker(
                     "Caption Style",
                     systemImage: "text.quote",
-                    selection: Binding(get: { viewModel.preferredSharePreset }, set: { viewModel.preferredSharePreset = $0 })
+                    selection: Binding(
+                        get: { viewModel.preferredSharePreset },
+                        set: { viewModel.preferredSharePreset = $0 })
                 ) {
                     ForEach(ShareCaptionPreset.allCases) { p in
                         Text(p.title).tag(p)
@@ -576,7 +665,9 @@ struct SettingsTabView: View {
                 settingsPicker(
                     "Content Pack",
                     systemImage: "square.grid.2x2",
-                    selection: Binding(get: { viewModel.preferredContentPack }, set: { viewModel.preferredContentPack = $0 })
+                    selection: Binding(
+                        get: { viewModel.preferredContentPack },
+                        set: { viewModel.preferredContentPack = $0 })
                 ) {
                     ForEach(ContentPack.allCases) { pack in
                         Text(pack.title).tag(pack)
@@ -586,7 +677,9 @@ struct SettingsTabView: View {
                 settingsPicker(
                     "Generation Engine",
                     systemImage: "cpu",
-                    selection: Binding(get: { viewModel.preferredGenerationProvider }, set: { viewModel.preferredGenerationProvider = $0 }),
+                    selection: Binding(
+                        get: { viewModel.preferredGenerationProvider },
+                        set: { viewModel.preferredGenerationProvider = $0 }),
                     pickerAccessibilityIdentifier: "settings.generationEngine.picker"
                 ) {
                     ForEach(AdviceGenerationProvider.allCases) { provider in
@@ -613,14 +706,23 @@ struct SettingsTabView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
                 settingsDivider
-                settingsToggle("Community suggestions only", systemImage: "person.2",
-                    isOn: Binding(get: { viewModel.communityOnlyMode }, set: { viewModel.communityOnlyMode = $0 }))
+                settingsToggle(
+                    "Community suggestions only", systemImage: "person.2",
+                    isOn: Binding(
+                        get: { viewModel.communityOnlyMode },
+                        set: { viewModel.communityOnlyMode = $0 }))
                 settingsDivider
-                settingsToggle("Fake rationale", systemImage: "text.bubble",
-                    isOn: Binding(get: { viewModel.includeRationale }, set: { viewModel.includeRationale = $0 }))
+                settingsToggle(
+                    "Fake rationale", systemImage: "text.bubble",
+                    isOn: Binding(
+                        get: { viewModel.includeRationale },
+                        set: { viewModel.includeRationale = $0 }))
                 settingsDivider
-                settingsToggle("Strict no repeats", systemImage: "arrow.triangle.2.circlepath",
-                    isOn: Binding(get: { viewModel.strictNoRepeats }, set: { viewModel.strictNoRepeats = $0 }))
+                settingsToggle(
+                    "Strict no repeats", systemImage: "arrow.triangle.2.circlepath",
+                    isOn: Binding(
+                        get: { viewModel.strictNoRepeats }, set: { viewModel.strictNoRepeats = $0 })
+                )
             }
         }
     }
@@ -643,7 +745,8 @@ struct SettingsTabView: View {
             HStack(spacing: 8) {
                 snapshotPill(title: "Generated", value: "\(generateViewModel.totalGeneratedCount)")
                 snapshotPill(title: "Saved", value: "\(generateViewModel.favoriteCount)")
-                snapshotPill(title: "Suggestions", value: "\(generateViewModel.communitySuggestionCount)")
+                snapshotPill(
+                    title: "Suggestions", value: "\(generateViewModel.communitySuggestionCount)")
             }
         }
     }
@@ -678,7 +781,8 @@ struct SettingsTabView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 10)
 
-                ForEach(Array(viewModel.reorderableTabs.enumerated()), id: \.element.id) { index, tab in
+                ForEach(Array(viewModel.reorderableTabs.enumerated()), id: \.element.id) {
+                    index, tab in
                     if index > 0 { settingsDivider }
                     HStack(spacing: 12) {
                         Image(systemName: tab.systemImage)
@@ -696,8 +800,9 @@ struct SettingsTabView: View {
                                 Image(systemName: "chevron.up")
                                     .font(.caption.weight(.bold))
                                     .frame(width: 32, height: 32)
-                                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(secondaryText.opacity(0.1)))
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .fill(secondaryText.opacity(0.1)))
                             }
                             .buttonStyle(.plain)
                             .disabled(index == 0)
@@ -709,8 +814,9 @@ struct SettingsTabView: View {
                                 Image(systemName: "chevron.down")
                                     .font(.caption.weight(.bold))
                                     .frame(width: 32, height: 32)
-                                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(secondaryText.opacity(0.1)))
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .fill(secondaryText.opacity(0.1)))
                             }
                             .buttonStyle(.plain)
                             .disabled(index == viewModel.reorderableTabs.count - 1)
@@ -751,7 +857,9 @@ struct SettingsTabView: View {
             .frame(height: 1)
     }
 
-    private func settingsToggle(_ label: String, systemImage: String, isOn: Binding<Bool>) -> some View {
+    private func settingsToggle(_ label: String, systemImage: String, isOn: Binding<Bool>)
+        -> some View
+    {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
                 .font(.body.weight(.medium))
@@ -832,14 +940,16 @@ struct SettingsTabView: View {
 
     // MARK: - Card container
 
-    private func settingsCard<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+    private func settingsCard<Content: View>(
+        title: String, icon: String, @ViewBuilder content: () -> Content
+    ) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Label(title, systemImage: icon)
                 .font(.system(.subheadline, design: .rounded, weight: .bold))
                 .foregroundStyle(secondaryText)
                 .textCase(.uppercase)
                 .tracking(1.2)
-            
+
             content()
                 .padding(16)
                 .background(
@@ -904,7 +1014,9 @@ private struct SuggestionLabView: View {
                         suggestionTopic = ""
                         suggestionAdviceLine = ""
                         HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { submitSuccess = true }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            submitSuccess = true
+                        }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
                             withAnimation(.easeOut(duration: 0.3)) { submitSuccess = false }
                         }
@@ -922,7 +1034,8 @@ private struct SuggestionLabView: View {
                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: submitSuccess)
                 .disabled(
                     suggestionTopic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || suggestionAdviceLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || suggestionAdviceLine.trimmingCharacters(in: .whitespacesAndNewlines)
+                            .isEmpty
                 )
             }
 
@@ -1010,7 +1123,9 @@ private struct QuoteSuggestionLabView: View {
                         suggestionSource = ""
                         suggestionQuoteText = ""
                         HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { submitSuccess = true }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            submitSuccess = true
+                        }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
                             withAnimation(.easeOut(duration: 0.3)) { submitSuccess = false }
                         }
@@ -1026,7 +1141,8 @@ private struct QuoteSuggestionLabView: View {
                     }
                 }
                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: submitSuccess)
-                .disabled(suggestionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(
+                    suggestionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
 
             Section("Recent Quote Suggestions") {
@@ -1070,7 +1186,7 @@ private struct CommunityPulseView: View {
 
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
-    
+
     @State private var chartAnimated = false
 
     var body: some View {
@@ -1104,7 +1220,9 @@ private struct CommunityPulseView: View {
                                 .foregroundStyle(primaryText)
                         }
                     }
-                    .frame(height: max(200, CGFloat(min(viewModel.topCommunityTopics.count, 10) * 44)))
+                    .frame(
+                        height: max(200, CGFloat(min(viewModel.topCommunityTopics.count, 10) * 44))
+                    )
                     .padding(.vertical, 8)
                 }
             }
@@ -1120,9 +1238,11 @@ private struct CommunityPulseView: View {
                                 .font(.body)
                                 .foregroundStyle(primaryText)
                                 .lineLimit(3)
-                            Text("\(item.category.title) • \(item.tone.title) • \(item.votes)x likes")
-                                .font(.caption)
-                                .foregroundStyle(secondaryText)
+                            Text(
+                                "\(item.category.title) • \(item.tone.title) • \(item.votes)x likes"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
                         }
                     }
                 }
@@ -1139,9 +1259,11 @@ private struct CommunityPulseView: View {
                                 .font(.body)
                                 .foregroundStyle(primaryText)
                                 .lineLimit(3)
-                            Text("\(item.category.title) • \(item.tone.title) • \(item.votes)x dislikes")
-                                .font(.caption)
-                                .foregroundStyle(secondaryText)
+                            Text(
+                                "\(item.category.title) • \(item.tone.title) • \(item.votes)x dislikes"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
                         }
                     }
                 }

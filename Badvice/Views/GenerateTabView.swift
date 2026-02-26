@@ -114,9 +114,18 @@ struct GenerateTabView: View {
         .scaleEffect(headerReactiveScale)
         .rotationEffect(.degrees(isMotionReduced ? 0 : headerRotation))
         .hueRotation(.degrees(isMotionReduced ? 0 : Double(viewModel.hapticTrigger % 4) * 12))
-        .animation(isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.6), value: viewModel.hapticTrigger)
-        .animation(isMotionReduced ? nil : .spring(response: 0.24, dampingFraction: 0.56), value: headerPulseScale)
-        .animation(isMotionReduced ? nil : .spring(response: 0.26, dampingFraction: 0.58), value: headerRotation)
+        .animation(
+            isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.6),
+            value: viewModel.hapticTrigger
+        )
+        .animation(
+            isMotionReduced ? nil : .spring(response: 0.24, dampingFraction: 0.56),
+            value: headerPulseScale
+        )
+        .animation(
+            isMotionReduced ? nil : .spring(response: 0.26, dampingFraction: 0.58),
+            value: headerRotation
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             triggerHeaderEasterEggTap()
@@ -156,57 +165,42 @@ struct GenerateTabView: View {
                             theme: settings.theme,
                             reduceMotion: settings.reduceMotion
                         )
-                            .accessibilityIdentifier("advice.card")
-                            .overlay(alignment: .topTrailing) {
-                                if let sourceBadge = viewModel.generationSourceBadgeText {
-                                    Text(sourceBadge)
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(primaryText)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(
-                                            Capsule(style: .continuous)
-                                                .fill(cardColor.opacity(0.92))
-                                        )
-                                        .overlay(
-                                            Capsule(style: .continuous)
-                                                .stroke(accent.opacity(0.35), lineWidth: 1)
-                                        )
-                                        .padding(12)
-                                }
-                            }
-                            .transition(isMotionReduced ? .identity : .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
-                            .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
-                            .animation(isMotionReduced ? nil : .spring(response: 0.2, dampingFraction: 0.5), value: viewModel.hapticTrigger)
-                            .contextMenu {
-                                Button("Save", systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark") {
-                                    let wasFavorite = viewModel.isCurrentFavorite
-                                    viewModel.toggleFavorite()
-                                    onDataChanged()
-                                    HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                                    activeToast = ToastMessage(
-                                        message: wasFavorite ? "Removed from Favorites" : "Saved!",
-                                        style: wasFavorite ? .deleted : .success
+                        .accessibilityIdentifier("advice.card")
+                        .overlay(alignment: .topTrailing) {
+                            if let sourceBadge = viewModel.generationSourceBadgeText {
+                                Text(sourceBadge)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(primaryText)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule(style: .continuous)
+                                            .fill(cardColor.opacity(0.92))
                                     )
-                                }
-
-                                Button("Copy", systemImage: "doc.on.doc") {
-                                    UIPasteboard.general.string = viewModel.currentShareText
-                                    viewModel.trackCopy()
-                                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                                    activeToast = ToastMessage(message: "Copied!", style: .success)
-                                }
-
-                                Button("Share", systemImage: "square.and.arrow.up") {
-                                    guard let payload = viewModel.currentSharePayload else { return }
-                                    let image = ShareCardRenderer.render(content: payload)
-                                    shareItems = [image, viewModel.currentShareText]
-                                    viewModel.trackShare(template: payload.template, ratio: payload.aspectRatio)
-                                    showingShareSheet = true
-                                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                                }
+                                    .overlay(
+                                        Capsule(style: .continuous)
+                                            .stroke(accent.opacity(0.35), lineWidth: 1)
+                                    )
+                                    .padding(12)
                             }
-                            .onTapGesture(count: 2) {
+                        }
+                        .transition(
+                            isMotionReduced
+                                ? .identity
+                                : .asymmetric(
+                                    insertion: .scale.combined(with: .opacity), removal: .opacity)
+                        )
+                        .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
+                        .animation(
+                            isMotionReduced ? nil : .spring(response: 0.2, dampingFraction: 0.5),
+                            value: viewModel.hapticTrigger
+                        )
+                        .contextMenu {
+                            Button(
+                                "Save",
+                                systemImage: viewModel.isCurrentFavorite
+                                    ? "bookmark.fill" : "bookmark"
+                            ) {
                                 let wasFavorite = viewModel.isCurrentFavorite
                                 viewModel.toggleFavorite()
                                 onDataChanged()
@@ -216,6 +210,34 @@ struct GenerateTabView: View {
                                     style: wasFavorite ? .deleted : .success
                                 )
                             }
+
+                            Button("Copy", systemImage: "doc.on.doc") {
+                                UIPasteboard.general.string = viewModel.currentShareText
+                                viewModel.trackCopy()
+                                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                                activeToast = ToastMessage(message: "Copied!", style: .success)
+                            }
+
+                            Button("Share", systemImage: "square.and.arrow.up") {
+                                guard let payload = viewModel.currentSharePayload else { return }
+                                let image = ShareCardRenderer.render(content: payload)
+                                shareItems = [image, viewModel.currentShareText]
+                                viewModel.trackShare(
+                                    template: payload.template, ratio: payload.aspectRatio)
+                                showingShareSheet = true
+                                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                            }
+                        }
+                        .onTapGesture(count: 2) {
+                            let wasFavorite = viewModel.isCurrentFavorite
+                            viewModel.toggleFavorite()
+                            onDataChanged()
+                            HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                            activeToast = ToastMessage(
+                                message: wasFavorite ? "Removed from Favorites" : "Saved!",
+                                style: wasFavorite ? .deleted : .success
+                            )
+                        }
                     } else if !viewModel.isGenerating {
                         emptyState
                             .transition(isMotionReduced ? .identity : .opacity)
@@ -226,14 +248,21 @@ struct GenerateTabView: View {
                         GeneratingOverlay(theme: settings.theme)
                     }
                 }
-                .animation(isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.86), value: viewModel.current?.id)
-                .animation(isMotionReduced ? nil : .easeInOut(duration: 0.2), value: viewModel.isGenerating)
+                .animation(
+                    isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.86),
+                    value: viewModel.current?.id
+                )
+                .animation(
+                    isMotionReduced ? nil : .easeInOut(duration: 0.2), value: viewModel.isGenerating
+                )
 
                 votingRow
                 primaryActionButtons
                 if !tabBarVisible.wrappedValue {
                     tabShortcutRow
-                        .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
+                        .transition(
+                            isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top))
+                        )
                 }
                 if let notice = viewModel.generationNotice, !notice.isEmpty {
                     Text(notice)
@@ -400,10 +429,13 @@ struct GenerateTabView: View {
                     }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(secondaryText)
-                    .transition(isMotionReduced ? .identity : .opacity.combined(with: .scale(scale: 0.8)))
+                    .transition(
+                        isMotionReduced ? .identity : .opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
-            .animation(isMotionReduced ? nil : .easeInOut(duration: Theme.animFast), value: viewModel.scenarioText.isEmpty)
+            .animation(
+                isMotionReduced ? nil : .easeInOut(duration: Theme.animFast),
+                value: viewModel.scenarioText.isEmpty)
 
             TextField("Example: awkward first date", text: $viewModel.scenarioText, axis: .vertical)
                 .textFieldStyle(.plain)
@@ -717,10 +749,12 @@ struct GenerateTabView: View {
                 .accessibilityLabel("Dismiss what's new")
             }
 
-            Text("New: Chaos Hub combines daily missions, community pulse, and your wins. ML Remix now sharpens tone and category variety.")
-                .font(.footnote)
-                .foregroundStyle(secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(
+                "New: Chaos Hub combines daily missions, community pulse, and your wins. ML Remix now sharpens tone and category variety."
+            )
+            .font(.footnote)
+            .foregroundStyle(secondaryText)
+            .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
                 Button {
@@ -788,7 +822,9 @@ struct GenerateTabView: View {
                     }
                 }
                 Button {
-                    let lines = recapItems.enumerated().map { "\($0.offset + 1). \($0.element.adviceLine)" }.joined(separator: "\n")
+                    let lines = recapItems.enumerated().map {
+                        "\($0.offset + 1). \($0.element.adviceLine)"
+                    }.joined(separator: "\n")
                     let shareText = "My Worst Advice of the Week 🏆\n\n\(lines)\n\n— via Badvice"
                     shareItems = [shareText]
                     showingShareSheet = true
@@ -806,7 +842,9 @@ struct GenerateTabView: View {
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(cardColor)
-                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(accent.opacity(0.14), lineWidth: 1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(
+                            accent.opacity(0.14), lineWidth: 1))
             )
         }
     }
@@ -835,7 +873,8 @@ struct GenerateTabView: View {
         if !isMotionReduced {
             let direction: Double = headerTapStreak.isMultiple(of: 2) ? 1 : -1
             withAnimation(.spring(response: 0.22, dampingFraction: 0.55)) {
-                headerPulseScale = 1.04 + CGFloat(Theme.personality(for: settings.theme).effectIntensity * 0.04)
+                headerPulseScale =
+                    1.04 + CGFloat(Theme.personality(for: settings.theme).effectIntensity * 0.04)
                 headerRotation = direction * headerReactiveRotationAmplitude
                 headerOrbitOpacity = 0.92
             }
@@ -851,7 +890,7 @@ struct GenerateTabView: View {
             let toasts3 = [
                 "Header unlocked: confidence mode engaged.",
                 "Triple tap detected. Questionable decisions incoming.",
-                "You found the secret handshake. Chaos nods in approval."
+                "You found the secret handshake. Chaos nods in approval.",
             ]
             activeToast = ToastMessage(message: toasts3.randomElement()!, style: .info)
             revealSurprise("Mini surprise: the badge wakes up with your theme mood.")
@@ -859,7 +898,7 @@ struct GenerateTabView: View {
             let toasts5 = [
                 "Secret combo hit: Surprise Me launched.",
                 "Five taps? That's commitment. Here's random chaos.",
-                "Combo unlocked. The algorithm is now terrified of you."
+                "Combo unlocked. The algorithm is now terrified of you.",
             ]
             activeToast = ToastMessage(message: toasts5.randomElement()!, style: .success)
             revealSurprise("Chaos code: rolling a random tone + category.")
@@ -869,7 +908,7 @@ struct GenerateTabView: View {
             let toasts8 = [
                 "Ultra combo: Daily Drop triggered from the logo.",
                 "Eight taps. You are now legally a chaos engineer.",
-                "Logo boss defeated. Daily Drop deployed as reward."
+                "Logo boss defeated. Daily Drop deployed as reward.",
             ]
             activeToast = ToastMessage(message: toasts8.randomElement()!, style: .success)
             revealSurprise("You found the 8-tap easter egg. Daily Drop injected.")
@@ -886,7 +925,7 @@ struct GenerateTabView: View {
         let longPressToasts = [
             "Hidden mode: Roast Protocol armed.",
             "Long press detected. Friend Roast mode: activated.",
-            "Patience unlocked the roast. Someone's about to have a day."
+            "Patience unlocked the roast. Someone's about to have a day.",
         ]
         activeToast = ToastMessage(message: longPressToasts.randomElement()!, style: .info)
         revealSurprise("Long-press unlock: Friend Roast tone primed for your next run.")
@@ -923,7 +962,7 @@ struct GenerateTabView: View {
             "You miss 100% of the shots you don't put in the roadmap.",
             "The best time to set realistic expectations was last sprint. The second best time is now.",
             "Speak softly and carry a well-formatted slide deck.",
-            "We are all just one pivot away from a TED Talk."
+            "We are all just one pivot away from a TED Talk.",
         ]
         let unlocked = mutatedQuotePool.randomElement() ?? mutatedQuotePool[0]
         UIPasteboard.general.string = unlocked
@@ -932,14 +971,16 @@ struct GenerateTabView: View {
             "Secret quote copied.",
             "Hidden wisdom extracted and clipped.",
             "Contraband quote secured to clipboard.",
-            "Rare drop obtained. No one will believe you found it."
+            "Rare drop obtained. No one will believe you found it.",
         ]
         activeToast = ToastMessage(message: quoteCopyToasts.randomElement()!, style: .success)
         revealSurprise("Hidden quote: \"\(unlocked)\"")
     }
 
     private func revealSurprise(_ message: String) {
-        withAnimation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8)) {
+        withAnimation(
+            isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8)
+        ) {
             unlockedSurpriseLine = message
         }
         surpriseClearTask?.cancel()
@@ -1017,11 +1058,14 @@ struct GenerateTabView: View {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 } label: {
                     HStack(spacing: 5) {
-                        Image(systemName: viewModel.currentVote == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
+                        Image(
+                            systemName: viewModel.currentVote == .like
+                                ? "hand.thumbsup.fill" : "hand.thumbsup")
                         if viewModel.currentVote == .like {
                             Text("Liked")
                                 .font(.caption.weight(.semibold))
-                                .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
+                                .transition(
+                                    .opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
                         }
                     }
                     .frame(height: 36)
@@ -1029,7 +1073,9 @@ struct GenerateTabView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(viewModel.currentVote == .like ? accent : secondaryText)
-                .animation(isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7), value: viewModel.currentVote)
+                .animation(
+                    isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7),
+                    value: viewModel.currentVote)
 
                 Button {
                     viewModel.toggleVote(.dislike)
@@ -1037,11 +1083,14 @@ struct GenerateTabView: View {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 } label: {
                     HStack(spacing: 5) {
-                        Image(systemName: viewModel.currentVote == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                        Image(
+                            systemName: viewModel.currentVote == .dislike
+                                ? "hand.thumbsdown.fill" : "hand.thumbsdown")
                         if viewModel.currentVote == .dislike {
                             Text("Noted")
                                 .font(.caption.weight(.semibold))
-                                .transition(.opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
+                                .transition(
+                                    .opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
                         }
                     }
                     .frame(height: 36)
@@ -1049,7 +1098,9 @@ struct GenerateTabView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(viewModel.currentVote == .dislike ? accent.opacity(0.8) : secondaryText)
-                .animation(isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7), value: viewModel.currentVote)
+                .animation(
+                    isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7),
+                    value: viewModel.currentVote)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -1061,7 +1112,10 @@ struct GenerateTabView: View {
     }
 
     private var advancedSection: some View {
-        DisclosureGroup(isExpanded: $showingAdvanced.animation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))) {
+        DisclosureGroup(
+            isExpanded: $showingAdvanced.animation(
+                isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))
+        ) {
             VStack(alignment: .leading, spacing: 12) {
                 Text(viewModel.uniquenessStatusText)
                     .font(.caption)
@@ -1193,7 +1247,9 @@ private struct GeneratingOverlay: View {
 
     // Cache theme colors so body doesn't call Theme switch statements every frame
     private var accentColor: Color { Theme.accent(for: theme) }
-    private var secondaryAccentColor: Color { Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme) }
+    private var secondaryAccentColor: Color {
+        Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme)
+    }
     private var primaryTextColor: Color { Theme.primaryText(for: theme) }
     private var glowColor: Color? { Theme.glowColor(for: theme) }
 
@@ -1209,7 +1265,7 @@ private struct GeneratingOverlay: View {
         "Fabricating confidence...",
         "Running the disaster protocol...",
         "Polling experts in bad decisions...",
-        "Loading questionable wisdom..."
+        "Loading questionable wisdom...",
     ]
 
     var body: some View {
@@ -1227,7 +1283,7 @@ private struct GeneratingOverlay: View {
                                 colors: [
                                     accentColor.opacity(0.9),
                                     secondaryAccentColor.opacity(0.5),
-                                    accentColor.opacity(0.0)
+                                    accentColor.opacity(0.0),
                                 ],
                                 center: .center,
                                 startRadius: 10,
@@ -1236,19 +1292,24 @@ private struct GeneratingOverlay: View {
                         )
                         .frame(width: 60, height: 60)
                         .scaleEffect(pulseScale)
-                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseScale)
+                        .animation(
+                            .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                            value: pulseScale)
 
                     // Spinning ring — use Canvas to avoid per-frame View layout overhead
                     Canvas { ctx, size in
                         let center = CGPoint(x: size.width / 2, y: size.height / 2)
                         let r = size.width / 2 - 1.5
                         var path = Path()
-                        path.addArc(center: center, radius: r, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
+                        path.addArc(
+                            center: center, radius: r, startAngle: .degrees(0),
+                            endAngle: .degrees(360), clockwise: false)
                         ctx.stroke(path, with: .color(accentColor), lineWidth: 3)
                     }
                     .frame(width: 80, height: 80)
                     .rotationEffect(.degrees(rotation))
-                    .animation(.linear(duration: 1.5).repeatForever(autoreverses: false), value: rotation)
+                    .animation(
+                        .linear(duration: 1.5).repeatForever(autoreverses: false), value: rotation)
 
                     // Optional glow halo
                     if let glow = glowColor {
@@ -1262,22 +1323,30 @@ private struct GeneratingOverlay: View {
                     // Orbiting dots drawn in Canvas — zero SwiftUI layout overhead per frame
                     Canvas(rendersAsynchronously: false) { ctx, size in
                         let center = CGPoint(x: size.width / 2, y: size.height / 2)
-                        let dots: [(angle: Double, radius: CGFloat, speed: Double, sz: CGFloat, useSecondary: Bool)] = [
-                            (0,    45, 1.0,  8, false),
-                            (2.09, 45, 1.0,  6, true),
-                            (4.19, 45, 1.0,  8, false),
-                            (1.05, 35, -1.5, 5, true),
-                            (3.14, 35, -1.5, 5, false),
-                            (5.24, 35, -1.5, 5, true)
-                        ]
+                        let dots:
+                            [(
+                                angle: Double, radius: CGFloat, speed: Double, sz: CGFloat,
+                                useSecondary: Bool
+                            )] = [
+                                (0, 45, 1.0, 8, false),
+                                (2.09, 45, 1.0, 6, true),
+                                (4.19, 45, 1.0, 8, false),
+                                (1.05, 35, -1.5, 5, true),
+                                (3.14, 35, -1.5, 5, false),
+                                (5.24, 35, -1.5, 5, true),
+                            ]
                         let rotRad = rotation * .pi / 180
                         for dot in dots {
                             let a = dot.angle + rotRad * dot.speed
                             let x = center.x + cos(a) * dot.radius
                             let y = center.y + sin(a) * dot.radius
-                            let rect = CGRect(x: x - dot.sz / 2, y: y - dot.sz / 2, width: dot.sz, height: dot.sz)
-                            var path = Path(); path.addEllipse(in: rect)
-                            ctx.fill(path, with: .color(dot.useSecondary ? secondaryAccentColor : accentColor))
+                            let rect = CGRect(
+                                x: x - dot.sz / 2, y: y - dot.sz / 2, width: dot.sz, height: dot.sz)
+                            var path = Path()
+                            path.addEllipse(in: rect)
+                            ctx.fill(
+                                path,
+                                with: .color(dot.useSecondary ? secondaryAccentColor : accentColor))
                         }
                     }
                     .frame(width: 100, height: 100)
@@ -1298,8 +1367,8 @@ private struct GeneratingOverlay: View {
                                 .opacity(pulseScale > 1.1 - Double(i) * 0.15 ? 1.0 : 0.3)
                                 .animation(
                                     .easeInOut(duration: 0.5)
-                                    .repeatForever(autoreverses: true)
-                                    .delay(Double(i) * 0.15),
+                                        .repeatForever(autoreverses: true)
+                                        .delay(Double(i) * 0.15),
                                     value: pulseScale
                                 )
                         }
@@ -1309,10 +1378,12 @@ private struct GeneratingOverlay: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
-        .transition(.asymmetric(
-            insertion: .opacity.combined(with: .scale(scale: 0.9)),
-            removal: .opacity.combined(with: .scale(scale: 1.05))
-        ))
+        .transition(
+            .asymmetric(
+                insertion: .opacity.combined(with: .scale(scale: 0.9)),
+                removal: .opacity.combined(with: .scale(scale: 1.05))
+            )
+        )
         .onAppear {
             rotation = 360
             pulseScale = 1.2
