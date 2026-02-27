@@ -7005,6 +7005,7 @@ enum CloudKitSocialSchema {
         static let post = "Post"
         static let chaosScore = "ChaosScore"
         static let collabDoc = "CollabDoc"
+        static let moderationReport = "ModerationReport"
     }
 
     enum Field {
@@ -7041,6 +7042,13 @@ enum CloudKitSocialSchema {
         static let contributorsRefs = "contributorsRefs"
         static let content = "content"
         static let version = "version"
+
+        // ModerationReport
+        static let clientReportID = "clientReportID"
+        static let targetType = "targetType"
+        static let targetRecordName = "targetRecordName"
+        static let reporterHandle = "reporterHandle"
+        static let reason = "reason"
     }
 }
 
@@ -7172,6 +7180,36 @@ struct SocialCollabDraft: Identifiable, Sendable {
     let content: String
 }
 
+enum SocialModerationTargetType: String, Codable, Sendable {
+    case post
+    case user
+}
+
+struct SocialModerationReport: Identifiable, Codable, Hashable, Sendable {
+    let id: String
+    let targetType: SocialModerationTargetType
+    let targetRecordName: String
+    let reporterHandle: String
+    let reason: String?
+    let createdAt: Date
+}
+
+enum SocialQueuedActionPayload: Codable, Sendable {
+    case friendRequest(handle: String)
+    case sharePost(type: SocialPostType, text: String)
+    case chaosScore(seasonId: String, score: Int64)
+    case moderationReport(SocialModerationReport)
+}
+
+struct SocialQueuedAction: Identifiable, Codable, Sendable {
+    let id: UUID
+    let dedupeKey: String?
+    let createdAt: Date
+    var nextRetryAt: Date
+    var attemptCount: Int
+    let payload: SocialQueuedActionPayload
+}
+
 enum SocialReportLogger {
     private static let userDefaultsKey = "social.reportLog.v1"
     private static let maxEntries = 80
@@ -7187,7 +7225,110 @@ enum SocialReportLogger {
     }
 }
 
-actor CloudKitStore {
+protocol SocialBackend: Sendable {
+    func backendDisplayName() async -> String
+    func availabilityState() async -> SocialAvailabilityState
+    func fetchCurrentUserIfStored() async throws -> SocialUser?
+    func getOrCreateCurrentUser(handle: String, displayName: String?) async throws -> SocialUser
+    func findUserByHandle(_ handle: String) async throws -> SocialUser?
+    func sendFriendRequest(toUser target: SocialUser) async throws -> SocialFriendRequest
+    func fetchIncomingFriendRequests() async throws -> [SocialFriendRequest]
+    func fetchOutgoingFriendRequests() async throws -> [SocialFriendRequest]
+    func acceptFriendRequest(_ request: SocialFriendRequest) async throws
+    func declineFriendRequest(_ request: SocialFriendRequest) async throws
+    func blockUser(_ user: SocialUser) async throws
+    func fetchBlockedUsers() async throws -> [SocialUser]
+    func fetchFriends() async throws -> [SocialUser]
+    func createPost(type: SocialPostType, text: String) async throws -> SocialPost
+    func fetchFriendsFeed() async throws -> [SocialPost]
+    func submitChaosScore(seasonId: String, score: Int64) async throws
+    func fetchLeaderboard(seasonId: String, limit: Int) async throws -> [SocialChaosScore]
+    func createOrUpdateCollabDoc(
+        docID: String?,
+        type: SocialPostType,
+        content: String,
+        contributorIDs: [CKRecord.ID],
+        expectedVersion: Int64?
+    ) async throws -> SocialCollabDoc
+    func fetchMyCollabDocs() async throws -> [SocialCollabDoc]
+    func fetchCollabDoc(id: String) async throws -> SocialCollabDoc?
+    func submitModerationReport(_ report: SocialModerationReport) async throws
+}
+
+actor SocialActionQueueStore {
+    private let userDefaults: UserDefaults
+    private let storageKey: String
+
+    init(
+        userDefaults: UserDefaults = .standard,
+        storageKey: String = "social.actionQueue.v1"
+    ) {
+        self.userDefaults = userDefaults
+        self.storageKey = storageKey
+    }
+
+    func enqueue(_ action: SocialQueuedAction) {
+        var actions = load()
+        if let dedupeKey = action.dedupeKey,
+            actions.contains(where: { $0.dedupeKey == dedupeKey })
+        {
+            return
+        }
+        actions.append(action)
+        save(actions)
+    }
+
+    func readyActions(now: Date = Date(), limit: Int = 10) -> [SocialQueuedAction] {
+        Array(load().filter { $0.nextRetryAt <= now }.prefix(max(1, limit)))
+    }
+
+    func markSucceeded(id: UUID) {
+        var actions = load()
+        actions.removeAll { $0.id == id }
+        save(actions)
+    }
+
+    func reschedule(id: UUID, retryAt: Date) {
+        var actions = load()
+        guard let index = actions.firstIndex(where: { $0.id == id }) else { return }
+        actions[index].attemptCount += 1
+        actions[index].nextRetryAt = retryAt
+        save(actions)
+    }
+
+    func totalCount() -> Int {
+        load().count
+    }
+
+    func pendingModerationReportCount() -> Int {
+        load().reduce(into: 0) { count, action in
+            if case .moderationReport = action.payload {
+                count += 1
+            }
+        }
+    }
+
+    private func load() -> [SocialQueuedAction] {
+        guard
+            let data = userDefaults.data(forKey: storageKey),
+            let decoded = try? JSONDecoder().decode([SocialQueuedAction].self, from: data)
+        else {
+            return []
+        }
+        return decoded
+    }
+
+    private func save(_ actions: [SocialQueuedAction]) {
+        if actions.isEmpty {
+            userDefaults.removeObject(forKey: storageKey)
+            return
+        }
+        guard let data = try? JSONEncoder().encode(actions) else { return }
+        userDefaults.set(data, forKey: storageKey)
+    }
+}
+
+actor CloudKitStore: SocialBackend {
     private let container: CKContainer
     private let publicDB: CKDatabase
     private let userDefaults: UserDefaults
@@ -7210,6 +7351,10 @@ actor CloudKitStore {
         self.container = container
         self.publicDB = container.publicCloudDatabase
         self.userDefaults = userDefaults
+    }
+
+    func backendDisplayName() async -> String {
+        "CloudKit"
     }
 
     func availabilityState() async -> SocialAvailabilityState {
@@ -7308,36 +7453,74 @@ actor CloudKitStore {
         let normalizedHandle = normalizeHandle(handle)
         guard Self.isValidHandle(normalizedHandle) else { return true }
 
-        let predicate = NSPredicate(
-            format: "%K == %@",
-            CloudKitSocialSchema.Field.handle,
-            normalizedHandle
-        )
-        let records = try await queryRecords(
-            recordType: CloudKitSocialSchema.RecordType.user,
-            predicate: predicate,
-            resultsLimit: 1
-        )
-        guard let current = try await fetchCurrentUserIfStored() else {
-            return !records.isEmpty
+        let matchingRecords: [CKRecord]
+        do {
+            let indexedRecords = try await queryRecords(
+                recordType: CloudKitSocialSchema.RecordType.user,
+                predicate: NSPredicate(
+                    format: "%K == %@",
+                    CloudKitSocialSchema.Field.handle,
+                    normalizedHandle
+                ),
+                resultsLimit: 4,
+                desiredKeys: [CloudKitSocialSchema.Field.handle]
+            )
+            matchingRecords = indexedRecords
+        } catch {
+            guard shouldFallbackToFullUserScan(error) else { throw error }
+            let records = try await queryRecords(
+                recordType: CloudKitSocialSchema.RecordType.user,
+                predicate: NSPredicate(value: true),
+                resultsLimit: CKQueryOperation.maximumResults,
+                desiredKeys: [CloudKitSocialSchema.Field.handle]
+            )
+            matchingRecords = records.filter {
+                normalizeHandle(($0[CloudKitSocialSchema.Field.handle] as? String) ?? "") == normalizedHandle
+            }
         }
-        return records.contains(where: { $0.recordID != current.recordID })
+        guard let current = try await fetchCurrentUserIfStored() else {
+            return !matchingRecords.isEmpty
+        }
+        return matchingRecords.contains(where: { $0.recordID != current.recordID })
     }
 
     func findUserByHandle(_ handle: String) async throws -> SocialUser? {
         let normalizedHandle = normalizeHandle(handle)
         guard Self.isValidHandle(normalizedHandle) else { return nil }
-        let predicate = NSPredicate(
-            format: "%K == %@",
-            CloudKitSocialSchema.Field.handle,
-            normalizedHandle
-        )
-        let records = try await queryRecords(
-            recordType: CloudKitSocialSchema.RecordType.user,
-            predicate: predicate,
-            resultsLimit: 1
-        )
-        guard let first = records.first else { return nil }
+        let first: CKRecord?
+        do {
+            let records = try await queryRecords(
+                recordType: CloudKitSocialSchema.RecordType.user,
+                predicate: NSPredicate(
+                    format: "%K == %@",
+                    CloudKitSocialSchema.Field.handle,
+                    normalizedHandle
+                ),
+                resultsLimit: 1,
+                desiredKeys: [
+                    CloudKitSocialSchema.Field.handle,
+                    CloudKitSocialSchema.Field.displayName,
+                    CloudKitSocialSchema.Field.createdAt,
+                ]
+            )
+            first = records.first
+        } catch {
+            guard shouldFallbackToFullUserScan(error) else { throw error }
+            let records = try await queryRecords(
+                recordType: CloudKitSocialSchema.RecordType.user,
+                predicate: NSPredicate(value: true),
+                resultsLimit: CKQueryOperation.maximumResults,
+                desiredKeys: [
+                    CloudKitSocialSchema.Field.handle,
+                    CloudKitSocialSchema.Field.displayName,
+                    CloudKitSocialSchema.Field.createdAt,
+                ]
+            )
+            first = records.first(where: {
+                normalizeHandle(($0[CloudKitSocialSchema.Field.handle] as? String) ?? "") == normalizedHandle
+            })
+        }
+        guard let first else { return nil }
         return try socialUser(from: first)
     }
 
@@ -7605,6 +7788,21 @@ actor CloudKitStore {
             visibility: .friends,
             createdAt: saved[CloudKitSocialSchema.Field.createdAt] as? Date ?? Date()
         )
+    }
+
+    func submitModerationReport(_ report: SocialModerationReport) async throws {
+        let recordID = CKRecord.ID(recordName: "modreport_\(report.id)")
+        let record = CKRecord(
+            recordType: CloudKitSocialSchema.RecordType.moderationReport,
+            recordID: recordID
+        )
+        record[CloudKitSocialSchema.Field.clientReportID] = report.id
+        record[CloudKitSocialSchema.Field.targetType] = report.targetType.rawValue
+        record[CloudKitSocialSchema.Field.targetRecordName] = report.targetRecordName
+        record[CloudKitSocialSchema.Field.reporterHandle] = report.reporterHandle
+        record[CloudKitSocialSchema.Field.reason] = report.reason
+        record[CloudKitSocialSchema.Field.createdAt] = report.createdAt
+        _ = try await save(record: record, savePolicy: .allKeys)
     }
 
     func fetchFriendsFeed() async throws -> [SocialPost] {
@@ -8078,6 +8276,34 @@ actor CloudKitStore {
         return 0
     }
 
+    private func shouldTreatQueryErrorAsEmpty(_ error: Error) -> Bool {
+        guard let ckError = error as? CKError else { return false }
+        if ckError.code == .unknownItem {
+            return true
+        }
+        guard
+            ckError.code == .partialFailure,
+            let partialErrors = ckError.partialErrorsByItemID?.values.compactMap({ $0 as? CKError }),
+            !partialErrors.isEmpty
+        else {
+            return false
+        }
+        return partialErrors.allSatisfy { $0.code == .unknownItem }
+    }
+
+    private func shouldFallbackToFullUserScan(_ error: Error) -> Bool {
+        guard let ckError = error as? CKError else { return false }
+        guard
+            ckError.code == .invalidArguments
+                || ckError.code == .constraintViolation
+                || ckError.code == .serverRejectedRequest
+        else {
+            return false
+        }
+        let details = ckError.localizedDescription.lowercased()
+        return details.contains("queryable") || details.contains("index") || details.contains("field")
+    }
+
     private func accountStatus() async throws -> CKAccountStatus {
         try await withCheckedThrowingContinuation { continuation in
             container.accountStatus { status, error in
@@ -8102,23 +8328,30 @@ actor CloudKitStore {
         var allRecords: [CKRecord] = []
         var cursor: CKQueryOperation.Cursor?
 
-        repeat {
-            let (records, nextCursor) = try await runQuery(
-                query: cursor == nil ? query : nil,
-                cursor: cursor,
-                desiredKeys: desiredKeys,
-                resultsLimit: resultsLimit
-            )
-            allRecords.append(contentsOf: records)
-            cursor = nextCursor
-            if resultsLimit != CKQueryOperation.maximumResults,
-                allRecords.count >= resultsLimit
-            {
-                return Array(allRecords.prefix(resultsLimit))
-            }
-        } while cursor != nil
+        do {
+            repeat {
+                let (records, nextCursor) = try await runQuery(
+                    query: cursor == nil ? query : nil,
+                    cursor: cursor,
+                    desiredKeys: desiredKeys,
+                    resultsLimit: resultsLimit
+                )
+                allRecords.append(contentsOf: records)
+                cursor = nextCursor
+                if resultsLimit != CKQueryOperation.maximumResults,
+                    allRecords.count >= resultsLimit
+                {
+                    return Array(allRecords.prefix(resultsLimit))
+                }
+            } while cursor != nil
 
-        return allRecords
+            return allRecords
+        } catch {
+            if shouldTreatQueryErrorAsEmpty(error) {
+                return []
+            }
+            throw error
+        }
     }
 
     private func runQuery(
@@ -8294,10 +8527,422 @@ actor CloudKitStore {
     }
 }
 
+enum SocialBackendFactory {
+    static func make() -> any SocialBackend {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-ui-testing-social-mock") {
+            return UITestSocialBackend(
+                forceUnavailable: arguments.contains("-ui-testing-force-social-unavailable"),
+                seededIncomingRequests: intArgument(after: "-ui-testing-social-seed-incoming") ?? 0
+            )
+        }
+        return CloudKitStore()
+    }
+
+    private static func intArgument(after flag: String) -> Int? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let flagIndex = arguments.firstIndex(of: flag) else { return nil }
+        let valueIndex = arguments.index(after: flagIndex)
+        guard valueIndex < arguments.endIndex else { return nil }
+        return Int(arguments[valueIndex])
+    }
+}
+
+actor UITestSocialBackend: SocialBackend {
+    private var currentUser: SocialUser?
+    private var usersByHandle: [String: SocialUser] = [:]
+    private var usersByRecordName: [String: SocialUser] = [:]
+    private var friendRequests: [SocialFriendRequest] = []
+    private var friendshipsByUser: [String: Set<String>] = [:]
+    private var blockedByUser: [String: Set<String>] = [:]
+    private var posts: [SocialPost] = []
+    private var scoresBySeason: [String: [String: Int64]] = [:]
+    private var collabDocsByID: [String: SocialCollabDoc] = [:]
+    private var moderationReports: [SocialModerationReport] = []
+
+    private let forceUnavailable: Bool
+    private let seededIncomingRequests: Int
+    private var seededIncomingApplied = false
+
+    init(forceUnavailable: Bool, seededIncomingRequests: Int) {
+        self.forceUnavailable = forceUnavailable
+        self.seededIncomingRequests = max(0, seededIncomingRequests)
+    }
+
+    func backendDisplayName() async -> String {
+        "UI Test Mock"
+    }
+
+    func availabilityState() async -> SocialAvailabilityState {
+        if forceUnavailable {
+            return SocialAvailabilityState(
+                isAvailable: false,
+                message: "Social features are unavailable in this test run."
+            )
+        }
+        return .available
+    }
+
+    func fetchCurrentUserIfStored() async throws -> SocialUser? {
+        currentUser
+    }
+
+    func getOrCreateCurrentUser(handle: String, displayName: String?) async throws -> SocialUser {
+        if let currentUser {
+            return currentUser
+        }
+        let normalized = handle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard CloudKitStore.isValidHandle(normalized) else {
+            throw SocialError.invalidHandle
+        }
+        if usersByHandle[normalized] != nil {
+            throw SocialError.handleTaken
+        }
+        let user = SocialUser(
+            recordID: CKRecord.ID(recordName: "mock_user_\(normalized)"),
+            handle: normalized,
+            displayName: normalizedDisplayName(displayName, fallbackHandle: normalized),
+            createdAt: Date()
+        )
+        usersByHandle[normalized] = user
+        usersByRecordName[user.recordID.recordName] = user
+        currentUser = user
+        applySeededIncomingRequestsIfNeeded()
+        return user
+    }
+
+    func findUserByHandle(_ handle: String) async throws -> SocialUser? {
+        let normalized = handle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard let user = usersByHandle[normalized] else { return nil }
+        if user.recordID == currentUser?.recordID {
+            return nil
+        }
+        return user
+    }
+
+    func sendFriendRequest(toUser target: SocialUser) async throws -> SocialFriendRequest {
+        let current = try requireCurrentUser()
+        guard current.recordID != target.recordID else {
+            throw SocialError.cannotFriendYourself
+        }
+        guard usersByRecordName[target.recordID.recordName] != nil else {
+            throw SocialError.userNotFound
+        }
+        if friendshipsByUser[current.recordID.recordName]?.contains(target.recordID.recordName) == true {
+            throw SocialError.duplicateRequest
+        }
+        if friendRequests.contains(where: {
+            $0.fromUserID == current.recordID
+                && $0.toUserID == target.recordID
+                && ($0.status == .pending || $0.status == .accepted || $0.status == .blocked)
+        }) {
+            throw SocialError.duplicateRequest
+        }
+        if friendRequests.contains(where: {
+            $0.fromUserID == target.recordID
+                && $0.toUserID == current.recordID
+                && ($0.status == .pending || $0.status == .accepted || $0.status == .blocked)
+        }) {
+            throw SocialError.duplicateRequest
+        }
+
+        let request = SocialFriendRequest(
+            recordID: CKRecord.ID(recordName: "mock_friendrequest_\(UUID().uuidString)"),
+            fromUserID: current.recordID,
+            toUserID: target.recordID,
+            status: .pending,
+            createdAt: Date(),
+            fromUser: current,
+            toUser: target
+        )
+        friendRequests.append(request)
+        return request
+    }
+
+    func fetchIncomingFriendRequests() async throws -> [SocialFriendRequest] {
+        let current = try requireCurrentUser()
+        return friendRequests
+            .filter { $0.toUserID == current.recordID && $0.status == .pending }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    func fetchOutgoingFriendRequests() async throws -> [SocialFriendRequest] {
+        let current = try requireCurrentUser()
+        return friendRequests
+            .filter { $0.fromUserID == current.recordID && $0.status == .pending }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    func acceptFriendRequest(_ request: SocialFriendRequest) async throws {
+        let current = try requireCurrentUser()
+        guard request.toUserID == current.recordID else { throw SocialError.permissionDenied }
+        guard let index = friendRequests.firstIndex(where: { $0.id == request.id }) else {
+            throw SocialError.invalidRecord
+        }
+        friendRequests[index] = SocialFriendRequest(
+            recordID: request.recordID,
+            fromUserID: request.fromUserID,
+            toUserID: request.toUserID,
+            status: .accepted,
+            createdAt: request.createdAt,
+            fromUser: request.fromUser,
+            toUser: request.toUser
+        )
+        addFriendship(a: request.fromUserID.recordName, b: request.toUserID.recordName)
+    }
+
+    func declineFriendRequest(_ request: SocialFriendRequest) async throws {
+        let current = try requireCurrentUser()
+        guard request.toUserID == current.recordID else { throw SocialError.permissionDenied }
+        guard let index = friendRequests.firstIndex(where: { $0.id == request.id }) else {
+            throw SocialError.invalidRecord
+        }
+        friendRequests[index] = SocialFriendRequest(
+            recordID: request.recordID,
+            fromUserID: request.fromUserID,
+            toUserID: request.toUserID,
+            status: .declined,
+            createdAt: request.createdAt,
+            fromUser: request.fromUser,
+            toUser: request.toUser
+        )
+    }
+
+    func blockUser(_ user: SocialUser) async throws {
+        let current = try requireCurrentUser()
+        let currentRecordName = current.recordID.recordName
+        let targetRecordName = user.recordID.recordName
+
+        var blocked = blockedByUser[currentRecordName] ?? []
+        blocked.insert(targetRecordName)
+        blockedByUser[currentRecordName] = blocked
+
+        friendshipsByUser[currentRecordName]?.remove(targetRecordName)
+        friendshipsByUser[targetRecordName]?.remove(currentRecordName)
+
+        if let index = friendRequests.firstIndex(where: {
+            $0.fromUserID.recordName == currentRecordName && $0.toUserID.recordName == targetRecordName
+        }) {
+            let existing = friendRequests[index]
+            friendRequests[index] = SocialFriendRequest(
+                recordID: existing.recordID,
+                fromUserID: existing.fromUserID,
+                toUserID: existing.toUserID,
+                status: .blocked,
+                createdAt: existing.createdAt,
+                fromUser: existing.fromUser,
+                toUser: existing.toUser
+            )
+        } else {
+            friendRequests.append(
+                SocialFriendRequest(
+                    recordID: CKRecord.ID(recordName: "mock_friendrequest_\(UUID().uuidString)"),
+                    fromUserID: current.recordID,
+                    toUserID: user.recordID,
+                    status: .blocked,
+                    createdAt: Date(),
+                    fromUser: current,
+                    toUser: user
+                )
+            )
+        }
+    }
+
+    func fetchBlockedUsers() async throws -> [SocialUser] {
+        let current = try requireCurrentUser()
+        let blocked = blockedByUser[current.recordID.recordName] ?? []
+        return blocked.compactMap { usersByRecordName[$0] }
+            .sorted { $0.handle < $1.handle }
+    }
+
+    func fetchFriends() async throws -> [SocialUser] {
+        let current = try requireCurrentUser()
+        let friendIDs = friendshipsByUser[current.recordID.recordName] ?? []
+        return friendIDs.compactMap { usersByRecordName[$0] }
+            .sorted { $0.handle < $1.handle }
+    }
+
+    func createPost(type: SocialPostType, text: String) async throws -> SocialPost {
+        let current = try requireCurrentUser()
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw SocialError.invalidRecord }
+        let post = SocialPost(
+            recordID: CKRecord.ID(recordName: "mock_post_\(UUID().uuidString)"),
+            authorUserID: current.recordID,
+            author: current,
+            type: type,
+            text: String(trimmed.prefix(480)),
+            visibility: .friends,
+            createdAt: Date()
+        )
+        posts.append(post)
+        return post
+    }
+
+    func fetchFriendsFeed() async throws -> [SocialPost] {
+        let current = try requireCurrentUser()
+        let friendIDs = friendshipsByUser[current.recordID.recordName] ?? []
+        return posts.filter { friendIDs.contains($0.authorUserID.recordName) }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    func submitChaosScore(seasonId: String, score: Int64) async throws {
+        let current = try requireCurrentUser()
+        let normalizedSeason = seasonId.trimmingCharacters(in: .whitespacesAndNewlines)
+        var seasonScores = scoresBySeason[normalizedSeason] ?? [:]
+        seasonScores[current.recordID.recordName] = max(seasonScores[current.recordID.recordName] ?? 0, score)
+        scoresBySeason[normalizedSeason] = seasonScores
+    }
+
+    func fetchLeaderboard(seasonId: String, limit: Int) async throws -> [SocialChaosScore] {
+        let normalizedSeason = seasonId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let seasonScores = scoresBySeason[normalizedSeason] ?? [:]
+        return seasonScores
+            .compactMap { key, value -> SocialChaosScore? in
+                guard let user = usersByRecordName[key] else { return nil }
+                return SocialChaosScore(
+                    recordID: CKRecord.ID(recordName: "mock_chaos_\(normalizedSeason)_\(key)"),
+                    seasonId: normalizedSeason,
+                    userID: user.recordID,
+                    user: user,
+                    score: value,
+                    updatedAt: Date()
+                )
+            }
+            .sorted { lhs, rhs in
+                if lhs.score == rhs.score {
+                    return lhs.user?.handle ?? "" < rhs.user?.handle ?? ""
+                }
+                return lhs.score > rhs.score
+            }
+            .prefix(max(1, min(limit, 100)))
+            .map { $0 }
+    }
+
+    func createOrUpdateCollabDoc(
+        docID: String?,
+        type: SocialPostType,
+        content: String,
+        contributorIDs: [CKRecord.ID],
+        expectedVersion: Int64?
+    ) async throws -> SocialCollabDoc {
+        let current = try requireCurrentUser()
+        let trimmed = String(content.trimmingCharacters(in: .whitespacesAndNewlines).prefix(4_000))
+        guard !trimmed.isEmpty else { throw SocialError.invalidRecord }
+
+        if let docID, let existing = collabDocsByID[docID] {
+            let isContributor = existing.contributorIDs.contains(current.recordID)
+            guard existing.ownerID == current.recordID || isContributor else {
+                throw SocialError.permissionDenied
+            }
+            if let expectedVersion, existing.version > expectedVersion {
+                throw SocialError.versionConflict(current: existing.version)
+            }
+            let contributors = contributorIDs.compactMap { usersByRecordName[$0.recordName] }
+            let contributorRecordIDs = contributors.map(\.recordID)
+            let updated = SocialCollabDoc(
+                recordID: existing.recordID,
+                ownerID: existing.ownerID,
+                owner: existing.owner,
+                contributorIDs: contributorRecordIDs,
+                contributors: contributors,
+                type: type,
+                content: trimmed,
+                version: existing.version + 1,
+                updatedAt: Date()
+            )
+            collabDocsByID[docID] = updated
+            return updated
+        }
+
+        let recordName = docID ?? "mock_collab_\(UUID().uuidString)"
+        let contributors = contributorIDs.compactMap { usersByRecordName[$0.recordName] }
+        let contributorRecordIDs = contributors.map(\.recordID)
+        let doc = SocialCollabDoc(
+            recordID: CKRecord.ID(recordName: recordName),
+            ownerID: current.recordID,
+            owner: current,
+            contributorIDs: contributorRecordIDs,
+            contributors: contributors,
+            type: type,
+            content: trimmed,
+            version: 1,
+            updatedAt: Date()
+        )
+        collabDocsByID[doc.id] = doc
+        return doc
+    }
+
+    func fetchMyCollabDocs() async throws -> [SocialCollabDoc] {
+        let current = try requireCurrentUser()
+        return collabDocsByID.values
+            .filter { $0.ownerID == current.recordID || $0.contributorIDs.contains(current.recordID) }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    func fetchCollabDoc(id: String) async throws -> SocialCollabDoc? {
+        collabDocsByID[id]
+    }
+
+    func submitModerationReport(_ report: SocialModerationReport) async throws {
+        moderationReports.append(report)
+    }
+
+    private func requireCurrentUser() throws -> SocialUser {
+        guard let currentUser else {
+            throw SocialError.missingProfile
+        }
+        return currentUser
+    }
+
+    private func addFriendship(a: String, b: String) {
+        var aFriends = friendshipsByUser[a] ?? []
+        aFriends.insert(b)
+        friendshipsByUser[a] = aFriends
+        var bFriends = friendshipsByUser[b] ?? []
+        bFriends.insert(a)
+        friendshipsByUser[b] = bFriends
+    }
+
+    private func normalizedDisplayName(_ displayName: String?, fallbackHandle: String) -> String {
+        let trimmed = displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if trimmed.isEmpty { return fallbackHandle }
+        return String(trimmed.prefix(40))
+    }
+
+    private func applySeededIncomingRequestsIfNeeded() {
+        guard !seededIncomingApplied, seededIncomingRequests > 0, let currentUser else { return }
+        seededIncomingApplied = true
+        for index in 0..<seededIncomingRequests {
+            let handle = "seed_friend_\(index + 1)"
+            let seedUser = SocialUser(
+                recordID: CKRecord.ID(recordName: "mock_seed_user_\(index + 1)"),
+                handle: handle,
+                displayName: "Seed Friend \(index + 1)",
+                createdAt: Date().addingTimeInterval(TimeInterval(-(index + 1) * 60))
+            )
+            usersByHandle[handle] = seedUser
+            usersByRecordName[seedUser.recordID.recordName] = seedUser
+            friendRequests.append(
+                SocialFriendRequest(
+                    recordID: CKRecord.ID(recordName: "mock_seed_request_\(index + 1)"),
+                    fromUserID: seedUser.recordID,
+                    toUserID: currentUser.recordID,
+                    status: .pending,
+                    createdAt: Date().addingTimeInterval(TimeInterval(-(index + 1) * 30)),
+                    fromUser: seedUser,
+                    toUser: currentUser
+                )
+            )
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class SocialViewModel {
-    private let cloudStore: CloudKitStore
+    private let cloudStore: any SocialBackend
+    private let actionQueue: SocialActionQueueStore
 
     var availability = SocialAvailabilityState(
         isAvailable: false,
@@ -8321,9 +8966,20 @@ final class SocialViewModel {
     var latestSearchResult: SocialUser?
     var latestSearchHandle: String = ""
     var leaderboardSeasonID: String = SocialViewModel.currentSeasonID()
+    var backendDisplayName: String = "Unknown"
+    var queuedActionCount: Int = 0
+    var queuedModerationReportCount: Int = 0
+    var lastAvailabilityCheckAt: Date?
+    var lastQueueDrainAt: Date?
+    var lastQueueDrainError: String?
+    var lastSocialRefreshAt: Date?
 
-    init(cloudStore: CloudKitStore = CloudKitStore()) {
+    init(
+        cloudStore: any SocialBackend = SocialBackendFactory.make(),
+        actionQueue: SocialActionQueueStore = SocialActionQueueStore()
+    ) {
         self.cloudStore = cloudStore
+        self.actionQueue = actionQueue
         Task { [weak self] in
             await self?.bootstrap()
         }
@@ -8348,12 +9004,15 @@ final class SocialViewModel {
     }
 
     func bootstrap() async {
+        backendDisplayName = await cloudStore.backendDisplayName()
         await refreshAvailability()
+        await refreshQueueDiagnostics()
         guard availability.isAvailable else { return }
         do {
             currentUser = try await cloudStore.fetchCurrentUserIfStored()
             if currentUser != nil {
                 await refreshSocialData()
+                await drainQueuedActions()
             }
         } catch {
             statusMessage = message(for: error)
@@ -8361,6 +9020,7 @@ final class SocialViewModel {
     }
 
     func refreshAvailability() async {
+        lastAvailabilityCheckAt = Date()
         availability = await cloudStore.availabilityState()
         if !availability.isAvailable {
             currentUser = nil
@@ -8371,7 +9031,11 @@ final class SocialViewModel {
             feedPosts = []
             leaderboard = []
             collabDocs = []
+            await refreshQueueDiagnostics()
+            return
         }
+        await refreshQueueDiagnostics()
+        await drainQueuedActions()
     }
 
     func createProfile(handle: String, displayName: String) async {
@@ -8392,6 +9056,7 @@ final class SocialViewModel {
             currentUser = user
             statusMessage = "Profile created."
             await refreshSocialData()
+            await drainQueuedActions()
         } catch {
             statusMessage = message(for: error)
         }
@@ -8421,9 +9086,15 @@ final class SocialViewModel {
             feedPosts = try await feed
             collabDocs = try await collabs
             leaderboard = try await leaderboardResult
+            lastSocialRefreshAt = Date()
+            await refreshQueueDiagnostics()
         } catch {
             statusMessage = message(for: error)
         }
+    }
+
+    func retryQueuedActions() async {
+        await drainQueuedActions()
     }
 
     func searchUserByHandle(_ handle: String) async {
@@ -8450,7 +9121,15 @@ final class SocialViewModel {
             statusMessage = "Friend request sent."
             outgoingRequests = try await cloudStore.fetchOutgoingFriendRequests()
         } catch {
-            statusMessage = message(for: error)
+            if shouldQueueForRetry(error) {
+                await enqueueAction(
+                    payload: .friendRequest(handle: user.handle),
+                    dedupeKey: "friend:\(user.handle)"
+                )
+                statusMessage = "Friend request queued. It will retry automatically."
+            } else {
+                statusMessage = message(for: error)
+            }
         }
     }
 
@@ -8506,7 +9185,15 @@ final class SocialViewModel {
             statusMessage = "Shared with friends."
             feedPosts = try await cloudStore.fetchFriendsFeed()
         } catch {
-            statusMessage = message(for: error)
+            if shouldQueueForRetry(error) {
+                await enqueueAction(
+                    payload: .sharePost(type: type, text: text),
+                    dedupeKey: nil
+                )
+                statusMessage = "Share queued. It will retry automatically."
+            } else {
+                statusMessage = message(for: error)
+            }
         }
     }
 
@@ -8521,7 +9208,15 @@ final class SocialViewModel {
             )
             statusMessage = "Score submitted."
         } catch {
-            statusMessage = message(for: error)
+            if shouldQueueForRetry(error) {
+                await enqueueAction(
+                    payload: .chaosScore(seasonId: leaderboardSeasonID, score: score),
+                    dedupeKey: nil
+                )
+                statusMessage = "Score queued. It will retry automatically."
+            } else {
+                statusMessage = message(for: error)
+            }
         }
     }
 
@@ -8589,23 +9284,180 @@ final class SocialViewModel {
     func report(post: SocialPost) {
         let reporter = currentUser?.handle ?? "unknown"
         SocialReportLogger.log("post=\(post.id) reporter=@\(reporter)")
+        let report = SocialModerationReport(
+            id: UUID().uuidString,
+            targetType: .post,
+            targetRecordName: post.id,
+            reporterHandle: reporter,
+            reason: nil,
+            createdAt: Date()
+        )
+        Task {
+            await enqueueAction(
+                payload: .moderationReport(report),
+                dedupeKey: "report:\(report.id)"
+            )
+        }
         statusMessage = "Report noted. Thanks."
     }
 
     func report(user: SocialUser) {
         let reporter = currentUser?.handle ?? "unknown"
         SocialReportLogger.log("user=@\(user.handle) reporter=@\(reporter)")
+        let report = SocialModerationReport(
+            id: UUID().uuidString,
+            targetType: .user,
+            targetRecordName: user.id,
+            reporterHandle: reporter,
+            reason: nil,
+            createdAt: Date()
+        )
+        Task {
+            await enqueueAction(
+                payload: .moderationReport(report),
+                dedupeKey: "report:\(report.id)"
+            )
+        }
         statusMessage = "Report noted. Thanks."
+    }
+
+    private func shouldQueueForRetry(_ error: Error) -> Bool {
+        if let socialError = error as? SocialError {
+            switch socialError {
+            case .rateLimited, .iCloudUnavailable:
+                return true
+            case .missingProfile, .invalidHandle, .handleTaken, .userNotFound, .cannotFriendYourself,
+                .duplicateRequest, .permissionDenied, .versionConflict, .invalidRecord:
+                return false
+            }
+        }
+        if let ckError = error as? CKError {
+            switch ckError.code {
+            case .networkUnavailable, .networkFailure, .serviceUnavailable, .zoneBusy,
+                .requestRateLimited, .notAuthenticated, .accountTemporarilyUnavailable:
+                return true
+            default:
+                return false
+            }
+        }
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .timedOut, .cannotFindHost, .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet:
+                return true
+            default:
+                return false
+            }
+        }
+        return false
+    }
+
+    private func enqueueAction(payload: SocialQueuedActionPayload, dedupeKey: String?) async {
+        let action = SocialQueuedAction(
+            id: UUID(),
+            dedupeKey: dedupeKey,
+            createdAt: Date(),
+            nextRetryAt: Date(),
+            attemptCount: 0,
+            payload: payload
+        )
+        await actionQueue.enqueue(action)
+        await refreshQueueDiagnostics()
+        await drainQueuedActions()
+    }
+
+    private func drainQueuedActions() async {
+        guard availability.isAvailable else {
+            await refreshQueueDiagnostics()
+            return
+        }
+
+        let ready = await actionQueue.readyActions(limit: 12)
+        guard !ready.isEmpty else {
+            await refreshQueueDiagnostics()
+            return
+        }
+
+        for action in ready {
+            do {
+                try await execute(action: action)
+                await actionQueue.markSucceeded(id: action.id)
+                lastQueueDrainError = nil
+            } catch {
+                if shouldQueueForRetry(error) {
+                    let retryAt = Date().addingTimeInterval(retryDelay(forAttempt: action.attemptCount))
+                    await actionQueue.reschedule(id: action.id, retryAt: retryAt)
+                    lastQueueDrainError = message(for: error)
+                } else {
+                    await actionQueue.markSucceeded(id: action.id)
+                    lastQueueDrainError = nil
+                }
+            }
+        }
+
+        lastQueueDrainAt = Date()
+        await refreshQueueDiagnostics()
+    }
+
+    private func retryDelay(forAttempt attempt: Int) -> TimeInterval {
+        let boundedAttempt = max(0, min(attempt, 8))
+        return min(900, pow(2.0, Double(boundedAttempt)) * 5.0)
+    }
+
+    private func execute(action: SocialQueuedAction) async throws {
+        switch action.payload {
+        case .friendRequest(let handle):
+            guard let target = try await cloudStore.findUserByHandle(handle) else {
+                throw SocialError.userNotFound
+            }
+            _ = try await cloudStore.sendFriendRequest(toUser: target)
+        case .sharePost(let type, let text):
+            _ = try await cloudStore.createPost(type: type, text: text)
+        case .chaosScore(let seasonId, let score):
+            try await cloudStore.submitChaosScore(seasonId: seasonId, score: score)
+        case .moderationReport(let report):
+            try await cloudStore.submitModerationReport(report)
+        }
+    }
+
+    private func refreshQueueDiagnostics() async {
+        queuedActionCount = await actionQueue.totalCount()
+        queuedModerationReportCount = await actionQueue.pendingModerationReportCount()
     }
 
     private func message(for error: Error) -> String {
         if let socialError = error as? SocialError, let description = socialError.errorDescription {
             return description
         }
+        if let ckError = error as? CKError {
+            return cloudKitMessage(for: ckError)
+        }
         if let localized = (error as NSError?)?.localizedDescription, !localized.isEmpty {
             return localized
         }
         return "Something went wrong. Please try again."
+    }
+
+    private func cloudKitMessage(for error: CKError) -> String {
+        switch error.code {
+        case .notAuthenticated:
+            return "Sign in to iCloud to use Friends, Chaos leaderboard, and collaboration."
+        case .permissionFailure:
+            return "CloudKit permissions are not configured for this build. Check iCloud capability and container access in Xcode."
+        case .networkUnavailable, .networkFailure, .serviceUnavailable, .zoneBusy, .requestRateLimited:
+            return "CloudKit is temporarily unavailable. Check your connection and try again."
+        case .invalidArguments, .constraintViolation, .serverRejectedRequest:
+            let details = error.localizedDescription.lowercased()
+            if details.contains("queryable") || details.contains("index") || details.contains("field") {
+                return "CloudKit social schema/indexes are not fully set up yet. Deploy the schema in CloudKit Dashboard, then try again."
+            }
+            return error.localizedDescription
+        case .unknownItem:
+            return "CloudKit social records are not initialized yet. Try again in a moment."
+        case .quotaExceeded, .limitExceeded:
+            return "CloudKit storage limits were reached. Free up iCloud storage and try again."
+        default:
+            return error.localizedDescription
+        }
     }
 }
 

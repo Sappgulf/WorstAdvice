@@ -200,4 +200,87 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(newDoc.waitForExistence(timeout: 3))
         XCTAssertFalse(newDoc.isEnabled)
     }
+
+    func testSocialMockSignupCompletesAndFriendsSurfaceLoads() throws {
+        let app = launchMockSocialApp()
+        completeProfileSignup(app: app, handle: "mock_signup_user")
+
+        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
+        XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
+        friendsTab.tap()
+
+        let sectionPicker = app.segmentedControls["friends.sectionPicker"]
+        XCTAssertTrue(sectionPicker.waitForExistence(timeout: 5))
+
+        let searchField = app.textFields["friends.searchField"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 3))
+    }
+
+    func testSocialMockIncomingBadgeAppearsOnTabBar() throws {
+        let app = launchMockSocialApp(seededIncomingRequests: 3)
+        completeProfileSignup(app: app, handle: "badge_user")
+
+        let badge = app.staticTexts["tab.friends.badge"]
+        XCTAssertTrue(badge.waitForExistence(timeout: 5))
+        let badgeLabel = badge.label
+        XCTAssertTrue(
+            badgeLabel.contains("3") || badgeLabel.contains("99+"),
+            "Expected friends badge to show pending request count. label=\(badgeLabel)"
+        )
+    }
+
+    func testSettingsSocialDiagnosticsOpensInMockMode() throws {
+        let app = launchMockSocialApp(seededIncomingRequests: 1)
+        completeProfileSignup(app: app, handle: "diagnostics_user")
+
+        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
+        settingsTab.tap()
+
+        let socialHealthOpen = app.buttons["settings.socialHealth.open"]
+        if !socialHealthOpen.waitForExistence(timeout: 3) {
+            for _ in 0..<8 where !socialHealthOpen.exists {
+                app.swipeUp()
+            }
+        }
+        XCTAssertTrue(socialHealthOpen.waitForExistence(timeout: 3))
+        socialHealthOpen.tap()
+
+        XCTAssertTrue(app.navigationBars["Social Diagnostics"].waitForExistence(timeout: 5))
+
+        let retryQueueButton = app.buttons["settings.socialHealth.retryQueue"]
+        XCTAssertTrue(retryQueueButton.waitForExistence(timeout: 3))
+    }
+
+    private func launchMockSocialApp(seededIncomingRequests: Int = 0) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += defaultLaunchArguments + [
+            "-ui-testing-social-mock"
+        ]
+        if seededIncomingRequests > 0 {
+            app.launchArguments += [
+                "-ui-testing-social-seed-incoming",
+                "\(seededIncomingRequests)",
+            ]
+        }
+        app.launch()
+        return app
+    }
+
+    private func completeProfileSignup(app: XCUIApplication, handle: String) {
+        let handleField = app.textFields["social.profile.handle"]
+        XCTAssertTrue(handleField.waitForExistence(timeout: 8))
+        handleField.tap()
+        handleField.typeText(handle)
+
+        let saveButton = app.buttons["social.profile.save"]
+        XCTAssertTrue(saveButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(saveButton.isEnabled)
+        saveButton.tap()
+
+        XCTAssertFalse(
+            handleField.waitForExistence(timeout: 3),
+            "Expected profile setup sheet to dismiss after successful profile creation."
+        )
+    }
 }

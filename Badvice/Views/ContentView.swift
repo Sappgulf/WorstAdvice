@@ -169,20 +169,34 @@ struct ContentView: View {
                             let tabBarStyle = Theme.tabBarStyle(for: session.settings.theme)
                             let accent = Theme.accent(for: session.settings.theme)
                             let secondaryText = Theme.secondaryText(for: session.settings.theme)
+                            let friendsBadgeCount = session.social.incomingRequests.count
                             HStack(spacing: 0) {
                                 ForEach(tabs) { tab in
                                     let isSelected = selectedTab == tab
                                     let isHighlighted = tabDragHighlight == tab
+                                    let badgeCount = tab == .friends ? friendsBadgeCount : 0
                                     let tabAccessibilityID = "tab.\(tab.rawValue)"
                                     VStack(spacing: 3) {
-                                        Image(systemName: tab.systemImage)
-                                            .font(
-                                                .system(
-                                                    size: 20,
-                                                    weight: isSelected ? .semibold : .medium)
-                                            )
-                                            .symbolVariant(isSelected ? .fill : .none)
-                                            .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(systemName: tab.systemImage)
+                                                .font(
+                                                    .system(
+                                                        size: 20,
+                                                        weight: isSelected ? .semibold : .medium)
+                                                )
+                                                .symbolVariant(isSelected ? .fill : .none)
+                                                .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
+                                            if badgeCount > 0 {
+                                                Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
+                                                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                                                    .foregroundStyle(.white)
+                                                    .padding(.horizontal, 5)
+                                                    .padding(.vertical, 2)
+                                                    .background(Capsule(style: .continuous).fill(.red))
+                                                    .offset(x: 10, y: -7)
+                                                    .accessibilityIdentifier("tab.friends.badge")
+                                            }
+                                        }
                                         Text(tab.title)
                                             .font(
                                                 .system(
@@ -268,7 +282,9 @@ struct ContentView: View {
                                     }
                                     .accessibilityLabel(tab.title)
                                     .accessibilityIdentifier(tabAccessibilityID)
-                                    .accessibilityValue(isSelected ? "Selected" : "Not selected")
+                                    .accessibilityValue(
+                                        "\(isSelected ? "Selected" : "Not selected")\(badgeCount > 0 ? ", \(badgeCount) pending requests" : "")"
+                                    )
                                     .accessibilityAddTraits(isSelected ? .isSelected : [])
                                 }
                             }
@@ -501,20 +517,50 @@ struct ContentView: View {
                         set: { _ in }
                     )
                 ) {
+                    let normalizedHandle = normalizedProfileHandle(profileHandleDraft)
+                    let isHandleValid = CloudKitStore.isValidHandle(normalizedHandle)
+                    let shouldShowValidationError = !normalizedHandle.isEmpty && !isHandleValid
                     NavigationStack {
                         Form {
                             Section("Create Profile") {
-                                TextField("handle", text: $profileHandleDraft)
+                                TextField("@handle", text: $profileHandleDraft)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
+                                    .accessibilityIdentifier("social.profile.handle")
                                 TextField(
                                     "Display name (optional)",
                                     text: $profileDisplayNameDraft
                                 )
+                                .accessibilityIdentifier("social.profile.displayName")
+                                if session.social.isSubmittingAction {
+                                    HStack(spacing: 10) {
+                                        ProgressView()
+                                        Text("Creating profile...")
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                }
+                            }
+                            if shouldShowValidationError {
+                                Section("Fix Handle") {
+                                    Text(
+                                        "Use 3–16 characters with lowercase letters, numbers, or underscore."
+                                    )
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                }
+                            }
+                            if let status = session.social.statusMessage, !status.isEmpty {
+                                Section("Status") {
+                                    Text(status)
+                                        .font(.caption)
+                                        .foregroundStyle(status.lowercased().contains("created") ? .green : .red)
+                                        .accessibilityIdentifier("social.profile.status")
+                                }
                             }
                             Section("Rules") {
                                 Text(
-                                    "Handle must be 3–16 characters and can only use lowercase letters, numbers, or underscore."
+                                    "Handle must be 3–16 characters and can only use lowercase letters, numbers, or underscore. You can type with or without @."
                                 )
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -525,18 +571,19 @@ struct ContentView: View {
                         .interactiveDismissDisabled()
                         .toolbar {
                             ToolbarItem(placement: .confirmationAction) {
-                                Button("Save") {
+                                Button(session.social.isSubmittingAction ? "Saving..." : "Save") {
                                     Task {
                                         await session.social.createProfile(
-                                            handle: profileHandleDraft,
+                                            handle: normalizedHandle,
                                             displayName: profileDisplayNameDraft
                                         )
                                     }
                                 }
                                 .disabled(
-                                    profileHandleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-                                        .isEmpty
+                                    normalizedHandle.isEmpty || !isHandleValid
+                                        || session.social.isSubmittingAction
                                 )
+                                .accessibilityIdentifier("social.profile.save")
                             }
                         }
                     }
@@ -662,6 +709,12 @@ struct ContentView: View {
         return Int(launchArguments[valueIndex])
     }
 
+    private func normalizedProfileHandle(_ input: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        let withoutPrefixAt = trimmed.hasPrefix("@") ? String(trimmed.dropFirst()) : trimmed
+        return SocialViewModel.normalizedHandle(withoutPrefixAt)
+    }
+
     @ViewBuilder
     private func tabView(for tab: AppTab, session: AppSessionViewModel) -> some View {
         switch tab {
@@ -736,6 +789,7 @@ struct ContentView: View {
                 viewModel: session.settings,
                 generateViewModel: session.generate,
                 quotesViewModel: session.quotes,
+                social: session.social,
                 achievementsManager: session.achievements
             )
         }

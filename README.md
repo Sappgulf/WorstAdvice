@@ -54,6 +54,15 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Local voting feedback on generated advice (`like` / `dislike`)
   - Suggestion Lab for user-submitted bad advice ideas
   - Community Pulse leaderboard for top suggested topics and top liked/disliked lines
+- Social layer (CloudKit-backed):
+  - Profile creation with validated handles
+  - Friends discovery, request/accept/decline/block flows
+  - Friends feed sharing (advice + quotes)
+  - Chaos leaderboard submissions
+  - Collaboration document drafts/edits
+  - Moderation report submission pipeline
+  - Offline retry queue for social writes (friend request/share/score/report)
+  - Settings diagnostics for social backend + queue health
 - Discovery workflows:
   - Favorites supports list/grid plus search and category filters
   - History supports search, category filters, and ranking modes (`Recent`, `Top Liked`, `Top Disliked`)
@@ -101,6 +110,38 @@ xcodebuild build \
   -project "Badvice.xcodeproj" \
   -scheme "Badvice" \
   -destination "platform=iOS Simulator,name=iPhone 17"
+```
+
+## Social (CloudKit) Setup
+Social features (`Friends`, feed, leaderboard, collaboration) require CloudKit setup in addition to local app build.
+
+1. In Xcode target settings for `Badvice`, confirm:
+   - iCloud capability is enabled.
+   - Container includes `iCloud.com.worstadvice.app`.
+   - `Badvice/Badvice.entitlements` is attached to the app target.
+2. Sign into an iCloud account on your test device/simulator host machine.
+3. Launch the app once in Development environment to initialize CloudKit record types.
+4. In CloudKit Dashboard, verify schema for:
+   - `User`
+   - `FriendRequest`
+   - `FriendEdge`
+   - `Post`
+   - `ChaosScore`
+   - `CollabDoc`
+5. Before TestFlight/App Store builds, deploy the Development schema to Production in CloudKit Dashboard.
+6. If handle/friend queries fail with index/queryable errors, add the required query/sort indexes for the fields used by social queries.
+
+### UI Test Mock Social Backend
+For deterministic UI tests without iCloud dependencies:
+
+```bash
+-ui-testing-social-mock
+```
+
+Optional seeded incoming friend requests count:
+
+```bash
+-ui-testing-social-seed-incoming 3
 ```
 
 ## Test

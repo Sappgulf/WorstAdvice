@@ -161,7 +161,9 @@ struct iPadSplitView: View {
             SettingsTabView(
                 viewModel: session.settings,
                 generateViewModel: session.generate,
-                quotesViewModel: session.quotes
+                quotesViewModel: session.quotes,
+                social: session.social,
+                achievementsManager: session.achievements
             )
         }
     }

@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Session Log (2026-02-27) — Social Hardening & Ship Readiness
+- Added a social backend abstraction (`SocialBackend`) with a deterministic UI-test mock backend (`-ui-testing-social-mock`) to decouple signup/social tests from live iCloud state.
+- Added persistent social outbox queue with retry/backoff for friend requests, friend-feed shares, leaderboard score submissions, and moderation reports.
+- Added moderation report pipeline model + CloudKit persistence (`ModerationReport`) while keeping local report audit logging.
+- Added Social Health diagnostics in Settings with backend status, queue depth, counters, and manual retry controls.
+- Added incoming friend-request badge on custom tab bar (`tab.friends.badge`).
+- Added UI tests for mock social signup, pending-request badge visibility, and settings diagnostics reachability.
+- Added unit tests for mock social profile bootstrapping and report queue draining behavior.
+- Updated docs with social feature inventory and mock-backend launch args for UI test runs.
+
 ### Session Log (2026-02-20) — Polish, Perf & Cleanup
 - Theme var hoisting: all `Theme.X(for:)` calls replaced with hoisted computed properties across every view struct (AchievementsView, AchievementCard, ChaosHubTabView, GenerateTabView, FavoritesTabView, QuotesTabView, FavoriteDetailView, HistoryTabView, SettingsTabView, SuggestionLabView, CommunityPulseView, OnboardingHistoryView)
 - Dead code removal: deleted unused `UnlockableTheme` enum (superseded by `AchievementType.unlocksTheme`); deleted stray root-level `SharedDailyQuoteSource.swift` duplicate (not in build target)

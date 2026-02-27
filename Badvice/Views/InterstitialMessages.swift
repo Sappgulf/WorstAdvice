@@ -199,6 +199,7 @@ struct SettingsTabView: View {
     @Bindable var viewModel: SettingsViewModel
     @Bindable var generateViewModel: GenerateViewModel
     @Bindable var quotesViewModel: QuotesViewModel
+    @Bindable var social: SocialViewModel
     var achievementsManager: AchievementsManager
 
     @State private var sectionsAppeared = false
@@ -325,7 +326,7 @@ struct SettingsTabView: View {
                                     ? nil
                                     : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05),
                                 value: sectionsAppeared)
-                        themeSection
+                        socialHealthSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
@@ -334,7 +335,7 @@ struct SettingsTabView: View {
                                     ? nil
                                     : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10),
                                 value: sectionsAppeared)
-                        experienceSection
+                        themeSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
@@ -343,7 +344,7 @@ struct SettingsTabView: View {
                                     ? nil
                                     : .spring(response: 0.5, dampingFraction: 0.75).delay(0.15),
                                 value: sectionsAppeared)
-                        sharingSection
+                        experienceSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
@@ -352,7 +353,7 @@ struct SettingsTabView: View {
                                     ? nil
                                     : .spring(response: 0.5, dampingFraction: 0.75).delay(0.20),
                                 value: sectionsAppeared)
-                        dataSection
+                        sharingSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
@@ -361,7 +362,7 @@ struct SettingsTabView: View {
                                     ? nil
                                     : .spring(response: 0.5, dampingFraction: 0.75).delay(0.25),
                                 value: sectionsAppeared)
-                        aboutSection
+                        dataSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
@@ -369,6 +370,15 @@ struct SettingsTabView: View {
                                 isMotionReduced
                                     ? nil
                                     : .spring(response: 0.5, dampingFraction: 0.75).delay(0.30),
+                                value: sectionsAppeared)
+                        aboutSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.35),
                                 value: sectionsAppeared)
                     }
                     .padding(.horizontal, 16)
@@ -387,6 +397,10 @@ struct SettingsTabView: View {
                 gearWobble = false
                 tabBarVisible.wrappedValue = true
                 viewModel.refreshAppleOnDeviceModelAvailability()
+                Task {
+                    await social.refreshAvailability()
+                    await social.refreshSocialData()
+                }
                 // A tiny async hop lets SwiftUI finish layout before animating in
                 DispatchQueue.main.async {
                     sectionsAppeared = true
@@ -475,6 +489,54 @@ struct SettingsTabView: View {
                     settingsNavRow("Community Pulse", systemImage: "chart.bar.xaxis", badge: nil)
                 }
                 .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var socialHealthSection: some View {
+        settingsCard(title: "Social Health", icon: "stethoscope") {
+            VStack(spacing: 12) {
+                NavigationLink {
+                    SocialHealthDiagnosticsView(social: social, settings: viewModel)
+                } label: {
+                    settingsNavRow(
+                        "Open Diagnostics",
+                        systemImage: "waveform.path.ecg",
+                        badge: social.queuedActionCount > 0 ? "\(social.queuedActionCount)" : nil
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.socialHealth.open")
+
+                settingsDivider
+
+                socialStatRow("Backend", value: social.backendDisplayName)
+                socialStatRow(
+                    "Availability",
+                    value: social.availability.isAvailable ? "Available" : "Unavailable"
+                )
+                socialStatRow(
+                    "Profile",
+                    value: social.currentUser.map { "@\($0.handle)" } ?? "Not created"
+                )
+                socialStatRow("Incoming Requests", value: "\(social.incomingRequests.count)")
+                socialStatRow("Queue Depth", value: "\(social.queuedActionCount)")
+
+                settingsDivider
+
+                Button {
+                    Task {
+                        await social.refreshAvailability()
+                        await social.refreshSocialData()
+                    }
+                } label: {
+                    Label("Refresh Social Status", systemImage: "arrow.clockwise")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .accessibilityIdentifier("settings.socialHealth.refresh")
             }
         }
     }
@@ -752,6 +814,20 @@ struct SettingsTabView: View {
                 snapshotPill(
                     title: "Suggestions", value: "\(generateViewModel.communitySuggestionCount)")
             }
+        }
+    }
+
+    private func socialStatRow(_ title: String, value: String) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+            Spacer()
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
     }
 
@@ -1351,6 +1427,93 @@ struct SettingsTabView: View {
                 )
         }
     }
+}
+
+private struct SocialHealthDiagnosticsView: View {
+    @Bindable var social: SocialViewModel
+    @Bindable var settings: SettingsViewModel
+
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+
+    var body: some View {
+        Form {
+            Section("Backend") {
+                diagnosticRow("Provider", value: social.backendDisplayName)
+                diagnosticRow(
+                    "Availability",
+                    value: social.availability.isAvailable ? "Available" : social.availability.message
+                )
+                diagnosticRow("Current Profile", value: social.currentUser.map { "@\($0.handle)" } ?? "None")
+            }
+
+            Section("Queue & Retry") {
+                diagnosticRow("Queued Actions", value: "\(social.queuedActionCount)")
+                diagnosticRow("Queued Reports", value: "\(social.queuedModerationReportCount)")
+                diagnosticRow("Last Queue Drain", value: formattedDate(social.lastQueueDrainAt))
+                diagnosticRow("Last Drain Error", value: social.lastQueueDrainError ?? "None")
+
+                Button {
+                    Task {
+                        await social.retryQueuedActions()
+                        await social.refreshSocialData()
+                    }
+                } label: {
+                    Label("Retry Queue Now", systemImage: "arrow.triangle.2.circlepath")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .accessibilityIdentifier("settings.socialHealth.retryQueue")
+            }
+
+            Section("Social Counters") {
+                diagnosticRow("Incoming Requests", value: "\(social.incomingRequests.count)")
+                diagnosticRow("Outgoing Requests", value: "\(social.outgoingRequests.count)")
+                diagnosticRow("Friends", value: "\(social.friends.count)")
+                diagnosticRow("Blocked Users", value: "\(social.blockedUsers.count)")
+                diagnosticRow("Feed Posts", value: "\(social.feedPosts.count)")
+                diagnosticRow("Leaderboard Entries", value: "\(social.leaderboard.count)")
+                diagnosticRow("Collab Docs", value: "\(social.collabDocs.count)")
+                diagnosticRow("Last Availability Check", value: formattedDate(social.lastAvailabilityCheckAt))
+                diagnosticRow("Last Social Refresh", value: formattedDate(social.lastSocialRefreshAt))
+            }
+        }
+        .navigationTitle("Social Diagnostics")
+        .navigationBarTitleDisplayMode(.inline)
+        .preferredColorScheme(Theme.colorScheme(for: settings.theme))
+        .onAppear {
+            Task {
+                await social.refreshAvailability()
+                await social.refreshSocialData()
+            }
+        }
+    }
+
+    private func diagnosticRow(_ title: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+            Spacer()
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(primaryText)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    private func formattedDate(_ date: Date?) -> String {
+        guard let date else { return "Never" }
+        return Self.formatter.string(from: date)
+    }
+
+    private static let formatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
 }
 
 private struct SuggestionLabView: View {
