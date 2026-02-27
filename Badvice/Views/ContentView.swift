@@ -517,21 +517,49 @@ struct ContentView: View {
                         set: { _ in }
                     )
                 ) {
+                    let handleBinding = Binding<String>(
+                        get: { profileHandleDraft },
+                        set: { profileHandleDraft = sanitizedProfileHandle($0) }
+                    )
+                    let displayNameBinding = Binding<String>(
+                        get: { profileDisplayNameDraft },
+                        set: { profileDisplayNameDraft = sanitizedProfileDisplayName($0) }
+                    )
                     let normalizedHandle = normalizedProfileHandle(profileHandleDraft)
                     let isHandleValid = CloudKitStore.isValidHandle(normalizedHandle)
                     let shouldShowValidationError = !normalizedHandle.isEmpty && !isHandleValid
                     NavigationStack {
                         Form {
                             Section("Create Profile") {
-                                TextField("@handle", text: $profileHandleDraft)
+                                TextField("@handle", text: handleBinding)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
+                                    .textContentType(.nickname)
                                     .accessibilityIdentifier("social.profile.handle")
                                 TextField(
                                     "Display name (optional)",
-                                    text: $profileDisplayNameDraft
+                                    text: displayNameBinding
                                 )
+                                .textInputAutocapitalization(.words)
                                 .accessibilityIdentifier("social.profile.displayName")
+                                HStack {
+                                    Text("Handle preview")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text(normalizedHandle.isEmpty ? "@your_handle" : "@\(normalizedHandle)")
+                                        .font(.caption.monospaced())
+                                        .foregroundStyle(isHandleValid || normalizedHandle.isEmpty ? .secondary : .red)
+                                }
+                                HStack {
+                                    Text("Handle length")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text("\(normalizedHandle.count)/16")
+                                        .font(.caption.monospaced())
+                                        .foregroundStyle(isHandleValid || normalizedHandle.isEmpty ? .secondary : .red)
+                                }
                                 if session.social.isSubmittingAction {
                                     HStack(spacing: 10) {
                                         ProgressView()
@@ -713,6 +741,23 @@ struct ContentView: View {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
         let withoutPrefixAt = trimmed.hasPrefix("@") ? String(trimmed.dropFirst()) : trimmed
         return SocialViewModel.normalizedHandle(withoutPrefixAt)
+    }
+
+    private func sanitizedProfileHandle(_ input: String) -> String {
+        let normalized = normalizedProfileHandle(input)
+        let allowedScalars = normalized.unicodeScalars.filter { scalar in
+            let value = scalar.value
+            let isLowercaseASCII = (97...122).contains(value)
+            let isDigitASCII = (48...57).contains(value)
+            let isUnderscore = value == 95
+            return isLowercaseASCII || isDigitASCII || isUnderscore
+        }
+        let filtered = String(String.UnicodeScalarView(allowedScalars))
+        return String(filtered.prefix(16))
+    }
+
+    private func sanitizedProfileDisplayName(_ input: String) -> String {
+        String(input.prefix(40))
     }
 
     @ViewBuilder

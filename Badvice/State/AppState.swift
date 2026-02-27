@@ -7340,9 +7340,11 @@ actor CloudKitStore: SocialBackend {
     private var cachedCurrentUser: SocialUser?
     private var cachedFriendIDs: (ids: [CKRecord.ID], fetchedAt: Date)?
     private var cachedFeed: (posts: [SocialPost], fetchedAt: Date)?
+    private var schemaReadinessCheckedAt: Date?
 
     private let friendCacheTTL: TimeInterval = 120
     private let feedCacheTTL: TimeInterval = 45
+    private let schemaReadinessCacheTTL: TimeInterval = 300
 
     init(
         container: CKContainer = .default(),
@@ -7368,7 +7370,25 @@ actor CloudKitStore: SocialBackend {
             let status = try await accountStatus()
             switch status {
             case .available:
-                return .available
+                if hasFreshSchemaReadinessCheck() {
+                    return .available
+                }
+                do {
+                    try await validateSchemaReadiness()
+                    schemaReadinessCheckedAt = Date()
+                    return .available
+                } catch {
+                    if isMissingProductionSchemaError(error) {
+                        return SocialAvailabilityState(
+                            isAvailable: false,
+                            message: "Social backend isn't deployed to CloudKit Production yet. Deploy the Development schema to Production in CloudKit Dashboard."
+                        )
+                    }
+                    return SocialAvailabilityState(
+                        isAvailable: false,
+                        message: "CloudKit social setup is incomplete. Deploy the schema in CloudKit Dashboard, then relaunch."
+                    )
+                }
             case .noAccount:
                 return SocialAvailabilityState(
                     isAvailable: false,
@@ -8301,7 +8321,53 @@ actor CloudKitStore: SocialBackend {
             return false
         }
         let details = ckError.localizedDescription.lowercased()
-        return details.contains("queryable") || details.contains("index") || details.contains("field")
+        return isSchemaIndexingError(details)
+    }
+
+    private func hasFreshSchemaReadinessCheck(referenceDate: Date = Date()) -> Bool {
+        guard let checkedAt = schemaReadinessCheckedAt else { return false }
+        return referenceDate.timeIntervalSince(checkedAt) < schemaReadinessCacheTTL
+    }
+
+    private func validateSchemaReadiness() async throws {
+        let recordTypes = [
+            CloudKitSocialSchema.RecordType.user,
+            CloudKitSocialSchema.RecordType.friendRequest,
+            CloudKitSocialSchema.RecordType.friendEdge,
+            CloudKitSocialSchema.RecordType.post,
+            CloudKitSocialSchema.RecordType.chaosScore,
+            CloudKitSocialSchema.RecordType.collabDoc,
+            CloudKitSocialSchema.RecordType.moderationReport,
+        ]
+
+        for recordType in recordTypes {
+            _ = try await queryRecords(
+                recordType: recordType,
+                predicate: NSPredicate(value: false),
+                resultsLimit: 1
+            )
+        }
+    }
+
+    private func isMissingProductionSchemaError(_ error: Error) -> Bool {
+        guard let ckError = error as? CKError else { return false }
+        guard
+            ckError.code == .invalidArguments
+                || ckError.code == .constraintViolation
+                || ckError.code == .serverRejectedRequest
+                || ckError.code == .permissionFailure
+        else {
+            return false
+        }
+        let details = ckError.localizedDescription.lowercased()
+        return details.contains("cannot create new type")
+            || (details.contains("production schema") && details.contains("type"))
+    }
+
+    private func isSchemaIndexingError(_ details: String) -> Bool {
+        details.contains("queryable")
+            || details.contains("index")
+            || details.contains("field")
     }
 
     private func accountStatus() async throws -> CKAccountStatus {
@@ -9447,6 +9513,11 @@ final class SocialViewModel {
             return "CloudKit is temporarily unavailable. Check your connection and try again."
         case .invalidArguments, .constraintViolation, .serverRejectedRequest:
             let details = error.localizedDescription.lowercased()
+            if details.contains("cannot create new type")
+                || (details.contains("production schema") && details.contains("type"))
+            {
+                return "CloudKit production schema is missing required social record types. Deploy the Development schema to Production in CloudKit Dashboard, then try again."
+            }
             if details.contains("queryable") || details.contains("index") || details.contains("field") {
                 return "CloudKit social schema/indexes are not fully set up yet. Deploy the schema in CloudKit Dashboard, then try again."
             }
