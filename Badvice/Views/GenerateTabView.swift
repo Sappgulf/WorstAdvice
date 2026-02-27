@@ -362,6 +362,7 @@ struct GenerateTabView: View {
                 Text(value)
                     .font(Theme.bodyFont.weight(.semibold))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.78)
                     .foregroundStyle(accent)
             }
             Spacer(minLength: 8)

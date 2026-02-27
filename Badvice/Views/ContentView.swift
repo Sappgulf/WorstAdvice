@@ -120,7 +120,7 @@ struct ContentView: View {
                 let effectiveLowPowerMode =
                     lowPowerModeEnabled || deviceCapability.forceLowPowerVisuals
                 let renderBudget = budget(for: session, lowPowerModeEnabled: effectiveLowPowerMode)
-                let shouldRenderParticles = selectedTab == .generate || selectedTab == .chaosHub
+                let shouldRenderParticles = (selectedTab == .generate || selectedTab == .chaosHub) && !isUITesting
                 ZStack {
                     Theme.canvasColor(for: session.settings.theme)
                         .ignoresSafeArea()
