@@ -102,16 +102,19 @@ struct ContentView: View {
     private var isUITesting: Bool { launchArguments.contains("-ui-testing") }
 
     var body: some View {
-        Group {
+        AnyView(
+            Group {
             if showSplash {
-                SplashView(isShowing: $showSplash)
-                    .transition(.opacity)
-                    .task {
-                        // Pre-warm session during splash so it's ready immediately after
-                        if session == nil {
-                            session = AppSessionViewModel(context: modelContext)
+                AnyView(
+                    SplashView(isShowing: $showSplash)
+                        .transition(.opacity)
+                        .task {
+                            // Pre-warm session during splash so it's ready immediately after
+                            if session == nil {
+                                session = AppSessionViewModel(context: modelContext)
+                            }
                         }
-                    }
+                )
             } else if let session {
                 let reduceMotion =
                     session.settings.reduceMotion
@@ -123,281 +126,14 @@ struct ContentView: View {
                     lowPowerModeEnabled || deviceCapability.forceLowPowerVisuals
                 let renderBudget = budget(for: session, lowPowerModeEnabled: effectiveLowPowerMode)
                 let shouldRenderParticles = (selectedTab == .generate || selectedTab == .chaosHub) && !isUITesting
-                ZStack {
-                    Theme.canvasColor(for: session.settings.theme)
-                        .ignoresSafeArea()
-
-                    ThemeBackgroundView(
-                        mode: session.settings.theme,
-                        budget: renderBudget,
-                        lowPowerModeEnabled: effectiveLowPowerMode
-                    )
-                    .ignoresSafeArea()
-
-                    if shouldRenderParticles {
-                        FloatingParticlesView(
-                            theme: session.settings.theme,
-                            reduceMotion: reduceMotion,
-                            isGenerating: session.generate.isGenerating,
-                            budget: renderBudget,
-                            lowPowerMode: effectiveLowPowerMode
-                        )
-                        .ignoresSafeArea()
-                    }
-
-                    TabView(selection: $selectedTab) {
-                        ForEach(session.settings.tabOrder) { tab in
-                            tabView(for: tab, session: session)
-                                .tag(tab)
-                                .toolbar(.hidden, for: .tabBar)  // Hide standard bar
-                                .environment(\.tabBarVisible, $tabBarVisible)
-                        }
-                    }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
-                    // Extend only the bottom edge so the custom tab bar overlaps the home indicator
-                    // region without pushing content under the Dynamic Island / status bar.
-                    .ignoresSafeArea(.all, edges: .bottom)
-                    // Performance: Disable animation if reduce motion is enabled
-                    .animation(
-                        constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
-
-                    // Custom Floating Tab Bar — supports tap and instant press-slide
-                    GeometryReader { proxy in
-                        VStack {
-                            Spacer()
-                            let tabs = session.settings.tabOrder
-                            let tabBarStyle = Theme.tabBarStyle(for: session.settings.theme)
-                            let accent = Theme.accent(for: session.settings.theme)
-                            let secondaryText = Theme.secondaryText(for: session.settings.theme)
-                            let friendsBadgeCount = session.social.incomingRequests.count
-                            HStack(spacing: 0) {
-                                ForEach(tabs) { tab in
-                                    let isSelected = selectedTab == tab
-                                    let isHighlighted = tabDragHighlight == tab
-                                    let badgeCount = tab == .friends ? friendsBadgeCount : 0
-                                    let tabAccessibilityID = "tab.\(tab.rawValue)"
-                                    VStack(spacing: 3) {
-                                        ZStack(alignment: .topTrailing) {
-                                            Image(systemName: tab.systemImage)
-                                                .font(
-                                                    .system(
-                                                        size: 20,
-                                                        weight: isSelected ? .semibold : .medium)
-                                                )
-                                                .symbolVariant(isSelected ? .fill : .none)
-                                                .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
-                                            if badgeCount > 0 {
-                                                Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
-                                                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                                                    .foregroundStyle(.white)
-                                                    .padding(.horizontal, 5)
-                                                    .padding(.vertical, 2)
-                                                    .background(Capsule(style: .continuous).fill(.red))
-                                                    .offset(x: 10, y: -7)
-                                                    .accessibilityIdentifier("tab.friends.badge")
-                                            }
-                                        }
-                                        Text(tab.title)
-                                            .font(
-                                                .system(
-                                                    size: 9,
-                                                    weight: isSelected ? .semibold : .regular))
-                                            .lineLimit(1)
-                                            .minimumScaleFactor(0.75)
-                                        Capsule(style: .continuous)
-                                            .fill(accent.opacity(isSelected ? 0.9 : 0))
-                                            .frame(width: isSelected ? 18 : 8, height: 3)
-                                            .opacity(isSelected ? 1 : 0.01)
-                                    }
-                                    .foregroundStyle(
-                                        isSelected
-                                            ? accent
-                                            : (isHighlighted
-                                                ? accent.opacity(0.58)
-                                                : secondaryText.opacity(0.74))
-                                    )
-                                    .frame(maxWidth: .infinity)
-                                    .frame(minHeight: Theme.minimumTapTarget)
-                                    .padding(.top, 6)
-                                    .padding(.bottom, 4)
-                                    .offset(y: isSelected ? -1.5 : 0)
-                                    .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
-                                    .background {
-                                        if isSelected || isHighlighted {
-                                            Capsule(style: .continuous)
-                                                .fill(
-                                                    accent.opacity(
-                                                        isSelected
-                                                            ? tabBarStyle.selectedFillOpacity
-                                                            : tabBarStyle.highlightedFillOpacity)
-                                                )
-                                                .padding(
-                                                    .horizontal,
-                                                    max(4, tabBarStyle.indicatorInset + 3)
-                                                )
-                                                .padding(.vertical, 1)
-                                        }
-                                    }
-                                    .overlay {
-                                        if isSelected, let glow = tabBarStyle.glow {
-                                            Capsule(style: .continuous)
-                                                .stroke(glow.opacity(0.35), lineWidth: 1)
-                                                .padding(
-                                                    .horizontal,
-                                                    max(5, tabBarStyle.indicatorInset + 4)
-                                                )
-                                                .padding(.vertical, 2)
-                                        }
-                                    }
-                                    .contentShape(Rectangle())
-                                    .accessibilityAddTraits(.isButton)
-                                    .onTapGesture {
-                                        guard selectedTab != tab else { return }
-                                        HapticsManager.playSelection(
-                                            isEnabled: session.settings.hapticsEnabled)
-                                        if constrainedMotion {
-                                            selectedTab = tab
-                                        } else {
-                                            withAnimation(
-                                                .spring(response: 0.3, dampingFraction: 0.7)
-                                            ) {
-                                                selectedTab = tab
-                                            }
-                                        }
-                                    }
-                                    .accessibilityAction {
-                                        if selectedTab != tab {
-                                            HapticsManager.playSelection(
-                                                isEnabled: session.settings.hapticsEnabled)
-                                            if constrainedMotion {
-                                                selectedTab = tab
-                                            } else {
-                                                withAnimation(
-                                                    .spring(response: 0.3, dampingFraction: 0.7)
-                                                ) {
-                                                    selectedTab = tab
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .accessibilityLabel(tab.title)
-                                    .accessibilityIdentifier(tabAccessibilityID)
-                                    .accessibilityValue(
-                                        "\(isSelected ? "Selected" : "Not selected")\(badgeCount > 0 ? ", \(badgeCount) pending requests" : "")"
-                                    )
-                                    .accessibilityAddTraits(isSelected ? .isSelected : [])
-                                }
-                            }
-                            .contentShape(Rectangle())
-                            .background(
-                                GeometryReader { barGeo in
-                                    Color.clear.onAppear {
-                                        tabBarWidth = barGeo.size.width
-                                    }
-                                    .onChange(of: barGeo.size.width) { _, w in
-                                        tabBarWidth = w
-                                    }
-                                }
-                            )
-                            .simultaneousGesture(
-                                DragGesture(minimumDistance: 0, coordinateSpace: .local)
-                                    .onChanged { drag in
-                                        let horizontalMovement = abs(drag.translation.width)
-                                        let verticalMovement = abs(drag.translation.height)
-                                        let shouldActivateSlide =
-                                            horizontalMovement >= 6
-                                            || (horizontalMovement > verticalMovement
-                                                && horizontalMovement >= 2)
-                                        guard shouldActivateSlide else { return }
-                                        if !tabSlideModeActive {
-                                            beginTabSlide(
-                                                tabs: tabs,
-                                                hapticsEnabled: session.settings.hapticsEnabled)
-                                        }
-                                        updateTabSlide(
-                                            locationX: drag.location.x,
-                                            tabs: tabs,
-                                            hapticsEnabled: session.settings.hapticsEnabled
-                                        )
-                                    }
-                                    .onEnded { _ in
-                                        endTabSlide(reduceMotion: constrainedMotion)
-                                    }
-                            )
-                            .padding(.horizontal, 6)
-                            .padding(.bottom, 6)
-                            .background {
-                                ZStack {
-                                    if lowPowerModeEnabled {
-                                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                            .fill(tabBarStyle.backgroundTint.opacity(0.94))
-                                            .shadow(
-                                                color: tabBarStyle.shadow,
-                                                radius: tabBarStyle.shadowRadius * 0.75, x: 0, y: 6)
-                                    } else {
-                                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                            .fill(.ultraThinMaterial)
-                                            .overlay {
-                                                RoundedRectangle(
-                                                    cornerRadius: 28, style: .continuous
-                                                )
-                                                .fill(
-                                                    tabBarStyle.backgroundTint.opacity(
-                                                        tabBarStyle.materialOverlayOpacity))
-                                            }
-                                            .shadow(
-                                                color: tabBarStyle.shadow,
-                                                radius: tabBarStyle.shadowRadius, x: 0, y: 8)
-                                    }
-
-                                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                        .stroke(
-                                            LinearGradient(
-                                                colors: [
-                                                    tabBarStyle.borderTop, tabBarStyle.borderBottom,
-                                                    tabBarStyle.borderTop.opacity(0.55),
-                                                ],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ),
-                                            lineWidth: 0.8
-                                        )
-
-                                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [
-                                                    .white.opacity(0.22), .white.opacity(0.04),
-                                                    .clear,
-                                                ],
-                                                startPoint: .top,
-                                                endPoint: .bottom
-                                            )
-                                        )
-                                        .blendMode(.screen)
-
-                                    if let glow = tabBarStyle.glow, !constrainedMotion, !lowPowerModeEnabled {
-                                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                            .stroke(glow.opacity(0.25), lineWidth: 1)
-                                            .blur(radius: 2)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, max(6, proxy.safeAreaInsets.bottom * 0.2))
-                            .offset(y: tabBarVisible ? 0 : 120)
-                            .animation(
-                                constrainedMotion
-                                    ? nil : .spring(response: 0.4, dampingFraction: 0.8),
-                                value: tabBarVisible)
-                        }
-                    }
-                    .ignoresSafeArea(.container, edges: .bottom)
-                    .ignoresSafeArea(.keyboard)
-
-                    // Confetti overlay — fires on streak milestones
-                    ConfettiView(isActive: $showConfetti, lowPowerMode: effectiveLowPowerMode)
-                }
+                sessionMainContent(
+                    session: session,
+                    reduceMotion: reduceMotion,
+                    constrainedMotion: constrainedMotion,
+                    effectiveLowPowerMode: effectiveLowPowerMode,
+                    renderBudget: renderBudget,
+                    shouldRenderParticles: shouldRenderParticles
+                )
                 .sensoryFeedback(trigger: session.generate.hapticTrigger) { _, _ in
                     let weight = session.generate.hapticWeight
                     if weight > 0.8 { return .impact(weight: .heavy) }
@@ -617,25 +353,314 @@ struct ContentView: View {
                     }
                 }
             } else {
-                ZStack {
-                    Color(.systemBackground).ignoresSafeArea()
-                    VStack(spacing: 16) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 38, weight: .semibold))
-                            .foregroundStyle(Color.primary.opacity(0.5))
-                        ProgressView()
-                            .tint(.primary)
-                        Text("Loading your chaos...")
-                            .font(.system(.subheadline, design: .rounded, weight: .medium))
-                            .foregroundStyle(Color.primary.opacity(0.45))
+                AnyView(
+                    ZStack {
+                        Color(.systemBackground).ignoresSafeArea()
+                        VStack(spacing: 16) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 38, weight: .semibold))
+                                .foregroundStyle(Color.primary.opacity(0.5))
+                            ProgressView()
+                                .tint(.primary)
+                            Text("Loading your chaos...")
+                                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                                .foregroundStyle(Color.primary.opacity(0.45))
+                        }
                     }
-                }
-                .task {
-                    if session == nil {
-                        session = AppSessionViewModel(context: modelContext)
+                    .task {
+                        if session == nil {
+                            session = AppSessionViewModel(context: modelContext)
+                        }
                     }
+                )
+            }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func sessionMainContent(
+        session: AppSessionViewModel,
+        reduceMotion: Bool,
+        constrainedMotion: Bool,
+        effectiveLowPowerMode: Bool,
+        renderBudget: RenderBudget,
+        shouldRenderParticles: Bool
+    ) -> some View {
+        ZStack {
+            Theme.canvasColor(for: session.settings.theme)
+                .ignoresSafeArea()
+
+            ThemeBackgroundView(
+                mode: session.settings.theme,
+                budget: renderBudget,
+                lowPowerModeEnabled: effectiveLowPowerMode
+            )
+            .ignoresSafeArea()
+
+            if shouldRenderParticles {
+                FloatingParticlesView(
+                    theme: session.settings.theme,
+                    reduceMotion: reduceMotion,
+                    isGenerating: session.generate.isGenerating,
+                    budget: renderBudget,
+                    lowPowerMode: effectiveLowPowerMode
+                )
+                .ignoresSafeArea()
+            }
+
+            TabView(selection: $selectedTab) {
+                ForEach(session.settings.tabOrder) { tab in
+                    tabView(for: tab, session: session)
+                        .tag(tab)
+                        .toolbar(.hidden, for: .tabBar)  // Hide standard bar
+                        .environment(\.tabBarVisible, $tabBarVisible)
                 }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            // Extend only the bottom edge so the custom tab bar overlaps the home indicator
+            // region without pushing content under the Dynamic Island / status bar.
+            .ignoresSafeArea(.all, edges: .bottom)
+            // Performance: Disable animation if reduce motion is enabled
+            .animation(
+                constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
+
+            // Custom Floating Tab Bar — supports tap and instant press-slide
+            GeometryReader { proxy in
+                VStack {
+                    Spacer()
+                    let tabs = session.settings.tabOrder
+                    let tabBarStyle = Theme.tabBarStyle(for: session.settings.theme)
+                    let accent = Theme.accent(for: session.settings.theme)
+                    let secondaryText = Theme.secondaryText(for: session.settings.theme)
+                    let friendsBadgeCount = session.social.incomingRequests.count
+                    HStack(spacing: 0) {
+                        ForEach(tabs) { tab in
+                            let isSelected = selectedTab == tab
+                            let isHighlighted = tabDragHighlight == tab
+                            let badgeCount = tab == .friends ? friendsBadgeCount : 0
+                            let tabAccessibilityID = "tab.\(tab.rawValue)"
+                            VStack(spacing: 3) {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(systemName: tab.systemImage)
+                                        .font(
+                                            .system(
+                                                size: 20,
+                                                weight: isSelected ? .semibold : .medium)
+                                        )
+                                        .symbolVariant(isSelected ? .fill : .none)
+                                        .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
+                                    if badgeCount > 0 {
+                                        Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
+                                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 5)
+                                            .padding(.vertical, 2)
+                                            .background(Capsule(style: .continuous).fill(.red))
+                                            .offset(x: 10, y: -7)
+                                            .accessibilityIdentifier("tab.friends.badge")
+                                    }
+                                }
+                                Text(tab.title)
+                                    .font(
+                                        .system(
+                                            size: 9,
+                                            weight: isSelected ? .semibold : .regular))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.75)
+                                Capsule(style: .continuous)
+                                    .fill(accent.opacity(isSelected ? 0.9 : 0))
+                                    .frame(width: isSelected ? 18 : 8, height: 3)
+                                    .opacity(isSelected ? 1 : 0.01)
+                            }
+                            .foregroundStyle(
+                                isSelected
+                                    ? accent
+                                    : (isHighlighted
+                                        ? accent.opacity(0.58)
+                                        : secondaryText.opacity(0.74))
+                            )
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: Theme.minimumTapTarget)
+                            .padding(.top, 6)
+                            .padding(.bottom, 4)
+                            .offset(y: isSelected ? -1.5 : 0)
+                            .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
+                            .background {
+                                if isSelected || isHighlighted {
+                                    Capsule(style: .continuous)
+                                        .fill(
+                                            accent.opacity(
+                                                isSelected
+                                                    ? tabBarStyle.selectedFillOpacity
+                                                    : tabBarStyle.highlightedFillOpacity)
+                                        )
+                                        .padding(
+                                            .horizontal,
+                                            max(4, tabBarStyle.indicatorInset + 3)
+                                        )
+                                        .padding(.vertical, 1)
+                                }
+                            }
+                            .overlay {
+                                if isSelected, let glow = tabBarStyle.glow {
+                                    Capsule(style: .continuous)
+                                        .stroke(glow.opacity(0.35), lineWidth: 1)
+                                        .padding(
+                                            .horizontal,
+                                            max(5, tabBarStyle.indicatorInset + 4)
+                                        )
+                                        .padding(.vertical, 2)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                            .accessibilityAddTraits(.isButton)
+                            .onTapGesture {
+                                guard selectedTab != tab else { return }
+                                HapticsManager.playSelection(
+                                    isEnabled: session.settings.hapticsEnabled)
+                                if constrainedMotion {
+                                    selectedTab = tab
+                                } else {
+                                    withAnimation(
+                                        .spring(response: 0.3, dampingFraction: 0.7)
+                                    ) {
+                                        selectedTab = tab
+                                    }
+                                }
+                            }
+                            .accessibilityAction {
+                                if selectedTab != tab {
+                                    HapticsManager.playSelection(
+                                        isEnabled: session.settings.hapticsEnabled)
+                                    if constrainedMotion {
+                                        selectedTab = tab
+                                    } else {
+                                        withAnimation(
+                                            .spring(response: 0.3, dampingFraction: 0.7)
+                                        ) {
+                                            selectedTab = tab
+                                        }
+                                    }
+                                }
+                            }
+                            .accessibilityLabel(tab.title)
+                            .accessibilityIdentifier(tabAccessibilityID)
+                            .accessibilityValue(
+                                "\(isSelected ? "Selected" : "Not selected")\(badgeCount > 0 ? ", \(badgeCount) pending requests" : "")"
+                            )
+                            .accessibilityAddTraits(isSelected ? .isSelected : [])
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .background(
+                        GeometryReader { barGeo in
+                            Color.clear.onAppear {
+                                tabBarWidth = barGeo.size.width
+                            }
+                            .onChange(of: barGeo.size.width) { _, w in
+                                tabBarWidth = w
+                            }
+                        }
+                    )
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                            .onChanged { drag in
+                                let horizontalMovement = abs(drag.translation.width)
+                                let verticalMovement = abs(drag.translation.height)
+                                let shouldActivateSlide =
+                                    horizontalMovement >= 6
+                                    || (horizontalMovement > verticalMovement
+                                        && horizontalMovement >= 2)
+                                guard shouldActivateSlide else { return }
+                                if !tabSlideModeActive {
+                                    beginTabSlide(
+                                        tabs: tabs,
+                                        hapticsEnabled: session.settings.hapticsEnabled)
+                                }
+                                updateTabSlide(
+                                    locationX: drag.location.x,
+                                    tabs: tabs,
+                                    hapticsEnabled: session.settings.hapticsEnabled
+                                )
+                            }
+                            .onEnded { _ in
+                                endTabSlide(reduceMotion: constrainedMotion)
+                            }
+                    )
+                    .padding(.horizontal, 6)
+                    .padding(.bottom, 6)
+                    .background {
+                        ZStack {
+                            if lowPowerModeEnabled {
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .fill(tabBarStyle.backgroundTint.opacity(0.94))
+                                    .shadow(
+                                        color: tabBarStyle.shadow,
+                                        radius: tabBarStyle.shadowRadius * 0.75, x: 0, y: 6)
+                            } else {
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .fill(.ultraThinMaterial)
+                                    .overlay {
+                                        RoundedRectangle(
+                                            cornerRadius: 28, style: .continuous
+                                        )
+                                        .fill(
+                                            tabBarStyle.backgroundTint.opacity(
+                                                tabBarStyle.materialOverlayOpacity))
+                                    }
+                                    .shadow(
+                                        color: tabBarStyle.shadow,
+                                        radius: tabBarStyle.shadowRadius, x: 0, y: 8)
+                            }
+
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [
+                                            tabBarStyle.borderTop, tabBarStyle.borderBottom,
+                                            tabBarStyle.borderTop.opacity(0.55),
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 0.8
+                                )
+
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            .white.opacity(0.22), .white.opacity(0.04),
+                                            .clear,
+                                        ],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .blendMode(.screen)
+
+                            if let glow = tabBarStyle.glow, !constrainedMotion, !lowPowerModeEnabled {
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .stroke(glow.opacity(0.25), lineWidth: 1)
+                                    .blur(radius: 2)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, max(6, proxy.safeAreaInsets.bottom * 0.2))
+                    .offset(y: tabBarVisible ? 0 : 120)
+                    .animation(
+                        constrainedMotion
+                            ? nil : .spring(response: 0.4, dampingFraction: 0.8),
+                        value: tabBarVisible)
+                }
+            }
+            .ignoresSafeArea(.container, edges: .bottom)
+            .ignoresSafeArea(.keyboard)
+
+            // Confetti overlay — fires on streak milestones
+            ConfettiView(isActive: $showConfetti, lowPowerMode: effectiveLowPowerMode)
         }
     }
 
