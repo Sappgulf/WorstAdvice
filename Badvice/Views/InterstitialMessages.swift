@@ -1143,7 +1143,7 @@ struct SettingsTabView: View {
                             .foregroundStyle(accent)
                             .frame(width: 24)
                         Text(tab.title)
-                            .font(Theme.bodyFont)
+                            .font(Theme.bodyFont(for: viewModel.theme))
                             .foregroundStyle(primaryText)
                         Spacer()
                         HStack(spacing: 4) {
@@ -1254,7 +1254,7 @@ struct SettingsTabView: View {
                 .foregroundStyle(accent)
                 .frame(width: 24)
             Text(label)
-                .font(Theme.bodyFont)
+                .font(Theme.bodyFont(for: viewModel.theme))
                 .foregroundStyle(primaryText)
             Spacer()
             Toggle("", isOn: isOn)
@@ -1282,7 +1282,7 @@ struct SettingsTabView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(primaryText)
-                .font(Theme.bodyFont)
+                .font(Theme.bodyFont(for: viewModel.theme))
                 .accessibilityIdentifier(pickerAccessibilityIdentifier)
             } else {
                 Picker(label, selection: selection) {
@@ -1290,7 +1290,7 @@ struct SettingsTabView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(primaryText)
-                .font(Theme.bodyFont)
+                .font(Theme.bodyFont(for: viewModel.theme))
             }
         }
         .padding(.vertical, 4)
@@ -1303,7 +1303,7 @@ struct SettingsTabView: View {
                 .foregroundStyle(accent)
                 .frame(width: 24)
             Text(label)
-                .font(Theme.bodyFont)
+                .font(Theme.bodyFont(for: viewModel.theme))
                 .foregroundStyle(primaryText)
             Spacer()
             if let badge {

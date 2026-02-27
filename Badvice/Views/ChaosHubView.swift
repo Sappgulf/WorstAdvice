@@ -471,6 +471,7 @@ struct ChaosHubTabView: View {
                     .tint(accent)
                     .foregroundStyle(buttonText)
                     .disabled(!social.socialFeaturesEnabled)
+                    .accessibilityIdentifier("chaos.social.submitScore")
 
                     Button {
                         Task { await social.refreshLeaderboard() }
@@ -482,9 +483,11 @@ struct ChaosHubTabView: View {
                     .buttonStyle(.bordered)
                     .tint(accent)
                     .disabled(!social.socialFeaturesEnabled)
+                    .accessibilityIdentifier("chaos.social.refreshLeaderboard")
                 }
             }
         }
+        .accessibilityIdentifier("chaos.social.leaderboardCard")
     }
 
     private var quickActionsCard: some View {

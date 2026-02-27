@@ -549,7 +549,10 @@ final class PersistenceTests: XCTestCase {
 
         XCTAssertEqual(reloaded.tabOrder.first, .generate)
         XCTAssertEqual(reloaded.tabOrder.last, .settings)
-        XCTAssertEqual(reloaded.tabOrder, [.generate, .history, .quotes, .favorites, .chaosHub, .settings])
+        XCTAssertEqual(
+            reloaded.tabOrder,
+            [.generate, .history, .quotes, .favorites, .chaosHub, .friends, .settings]
+        )
     }
 
     func testDailyMissionProgressCompletesFromTodayGeneration() async throws {

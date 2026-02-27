@@ -1452,6 +1452,7 @@ struct FriendsTabView: View {
             }
         }
         .pickerStyle(.segmented)
+        .accessibilityIdentifier("friends.sectionPicker")
     }
 
     private var friendsSection: some View {
@@ -1472,6 +1473,7 @@ struct FriendsTabView: View {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .fill(cardColor)
                             )
+                            .accessibilityIdentifier("friends.searchField")
 
                         Button {
                             Task {
@@ -1486,6 +1488,7 @@ struct FriendsTabView: View {
                         .tint(accent)
                         .foregroundStyle(buttonText)
                         .disabled(!social.availability.isAvailable || handleSearchText.isEmpty)
+                        .accessibilityIdentifier("friends.searchButton")
                     }
 
                     if let result = social.latestSearchResult {
@@ -1511,6 +1514,7 @@ struct FriendsTabView: View {
                             }
                             .buttonStyle(.plain)
                             .disabled(result.id == social.currentUser?.id || !social.socialFeaturesEnabled)
+                            .accessibilityIdentifier("friends.addButton")
                         }
                         .padding(10)
                         .background(
@@ -1637,6 +1641,7 @@ struct FriendsTabView: View {
                     }
                     .buttonStyle(.bordered)
                     .disabled(!social.socialFeaturesEnabled)
+                    .accessibilityIdentifier("friends.feedRefresh")
                 }
             }
 
@@ -1739,6 +1744,7 @@ struct FriendsTabView: View {
                     .buttonStyle(.bordered)
                     .font(.caption.weight(.semibold))
                     .disabled(!social.socialFeaturesEnabled)
+                    .accessibilityIdentifier("friends.newCollabDoc")
                 }
             }
 
@@ -2045,7 +2051,7 @@ private struct FavoriteDetailView: View {
                             axis: .vertical
                         )
                         .lineLimit(3...8)
-                        .font(Theme.bodyFont)
+                        .font(Theme.bodyFont(for: settings.theme))
                         .textInputAutocapitalization(.sentences)
                         .foregroundStyle(primaryText)
                         .padding(.horizontal, 14)

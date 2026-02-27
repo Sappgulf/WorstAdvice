@@ -61,7 +61,8 @@ struct AdviceCardView: View {
                         fill: accent.opacity(0.13),
                         stroke: .clear,
                         showsStroke: false,
-                        minWidth: nil
+                        minWidth: nil,
+                        theme: theme
                     )
                     .layoutPriority(1)
 
@@ -72,7 +73,8 @@ struct AdviceCardView: View {
                         fill: secondaryText.opacity(theme == .minimal ? 0.13 : 0.10),
                         stroke: secondaryText.opacity(0.12),
                         showsStroke: true,
-                        minWidth: nil
+                        minWidth: nil,
+                        theme: theme
                     )
                     .layoutPriority(0)
 
@@ -88,7 +90,8 @@ struct AdviceCardView: View {
                             fill: providerBadgeTint.opacity(theme == .minimal ? 0.16 : 0.14),
                             stroke: providerBadgeTint.opacity(0.25),
                             showsStroke: true,
-                            minWidth: nil
+                            minWidth: nil,
+                            theme: theme
                         )
                         .shadow(
                             color: isMotionReduced ? .clear : providerBadgeTint.opacity(0.08),
@@ -113,7 +116,7 @@ struct AdviceCardView: View {
 
             // Advice text
             Text(record.adviceLine)
-                .font(Theme.cardFont)
+                .font(Theme.cardFont(for: theme))
                 .foregroundStyle(primaryText)
                 .lineSpacing(5)
                 .fixedSize(horizontal: false, vertical: true)
@@ -383,6 +386,7 @@ private struct AdviceBadgePill: View {
     let stroke: Color
     let showsStroke: Bool
     let minWidth: CGFloat?
+    let theme: ThemeMode
 
     var body: some View {
         Group {
@@ -392,7 +396,7 @@ private struct AdviceBadgePill: View {
                 Text(text)
             }
         }
-        .font(Theme.chipFont)
+        .font(Theme.chipFont(for: theme))
         .lineLimit(1)
         .minimumScaleFactor(0.85)
         .foregroundStyle(tint)

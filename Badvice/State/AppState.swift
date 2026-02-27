@@ -4556,7 +4556,7 @@ final class GenerateViewModel {
                     seed: baseSeed,
                     includeRationale: settingsViewModel.includeRationale,
                     contentPack: selectedPack,
-                    limit: hasSituationContext ? 3 : 2
+                    limit: selectedPack == .classic ? 1 : (hasSituationContext ? 3 : 2)
                 )
                 candidatePool.append(contentsOf: remixCandidates.map { ($0, "ml_remix") })
             }
@@ -4647,13 +4647,18 @@ final class GenerateViewModel {
                 tone: item.candidate.tone,
                 context: learningContext
             )
+            let sourceBias = sourcePreferenceBias(
+                source: item.source,
+                contentPack: selectedPack,
+                requestedProvider: generationProvider
+            )
             let score = adaptiveRanker.adviceScore(
                 semanticRelevance: safetyAdjustedRelevance,
                 stats: blendedLearning,
                 noveltyPenalty: noveltyPenalty,
                 seed: baseSeed,
                 candidateIndex: index
-            )
+            ) + sourceBias
             ranked.append(
                 (
                     item.candidate, item.source, score, fingerprint, candidatePoolKey,
@@ -4842,6 +4847,25 @@ final class GenerateViewModel {
             return "Community"
         default:
             return source.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    private func sourcePreferenceBias(
+        source: String,
+        contentPack: ContentPack,
+        requestedProvider: AdviceGenerationProvider
+    ) -> Double {
+        switch source {
+        case "engine":
+            return contentPack == .classic ? 0.08 : 0.04
+        case "ml_remix":
+            return contentPack == .classic ? -0.05 : -0.01
+        case "apple_on_device":
+            return requestedProvider == .appleOnDevice ? 0.06 : 0.02
+        case "community":
+            return 0.01
+        default:
+            return 0
         }
     }
 
@@ -7189,6 +7213,12 @@ actor CloudKitStore {
     }
 
     func availabilityState() async -> SocialAvailabilityState {
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-force-social-unavailable") {
+            return SocialAvailabilityState(
+                isAvailable: false,
+                message: "Social features are unavailable in this test run."
+            )
+        }
         do {
             let status = try await accountStatus()
             switch status {

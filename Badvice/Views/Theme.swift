@@ -8,20 +8,20 @@ enum RenderBudget {
 
 
 enum Theme {
-    static let cardCornerRadius: CGFloat = 24
-    static let cardPadding: CGFloat = 24
-    static let horizontalPadding: CGFloat = 20
-    static let sectionSpacing: CGFloat = 16
-    static let cardInnerSpacing: CGFloat = 12
-    static let compactCornerRadius: CGFloat = 12
-    static let mediumCornerRadius: CGFloat = 14
-    static let largeCornerRadius: CGFloat = 18
+    static let cardCornerRadius: CGFloat = 22
+    static let cardPadding: CGFloat = 20
+    static let horizontalPadding: CGFloat = 16
+    static let sectionSpacing: CGFloat = 14
+    static let cardInnerSpacing: CGFloat = 10
+    static let compactCornerRadius: CGFloat = 10
+    static let mediumCornerRadius: CGFloat = 12
+    static let largeCornerRadius: CGFloat = 16
     static let minimumTapTarget: CGFloat = 44
     static let compactIconButtonSize: CGFloat = 44
-    static let chipMinHeight: CGFloat = 28
-    static let chipHorizontalPadding: CGFloat = 10
-    static let chipVerticalPadding: CGFloat = 5
-    static let largeTapTargetHeight: CGFloat = 56
+    static let chipMinHeight: CGFloat = 26
+    static let chipHorizontalPadding: CGFloat = 9
+    static let chipVerticalPadding: CGFloat = 4
+    static let largeTapTargetHeight: CGFloat = 52
 
     // MARK: - Animation durations (standardized)
     /// Fast: micro-interactions, icon changes — 0.18–0.22s
@@ -45,10 +45,54 @@ enum Theme {
         .spring(response: 0.55, dampingFraction: 0.8, blendDuration: 0.3)
     }
 
-    static let headlineFont: Font = .system(.largeTitle, design: .serif, weight: .bold)
-    static let cardFont: Font = .system(.title2, design: .default, weight: .semibold)
-    static let bodyFont: Font = .system(.body, design: .default, weight: .regular)
-    static let chipFont: Font = .system(.subheadline, design: .rounded, weight: .medium)
+    static let headlineFont: Font = headlineFont(for: .badvice)
+    static let cardFont: Font = cardFont(for: .badvice)
+    static let bodyFont: Font = bodyFont(for: .badvice)
+    static let chipFont: Font = chipFont(for: .badvice)
+
+    static func headlineFont(for mode: ThemeMode) -> Font {
+        switch mode {
+        case .fallout, .retro, .cybernetic:
+            return .system(.largeTitle, design: .monospaced, weight: .bold)
+        case .minimal, .slate, .evergreen:
+            return .system(.largeTitle, design: .rounded, weight: .bold)
+        default:
+            return .system(.largeTitle, design: .serif, weight: .bold)
+        }
+    }
+
+    static func cardFont(for mode: ThemeMode) -> Font {
+        switch mode {
+        case .fallout, .retro, .cybernetic:
+            return .system(.title3, design: .monospaced, weight: .semibold)
+        case .minimal, .slate:
+            return .system(.title3, design: .rounded, weight: .semibold)
+        case .sunset, .cosmic, .ember:
+            return .system(.title3, design: .serif, weight: .semibold)
+        default:
+            return .system(.title3, design: .default, weight: .semibold)
+        }
+    }
+
+    static func bodyFont(for mode: ThemeMode) -> Font {
+        switch mode {
+        case .fallout, .retro, .cybernetic:
+            return .system(.body, design: .monospaced, weight: .regular)
+        case .minimal, .slate, .evergreen:
+            return .system(.body, design: .rounded, weight: .regular)
+        default:
+            return .system(.body, design: .default, weight: .regular)
+        }
+    }
+
+    static func chipFont(for mode: ThemeMode) -> Font {
+        switch mode {
+        case .fallout, .retro, .cybernetic:
+            return .system(.subheadline, design: .monospaced, weight: .semibold)
+        default:
+            return .system(.subheadline, design: .rounded, weight: .medium)
+        }
+    }
     
     // MARK: - Performance: Gradient Cache
     

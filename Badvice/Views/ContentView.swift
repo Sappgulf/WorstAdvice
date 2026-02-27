@@ -388,6 +388,7 @@ struct ContentView: View {
                     if weight > 0.4 { return .impact(weight: .medium) }
                     return .impact(weight: .light)
                 }
+                .environment(\.font, Theme.bodyFont(for: session.settings.theme))
                 .fullScreenCover(
                     isPresented: .init(
                         get: { !hasSeenOnboarding },

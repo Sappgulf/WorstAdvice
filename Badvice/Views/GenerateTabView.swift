@@ -82,9 +82,9 @@ struct GenerateTabView: View {
 
             HStack(spacing: 0) {
                 Text("Bad")
-                    .font(Theme.headlineFont.weight(.black))
+                    .font(Theme.headlineFont(for: settings.theme).weight(.black))
                 Text("vice")
-                    .font(Theme.headlineFont.weight(.semibold))
+                    .font(Theme.headlineFont(for: settings.theme).weight(.semibold))
             }
             .foregroundStyle(headerColor)
         }
@@ -381,7 +381,7 @@ struct GenerateTabView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(secondaryText)
                 Text(value)
-                    .font(Theme.bodyFont.weight(.semibold))
+                    .font(Theme.bodyFont(for: settings.theme).weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
                     .foregroundStyle(accent)
@@ -444,7 +444,7 @@ struct GenerateTabView: View {
 
             TextField("Example: awkward first date", text: $viewModel.scenarioText, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(Theme.bodyFont)
+                .font(Theme.bodyFont(for: settings.theme))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
                 .frame(minHeight: 46)
@@ -543,7 +543,7 @@ struct GenerateTabView: View {
 
                 TextField("Example: Alex", text: $viewModel.friendName)
                     .textFieldStyle(.plain)
-                    .font(Theme.bodyFont)
+                    .font(Theme.bodyFont(for: settings.theme))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
                     .frame(minHeight: 46)
@@ -615,7 +615,7 @@ struct GenerateTabView: View {
                 }
             } label: {
                 Label(viewModel.primaryActionTitle, systemImage: "sparkles")
-                    .font(Theme.bodyFont.weight(.bold))
+                    .font(Theme.bodyFont(for: settings.theme).weight(.bold))
                     .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)
             }
             .buttonStyle(.borderedProminent)
@@ -728,6 +728,7 @@ struct GenerateTabView: View {
                         }
                     }
                 }
+                .accessibilityIdentifier("generate.shareToFriends")
 
                 railButton(
                     title: "Remix",
@@ -1208,11 +1209,11 @@ struct GenerateTabView: View {
 
             VStack(spacing: 12) {
                 Text("Your first bad idea is just a tap away.")
-                    .font(Theme.cardFont)
+                    .font(Theme.cardFont(for: settings.theme))
                     .foregroundStyle(primaryText)
 
                 Text("Pick a category and let chaos reign.")
-                    .font(Theme.bodyFont)
+                    .font(Theme.bodyFont(for: settings.theme))
                     .foregroundStyle(secondaryText)
                     .opacity(0.8)
             }
