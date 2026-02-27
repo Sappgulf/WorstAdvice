@@ -77,6 +77,8 @@ struct ContentView: View {
     @State private var showConfetti = false
     @State private var showSplash = true
     @State private var tabBarVisible = true
+    @State private var profileHandleDraft = ""
+    @State private var profileDisplayNameDraft = UIDevice.current.name
     @State private var lastShakeHandledAt: Date = .distantPast
     @State private var lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @StateObject private var shakeDetector = ShakeDetector()
@@ -445,6 +447,10 @@ struct ContentView: View {
                             shakeDetector.startMonitoring()
                         }
                         self.session?.generate.refreshRetentionStateOnAppear()
+                        Task {
+                            await self.session?.social.refreshAvailability()
+                            await self.session?.social.refreshSocialData()
+                        }
                     } else {
                         if phase == .background {
                             shouldRestartOnNextActive = true
@@ -484,6 +490,56 @@ struct ContentView: View {
                         selectedTab = fallback
                     }
                 }
+                .sheet(
+                    isPresented: Binding(
+                        get: {
+                            !showSplash
+                                && hasSeenOnboarding
+                                && session.social.shouldShowProfileSetup
+                        },
+                        set: { _ in }
+                    )
+                ) {
+                    NavigationStack {
+                        Form {
+                            Section("Create Profile") {
+                                TextField("handle", text: $profileHandleDraft)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                TextField(
+                                    "Display name (optional)",
+                                    text: $profileDisplayNameDraft
+                                )
+                            }
+                            Section("Rules") {
+                                Text(
+                                    "Handle must be 3–16 characters and can only use lowercase letters, numbers, or underscore."
+                                )
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            }
+                        }
+                        .navigationTitle("Create Profile")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .interactiveDismissDisabled()
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Save") {
+                                    Task {
+                                        await session.social.createProfile(
+                                            handle: profileHandleDraft,
+                                            displayName: profileDisplayNameDraft
+                                        )
+                                    }
+                                }
+                                .disabled(
+                                    profileHandleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                                        .isEmpty
+                                )
+                            }
+                        }
+                    }
+                }
             } else {
                 ZStack {
                     Color(.systemBackground).ignoresSafeArea()
@@ -519,7 +575,7 @@ struct ContentView: View {
                 baseline = session.generate.isGenerating ? .full : .balanced
             case .chaosHub:
                 baseline = .balanced
-            case .quotes, .favorites, .history, .settings:
+            case .friends, .quotes, .favorites, .history, .settings:
                 baseline = .reduced
             }
         }
@@ -612,6 +668,7 @@ struct ContentView: View {
             GenerateTabView(
                 viewModel: session.generate,
                 settings: session.settings,
+                social: session.social,
                 onDataChanged: { session.refreshLists() },
                 onOpenTab: { tab in
                     setSelectedTab(tab, session: session)
@@ -621,6 +678,7 @@ struct ContentView: View {
             ChaosHubTabView(
                 generateViewModel: session.generate,
                 settings: session.settings,
+                social: session.social,
                 onOpenTab: { tab in
                     setSelectedTab(tab, session: session)
                 },
@@ -628,12 +686,24 @@ struct ContentView: View {
                     session.refreshLists()
                 }
             )
+        case .friends:
+            FriendsTabView(
+                social: session.social,
+                settings: session.settings,
+                onOpenTab: { tab in
+                    setSelectedTab(tab, session: session)
+                }
+            )
         case .quotes:
             QuotesTabView(
                 viewModel: session.quotes,
                 settings: session.settings,
+                social: session.social,
                 onJumpToGenerate: {
                     setSelectedTab(.generate, session: session)
+                },
+                onOpenTab: { tab in
+                    setSelectedTab(tab, session: session)
                 }
             )
         case .favorites:

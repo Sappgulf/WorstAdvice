@@ -3,6 +3,7 @@ import SwiftUI
 struct GenerateTabView: View {
     @Bindable var viewModel: GenerateViewModel
     @Bindable var settings: SettingsViewModel
+    @Bindable var social: SocialViewModel
     var onDataChanged: () -> Void
     var onOpenTab: ((AppTab) -> Void)? = nil
 
@@ -212,6 +213,26 @@ struct GenerateTabView: View {
                                 showingShareSheet = true
                                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                             }
+
+                            Button("Collaborate", systemImage: "person.2.badge.plus") {
+                                guard social.socialFeaturesEnabled else {
+                                    activeToast = ToastMessage(
+                                        message: social.availability.isAvailable
+                                            ? "Create your profile in Friends first."
+                                            : social.availability.message,
+                                        style: .error
+                                    )
+                                    return
+                                }
+                                guard let record = viewModel.current else { return }
+                                social.queueCollabDraft(type: .advice, content: record.adviceLine)
+                                openTab(.friends)
+                                activeToast = ToastMessage(
+                                    message: "Pick collaborators in Friends.",
+                                    style: .info
+                                )
+                            }
+                            .disabled(!social.socialFeaturesEnabled)
                         }
                         .onTapGesture(count: 2) {
                             let wasFavorite = viewModel.isCurrentFavorite
@@ -691,16 +712,21 @@ struct GenerateTabView: View {
                 }
 
                 railButton(
-                    title: "Share",
-                    systemImage: "square.and.arrow.up",
-                    isEnabled: hasCurrent && !viewModel.isGenerating
+                    title: "Share to Friends",
+                    systemImage: "person.2.fill",
+                    isEnabled: hasCurrent && !viewModel.isGenerating && social.socialFeaturesEnabled
                 ) {
-                    guard let payload = viewModel.currentSharePayload else { return }
-                    let image = ShareCardRenderer.render(content: payload)
-                    shareItems = [image, viewModel.currentShareText]
-                    viewModel.trackShare(template: payload.template, ratio: payload.aspectRatio)
-                    showingShareSheet = true
-                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    guard let record = viewModel.current else { return }
+                    Task {
+                        await social.shareAdviceToFriends(text: record.adviceLine)
+                        if let message = social.statusMessage {
+                            activeToast = ToastMessage(
+                                message: message,
+                                style: message.lowercased().contains("shared")
+                                    ? .success : .error
+                            )
+                        }
+                    }
                 }
 
                 railButton(
@@ -713,6 +739,18 @@ struct GenerateTabView: View {
                 }
             }
             .frame(maxWidth: .infinity)
+
+            if !social.availability.isAvailable {
+                Text(social.availability.message)
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else if social.currentUser == nil {
+                Text("Create a profile in Friends to share and collaborate.")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .tint(accent)
         .foregroundStyle(primaryText)
@@ -744,16 +782,6 @@ struct GenerateTabView: View {
             .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
-                Button {
-                    openTab(.chaosHub)
-                    hasDismissedWhatsNewCard = true
-                } label: {
-                    Label("Open Chaos Hub", systemImage: "flame.fill")
-                        .font(.caption.weight(.semibold))
-                }
-                .buttonStyle(.bordered)
-                .tint(accent)
-
                 Button {
                     hasDismissedWhatsNewCard = true
                 } label: {

@@ -3,6 +3,7 @@ import SwiftUI
 struct ChaosHubTabView: View {
     @Bindable var generateViewModel: GenerateViewModel
     @Bindable var settings: SettingsViewModel
+    @Bindable var social: SocialViewModel
     var onOpenTab: (AppTab) -> Void
     var onDataChanged: () -> Void
 
@@ -87,6 +88,10 @@ struct ChaosHubTabView: View {
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
 
+                    socialLeaderboardCard
+                        .opacity(contentAppeared ? 1 : 0)
+                        .offset(y: contentAppeared ? 0 : 16)
+
                     contractsSection
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
@@ -124,6 +129,11 @@ struct ChaosHubTabView: View {
                 } else {
                     withAnimation(.spring(response: Theme.animSlow, dampingFraction: 0.82)) {
                         contentAppeared = true
+                    }
+                }
+                Task {
+                    if social.currentUser != nil {
+                        await social.refreshLeaderboard()
                     }
                 }
             }
@@ -398,6 +408,81 @@ struct ChaosHubTabView: View {
                 .opacity(contentAppeared ? 1 : 0)
                 .offset(y: contentAppeared ? 0 : 6)
                 .animation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8).delay(0.19), value: contentAppeared)
+            }
+        }
+    }
+
+    private var socialLeaderboardCard: some View {
+        cardShell {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Season Leaderboard", systemImage: "list.number")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(primaryText)
+
+                Text("Season: \(social.leaderboardSeasonID)")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+
+                if !social.availability.isAvailable {
+                    Text(social.availability.message)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                } else if social.currentUser == nil {
+                    Text("Create your profile in Friends to compete in leaderboard seasons.")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                } else if social.leaderboard.isEmpty {
+                    Text("No scores submitted yet.")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(Array(social.leaderboard.prefix(5).enumerated()), id: \.offset) {
+                            idx, item in
+                            HStack(spacing: 8) {
+                                Text("\(idx + 1).")
+                                    .font(.caption.weight(.bold).monospacedDigit())
+                                    .foregroundStyle(secondaryText)
+                                    .frame(width: 18, alignment: .leading)
+                                Text(item.user?.displayName ?? "@unknown")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(primaryText)
+                                    .lineLimit(1)
+                                Spacer(minLength: 8)
+                                Text("\(item.score)")
+                                    .font(.caption.weight(.bold).monospacedDigit())
+                                    .foregroundStyle(accent)
+                            }
+                        }
+                    }
+                }
+
+                HStack(spacing: 10) {
+                    Button {
+                        Task {
+                            await social.submitChaosScore(Int64(chaosScore))
+                        }
+                    } label: {
+                        Label("Submit Score", systemImage: "paperplane.fill")
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 38)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(accent)
+                    .foregroundStyle(buttonText)
+                    .disabled(!social.socialFeaturesEnabled)
+
+                    Button {
+                        Task { await social.refreshLeaderboard() }
+                    } label: {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 38)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(accent)
+                    .disabled(!social.socialFeaturesEnabled)
+                }
             }
         }
     }

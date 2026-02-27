@@ -316,6 +316,7 @@ struct LearningWeightProfile: Sendable {
 enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     case generate
     case chaosHub
+    case friends
     case quotes
     case favorites
     case history
@@ -327,6 +328,7 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .generate: return "Advice"
         case .chaosHub: return "Chaos Hub"
+        case .friends: return "Friends"
         case .quotes: return "Quotes"
         case .favorites: return "Favorites"
         case .history: return "History"
@@ -338,6 +340,7 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .generate: return "sparkles"
         case .chaosHub: return "flame.fill"
+        case .friends: return "person.2.fill"
         case .quotes: return "quote.bubble"
         case .favorites: return "bookmark.fill"
         case .history: return "clock"
@@ -345,7 +348,9 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
-    static let defaultOrder: [AppTab] = [.generate, .chaosHub, .quotes, .favorites, .history, .settings]
+    static let defaultOrder: [AppTab] = [
+        .generate, .chaosHub, .friends, .quotes, .favorites, .history, .settings,
+    ]
 }
 
 enum QuoteRankingMode: String, CaseIterable, Codable, Identifiable, Sendable {
