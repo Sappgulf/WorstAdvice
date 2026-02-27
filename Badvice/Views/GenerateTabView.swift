@@ -1196,515 +1196,93 @@ private struct LoadingAdviceView: View {
         reduceMotion || accessibilityReduceMotionEnabled
     }
     private var accentColor: Color { Theme.accent(for: theme) }
-    private var secondaryAccentColor: Color {
-        Theme.secondaryAccent(for: theme) ?? Theme.accent(for: theme)
-    }
     private var cardColor: Color { Theme.cardColor(for: theme) }
     private var primaryTextColor: Color { Theme.primaryText(for: theme) }
-    private var glowColor: Color? { Theme.glowColor(for: theme) }
+    private var secondaryTextColor: Color { Theme.secondaryText(for: theme) }
 
     @State private var ringRotation: Double = 0
-    @State private var counterRingRotation: Double = 0
-    @State private var orbitRotation: Double = 0
-    @State private var dotBouncePhase = false
-    @State private var shimmerTravel: CGFloat = -220
-    @State private var textShimmerTravel: CGFloat = -140
-    @State private var glowScale: CGFloat = 0.94
-    @State private var glowOpacity: Double = 0.16
-    @State private var sigilScale: CGFloat = 0.95
-    @State private var glyphRotation: Double = -6
-    @State private var beaconPulse = false
-    @State private var phrasePulse = false
-    @State private var loadingPhrase: String = LoadingAdviceView.loadingPhrases[0]
+    @State private var ringPulse = false
 
-    private static let loadingPhrases = [
-        "Consulting the chaos...",
-        "Summoning bad judgment...",
-        "Asking the universe badly...",
-        "Calibrating your downfall...",
-        "Fabricating confidence...",
-        "Running the disaster protocol...",
-        "Polling experts in bad decisions...",
-        "Loading questionable wisdom...",
-    ]
+    private let loadingPhrase = "Summoning bad judgment..."
 
     var body: some View {
         ZStack {
-            cardColor
-                .opacity(0.95)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(cardColor.opacity(0.98))
                 .overlay {
                     LinearGradient(
-                        colors: [
-                            .black.opacity(effectiveReduceMotion ? 0.02 : 0.06),
-                            .clear,
-                            accentColor.opacity(0.05),
-                        ],
+                        colors: [accentColor.opacity(0.08), .clear, .black.opacity(0.03)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .stroke(accentColor.opacity(0.08), lineWidth: 1)
+                        .stroke(accentColor.opacity(0.12), lineWidth: 1)
                 }
 
-            VStack(spacing: 18) {
-                skeletonCardPlaceholder
+            VStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .stroke(accentColor.opacity(0.18), lineWidth: 4)
+                        .frame(width: 48, height: 48)
 
-                if effectiveReduceMotion {
-                    if accessibilityReduceMotionEnabled {
-                        accessibilityLoader
-                    } else {
-                        reducedMotionLoader
-                    }
-                } else {
-                    microMotionLoader
+                    Circle()
+                        .trim(from: 0.12, to: 0.82)
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white.opacity(0.9), accentColor],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                        )
+                        .frame(width: 48, height: 48)
+                        .rotationEffect(.degrees(effectiveReduceMotion ? 0 : ringRotation))
+                        .animation(
+                            effectiveReduceMotion
+                                ? nil
+                                : .linear(duration: 0.85).repeatForever(autoreverses: false),
+                            value: ringRotation
+                        )
+
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(accentColor)
+                        .scaleEffect(ringPulse ? 1.0 : 0.92)
+                        .animation(
+                            effectiveReduceMotion
+                                ? nil
+                                : .easeInOut(duration: 1.0).repeatForever(autoreverses: true),
+                            value: ringPulse
+                        )
                 }
+
+                Text(loadingPhrase)
+                    .font(.system(.headline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(primaryTextColor)
+                    .multilineTextAlignment(.center)
+
+                Text("Generating advice")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(secondaryTextColor.opacity(0.8))
             }
-            .padding(16)
+            .padding(20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
-        .transition(
-            effectiveReduceMotion
-                ? .opacity
-                : .asymmetric(
-                    insertion: .opacity.combined(with: .scale(scale: 0.9)),
-                    removal: .opacity.combined(with: .scale(scale: 1.05))
-                )
-        )
+        .transition(.opacity)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Generating advice")
+        .accessibilityValue(loadingPhrase)
         .onAppear {
-            loadingPhrase = Self.loadingPhrases.randomElement() ?? Self.loadingPhrases[0]
-            guard !accessibilityReduceMotionEnabled else { return }
-            glowScale = 1.06
-            glowOpacity = 0.28
-            sigilScale = 1.03
-            glyphRotation = 7
-            beaconPulse = true
-            phrasePulse = true
+            ringPulse = true
             guard !effectiveReduceMotion else { return }
             ringRotation = 360
-            counterRingRotation = -360
-            orbitRotation = 360
-            dotBouncePhase = true
-            shimmerTravel = 220
-            textShimmerTravel = 140
         }
         .onDisappear {
             ringRotation = 0
-            counterRingRotation = 0
-            orbitRotation = 0
-            dotBouncePhase = false
-            shimmerTravel = -220
-            textShimmerTravel = -140
-            glowScale = 0.94
-            glowOpacity = 0.16
-            sigilScale = 0.95
-            glyphRotation = -6
-            beaconPulse = false
-            phrasePulse = false
+            ringPulse = false
         }
-        .task {
-            guard !accessibilityReduceMotionEnabled else { return }
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2.5))
-                if Task.isCancelled { break }
-                let next = Self.loadingPhrases
-                    .filter { $0 != loadingPhrase }
-                    .randomElement() ?? Self.loadingPhrases[0]
-                await MainActor.run {
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.78)) {
-                        loadingPhrase = next
-                    }
-                }
-            }
-        }
-    }
-
-    private var accessibilityLoader: some View {
-        VStack(spacing: 10) {
-            chaosSigil(allowOrbitalMotion: false, allowPulseMotion: false)
-
-            Text(loadingPhrase)
-                .font(.system(.subheadline, design: .rounded, weight: .bold))
-                .foregroundStyle(primaryTextColor)
-
-            Text("Generating advice")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(primaryTextColor.opacity(0.6))
-        }
-        .padding(.vertical, 4)
-    }
-
-    private var reducedMotionLoader: some View {
-        VStack(spacing: 10) {
-            chaosSigil(allowOrbitalMotion: false, allowPulseMotion: true)
-
-            HStack(spacing: 6) {
-                Capsule(style: .continuous)
-                    .fill(accentColor.opacity(0.8))
-                    .frame(width: phrasePulse ? 22 : 14, height: 5)
-                    .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: phrasePulse)
-                Text(loadingPhrase)
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .foregroundStyle(primaryTextColor)
-                Capsule(style: .continuous)
-                    .fill(secondaryAccentColor.opacity(0.8))
-                    .frame(width: phrasePulse ? 14 : 22, height: 5)
-                    .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: phrasePulse)
-            }
-
-            Text("Low-motion loader active")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(primaryTextColor.opacity(0.55))
-        }
-        .padding(.vertical, 2)
-    }
-
-    private var microMotionLoader: some View {
-        VStack(spacing: 12) {
-            chaosSigil(allowOrbitalMotion: true, allowPulseMotion: true)
-
-            ZStack {
-                HStack(spacing: 7) {
-                    ForEach(0..<3, id: \.self) { index in
-                        Circle()
-                            .fill(index == 1 ? secondaryAccentColor : accentColor)
-                            .frame(width: 6, height: 6)
-                            .offset(y: dotBouncePhase ? -3 : 2)
-                            .opacity(dotBouncePhase ? 1.0 : 0.45)
-                            .animation(
-                                .easeInOut(duration: 0.95)
-                                    .repeatForever(autoreverses: true)
-                                    .delay(Double(index) * 0.12),
-                                value: dotBouncePhase
-                            )
-                    }
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(cardColor.opacity(0.82))
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(accentColor.opacity(0.14), lineWidth: 1)
-                )
-
-                HStack(spacing: 4) {
-                    ForEach(0..<7, id: \.self) { index in
-                        Capsule(style: .continuous)
-                            .fill(index % 3 == 1 ? secondaryAccentColor : accentColor.opacity(0.9))
-                            .frame(
-                                width: 4,
-                                height: dotBouncePhase
-                                    ? [8, 12, 18, 10, 16, 9, 13][index]
-                                    : [13, 9, 14, 7, 12, 8, 11][index]
-                            )
-                            .opacity(dotBouncePhase ? 0.95 : 0.55)
-                            .animation(
-                                .easeInOut(duration: 0.72)
-                                    .repeatForever(autoreverses: true)
-                                    .delay(Double(index) * 0.05),
-                                value: dotBouncePhase
-                            )
-                    }
-                }
-                .frame(height: 20)
-                .accessibilityHidden(true)
-            }
-
-            VStack(spacing: 6) {
-                Text(loadingPhrase)
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .foregroundStyle(primaryTextColor.opacity(0.84))
-                    .scaleEffect(phrasePulse ? 1.0 : 0.985)
-                    .animation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true), value: phrasePulse)
-                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
-
-                HStack(spacing: 6) {
-                    Image(systemName: "sparkles")
-                        .font(.caption2.weight(.semibold))
-                    Text("Assembling confidence theater")
-                        .font(.caption2.weight(.semibold))
-                    Image(systemName: "sparkles")
-                        .font(.caption2.weight(.semibold))
-                }
-                .foregroundStyle(secondaryAccentColor.opacity(0.75))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(cardColor.opacity(0.75))
-                )
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(secondaryAccentColor.opacity(0.12), lineWidth: 1)
-                )
-            }
-            .overlay {
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [.clear, .white.opacity(0.9), .clear],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: 120, height: 22)
-                    .offset(x: textShimmerTravel, y: -12)
-                    .blendMode(.screen)
-                    .mask(alignment: .top) {
-                        Text(loadingPhrase)
-                            .font(.system(.subheadline, design: .rounded, weight: .bold))
-                            .padding(.bottom, 24)
-                    }
-                    .animation(
-                        .linear(duration: 1.2).repeatForever(autoreverses: false),
-                        value: textShimmerTravel
-                    )
-            }
-        }
-    }
-
-    private func chaosSigil(allowOrbitalMotion: Bool, allowPulseMotion: Bool) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            cardColor.opacity(0.92),
-                            accentColor.opacity(0.05),
-                            secondaryAccentColor.opacity(0.08),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 156, height: 102)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(accentColor.opacity(0.14), lineWidth: 1)
-                )
-
-            if let glow = glowColor {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(glow.opacity(glowOpacity))
-                    .frame(width: 120, height: 66)
-                    .blur(radius: 14)
-                    .scaleEffect(glowScale)
-                    .animation(
-                        allowPulseMotion
-                            ? .easeInOut(duration: 3.0).repeatForever(autoreverses: true)
-                            : nil,
-                        value: glowScale
-                    )
-            }
-
-            ZStack {
-                Circle()
-                    .stroke(accentColor.opacity(0.12), lineWidth: 2)
-                    .frame(width: 74, height: 74)
-
-                Circle()
-                    .trim(from: 0.06, to: 0.58)
-                    .stroke(
-                        AngularGradient(
-                            colors: [accentColor.opacity(0.15), accentColor, secondaryAccentColor],
-                            center: .center
-                        ),
-                        style: StrokeStyle(lineWidth: 2.8, lineCap: .round)
-                    )
-                    .frame(width: 74, height: 74)
-                    .rotationEffect(.degrees(allowOrbitalMotion ? ringRotation : 20))
-                    .animation(
-                        allowOrbitalMotion
-                            ? .linear(duration: 1.2).repeatForever(autoreverses: false)
-                            : nil,
-                        value: ringRotation
-                    )
-
-                Circle()
-                    .trim(from: 0.63, to: 0.96)
-                    .stroke(
-                        LinearGradient(
-                            colors: [secondaryAccentColor.opacity(0.22), secondaryAccentColor, .white.opacity(0.9)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        style: StrokeStyle(lineWidth: 2.2, lineCap: .round)
-                    )
-                    .frame(width: 62, height: 62)
-                    .rotationEffect(.degrees(allowOrbitalMotion ? counterRingRotation : -34))
-                    .animation(
-                        allowOrbitalMotion
-                            ? .linear(duration: 1.7).repeatForever(autoreverses: false)
-                            : nil,
-                        value: counterRingRotation
-                    )
-
-                ForEach(0..<8, id: \.self) { index in
-                    Capsule(style: .continuous)
-                        .fill(index.isMultiple(of: 2) ? accentColor.opacity(0.55) : secondaryAccentColor.opacity(0.5))
-                        .frame(width: 3, height: index.isMultiple(of: 2) ? 10 : 6)
-                        .offset(y: -42)
-                        .rotationEffect(.degrees(Double(index) * 45))
-                        .opacity(dotBouncePhase ? 1 : 0.45)
-                        .scaleEffect(dotBouncePhase ? 1.0 : 0.88)
-                        .animation(
-                            allowOrbitalMotion
-                                ? .easeInOut(duration: 0.9)
-                                    .repeatForever(autoreverses: true)
-                                    .delay(Double(index) * 0.05)
-                                : nil,
-                            value: dotBouncePhase
-                        )
-                }
-
-                ForEach(0..<3, id: \.self) { index in
-                    Circle()
-                        .fill(index == 1 ? .white.opacity(0.95) : secondaryAccentColor)
-                        .frame(width: index == 1 ? 6 : 5, height: index == 1 ? 6 : 5)
-                        .shadow(color: accentColor.opacity(0.4), radius: 4, x: 0, y: 0)
-                        .offset(
-                            x: allowOrbitalMotion
-                                ? 0
-                                : [0, -18, 18][index],
-                            y: allowOrbitalMotion ? -31 : [0, 8, -8][index]
-                        )
-                        .rotationEffect(.degrees(Double(index) * 120 + (allowOrbitalMotion ? orbitRotation : 0)))
-                        .animation(
-                            allowOrbitalMotion
-                                ? .linear(duration: 2.4).repeatForever(autoreverses: false)
-                                : nil,
-                            value: orbitRotation
-                        )
-                }
-
-                ZStack {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [accentColor.opacity(0.24), cardColor.opacity(0.95)],
-                                center: .center,
-                                startRadius: 2,
-                                endRadius: 22
-                            )
-                        )
-                        .frame(width: 40, height: 40)
-                    Circle()
-                        .stroke(secondaryAccentColor.opacity(0.2), lineWidth: 1)
-                        .frame(width: 40, height: 40)
-
-                    Text("“")
-                        .font(.system(size: 24, weight: .black, design: .rounded))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.white.opacity(0.95), accentColor, secondaryAccentColor],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .rotationEffect(.degrees(glyphRotation))
-                        .offset(x: 1, y: 2)
-                        .scaleEffect(sigilScale)
-                        .animation(
-                            allowPulseMotion
-                                ? .spring(response: 1.0, dampingFraction: 0.6).repeatForever(autoreverses: true)
-                                : nil,
-                            value: glyphRotation
-                        )
-                        .animation(
-                            allowPulseMotion
-                                ? .easeInOut(duration: 2.6).repeatForever(autoreverses: true)
-                                : nil,
-                            value: sigilScale
-                        )
-                }
-            }
-            .overlay(alignment: .topTrailing) {
-                Circle()
-                    .fill(secondaryAccentColor)
-                    .frame(width: 8, height: 8)
-                    .blur(radius: beaconPulse ? 0.2 : 0)
-                    .opacity(beaconPulse ? 1.0 : 0.35)
-                    .shadow(color: secondaryAccentColor.opacity(0.6), radius: 6, x: 0, y: 0)
-                    .offset(x: 30, y: -26)
-                    .animation(
-                        allowPulseMotion
-                            ? .easeInOut(duration: 0.75).repeatForever(autoreverses: true)
-                            : nil,
-                        value: beaconPulse
-                    )
-            }
-        }
-        .accessibilityHidden(true)
-    }
-
-    private var skeletonCardPlaceholder: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            skeletonLine(width: 0.46, height: 14)
-            skeletonLine(width: 0.92, height: 22)
-            skeletonLine(width: 0.78, height: 16)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(cardColor.opacity(0.82))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(accentColor.opacity(0.12), lineWidth: 1)
-                )
-        )
-        .overlay {
-            if !effectiveReduceMotion {
-                shimmerBand
-                    .mask {
-                        VStack(alignment: .leading, spacing: 14) {
-                            skeletonLine(width: 0.46, height: 14)
-                            skeletonLine(width: 0.92, height: 22)
-                            skeletonLine(width: 0.78, height: 16)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                    }
-            }
-        }
-    }
-
-    private var shimmerBand: some View {
-        Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [
-                        .clear,
-                        .white.opacity(0.08),
-                        .white.opacity(0.30),
-                        .white.opacity(0.08),
-                        .clear,
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .frame(width: 170)
-            .rotationEffect(.degrees(14))
-            .offset(x: shimmerTravel)
-            .animation(.linear(duration: 1.2).repeatForever(autoreverses: false), value: shimmerTravel)
-    }
-
-    private func skeletonLine(width: CGFloat, height: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: height * 0.45, style: .continuous)
-            .fill(accentColor.opacity(0.10))
-            .overlay {
-                RoundedRectangle(cornerRadius: height * 0.45, style: .continuous)
-                    .fill(primaryTextColor.opacity(0.07))
-            }
-            .frame(width: max(84, 280 * width), height: height)
-            .accessibilityHidden(true)
     }
 }
