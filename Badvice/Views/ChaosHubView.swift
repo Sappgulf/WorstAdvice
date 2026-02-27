@@ -61,7 +61,7 @@ struct ChaosHubTabView: View {
     }
 
     private var isMotionReduced: Bool {
-        settings.reduceMotion || accessibilityReduceMotion
+        settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion
     }
 
     // Hoist per-theme lookups — single switch per body render instead of ~30 repeated calls

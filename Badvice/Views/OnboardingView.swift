@@ -10,7 +10,7 @@ struct OnboardingHistoryView: View {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     private var isMotionReduced: Bool {
-        settings.reduceMotion || accessibilityReduceMotion
+        settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion
     }
 
     private var accent: Color { Theme.accent(for: settings.theme) }

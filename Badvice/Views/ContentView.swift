@@ -582,6 +582,7 @@ struct ContentView: View {
         }
         if isUITesting {
             session?.settings.preferredGenerationProvider = .classic
+            session?.settings.performanceMode = true
             session?.settings.reduceMotion = true
             session?.settings.hapticsEnabled = false
         }

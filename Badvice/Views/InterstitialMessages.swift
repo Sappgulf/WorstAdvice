@@ -1575,7 +1575,7 @@ private struct CommunityPulseView: View {
 
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
-    private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
+    private var isMotionReduced: Bool { settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion }
 
     @State private var chartAnimated = false
 

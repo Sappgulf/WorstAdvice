@@ -92,7 +92,7 @@ struct FavoritesTabView: View {
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
-    private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
+    private var isMotionReduced: Bool { settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion }
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
@@ -622,11 +622,18 @@ struct FavoritesTabView: View {
                     .fill(accent.opacity(0.13))
                     .frame(width: 100, height: 100)
                     .offset(y: floatingOffset)
-                Image(systemName: "bookmark")
-                    .font(.system(size: 42, weight: .medium))
-                    .foregroundStyle(accent)
-                    .offset(y: floatingOffset)
-                    .symbolEffect(.bounce, options: .repeating, value: emptyStateAppeared)
+                if isMotionReduced {
+                    Image(systemName: "bookmark")
+                        .font(.system(size: 42, weight: .medium))
+                        .foregroundStyle(accent)
+                        .offset(y: floatingOffset)
+                } else {
+                    Image(systemName: "bookmark")
+                        .font(.system(size: 42, weight: .medium))
+                        .foregroundStyle(accent)
+                        .offset(y: floatingOffset)
+                        .symbolEffect(.bounce, options: .repeating, value: emptyStateAppeared)
+                }
             }
             .onAppear {
                 guard !isMotionReduced else { return }
@@ -742,7 +749,7 @@ struct QuotesTabView: View {
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
-    private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
+    private var isMotionReduced: Bool { settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion }
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
@@ -1249,7 +1256,7 @@ private struct FavoriteDetailView: View {
     @State private var aftermathText: String = ""
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
-    private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
+    private var isMotionReduced: Bool { settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion }
     private let aftermathCharLimit = 280
     private var aftermathIsDirty: Bool { aftermathText != (record.aftermathNote ?? "") }
     private var aftermathCharCount: Int { aftermathText.count }
@@ -1269,7 +1276,7 @@ private struct FavoriteDetailView: View {
                     AdviceCardView(
                         record: record,
                         theme: settings.theme,
-                        reduceMotion: settings.reduceMotion
+                        reduceMotion: settings.reduceMotion || settings.performanceMode
                     )
                     .padding(.horizontal, Theme.horizontalPadding)
 
@@ -1420,7 +1427,7 @@ struct HistoryTabView: View {
     @State private var activeToast: ToastMessage? = nil
     @State private var hallOfFameExpanded = false
 
-    private var isMotionReduced: Bool { settings.reduceMotion || accessibilityReduceMotion }
+    private var isMotionReduced: Bool { settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion }
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
@@ -1793,11 +1800,18 @@ struct HistoryTabView: View {
                     .fill(accent.opacity(0.13))
                     .frame(width: 100, height: 100)
                     .offset(y: historyFloatingOffset)
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 42, weight: .medium))
-                    .foregroundStyle(accent)
-                    .offset(y: historyFloatingOffset)
-                    .symbolEffect(.bounce, options: .repeating, value: historyEmptyStateAppeared)
+                if isMotionReduced {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 42, weight: .medium))
+                        .foregroundStyle(accent)
+                        .offset(y: historyFloatingOffset)
+                } else {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 42, weight: .medium))
+                        .foregroundStyle(accent)
+                        .offset(y: historyFloatingOffset)
+                        .symbolEffect(.bounce, options: .repeating, value: historyEmptyStateAppeared)
+                }
             }
             .onAppear {
                 guard !isMotionReduced else { return }
@@ -1989,11 +2003,18 @@ private struct QuotesEmptyState: View {
                     .fill(accent.opacity(0.13))
                     .frame(width: 100, height: 100)
                     .offset(y: floatOffset)
-                Image(systemName: "quote.bubble")
-                    .font(.system(size: 42, weight: .medium))
-                    .foregroundStyle(accent)
-                    .offset(y: floatOffset)
-                    .symbolEffect(.bounce, options: .repeating, value: appeared)
+                if reduceMotion {
+                    Image(systemName: "quote.bubble")
+                        .font(.system(size: 42, weight: .medium))
+                        .foregroundStyle(accent)
+                        .offset(y: floatOffset)
+                } else {
+                    Image(systemName: "quote.bubble")
+                        .font(.system(size: 42, weight: .medium))
+                        .foregroundStyle(accent)
+                        .offset(y: floatOffset)
+                        .symbolEffect(.bounce, options: .repeating, value: appeared)
+                }
             }
 
             VStack(spacing: 8) {

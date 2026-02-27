@@ -165,7 +165,7 @@ struct GenerateTabView: View {
                         AdviceCardView(
                             record: record,
                             theme: settings.theme,
-                            reduceMotion: settings.reduceMotion,
+                            reduceMotion: isMotionReduced,
                             sourceBadgeText: viewModel.generationSourceBadgeText
                         )
                         .accessibilityIdentifier("advice.card")
@@ -602,20 +602,33 @@ struct GenerateTabView: View {
             .tint(accent)
             .foregroundStyle(buttonText)
             .disabled(viewModel.isGenerating)
-            .scaleEffect(generateButtonPulsing ? 1.03 : 1.0)
+            .scaleEffect(generateButtonPulsing && !isMotionReduced ? 1.03 : 1.0)
             .animation(
-                generateButtonPulsing
-                    ? .easeInOut(duration: 1.1).repeatForever(autoreverses: true)
-                    : .easeOut(duration: 0.2),
+                isMotionReduced
+                    ? .easeOut(duration: 0.2)
+                    : (
+                        generateButtonPulsing
+                            ? .easeInOut(duration: 1.1).repeatForever(autoreverses: true)
+                            : .easeOut(duration: 0.2)
+                    ),
                 value: generateButtonPulsing
             )
             .onAppear {
-                if viewModel.current == nil {
+                if viewModel.current == nil && !isMotionReduced {
                     generateButtonPulsing = true
+                } else {
+                    generateButtonPulsing = false
                 }
             }
             .onChange(of: viewModel.current == nil) { _, isNil in
-                generateButtonPulsing = isNil
+                generateButtonPulsing = isNil && !isMotionReduced
+            }
+            .onChange(of: isMotionReduced) { _, reduced in
+                if reduced {
+                    generateButtonPulsing = false
+                } else if viewModel.current == nil {
+                    generateButtonPulsing = true
+                }
             }
 
             // Quick-fire secondary row — always visible
