@@ -5,6 +5,8 @@ final class BadviceUITests: XCTestCase {
         "-ui-testing",
         "-skip-onboarding",
         "-skip-splash",
+        "-ui-testing-auth-reset",
+        "-ui-testing-auth-skip",
     ]
 
     override func setUpWithError() throws {
@@ -203,6 +205,10 @@ final class BadviceUITests: XCTestCase {
 
     func testSocialMockSignupCompletesAndFriendsSurfaceLoads() throws {
         let app = launchMockSocialApp()
+
+        XCTAssertTrue(app.navigationBars["Friends Setup"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.otherElements["social.profile.intro"].waitForExistence(timeout: 3))
+
         completeProfileSignup(app: app, handle: "mock_signup_user")
 
         let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
@@ -214,6 +220,14 @@ final class BadviceUITests: XCTestCase {
 
         let searchField = app.textFields["friends.searchField"]
         XCTAssertTrue(searchField.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.otherElements["friends.overviewCard"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.otherElements["friends.outgoingCard"].waitForExistence(timeout: 3))
+
+        sectionPicker.buttons["Feed"].tap()
+        XCTAssertTrue(app.otherElements["friends.feed.empty"].waitForExistence(timeout: 3))
+
+        sectionPicker.buttons["Collab"].tap()
+        XCTAssertTrue(app.otherElements["friends.collab.empty"].waitForExistence(timeout: 3))
     }
 
     func testSocialMockIncomingBadgeAppearsOnTabBar() throws {
@@ -252,6 +266,128 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(retryQueueButton.waitForExistence(timeout: 3))
     }
 
+    func testLocalAuthSignupSignoutAndSigninFlow() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-ui-testing",
+            "-skip-onboarding",
+            "-skip-splash",
+            "-ui-testing-auth-reset",
+        ]
+        app.launch()
+
+        completeLocalSignup(
+            app: app,
+            displayName: "Local Tester",
+            email: "local@example.com",
+            password: "Badvice123"
+        )
+
+        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
+        settingsTab.tap()
+
+        let signOutButton = app.buttons["settings.auth.signOut"]
+        if !signOutButton.waitForExistence(timeout: 3) {
+            for _ in 0..<8 where !signOutButton.exists {
+                app.swipeUp()
+            }
+        }
+        XCTAssertTrue(signOutButton.waitForExistence(timeout: 3))
+        signOutButton.tap()
+
+        let emailField = app.textFields["auth.email"]
+        XCTAssertTrue(emailField.waitForExistence(timeout: 5))
+
+        completeLocalSignin(
+            app: app,
+            email: "local@example.com",
+            password: "Badvice123"
+        )
+
+        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 8))
+    }
+
+    func testLocalAuthPasswordChangeAndDeleteFlow() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-ui-testing",
+            "-skip-onboarding",
+            "-skip-splash",
+            "-ui-testing-auth-reset",
+        ]
+        app.launch()
+
+        completeLocalSignup(
+            app: app,
+            displayName: "Lifecycle User",
+            email: "lifecycle@example.com",
+            password: "Badvice123"
+        )
+
+        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
+        settingsTab.tap()
+
+        let changePasswordButton = app.buttons["settings.auth.changePassword"]
+        if !changePasswordButton.waitForExistence(timeout: 3) {
+            for _ in 0..<8 where !changePasswordButton.exists {
+                app.swipeUp()
+            }
+        }
+        XCTAssertTrue(changePasswordButton.waitForExistence(timeout: 3))
+        changePasswordButton.tap()
+
+        let currentPasswordField = app.secureTextFields["settings.auth.currentPassword"]
+        XCTAssertTrue(currentPasswordField.waitForExistence(timeout: 3))
+        currentPasswordField.tap()
+        currentPasswordField.typeText("Badvice123")
+
+        let newPasswordField = app.secureTextFields["settings.auth.newPassword"]
+        newPasswordField.tap()
+        newPasswordField.typeText("Chaos456")
+
+        let confirmField = app.secureTextFields["settings.auth.confirmNewPassword"]
+        confirmField.tap()
+        confirmField.typeText("Chaos456")
+
+        let savePasswordButton = app.buttons["settings.auth.passwordSave"]
+        XCTAssertTrue(savePasswordButton.isEnabled)
+        savePasswordButton.tap()
+
+        let signOutButton = app.buttons["settings.auth.signOut"]
+        XCTAssertTrue(signOutButton.waitForExistence(timeout: 5))
+        signOutButton.tap()
+
+        completeLocalSignin(
+            app: app,
+            email: "lifecycle@example.com",
+            password: "Chaos456"
+        )
+        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 8))
+
+        settingsTab.tap()
+        let deleteAccountButton = app.buttons["settings.auth.deleteAccount"]
+        if !deleteAccountButton.waitForExistence(timeout: 3) {
+            for _ in 0..<8 where !deleteAccountButton.exists {
+                app.swipeUp()
+            }
+        }
+        XCTAssertTrue(deleteAccountButton.waitForExistence(timeout: 3))
+        deleteAccountButton.tap()
+
+        let deletePasswordField = app.secureTextFields["settings.auth.deletePassword"]
+        XCTAssertTrue(deletePasswordField.waitForExistence(timeout: 3))
+        deletePasswordField.tap()
+        deletePasswordField.typeText("Chaos456")
+
+        let confirmDeleteButton = app.buttons["settings.auth.deleteConfirm"]
+        XCTAssertTrue(confirmDeleteButton.isEnabled)
+        confirmDeleteButton.tap()
+
+        XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
+    }
+
     private func launchMockSocialApp(seededIncomingRequests: Int = 0) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += defaultLaunchArguments + [
@@ -282,5 +418,68 @@ final class BadviceUITests: XCTestCase {
             handleField.waitForExistence(timeout: 3),
             "Expected profile setup sheet to dismiss after successful profile creation."
         )
+    }
+
+    private func completeLocalSignup(
+        app: XCUIApplication,
+        displayName: String,
+        email: String,
+        password: String
+    ) {
+        let modePicker = app.segmentedControls["auth.mode"]
+        XCTAssertTrue(modePicker.waitForExistence(timeout: 8))
+
+        let displayNameField = app.textFields["auth.displayName"]
+        XCTAssertTrue(displayNameField.waitForExistence(timeout: 5))
+        displayNameField.tap()
+        displayNameField.typeText(displayName)
+
+        let emailField = app.textFields["auth.email"]
+        XCTAssertTrue(emailField.waitForExistence(timeout: 3))
+        emailField.tap()
+        emailField.typeText(email)
+
+        let passwordField = app.secureTextFields["auth.password"]
+        XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
+        passwordField.tap()
+        passwordField.typeText(password)
+
+        let confirmField = app.secureTextFields["auth.confirmPassword"]
+        XCTAssertTrue(confirmField.waitForExistence(timeout: 3))
+        confirmField.tap()
+        confirmField.typeText(password)
+
+        let primaryButton = app.buttons["auth.primary"]
+        XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(primaryButton.isEnabled)
+        primaryButton.tap()
+
+        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 8))
+    }
+
+    private func completeLocalSignin(app: XCUIApplication, email: String, password: String) {
+        let signInSegment = app.buttons["Sign In"]
+        if signInSegment.exists {
+            signInSegment.tap()
+        }
+
+        let emailField = app.textFields["auth.email"]
+        XCTAssertTrue(emailField.waitForExistence(timeout: 5))
+        emailField.tap()
+        if let existing = emailField.value as? String, !existing.isEmpty, existing != "Email" {
+            let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count)
+            emailField.typeText(deleteString)
+        }
+        emailField.typeText(email)
+
+        let passwordField = app.secureTextFields["auth.password"]
+        XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
+        passwordField.tap()
+        passwordField.typeText(password)
+
+        let primaryButton = app.buttons["auth.primary"]
+        XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(primaryButton.isEnabled)
+        primaryButton.tap()
     }
 }

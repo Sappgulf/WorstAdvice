@@ -782,7 +782,7 @@ struct QuotesTabView: View {
                             .padding(.horizontal, 16)
                         } else if social.currentUser == nil {
                             QuotesInlineBanner(
-                                text: "Create a profile in Friends to share posts and collaborate.",
+                                text: "Finish your Friends profile to share quotes and start collabs from here.",
                                 accent: accent,
                                 secondaryText: secondaryText
                             )
@@ -1215,7 +1215,7 @@ struct QuotesTabView: View {
         guard social.socialFeaturesEnabled else {
             activeToast = ToastMessage(
                 message: social.availability.isAvailable
-                    ? "Create your profile in Friends first."
+                    ? "Finish your Friends profile in Friends to share quotes."
                     : social.availability.message,
                 style: .error
             )
@@ -1236,7 +1236,7 @@ struct QuotesTabView: View {
         guard social.socialFeaturesEnabled else {
             activeToast = ToastMessage(
                 message: social.availability.isAvailable
-                    ? "Create your profile in Friends first."
+                    ? "Finish your Friends profile in Friends to start a collab."
                     : social.availability.message,
                 style: .error
             )
@@ -1244,6 +1244,7 @@ struct QuotesTabView: View {
         }
         social.queueCollabDraft(type: .quote, content: quote.text)
         onOpenTab?(.friends)
+        activeToast = ToastMessage(message: "Draft sent to Friends > Collab.", style: .info)
     }
 
     private func voteButtons(for quote: BadQuote) -> some View {
@@ -1342,6 +1343,53 @@ private enum FriendsSection: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+private enum FriendSearchRelationshipState: Equatable {
+    case currentUser
+    case existingFriend
+    case incomingRequest
+    case outgoingRequest
+    case blocked
+    case addable
+
+    var buttonTitle: String {
+        switch self {
+        case .currentUser:
+            return "This is you"
+        case .existingFriend:
+            return "Already friends"
+        case .incomingRequest:
+            return "Check requests"
+        case .outgoingRequest:
+            return "Pending"
+        case .blocked:
+            return "Blocked"
+        case .addable:
+            return "Add friend"
+        }
+    }
+
+    var detailText: String {
+        switch self {
+        case .currentUser:
+            return "Search for another handle to add someone new."
+        case .existingFriend:
+            return "You are already connected."
+        case .incomingRequest:
+            return "They already sent you a request. Accept it below."
+        case .outgoingRequest:
+            return "Your request is already on the way."
+        case .blocked:
+            return "Unblock this handle before sending a request."
+        case .addable:
+            return "Send a request to unlock feed posts and collab drafts."
+        }
+    }
+
+    var isActionEnabled: Bool {
+        self == .addable
+    }
+}
+
 struct FriendsTabView: View {
     @Bindable var social: SocialViewModel
     @Bindable var settings: SettingsViewModel
@@ -1370,6 +1418,14 @@ struct FriendsTabView: View {
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
+    private var normalizedHandleSearchText: String {
+        let trimmed = handleSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let withoutPrefixAt = trimmed.hasPrefix("@") ? String(trimmed.dropFirst()) : trimmed
+        return SocialViewModel.normalizedHandle(withoutPrefixAt)
+    }
+    private var canSearchForFriends: Bool {
+        social.socialFeaturesEnabled && !normalizedHandleSearchText.isEmpty
+    }
 
     var body: some View {
         NavigationStack {
@@ -1386,7 +1442,7 @@ struct FriendsTabView: View {
                             )
                         } else if social.currentUser == nil {
                             QuotesInlineBanner(
-                                text: "Create your profile to start using social features.",
+                                text: "Finish your Friends profile to search handles, accept requests, and unlock the feed.",
                                 accent: accent,
                                 secondaryText: secondaryText
                             )
@@ -1457,16 +1513,72 @@ struct FriendsTabView: View {
 
     private var friendsSection: some View {
         VStack(spacing: 12) {
+            if let currentUser = social.currentUser {
+                socialCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(currentUser.displayName)
+                                .font(.headline)
+                                .foregroundStyle(primaryText)
+                            Text("@\(currentUser.handle)")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(accent)
+                            Text("Joined \(memberSinceText(currentUser.createdAt)). Share your handle, add friends, then start posting from Generate or Quotes.")
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                        }
+
+                        HStack(spacing: 8) {
+                            socialStatPill(
+                                title: "Friends",
+                                value: "\(social.friends.count)",
+                                systemImage: "person.2.fill"
+                            )
+                            socialStatPill(
+                                title: "Requests",
+                                value: "\(social.incomingRequests.count + social.outgoingRequests.count)",
+                                systemImage: "tray.full.fill"
+                            )
+                            socialStatPill(
+                                title: "Collabs",
+                                value: "\(social.collabDocs.count)",
+                                systemImage: "doc.text.fill"
+                            )
+                        }
+
+                        HStack(spacing: 8) {
+                            Button("Open Generate") {
+                                onOpenTab?(.generate)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(accent)
+                            .foregroundStyle(buttonText)
+
+                            Button("Browse Quotes") {
+                                onOpenTab?(.quotes)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                    .accessibilityIdentifier("friends.overviewCard")
+                }
+            }
+
             socialCard {
                 VStack(alignment: .leading, spacing: 10) {
-                    Label("Search Handle", systemImage: "magnifyingglass")
+                    Label("Find friends by handle", systemImage: "magnifyingglass")
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(primaryText)
+                    Text("Search with or without @. Once you connect, feed posts and shared drafts start showing up here.")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
 
                     HStack(spacing: 8) {
                         TextField("@handle", text: $handleSearchText)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
+                            .submitLabel(.search)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
                             .background(
@@ -1474,10 +1586,16 @@ struct FriendsTabView: View {
                                     .fill(cardColor)
                             )
                             .accessibilityIdentifier("friends.searchField")
+                            .onSubmit {
+                                guard canSearchForFriends else { return }
+                                Task {
+                                    await social.searchUserByHandle(normalizedHandleSearchText)
+                                }
+                            }
 
                         Button {
                             Task {
-                                await social.searchUserByHandle(handleSearchText)
+                                await social.searchUserByHandle(normalizedHandleSearchText)
                             }
                         } label: {
                             Text("Find")
@@ -1487,11 +1605,12 @@ struct FriendsTabView: View {
                         .buttonStyle(.borderedProminent)
                         .tint(accent)
                         .foregroundStyle(buttonText)
-                        .disabled(!social.availability.isAvailable || handleSearchText.isEmpty)
+                        .disabled(!canSearchForFriends)
                         .accessibilityIdentifier("friends.searchButton")
                     }
 
                     if let result = social.latestSearchResult {
+                        let relationshipState = relationshipState(for: result)
                         HStack(spacing: 10) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(result.displayName)
@@ -1500,12 +1619,16 @@ struct FriendsTabView: View {
                                 Text("@\(result.handle)")
                                     .font(.caption)
                                     .foregroundStyle(secondaryText)
+                                Text(relationshipState.detailText)
+                                    .font(.caption2)
+                                    .foregroundStyle(secondaryText)
                             }
                             Spacer(minLength: 8)
                             Button {
+                                guard relationshipState.isActionEnabled else { return }
                                 Task { await social.sendFriendRequest(to: result) }
                             } label: {
-                                Text("Add")
+                                Text(relationshipState.buttonTitle)
                                     .font(.caption.weight(.bold))
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
@@ -1513,7 +1636,7 @@ struct FriendsTabView: View {
                                     .foregroundStyle(buttonText)
                             }
                             .buttonStyle(.plain)
-                            .disabled(result.id == social.currentUser?.id || !social.socialFeaturesEnabled)
+                            .disabled(!relationshipState.isActionEnabled || !social.socialFeaturesEnabled)
                             .accessibilityIdentifier("friends.addButton")
                         }
                         .padding(10)
@@ -1521,6 +1644,12 @@ struct FriendsTabView: View {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(secondaryText.opacity(0.08))
                         )
+                        .accessibilityIdentifier("friends.searchResult")
+                    } else if social.statusMessage == "No user found for @\(social.latestSearchHandle)" {
+                        Text("No match for @\(social.latestSearchHandle) yet. Check the spelling or ask them to finish Friends setup first.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                            .accessibilityIdentifier("friends.searchEmpty")
                     }
                 }
             }
@@ -1567,12 +1696,38 @@ struct FriendsTabView: View {
 
             socialCard {
                 VStack(alignment: .leading, spacing: 10) {
+                    Label("Sent Requests", systemImage: "paperplane.fill")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+
+                    if social.outgoingRequests.isEmpty {
+                        Text("No pending invites. Send one above to get your network started.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                    } else {
+                        ForEach(social.outgoingRequests) { request in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(request.toUser?.displayName ?? "@unknown")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(primaryText)
+                                Text("@\(request.toUser?.handle ?? "unknown")")
+                                    .font(.caption2)
+                                    .foregroundStyle(secondaryText)
+                            }
+                        }
+                    }
+                }
+                .accessibilityIdentifier("friends.outgoingCard")
+            }
+
+            socialCard {
+                VStack(alignment: .leading, spacing: 10) {
                     Label("Friends", systemImage: "person.2.fill")
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(primaryText)
 
                     if social.friends.isEmpty {
-                        Text("No friends yet.")
+                        Text("No friends yet. Search a handle above or share your own handle with someone who already uses Friends.")
                             .font(.caption)
                             .foregroundStyle(secondaryText)
                     } else {
@@ -1647,9 +1802,31 @@ struct FriendsTabView: View {
 
             if social.feedPosts.isEmpty {
                 socialCard {
-                    Text("No posts yet. Share advice or quotes to your friends.")
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(
+                            social.friends.isEmpty
+                                ? "Add at least one friend first, then share from Generate or Quotes to wake up the feed."
+                                : "Nobody has posted yet. Be first and break the silence."
+                        )
                         .font(.caption)
                         .foregroundStyle(secondaryText)
+
+                        HStack(spacing: 8) {
+                            Button("Open Generate") {
+                                onOpenTab?(.generate)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(accent)
+                            .foregroundStyle(buttonText)
+
+                            Button("Open Quotes") {
+                                onOpenTab?(.quotes)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                    .accessibilityIdentifier("friends.feed.empty")
                 }
             } else {
                 ForEach(social.feedPosts) { post in
@@ -1750,9 +1927,31 @@ struct FriendsTabView: View {
 
             if social.collabDocs.isEmpty {
                 socialCard {
-                    Text("No collaboration docs yet.")
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(
+                            social.friends.isEmpty
+                                ? "Add friends first, then invite them into a draft from Generate, Quotes, or a blank doc."
+                                : "No collaboration docs yet. Start a blank draft here or send one over from Generate or Quotes."
+                        )
                         .font(.caption)
                         .foregroundStyle(secondaryText)
+
+                        HStack(spacing: 8) {
+                            Button("Open Generate") {
+                                onOpenTab?(.generate)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(accent)
+                            .foregroundStyle(buttonText)
+
+                            Button("Open Quotes") {
+                                onOpenTab?(.quotes)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                    .accessibilityIdentifier("friends.collab.empty")
                 }
             } else {
                 ForEach(social.collabDocs) { doc in
@@ -1929,6 +2128,49 @@ struct FriendsTabView: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(accent.opacity(0.12), lineWidth: 1)
             )
+    }
+
+    private func relationshipState(for user: SocialUser) -> FriendSearchRelationshipState {
+        if user.id == social.currentUser?.id {
+            return .currentUser
+        }
+        if social.friends.contains(where: { $0.id == user.id }) {
+            return .existingFriend
+        }
+        if social.incomingRequests.contains(where: { $0.fromUserID == user.recordID }) {
+            return .incomingRequest
+        }
+        if social.outgoingRequests.contains(where: { $0.toUserID == user.recordID }) {
+            return .outgoingRequest
+        }
+        if social.blockedUsers.contains(where: { $0.id == user.id }) {
+            return .blocked
+        }
+        return .addable
+    }
+
+    private func socialStatPill(title: String, value: String, systemImage: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(title, systemImage: systemImage)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.headline.monospacedDigit())
+                .foregroundStyle(primaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(secondaryText.opacity(0.08))
+        )
+    }
+
+    private func memberSinceText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: date)
     }
 
     private func relativeTimestamp(_ date: Date) -> String {

@@ -200,7 +200,10 @@ struct SettingsTabView: View {
     @Bindable var generateViewModel: GenerateViewModel
     @Bindable var quotesViewModel: QuotesViewModel
     @Bindable var social: SocialViewModel
+    @Bindable var auth: AuthViewModel
     var achievementsManager: AchievementsManager
+    var onSignOut: () -> Void
+    var onDeleteAccount: (_ password: String) async -> Void
 
     @State private var sectionsAppeared = false
     @State private var gearWobble = false
@@ -211,6 +214,12 @@ struct SettingsTabView: View {
     @State private var shockwaveTheme: ThemeMode?
     @State private var shockwaveScale: CGFloat = 0.1
     @State private var shockwaveOpacity: Double = 0
+    @State private var showChangePasswordSheet = false
+    @State private var showDeleteAccountSheet = false
+    @State private var currentPasswordDraft = ""
+    @State private var newPasswordDraft = ""
+    @State private var confirmPasswordDraft = ""
+    @State private var deletePasswordDraft = ""
 
     private let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
@@ -317,6 +326,15 @@ struct SettingsTabView: View {
                     .padding(.top, 20)
 
                     VStack(spacing: 20) {
+                        accountSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75),
+                                value: sectionsAppeared)
                         communityLabsSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
@@ -433,10 +451,194 @@ struct SettingsTabView: View {
                         .ignoresSafeArea()
                 }
             }
+            .sheet(isPresented: $showChangePasswordSheet) {
+                changePasswordSheet
+            }
+            .sheet(isPresented: $showDeleteAccountSheet) {
+                deleteAccountSheet
+            }
         }
     }
 
     // MARK: - Section Cards
+
+    private var accountSection: some View {
+        settingsCard(title: "Account", icon: "person.crop.circle.badge.checkmark") {
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(accent.opacity(0.12))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "person.fill")
+                            .foregroundStyle(accent)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(auth.displayName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(primaryText)
+                            .accessibilityIdentifier("settings.auth.displayName")
+                        Text(auth.signedInEmail ?? "Signed in")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                            .accessibilityIdentifier("settings.auth.email")
+                    }
+
+                    Spacer()
+                }
+
+                settingsDivider
+
+                Button(role: .destructive) {
+                    onSignOut()
+                } label: {
+                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .accessibilityIdentifier("settings.auth.signOut")
+
+                Button {
+                    currentPasswordDraft = ""
+                    newPasswordDraft = ""
+                    confirmPasswordDraft = ""
+                    showChangePasswordSheet = true
+                } label: {
+                    Label("Change Password", systemImage: "key.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .accessibilityIdentifier("settings.auth.changePassword")
+
+                Button(role: .destructive) {
+                    deletePasswordDraft = ""
+                    showDeleteAccountSheet = true
+                } label: {
+                    Label("Delete Local Account", systemImage: "trash.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .accessibilityIdentifier("settings.auth.deleteAccount")
+            }
+        }
+    }
+
+    private var changePasswordSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Security") {
+                    SecureField("Current password", text: $currentPasswordDraft)
+                        .textContentType(.password)
+                        .accessibilityIdentifier("settings.auth.currentPassword")
+                    SecureField("New password", text: $newPasswordDraft)
+                        .textContentType(.newPassword)
+                        .accessibilityIdentifier("settings.auth.newPassword")
+                    SecureField("Confirm new password", text: $confirmPasswordDraft)
+                        .textContentType(.newPassword)
+                        .accessibilityIdentifier("settings.auth.confirmNewPassword")
+                    Text("Use at least 8 characters, including a letter and a number.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let status = auth.statusMessage, !status.isEmpty {
+                    Section("Status") {
+                        Text(status)
+                            .font(.caption)
+                            .foregroundStyle(
+                                status.localizedCaseInsensitiveContains("updated") ? .green : .red
+                            )
+                            .accessibilityIdentifier("settings.auth.passwordStatus")
+                    }
+                }
+            }
+            .navigationTitle("Change Password")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showChangePasswordSheet = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(auth.isSubmitting ? "Saving..." : "Save") {
+                        Task {
+                            let didUpdate = await auth.changePassword(
+                                currentPassword: currentPasswordDraft,
+                                newPassword: newPasswordDraft,
+                                confirmPassword: confirmPasswordDraft
+                            )
+                            if didUpdate {
+                                showChangePasswordSheet = false
+                            }
+                        }
+                    }
+                    .disabled(
+                        auth.isSubmitting
+                            || currentPasswordDraft.isEmpty
+                            || newPasswordDraft.isEmpty
+                            || confirmPasswordDraft.isEmpty
+                    )
+                    .accessibilityIdentifier("settings.auth.passwordSave")
+                }
+            }
+        }
+    }
+
+    private var deleteAccountSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Delete Local Account") {
+                    Text("This removes the local Badvice account on this device and clears its local app data.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    SecureField("Current password", text: $deletePasswordDraft)
+                        .textContentType(.password)
+                        .accessibilityIdentifier("settings.auth.deletePassword")
+                }
+
+                if let status = auth.statusMessage, !status.isEmpty {
+                    Section("Status") {
+                        Text(status)
+                            .font(.caption)
+                            .foregroundStyle(
+                                status.localizedCaseInsensitiveContains("deleted") ? .green : .red
+                            )
+                            .accessibilityIdentifier("settings.auth.deleteStatus")
+                    }
+                }
+            }
+            .navigationTitle("Delete Account")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showDeleteAccountSheet = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(auth.isSubmitting ? "Deleting..." : "Delete") {
+                        Task {
+                            await onDeleteAccount(deletePasswordDraft)
+                            if !auth.isAuthenticated {
+                                showDeleteAccountSheet = false
+                            }
+                        }
+                    }
+                    .disabled(auth.isSubmitting || deletePasswordDraft.isEmpty)
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("settings.auth.deleteConfirm")
+                }
+            }
+        }
+    }
 
     private var communityLabsSection: some View {
         settingsCard(title: "Community & Labs", icon: "person.2.badge.gearshape") {

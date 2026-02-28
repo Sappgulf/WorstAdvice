@@ -36,6 +36,11 @@ struct GenerateTabView: View {
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
+    private var socialEntryPrompt: String {
+        social.availability.isAvailable
+            ? "Finish your Friends profile in Friends to share posts and start collabs."
+            : social.availability.message
+    }
     private var headerReactiveScale: CGFloat {
         guard !isMotionReduced else { return 1.0 }
         let cadenceScale: CGFloat = viewModel.hapticTrigger % 2 == 0 ? 1.0 : 1.02
@@ -217,9 +222,7 @@ struct GenerateTabView: View {
                             Button("Collaborate", systemImage: "person.2.badge.plus") {
                                 guard social.socialFeaturesEnabled else {
                                     activeToast = ToastMessage(
-                                        message: social.availability.isAvailable
-                                            ? "Create your profile in Friends first."
-                                            : social.availability.message,
+                                        message: socialEntryPrompt,
                                         style: .error
                                     )
                                     return
@@ -228,7 +231,7 @@ struct GenerateTabView: View {
                                 social.queueCollabDraft(type: .advice, content: record.adviceLine)
                                 openTab(.friends)
                                 activeToast = ToastMessage(
-                                    message: "Pick collaborators in Friends.",
+                                    message: "Draft sent to Friends > Collab.",
                                     style: .info
                                 )
                             }
@@ -747,7 +750,7 @@ struct GenerateTabView: View {
                     .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else if social.currentUser == nil {
-                Text("Create a profile in Friends to share and collaborate.")
+                Text("Finish Friends setup to share from Generate and spin up collabs.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)

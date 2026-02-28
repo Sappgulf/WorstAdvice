@@ -15,6 +15,8 @@ actor FailingProfileBackend: SocialBackend {
         .available
     }
 
+    func setStoredCurrentUserRecordName(_ recordName: String?) async {}
+
     func fetchCurrentUserIfStored() async throws -> SocialUser? {
         nil
     }

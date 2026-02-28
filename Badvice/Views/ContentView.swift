@@ -66,6 +66,22 @@ private struct ScrollTrackingModifier: ViewModifier {
     }
 }
 
+private enum LocalAuthMode: String, CaseIterable, Identifiable {
+    case signIn
+    case signUp
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .signIn:
+            return "Sign In"
+        case .signUp:
+            return "Create Account"
+        }
+    }
+}
+
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.requestReview) private var requestReview
@@ -73,10 +89,16 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var selectedTab: AppTab = .generate
+    @State private var auth: AuthViewModel?
     @State private var session: AppSessionViewModel?
     @State private var showConfetti = false
     @State private var showSplash = true
     @State private var tabBarVisible = true
+    @State private var authMode: LocalAuthMode = .signIn
+    @State private var authEmailDraft = ""
+    @State private var authPasswordDraft = ""
+    @State private var authConfirmPasswordDraft = ""
+    @State private var authDisplayNameDraft = ""
     @State private var profileHandleDraft = ""
     @State private var profileDisplayNameDraft = UIDevice.current.name
     @State private var lastShakeHandledAt: Date = .distantPast
@@ -102,280 +124,652 @@ struct ContentView: View {
     private var isUITesting: Bool { launchArguments.contains("-ui-testing") }
 
     var body: some View {
-        AnyView(
-            Group {
-            if showSplash {
-                AnyView(
-                    SplashView(isShowing: $showSplash)
-                        .transition(.opacity)
-                        .task {
-                            // Pre-warm session during splash so it's ready immediately after
-                            if session == nil {
-                                session = AppSessionViewModel(context: modelContext)
-                            }
-                        }
-                )
-            } else if let session {
-                let reduceMotion =
-                    session.settings.reduceMotion
-                    || session.settings.performanceMode
-                    || accessibilityReduceMotion
-                let constrainedMotion =
-                    reduceMotion || lowPowerModeEnabled || deviceCapability.prefersReducedEffects
-                let effectiveLowPowerMode =
-                    lowPowerModeEnabled || deviceCapability.forceLowPowerVisuals
-                let renderBudget = budget(for: session, lowPowerModeEnabled: effectiveLowPowerMode)
-                let shouldRenderParticles = (selectedTab == .generate || selectedTab == .chaosHub) && !isUITesting
-                sessionMainContent(
-                    session: session,
-                    reduceMotion: reduceMotion,
-                    constrainedMotion: constrainedMotion,
-                    effectiveLowPowerMode: effectiveLowPowerMode,
-                    renderBudget: renderBudget,
-                    shouldRenderParticles: shouldRenderParticles
-                )
-                .sensoryFeedback(trigger: session.generate.hapticTrigger) { _, _ in
-                    let weight = session.generate.hapticWeight
-                    if weight > 0.8 { return .impact(weight: .heavy) }
-                    if weight > 0.4 { return .impact(weight: .medium) }
-                    return .impact(weight: .light)
+        appRootView
+    }
+
+    @ViewBuilder
+    private var appRootView: some View {
+        if showSplash {
+            SplashView(isShowing: $showSplash)
+                .transition(.opacity)
+                .task {
+                    bootstrapAppStateIfNeeded()
                 }
-                .environment(\.font, Theme.bodyFont(for: session.settings.theme))
-                .fullScreenCover(
-                    isPresented: .init(
-                        get: { !hasSeenOnboarding },
-                        set: { if !$0 { hasSeenOnboarding = true } }
-                    )
-                ) {
-                    OnboardingFlow(
-                        isPresented: .init(
-                            get: { !hasSeenOnboarding },
-                            set: { if !$0 { hasSeenOnboarding = true } }
-                        ))
-                }
-                .onChange(of: session.generate.challengeStreakDays) { _, days in
-                    if [3, 7, 14, 30].contains(days) {
-                        showConfetti = true
+        } else if let auth {
+            if auth.isAuthenticated, let session {
+                authenticatedSessionView(auth: auth, session: session)
+            } else if auth.isAuthenticated {
+                loadingView
+                    .task {
+                        bootstrapAppStateIfNeeded()
                     }
+            } else {
+                authGateView(auth: auth)
+            }
+        } else {
+            loadingView
+                .task {
+                    bootstrapAppStateIfNeeded()
                 }
-                .onChange(of: session.favorites.favorites.count) { _, newCount in
-                    // Ask for review after the 3rd, 10th, and 25th favorite — once per threshold
-                    let thresholds = [3, 10, 25]
-                    if thresholds.contains(newCount) && newCount > favoritesCountAtLastReview {
-                        favoritesCountAtLastReview = newCount
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                            requestReview()
-                        }
-                    }
+        }
+    }
+
+    private func authenticatedSessionView(auth: AuthViewModel, session: AppSessionViewModel)
+        -> some View
+    {
+        let reduceMotion =
+            session.settings.reduceMotion
+            || session.settings.performanceMode
+            || accessibilityReduceMotion
+        let constrainedMotion =
+            reduceMotion || lowPowerModeEnabled || deviceCapability.prefersReducedEffects
+        let effectiveLowPowerMode =
+            lowPowerModeEnabled || deviceCapability.forceLowPowerVisuals
+        let renderBudget = budget(for: session, lowPowerModeEnabled: effectiveLowPowerMode)
+        let shouldRenderParticles =
+            (selectedTab == .generate || selectedTab == .chaosHub) && !isUITesting
+
+        return sessionMainContent(
+            session: session,
+            reduceMotion: reduceMotion,
+            constrainedMotion: constrainedMotion,
+            effectiveLowPowerMode: effectiveLowPowerMode,
+            renderBudget: renderBudget,
+            shouldRenderParticles: shouldRenderParticles
+        )
+        .sensoryFeedback(trigger: session.generate.hapticTrigger) { _, _ in
+            let weight = session.generate.hapticWeight
+            if weight > 0.8 { return .impact(weight: .heavy) }
+            if weight > 0.4 { return .impact(weight: .medium) }
+            return .impact(weight: .light)
+        }
+        .environment(\.font, Theme.bodyFont(for: session.settings.theme))
+        .task {
+            await syncAuthContext(auth: auth, social: session.social)
+        }
+        .fullScreenCover(
+            isPresented: .init(
+                get: { !hasSeenOnboarding },
+                set: { if !$0 { hasSeenOnboarding = true } }
+            )
+        ) {
+            OnboardingFlow(
+                isPresented: .init(
+                    get: { !hasSeenOnboarding },
+                    set: { if !$0 { hasSeenOnboarding = true } }
+                ))
+        }
+        .onChange(of: session.generate.challengeStreakDays) { _, days in
+            if [3, 7, 14, 30].contains(days) {
+                showConfetti = true
+            }
+        }
+        .onChange(of: session.favorites.favorites.count) { _, newCount in
+            let thresholds = [3, 10, 25]
+            if thresholds.contains(newCount) && newCount > favoritesCountAtLastReview {
+                favoritesCountAtLastReview = newCount
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                    requestReview()
                 }
-                // MARK: - Shake to Generate
-                .onChange(of: shakeDetector.didShake) { _, didShake in
-                    guard didShake, shakeToGenerateEnabled, selectedTab == .generate else { return }
-                    guard !session.generate.isGenerating else { return }
-                    let now = Date()
-                    guard now.timeIntervalSince(lastShakeHandledAt) > 0.9 else { return }
-                    lastShakeHandledAt = now
-                    HapticsManager.playShakeDetected(isEnabled: session.settings.hapticsEnabled)
-                    Task {
-                        await session.generate.generate()
-                    }
-                    session.refreshLists()
+            }
+        }
+        .onChange(of: shakeDetector.didShake) { _, didShake in
+            guard didShake, shakeToGenerateEnabled, selectedTab == .generate else { return }
+            guard !session.generate.isGenerating else { return }
+            let now = Date()
+            guard now.timeIntervalSince(lastShakeHandledAt) > 0.9 else { return }
+            lastShakeHandledAt = now
+            HapticsManager.playShakeDetected(isEnabled: session.settings.hapticsEnabled)
+            Task {
+                await session.generate.generate()
+            }
+            session.refreshLists()
+        }
+        .onChange(of: shakeToGenerateEnabled) { _, enabled in
+            shakeDetector.isEnabled = enabled
+            if enabled, scenePhase == .active {
+                shakeDetector.startMonitoring()
+            } else {
+                shakeDetector.stopMonitoring()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                if shouldRestartOnNextActive {
+                    shouldRestartOnNextActive = false
+                    restartAppSession()
+                    return
                 }
-                .onChange(of: shakeToGenerateEnabled) { _, enabled in
-                    shakeDetector.isEnabled = enabled
-                    if enabled, scenePhase == .active {
-                        shakeDetector.startMonitoring()
-                    } else {
-                        shakeDetector.stopMonitoring()
-                    }
+                if shakeToGenerateEnabled {
+                    shakeDetector.startMonitoring()
                 }
-                .onChange(of: scenePhase) { _, phase in
-                    if phase == .active {
-                        if shouldRestartOnNextActive {
-                            shouldRestartOnNextActive = false
-                            restartAppSession()
-                            return
-                        }
-                        if shakeToGenerateEnabled {
-                            shakeDetector.startMonitoring()
-                        }
-                        self.session?.generate.refreshRetentionStateOnAppear()
-                        Task {
-                            await self.session?.social.refreshAvailability()
-                            await self.session?.social.refreshSocialData()
-                        }
-                    } else {
-                        if phase == .background {
-                            shouldRestartOnNextActive = true
-                        }
-                        shakeDetector.stopMonitoring()
-                    }
-                }
-                .onAppear {
-                    applyUITestLaunchOverridesIfNeeded()
-                    shakeDetector.isEnabled = shakeToGenerateEnabled
-                    lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
-                    deviceCapability = DeviceCapabilityProfile.current()
-                    if shakeToGenerateEnabled {
-                        shakeDetector.startMonitoring()
-                    }
-                    session.generate.refreshRetentionStateOnAppear()
-                }
-                .onReceive(
-                    NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)
-                ) { _ in
-                    lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
-                    deviceCapability = DeviceCapabilityProfile.current()
-                }
-                .onReceive(
-                    NotificationCenter.default.publisher(
-                        for: ProcessInfo.thermalStateDidChangeNotification)
-                ) { _ in
-                    deviceCapability = DeviceCapabilityProfile.current()
-                }
-                .onDisappear {
-                    shakeDetector.stopMonitoring()
-                }
-                .onChange(of: session.settings.tabOrder) { _, newOrder in
-                    // Keep TabView selection valid if tab ordering changes mid-session.
-                    guard !newOrder.isEmpty else { return }
-                    if !newOrder.contains(selectedTab), let fallback = newOrder.first {
-                        selectedTab = fallback
-                    }
-                }
-                .sheet(
-                    isPresented: Binding(
-                        get: {
-                            !showSplash
-                                && hasSeenOnboarding
-                                && session.social.shouldShowProfileSetup
-                        },
-                        set: { _ in }
-                    )
-                ) {
-                    let handleBinding = Binding<String>(
-                        get: { profileHandleDraft },
-                        set: { profileHandleDraft = sanitizedProfileHandle($0) }
-                    )
-                    let displayNameBinding = Binding<String>(
-                        get: { profileDisplayNameDraft },
-                        set: { profileDisplayNameDraft = sanitizedProfileDisplayName($0) }
-                    )
-                    let normalizedHandle = normalizedProfileHandle(profileHandleDraft)
-                    let isHandleValid = CloudKitStore.isValidHandle(normalizedHandle)
-                    let shouldShowValidationError = !normalizedHandle.isEmpty && !isHandleValid
-                    NavigationStack {
-                        Form {
-                            Section("Create Profile") {
-                                TextField("@handle", text: handleBinding)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .textContentType(.nickname)
-                                    .accessibilityIdentifier("social.profile.handle")
-                                TextField(
-                                    "Display name (optional)",
-                                    text: displayNameBinding
-                                )
-                                .textInputAutocapitalization(.words)
-                                .accessibilityIdentifier("social.profile.displayName")
-                                HStack {
-                                    Text("Handle preview")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text(normalizedHandle.isEmpty ? "@your_handle" : "@\(normalizedHandle)")
-                                        .font(.caption.monospaced())
-                                        .foregroundStyle(isHandleValid || normalizedHandle.isEmpty ? .secondary : .red)
-                                }
-                                HStack {
-                                    Text("Handle length")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text("\(normalizedHandle.count)/16")
-                                        .font(.caption.monospaced())
-                                        .foregroundStyle(isHandleValid || normalizedHandle.isEmpty ? .secondary : .red)
-                                }
-                                if session.social.isSubmittingAction {
-                                    HStack(spacing: 10) {
-                                        ProgressView()
-                                        Text("Creating profile...")
-                                    }
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                }
-                            }
-                            if shouldShowValidationError {
-                                Section("Fix Handle") {
-                                    Text(
-                                        "Use 3–16 characters with lowercase letters, numbers, or underscore."
-                                    )
-                                    .font(.caption)
-                                    .foregroundStyle(.red)
-                                }
-                            }
-                            if let status = session.social.statusMessage, !status.isEmpty {
-                                Section("Status") {
-                                    Text(status)
-                                        .font(.caption)
-                                        .foregroundStyle(status.lowercased().contains("created") ? .green : .red)
-                                        .accessibilityIdentifier("social.profile.status")
-                                }
-                            }
-                            Section("Rules") {
-                                Text(
-                                    "Handle must be 3–16 characters and can only use lowercase letters, numbers, or underscore. You can type with or without @."
-                                )
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            }
-                        }
-                        .navigationTitle("Create Profile")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .interactiveDismissDisabled()
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button(session.social.isSubmittingAction ? "Saving..." : "Save") {
-                                    Task {
-                                        await session.social.createProfile(
-                                            handle: normalizedHandle,
-                                            displayName: profileDisplayNameDraft
-                                        )
-                                    }
-                                }
-                                .disabled(
-                                    normalizedHandle.isEmpty || !isHandleValid
-                                        || session.social.isSubmittingAction
-                                )
-                                .accessibilityIdentifier("social.profile.save")
-                            }
-                        }
-                    }
+                self.session?.generate.refreshRetentionStateOnAppear()
+                Task {
+                    await self.session?.social.refreshAvailability()
+                    await self.session?.social.refreshSocialData()
                 }
             } else {
-                AnyView(
-                    ZStack {
-                        Color(.systemBackground).ignoresSafeArea()
-                        VStack(spacing: 16) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 38, weight: .semibold))
-                                .foregroundStyle(Color.primary.opacity(0.5))
-                            ProgressView()
-                                .tint(.primary)
-                            Text("Loading your chaos...")
-                                .font(.system(.subheadline, design: .rounded, weight: .medium))
-                                .foregroundStyle(Color.primary.opacity(0.45))
-                        }
-                    }
-                    .task {
-                        if session == nil {
-                            session = AppSessionViewModel(context: modelContext)
-                        }
-                    }
-                )
+                if phase == .background {
+                    shouldRestartOnNextActive = true
+                }
+                shakeDetector.stopMonitoring()
             }
+        }
+        .onAppear {
+            applyUITestLaunchOverridesIfNeeded()
+            shakeDetector.isEnabled = shakeToGenerateEnabled
+            lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
+            deviceCapability = DeviceCapabilityProfile.current()
+            if shakeToGenerateEnabled {
+                shakeDetector.startMonitoring()
             }
+            session.generate.refreshRetentionStateOnAppear()
+            Task {
+                await syncAuthContext(auth: auth, social: session.social)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) {
+            _ in
+            lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
+            deviceCapability = DeviceCapabilityProfile.current()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: ProcessInfo.thermalStateDidChangeNotification)
+        ) { _ in
+            deviceCapability = DeviceCapabilityProfile.current()
+        }
+        .onDisappear {
+            shakeDetector.stopMonitoring()
+        }
+        .onChange(of: session.settings.tabOrder) { _, newOrder in
+            guard !newOrder.isEmpty else { return }
+            if !newOrder.contains(selectedTab), let fallback = newOrder.first {
+                selectedTab = fallback
+            }
+        }
+        .onChange(of: auth.currentSession?.accountID) { _, _ in
+            Task {
+                await syncAuthContext(auth: auth, social: session.social)
+            }
+        }
+        .onChange(of: session.social.currentUser?.recordID.recordName) { _, newRecordName in
+            auth.setLinkedSocialProfileRecordName(newRecordName)
+        }
+        .sheet(
+            isPresented: Binding(
+                get: {
+                    !showSplash
+                        && auth.isAuthenticated
+                        && hasSeenOnboarding
+                        && session.social.shouldShowProfileSetup
+                },
+                set: { _ in }
+            )
+        ) {
+            socialProfileSetupSheet(session: session)
+        }
+    }
+
+    private func socialProfileSetupSheet(session: AppSessionViewModel) -> some View {
+        let handleBinding = Binding<String>(
+            get: { profileHandleDraft },
+            set: { profileHandleDraft = sanitizedProfileHandle($0) }
         )
+        let displayNameBinding = Binding<String>(
+            get: { profileDisplayNameDraft },
+            set: { profileDisplayNameDraft = sanitizedProfileDisplayName($0) }
+        )
+        let normalizedHandle = normalizedProfileHandle(profileHandleDraft)
+        let isHandleValid = CloudKitStore.isValidHandle(normalizedHandle)
+        let shouldShowValidationError = !normalizedHandle.isEmpty && !isHandleValid
+
+        return NavigationStack {
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(
+                            "Set up your Friends profile",
+                            systemImage: "person.2.crop.square.stack.fill"
+                        )
+                        .font(.headline)
+                        Text(
+                            "Your handle is how friends find you for shares, collabs, and Chaos leaderboard runs."
+                        )
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityIdentifier("social.profile.intro")
+                }
+                Section("Create Profile") {
+                    TextField("@handle", text: handleBinding)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .textContentType(.nickname)
+                        .submitLabel(.next)
+                        .accessibilityIdentifier("social.profile.handle")
+                    TextField(
+                        "Display name (optional)",
+                        text: displayNameBinding
+                    )
+                    .textInputAutocapitalization(.words)
+                    .textContentType(.name)
+                    .submitLabel(.done)
+                    .accessibilityIdentifier("social.profile.displayName")
+                    Text("Pick a public handle once. Type with or without the @ symbol.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text("Handle preview")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(normalizedHandle.isEmpty ? "@your_handle" : "@\(normalizedHandle)")
+                            .font(.caption.monospaced())
+                            .foregroundStyle(
+                                isHandleValid || normalizedHandle.isEmpty
+                                    ? Color.secondary
+                                    : Color.red
+                            )
+                    }
+                    HStack {
+                        Text("Handle length")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(normalizedHandle.count)/16")
+                            .font(.caption.monospaced())
+                            .foregroundStyle(
+                                isHandleValid || normalizedHandle.isEmpty
+                                    ? Color.secondary
+                                    : Color.red
+                            )
+                    }
+                    if session.social.isSubmittingAction {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                            Text("Creating profile...")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+                Section("What unlocks next") {
+                    Label(
+                        "Share advice and quotes straight to Friends",
+                        systemImage: "square.and.arrow.up.fill"
+                    )
+                    .font(.caption)
+                    Label(
+                        "Start collaboration drafts with your crew",
+                        systemImage: "person.2.badge.plus"
+                    )
+                    .font(.caption)
+                    Label(
+                        "Compete on the Chaos leaderboard",
+                        systemImage: "trophy.fill"
+                    )
+                    .font(.caption)
+                }
+                if shouldShowValidationError {
+                    Section("Fix Handle") {
+                        Text(
+                            "Use 3–16 characters with lowercase letters, numbers, or underscore."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                    }
+                }
+                if let status = session.social.statusMessage, !status.isEmpty {
+                    Section("Status") {
+                        Text(status)
+                            .font(.caption)
+                            .foregroundStyle(
+                                status.lowercased().contains("created") ? .green : .red
+                            )
+                            .accessibilityIdentifier("social.profile.status")
+                    }
+                }
+                Section("Rules") {
+                    Text(
+                        "Handle must be 3–16 characters and can only use lowercase letters, numbers, or underscore. You can type with or without @."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Friends Setup")
+            .navigationBarTitleDisplayMode(.inline)
+            .interactiveDismissDisabled()
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(session.social.isSubmittingAction ? "Creating..." : "Finish Setup") {
+                        Task {
+                            await session.social.createProfile(
+                                handle: normalizedHandle,
+                                displayName: profileDisplayNameDraft
+                            )
+                        }
+                    }
+                    .disabled(
+                        normalizedHandle.isEmpty || !isHandleValid
+                            || session.social.isSubmittingAction
+                    )
+                    .accessibilityIdentifier("social.profile.save")
+                }
+            }
+        }
+    }
+
+    private var loadingView: some View {
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
+            VStack(spacing: 16) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 38, weight: .semibold))
+                    .foregroundStyle(Color.primary.opacity(0.5))
+                ProgressView()
+                    .tint(.primary)
+                Text("Loading your chaos...")
+                    .font(.system(.subheadline, design: .rounded, weight: .medium))
+                    .foregroundStyle(Color.primary.opacity(0.45))
+            }
+        }
+    }
+
+    private func bootstrapAppStateIfNeeded() {
+        if auth == nil {
+            let authViewModel = makeAuthViewModel()
+            auth = authViewModel
+            syncAuthDrafts(with: authViewModel)
+        }
+
+        applyUITestLaunchOverridesIfNeeded()
+
+        guard let auth else { return }
+        guard auth.isAuthenticated else { return }
+
+        if session == nil {
+            session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
+        }
+        syncProfileDrafts(with: auth)
+        Task {
+            await syncAuthContext(auth: auth, social: session?.social)
+        }
+    }
+
+    private func makeAuthViewModel() -> AuthViewModel {
+        let authViewModel = AuthViewModel()
+        if isUITesting, launchArguments.contains("-ui-testing-auth-reset") {
+            authViewModel.resetForUITesting()
+        }
+        if isUITesting, launchArguments.contains("-ui-testing-auth-skip") {
+            authViewModel.seedUITestSessionIfNeeded()
+        }
+        authMode = authViewModel.hasAccounts ? .signIn : .signUp
+        return authViewModel
+    }
+
+    private func syncAuthDrafts(with auth: AuthViewModel) {
+        if let email = auth.signedInEmail {
+            authEmailDraft = email
+        } else if authEmailDraft.isEmpty, !auth.hasAccounts {
+            authEmailDraft = ""
+        }
+        authPasswordDraft = ""
+        authConfirmPasswordDraft = ""
+        if authDisplayNameDraft.isEmpty {
+            authDisplayNameDraft = auth.displayName
+        }
+    }
+
+    private func syncProfileDrafts(with auth: AuthViewModel) {
+        profileDisplayNameDraft = sanitizedProfileDisplayName(auth.displayName)
+    }
+
+    private func resetSessionPresentationState() {
+        selectedTab = .generate
+        tabBarVisible = true
+        showConfetti = false
+        lastShakeHandledAt = .distantPast
+        tabDragHighlight = nil
+        tabSlideModeActive = false
+        tabSlideLastIndex = nil
+        tabSlideLastSwitchX = 0
+        tabSlideLastHapticTab = nil
+        tabSlideLastSwitchAt = .distantPast
+    }
+
+    private func beginAuthenticatedSession(using auth: AuthViewModel) {
+        resetSessionPresentationState()
+        syncAuthDrafts(with: auth)
+        syncProfileDrafts(with: auth)
+        session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
+        applyUITestLaunchOverridesIfNeeded()
+        Task {
+            await syncAuthContext(auth: auth, social: session?.social)
+        }
+    }
+
+    private func signOutCurrentAccount(_ auth: AuthViewModel) {
+        auth.signOut()
+        session = nil
+        resetSessionPresentationState()
+        profileHandleDraft = ""
+        profileDisplayNameDraft = UIDevice.current.name
+        authMode = .signIn
+        syncAuthDrafts(with: auth)
+    }
+
+    private func deleteCurrentAccount(_ auth: AuthViewModel, password: String) async {
+        let didDelete = await auth.deleteCurrentAccount(password: password)
+        guard didDelete else { return }
+        session?.repository.purgeCurrentAccountData()
+        session = nil
+        resetSessionPresentationState()
+        profileHandleDraft = ""
+        profileDisplayNameDraft = UIDevice.current.name
+        authMode = auth.hasAccounts ? .signIn : .signUp
+        syncAuthDrafts(with: auth)
+    }
+
+    private func syncAuthContext(auth: AuthViewModel, social: SocialViewModel?) async {
+        await social?.applyAuthContext(
+            email: auth.signedInEmail,
+            linkedSocialRecordName: auth.linkedSocialProfileRecordName
+        )
+    }
+
+    @ViewBuilder
+    private func authGateView(auth: AuthViewModel) -> some View {
+        let normalizedEmail = LocalAccountValidation.normalizedEmail(authEmailDraft)
+        let trimmedDisplayName = authDisplayNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let canSubmitSignIn =
+            LocalAccountValidation.isValidEmail(normalizedEmail) && !authPasswordDraft.isEmpty
+        let canSubmitSignUp =
+            LocalAccountValidation.isValidEmail(normalizedEmail)
+            && LocalAccountValidation.isStrongPassword(authPasswordDraft)
+            && authPasswordDraft == authConfirmPasswordDraft
+        let accent = Color(hex: "8F4A22")
+
+        ZStack {
+            LinearGradient(
+                colors: [Color(hex: "F7F2E8"), Color(hex: "EBDAC8"), Color(hex: "F8F4EE")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            FloatingParticlesView(theme: .minimal, reduceMotion: true, isGenerating: false)
+                .opacity(0.2)
+                .ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 24) {
+                    VStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(accent.opacity(0.12))
+                                .frame(width: 92, height: 92)
+                            Image(systemName: "person.crop.circle.badge.checkmark")
+                                .font(.system(size: 42, weight: .semibold))
+                                .foregroundStyle(accent)
+                        }
+
+                        Text("Local account required")
+                            .font(.system(.title2, design: .rounded, weight: .bold))
+                            .foregroundStyle(Theme.headerColor(for: .minimal))
+
+                        Text("Create a Badvice account on this device, or sign back in to keep your chaos behind a real password.")
+                            .font(.subheadline)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(Color.primary.opacity(0.68))
+                            .padding(.horizontal, 12)
+                    }
+
+                    VStack(spacing: 18) {
+                        Picker("Authentication", selection: $authMode) {
+                            ForEach(LocalAuthMode.allCases) { mode in
+                                Text(mode.title).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("auth.mode")
+
+                        VStack(spacing: 14) {
+                            if authMode == .signUp {
+                                TextField("Display name (optional)", text: $authDisplayNameDraft)
+                                    .textInputAutocapitalization(.words)
+                                    .textContentType(.name)
+                                    .accessibilityIdentifier("auth.displayName")
+                            }
+
+                            TextField("Email", text: $authEmailDraft)
+                                .textInputAutocapitalization(.never)
+                                .keyboardType(.emailAddress)
+                                .textContentType(.emailAddress)
+                                .autocorrectionDisabled()
+                                .accessibilityIdentifier("auth.email")
+
+                            SecureField(
+                                authMode == .signUp ? "Create password" : "Password",
+                                text: $authPasswordDraft
+                            )
+                            .textContentType(authMode == .signUp ? .newPassword : .password)
+                            .accessibilityIdentifier("auth.password")
+
+                            if authMode == .signUp {
+                                SecureField("Confirm password", text: $authConfirmPasswordDraft)
+                                    .textContentType(.newPassword)
+                                    .accessibilityIdentifier("auth.confirmPassword")
+                            }
+                        }
+                        .textFieldStyle(.roundedBorder)
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(authMode == .signUp ? "Passwords need at least 8 characters, plus a letter and a number." : "Accounts are stored only on this device.")
+                                .font(.caption)
+                                .foregroundStyle(Color.primary.opacity(0.58))
+                            if authMode == .signUp, !trimmedDisplayName.isEmpty,
+                                !LocalAccountValidation.isValidDisplayName(trimmedDisplayName)
+                            {
+                                Text("Display name must be 2-40 characters.")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if let status = auth.statusMessage, !status.isEmpty {
+                            Text(status)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(status.lowercased().contains("signed") || status.lowercased().contains("created") ? accent : .red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityIdentifier("auth.status")
+                        }
+
+                        Button {
+                            Task {
+                                let didAuthenticate: Bool
+                                switch authMode {
+                                case .signIn:
+                                    didAuthenticate = await auth.signIn(
+                                        email: normalizedEmail,
+                                        password: authPasswordDraft
+                                    )
+                                case .signUp:
+                                    didAuthenticate = await auth.signUp(
+                                        email: normalizedEmail,
+                                        displayName: trimmedDisplayName,
+                                        password: authPasswordDraft,
+                                        confirmPassword: authConfirmPasswordDraft
+                                    )
+                                }
+
+                                if didAuthenticate {
+                                    beginAuthenticatedSession(using: auth)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                if auth.isSubmitting {
+                                    ProgressView()
+                                        .tint(.white)
+                                }
+                                Text(authMode == .signUp ? "Create Account" : "Sign In")
+                                    .font(.system(.body, design: .rounded, weight: .bold))
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .foregroundStyle(.white)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .fill(accent)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(
+                            auth.isSubmitting
+                                || (authMode == .signIn ? !canSubmitSignIn : !canSubmitSignUp)
+                        )
+                        .opacity(
+                            auth.isSubmitting
+                                || (authMode == .signIn ? !canSubmitSignIn : !canSubmitSignUp)
+                                ? 0.6 : 1
+                        )
+                        .accessibilityIdentifier("auth.primary")
+
+                        if auth.hasAccounts {
+                            Button(authMode == .signIn ? "Need a new local account?" : "Use an existing account instead") {
+                                authMode = authMode == .signIn ? .signUp : .signIn
+                                auth.statusMessage = nil
+                                authPasswordDraft = ""
+                                authConfirmPasswordDraft = ""
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(accent)
+                            .accessibilityIdentifier("auth.switchMode")
+                        }
+                    }
+                    .padding(24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(accent.opacity(0.15), lineWidth: 1)
+                    )
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 36)
+            }
+        }
+        .onAppear {
+            if !auth.hasAccounts {
+                authMode = .signUp
+            }
+            syncAuthDrafts(with: auth)
+        }
     }
 
     @ViewBuilder
@@ -714,17 +1108,8 @@ struct ContentView: View {
     }
 
     private func restartAppSession() {
-        selectedTab = .generate
-        tabBarVisible = true
-        showConfetti = false
-        lastShakeHandledAt = .distantPast
-        tabDragHighlight = nil
-        tabSlideModeActive = false
-        tabSlideLastIndex = nil
-        tabSlideLastSwitchX = 0
-        tabSlideLastHapticTab = nil
-        tabSlideLastSwitchAt = .distantPast
-        session = AppSessionViewModel(context: modelContext)
+        resetSessionPresentationState()
+        session = AppSessionViewModel(context: modelContext, accountID: auth?.currentSession?.accountID)
     }
 
     private func applyUITestLaunchOverridesIfNeeded() {
@@ -733,9 +1118,6 @@ struct ContentView: View {
         }
         if isUITesting, launchArguments.contains("-skip-splash") {
             showSplash = false
-            if session == nil {
-                session = AppSessionViewModel(context: modelContext)
-            }
         }
         if isUITesting {
             session?.settings.preferredGenerationProvider = .classic
@@ -855,13 +1237,22 @@ struct ContentView: View {
                 }
             )
         case .settings:
-            SettingsTabView(
-                viewModel: session.settings,
-                generateViewModel: session.generate,
-                quotesViewModel: session.quotes,
-                social: session.social,
-                achievementsManager: session.achievements
-            )
+            if let auth {
+                SettingsTabView(
+                    viewModel: session.settings,
+                    generateViewModel: session.generate,
+                    quotesViewModel: session.quotes,
+                    social: session.social,
+                    auth: auth,
+                    achievementsManager: session.achievements,
+                    onSignOut: {
+                        signOutCurrentAccount(auth)
+                    },
+                    onDeleteAccount: { password in
+                        await deleteCurrentAccount(auth, password: password)
+                    }
+                )
+            }
         }
     }
 

@@ -1,8 +1,10 @@
 import CloudKit
+import CryptoKit
 import Foundation
 import Combine
 import OSLog
 import Observation
+import Security
 import SwiftData
 import UIKit
 
@@ -1690,6 +1692,7 @@ struct AppAnalyticsTracker: AnalyticsTracking {
 @Model
 final class AdviceRecord {
     @Attribute(.unique) var id: UUID
+    var ownerAccountID: String?
     var createdAt: Date
     var categoryRaw: String
     var toneRaw: String
@@ -1703,6 +1706,7 @@ final class AdviceRecord {
 
     init(
         id: UUID = UUID(),
+        ownerAccountID: String? = nil,
         createdAt: Date,
         category: AdviceCategory,
         tone: ToneMode,
@@ -1714,6 +1718,7 @@ final class AdviceRecord {
         copyCount: Int = 0
     ) {
         self.id = id
+        self.ownerAccountID = ownerAccountID
         self.createdAt = createdAt
         self.categoryRaw = category.rawValue
         self.toneRaw = tone.rawValue
@@ -1752,10 +1757,12 @@ final class AdviceRecord {
 @Model
 final class AdviceFingerprint {
     @Attribute(.unique) var normalizedText: String
+    var ownerAccountID: String?
     var createdAt: Date
 
-    init(normalizedText: String, createdAt: Date = Date()) {
+    init(normalizedText: String, ownerAccountID: String? = nil, createdAt: Date = Date()) {
         self.normalizedText = normalizedText
+        self.ownerAccountID = ownerAccountID
         self.createdAt = createdAt
     }
 }
@@ -1763,6 +1770,7 @@ final class AdviceFingerprint {
 @Model
 final class UserAdviceSuggestion {
     @Attribute(.unique) var id: UUID
+    var ownerAccountID: String?
     var createdAt: Date
     var categoryRaw: String
     var topic: String
@@ -1770,12 +1778,14 @@ final class UserAdviceSuggestion {
 
     init(
         id: UUID = UUID(),
+        ownerAccountID: String? = nil,
         createdAt: Date = Date(),
         category: AdviceCategory,
         topic: String,
         adviceLine: String
     ) {
         self.id = id
+        self.ownerAccountID = ownerAccountID
         self.createdAt = createdAt
         self.categoryRaw = category.rawValue
         self.topic = topic
@@ -1790,6 +1800,7 @@ final class UserAdviceSuggestion {
 @Model
 final class UserQuoteSuggestion {
     @Attribute(.unique) var id: UUID
+    var ownerAccountID: String?
     var createdAt: Date
     var categoryRaw: String
     var source: String
@@ -1797,12 +1808,14 @@ final class UserQuoteSuggestion {
 
     init(
         id: UUID = UUID(),
+        ownerAccountID: String? = nil,
         createdAt: Date = Date(),
         category: AdviceCategory,
         source: String,
         quoteText: String
     ) {
         self.id = id
+        self.ownerAccountID = ownerAccountID
         self.createdAt = createdAt
         self.categoryRaw = category.rawValue
         self.source = source
@@ -1817,15 +1830,18 @@ final class UserQuoteSuggestion {
 @Model
 final class QuoteVoteRecord {
     @Attribute(.unique) var quoteID: String
+    var ownerAccountID: String?
     var voteRaw: Int
     var updatedAt: Date
 
     init(
         quoteID: String,
+        ownerAccountID: String? = nil,
         vote: AdviceVoteState = .none,
         updatedAt: Date = Date()
     ) {
         self.quoteID = quoteID
+        self.ownerAccountID = ownerAccountID
         self.voteRaw = vote.rawValue
         self.updatedAt = updatedAt
     }
@@ -1839,6 +1855,7 @@ final class QuoteVoteRecord {
 @Model
 final class LearningStatRecord {
     @Attribute(.unique) var scopeKey: String
+    var ownerAccountID: String?
     var shownCount: Double
     var likeCount: Double
     var dislikeCount: Double
@@ -1850,6 +1867,7 @@ final class LearningStatRecord {
 
     init(
         scopeKey: String,
+        ownerAccountID: String? = nil,
         shownCount: Double = 0,
         likeCount: Double = 0,
         dislikeCount: Double = 0,
@@ -1860,6 +1878,7 @@ final class LearningStatRecord {
         updatedAt: Date = Date()
     ) {
         self.scopeKey = scopeKey
+        self.ownerAccountID = ownerAccountID
         self.shownCount = shownCount
         self.likeCount = likeCount
         self.dislikeCount = dislikeCount
@@ -1887,6 +1906,7 @@ final class LearningStatRecord {
 @Model
 final class MissionProgressRecord {
     @Attribute(.unique) var missionKey: String
+    var ownerAccountID: String?
     var periodRaw: String
     var categoryRaw: String
     var toneRaw: String
@@ -1898,6 +1918,7 @@ final class MissionProgressRecord {
 
     init(
         missionKey: String,
+        ownerAccountID: String? = nil,
         periodRaw: String = "weekly",
         category: AdviceCategory,
         tone: ToneMode,
@@ -1908,6 +1929,7 @@ final class MissionProgressRecord {
         updatedAt: Date = Date()
     ) {
         self.missionKey = missionKey
+        self.ownerAccountID = ownerAccountID
         self.periodRaw = periodRaw
         self.categoryRaw = category.rawValue
         self.toneRaw = tone.rawValue
@@ -1930,6 +1952,7 @@ final class MissionProgressRecord {
 @Model
 final class AppSettingsEntity {
     @Attribute(.unique) var id: UUID
+    var ownerAccountID: String?
     var themeRaw: String
     var includeDisclaimerOnShare: Bool
     var reduceMotion: Bool
@@ -1950,6 +1973,7 @@ final class AppSettingsEntity {
     var tabOrderRaw: String?
     init(
         id: UUID = UUID(),
+        ownerAccountID: String? = nil,
         theme: ThemeMode = .badvice,
         includeDisclaimerOnShare: Bool = true,
         reduceMotion: Bool = false,
@@ -1967,6 +1991,7 @@ final class AppSettingsEntity {
         tabOrder: [AppTab] = AppTab.defaultOrder
     ) {
         self.id = id
+        self.ownerAccountID = ownerAccountID
         self.themeRaw = theme.rawValue
         self.includeDisclaimerOnShare = includeDisclaimerOnShare
         self.reduceMotion = reduceMotion
@@ -2065,17 +2090,20 @@ final class AppSettingsEntity {
 
 @MainActor
 final class AdviceRepository {
+    private static let defaultAccountKey = "__default__"
     private static let poolFingerprintPrefix = "pool::"
     private static let maxLearningScopes = 800
     private static let maxAdviceFingerprints = 1200
 
     let context: ModelContext
+    let accountKey: String
     private var cachedSeenCount: Int?
     private var cachedFingerprintSet: Set<String>?
     private var cachedLearningStatsByKey: [String: LearningStatRecord]?
 
-    init(context: ModelContext) {
+    init(context: ModelContext, accountKey: String = "__default__") {
         self.context = context
+        self.accountKey = accountKey
         logger.debug("AdviceRepository initialized")
     }
 
@@ -2083,6 +2111,7 @@ final class AdviceRepository {
     func insert(_ generated: GeneratedAdvice) -> AdviceRecord {
         let record = AdviceRecord(
             id: generated.id,
+            ownerAccountID: accountKey,
             createdAt: generated.createdAt,
             category: generated.category,
             tone: generated.tone,
@@ -2112,27 +2141,18 @@ final class AdviceRepository {
     }
 
     func fetchHistory(limit: Int = 50) -> [AdviceRecord] {
-        var descriptor = FetchDescriptor<AdviceRecord>(
-            sortBy: [SortDescriptor(\AdviceRecord.createdAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = limit
-        return (try? context.fetch(descriptor)) ?? []
+        Array(fetchAllHistory().prefix(limit))
     }
 
     func fetchAllHistory() -> [AdviceRecord] {
         let descriptor = FetchDescriptor<AdviceRecord>(
             sortBy: [SortDescriptor(\AdviceRecord.createdAt, order: .reverse)]
         )
-        return (try? context.fetch(descriptor)) ?? []
+        return ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
     }
 
     func fetchFavorites() -> [AdviceRecord] {
-        let predicate = #Predicate<AdviceRecord> { $0.isFavorite }
-        let descriptor = FetchDescriptor<AdviceRecord>(
-            predicate: predicate,
-            sortBy: [SortDescriptor(\AdviceRecord.createdAt, order: .reverse)]
-        )
-        return (try? context.fetch(descriptor)) ?? []
+        fetchAllHistory().filter(\.isFavorite)
     }
 
     func thisWeekFavorites() -> [AdviceRecord] {
@@ -2145,8 +2165,7 @@ final class AdviceRepository {
     }
 
     func historyCount() -> Int {
-        let descriptor = FetchDescriptor<AdviceRecord>()
-        return (try? context.fetchCount(descriptor)) ?? 0
+        fetchAllHistory().count
     }
 
     // MARK: - Leaderboard helpers
@@ -2167,7 +2186,7 @@ final class AdviceRepository {
         let predicate = #Predicate<AdviceRecord> { $0.id == id }
         var descriptor = FetchDescriptor<AdviceRecord>(predicate: predicate)
         descriptor.fetchLimit = 1
-        return (try? context.fetch(descriptor))?.first
+        return (try? context.fetch(descriptor))?.first(where: { matchesActiveAccount($0.ownerAccountID) })
     }
 
     func topByShares(limit: Int = 5) -> [AdviceRecord] {
@@ -2192,20 +2211,18 @@ final class AdviceRepository {
     }
 
     func favoriteCount() -> Int {
-        let predicate = #Predicate<AdviceRecord> { $0.isFavorite }
-        let descriptor = FetchDescriptor<AdviceRecord>(predicate: predicate)
-        return (try? context.fetchCount(descriptor)) ?? 0
+        fetchFavorites().count
     }
 
     func todayHistoryCount(referenceDate: Date = Date()) -> Int {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: referenceDate)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? referenceDate
-        let predicate = #Predicate<AdviceRecord> {
-            $0.createdAt >= startOfDay && $0.createdAt < endOfDay
+        return fetchAllHistory().reduce(into: 0) { count, record in
+            if record.createdAt >= startOfDay, record.createdAt < endOfDay {
+                count += 1
+            }
         }
-        let descriptor = FetchDescriptor<AdviceRecord>(predicate: predicate)
-        return (try? context.fetchCount(descriptor)) ?? 0
     }
 
     func todayHistoryCount(
@@ -2256,9 +2273,7 @@ final class AdviceRepository {
 
     func purgeAllHistory() {
         fetchAllHistory().forEach { context.delete($0) }
-        let fingerprintDescriptor = FetchDescriptor<AdviceFingerprint>()
-        let fingerprints = (try? context.fetch(fingerprintDescriptor)) ?? []
-        fingerprints.forEach { context.delete($0) }
+        fetchAdviceFingerprints().forEach { context.delete($0) }
         cachedFingerprintSet = nil
         cachedSeenCount = nil
         save()
@@ -2266,23 +2281,26 @@ final class AdviceRepository {
 
     func ensureSettings() -> AppSettingsEntity {
         let descriptor = FetchDescriptor<AppSettingsEntity>()
-        if let existing = try? context.fetch(descriptor).first {
+        if let existing = ((try? context.fetch(descriptor)) ?? []).first(where: {
+            matchesActiveAccount($0.ownerAccountID)
+        }) {
             return existing
         }
-        let created = AppSettingsEntity()
+        let created = AppSettingsEntity(ownerAccountID: accountKey)
         context.insert(created)
         save()
         return created
     }
 
     func missionProgress(for missionKey: String) -> MissionProgressRecord? {
-        let predicate = #Predicate<MissionProgressRecord> { $0.missionKey == missionKey }
+        let scopedMissionKey = scopedMissionKey(missionKey)
+        let predicate = #Predicate<MissionProgressRecord> { $0.missionKey == scopedMissionKey }
         var descriptor = FetchDescriptor<MissionProgressRecord>(
             predicate: predicate,
             sortBy: [SortDescriptor(\MissionProgressRecord.updatedAt, order: .reverse)]
         )
         descriptor.fetchLimit = 1
-        return (try? context.fetch(descriptor))?.first
+        return (try? context.fetch(descriptor))?.first(where: { matchesActiveAccount($0.ownerAccountID) })
     }
 
     @discardableResult
@@ -2320,7 +2338,8 @@ final class AdviceRepository {
         }
 
         let created = MissionProgressRecord(
-            missionKey: missionKey,
+            missionKey: scopedMissionKey(missionKey),
+            ownerAccountID: accountKey,
             periodRaw: periodRaw,
             category: category,
             tone: tone,
@@ -2365,7 +2384,7 @@ final class AdviceRepository {
     }
 
     func hasSeenAdvice(_ normalizedAdviceLine: String) -> Bool {
-        let normalized = normalizedAdviceLine.normalizedForFiltering
+        let normalized = scopedFingerprintKey(normalizedAdviceLine.normalizedForFiltering)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty else { return false }
         ensureFingerprintCache()
@@ -2377,12 +2396,14 @@ final class AdviceRepository {
         createdAt: Date = Date(),
         saveChanges: Bool = true
     ) {
-        let normalized = normalizedAdviceLine.normalizedForFiltering
+        let normalized = scopedFingerprintKey(normalizedAdviceLine.normalizedForFiltering)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty else { return }
         ensureFingerprintCache()
         guard !(cachedFingerprintSet?.contains(normalized) ?? false) else { return }
-        context.insert(AdviceFingerprint(normalizedText: normalized, createdAt: createdAt))
+        context.insert(
+            AdviceFingerprint(normalizedText: normalized, ownerAccountID: accountKey, createdAt: createdAt)
+        )
         cachedFingerprintSet?.insert(normalized)
         cachedSeenCount = nil
         pruneAdviceFingerprints(maxCount: Self.maxAdviceFingerprints)
@@ -2396,7 +2417,14 @@ final class AdviceRepository {
         category: AdviceCategory,
         tone: ToneMode
     ) -> Bool {
-        hasSeenAdvice(poolFingerprint(for: normalizedAdviceLine, category: category, tone: tone))
+        let normalized = poolFingerprint(
+            for: normalizedAdviceLine,
+            category: category,
+            tone: tone
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return false }
+        ensureFingerprintCache()
+        return cachedFingerprintSet?.contains(normalized) ?? false
     }
 
     func rememberAdviceFingerprintInPool(
@@ -2406,18 +2434,30 @@ final class AdviceRepository {
         createdAt: Date = Date(),
         saveChanges: Bool = true
     ) {
-        rememberAdviceFingerprint(
-            poolFingerprint(for: normalizedAdviceLine, category: category, tone: tone),
-            createdAt: createdAt,
-            saveChanges: saveChanges
+        let normalized = poolFingerprint(
+            for: normalizedAdviceLine,
+            category: category,
+            tone: tone
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return }
+        ensureFingerprintCache()
+        guard !(cachedFingerprintSet?.contains(normalized) ?? false) else { return }
+        context.insert(
+            AdviceFingerprint(normalizedText: normalized, ownerAccountID: accountKey, createdAt: createdAt)
         )
+        cachedFingerprintSet?.insert(normalized)
+        cachedSeenCount = nil
+        pruneAdviceFingerprints(maxCount: Self.maxAdviceFingerprints)
+        if saveChanges {
+            save()
+        }
     }
 
     func seenAdviceCount() -> Int {
         if let cached = cachedSeenCount { return cached }
         ensureFingerprintCache()
         let count = (cachedFingerprintSet ?? [])
-            .filter { !$0.hasPrefix(Self.poolFingerprintPrefix) }
+            .filter { !$0.contains("::\(Self.poolFingerprintPrefix)") }
             .count
         cachedSeenCount = count
         return count
@@ -2433,7 +2473,11 @@ final class AdviceRepository {
             let normalizedGlobal = record.adviceLine.normalizedForFiltering
             if seenGlobal.insert(normalizedGlobal).inserted {
                 context.insert(
-                    AdviceFingerprint(normalizedText: normalizedGlobal, createdAt: record.createdAt)
+                    AdviceFingerprint(
+                        normalizedText: scopedFingerprintKey(normalizedGlobal),
+                        ownerAccountID: accountKey,
+                        createdAt: record.createdAt
+                    )
                 )
             }
             let normalizedPool = poolFingerprint(
@@ -2443,7 +2487,11 @@ final class AdviceRepository {
             )
             if seenPool.insert(normalizedPool).inserted {
                 context.insert(
-                    AdviceFingerprint(normalizedText: normalizedPool, createdAt: record.createdAt))
+                    AdviceFingerprint(
+                        normalizedText: normalizedPool,
+                        ownerAccountID: accountKey,
+                        createdAt: record.createdAt
+                    ))
             }
         }
         pruneAdviceFingerprints(maxCount: Self.maxAdviceFingerprints)
@@ -2459,6 +2507,7 @@ final class AdviceRepository {
         adviceLine: String
     ) -> UserAdviceSuggestion {
         let suggestion = UserAdviceSuggestion(
+            ownerAccountID: accountKey,
             category: category,
             topic: topic,
             adviceLine: adviceLine
@@ -2476,6 +2525,7 @@ final class AdviceRepository {
         quoteText: String
     ) -> UserQuoteSuggestion {
         let suggestion = UserQuoteSuggestion(
+            ownerAccountID: accountKey,
             category: category,
             source: source,
             quoteText: quoteText
@@ -2487,29 +2537,29 @@ final class AdviceRepository {
     }
 
     func fetchSuggestions(limit: Int = 40) -> [UserAdviceSuggestion] {
-        var descriptor = FetchDescriptor<UserAdviceSuggestion>(
+        let descriptor = FetchDescriptor<UserAdviceSuggestion>(
             sortBy: [SortDescriptor(\UserAdviceSuggestion.createdAt, order: .reverse)]
         )
-        descriptor.fetchLimit = limit
-        return (try? context.fetch(descriptor)) ?? []
+        return Array((((try? context.fetch(descriptor)) ?? []).filter {
+            matchesActiveAccount($0.ownerAccountID)
+        }).prefix(limit))
     }
 
     func fetchQuoteSuggestions(limit: Int = 60) -> [UserQuoteSuggestion] {
-        var descriptor = FetchDescriptor<UserQuoteSuggestion>(
+        let descriptor = FetchDescriptor<UserQuoteSuggestion>(
             sortBy: [SortDescriptor(\UserQuoteSuggestion.createdAt, order: .reverse)]
         )
-        descriptor.fetchLimit = limit
-        return (try? context.fetch(descriptor)) ?? []
+        return Array((((try? context.fetch(descriptor)) ?? []).filter {
+            matchesActiveAccount($0.ownerAccountID)
+        }).prefix(limit))
     }
 
     func suggestionCount() -> Int {
-        let descriptor = FetchDescriptor<UserAdviceSuggestion>()
-        return (try? context.fetchCount(descriptor)) ?? 0
+        fetchSuggestions(limit: Int.max).count
     }
 
     func quoteSuggestionCount() -> Int {
-        let descriptor = FetchDescriptor<UserQuoteSuggestion>()
-        return (try? context.fetchCount(descriptor)) ?? 0
+        fetchQuoteSuggestions(limit: Int.max).count
     }
 
     func deleteSuggestion(_ suggestion: UserAdviceSuggestion) {
@@ -2535,7 +2585,14 @@ final class AdviceRepository {
             existing.vote = vote
             existing.updatedAt = Date()
         } else {
-            context.insert(QuoteVoteRecord(quoteID: quoteID, vote: vote, updatedAt: Date()))
+            context.insert(
+                QuoteVoteRecord(
+                    quoteID: scopedQuoteID(quoteID),
+                    ownerAccountID: accountKey,
+                    vote: vote,
+                    updatedAt: Date()
+                )
+            )
         }
         save()
     }
@@ -2548,14 +2605,14 @@ final class AdviceRepository {
         let descriptor = FetchDescriptor<QuoteVoteRecord>(
             sortBy: [SortDescriptor(\QuoteVoteRecord.updatedAt, order: .reverse)]
         )
-        let all = (try? context.fetch(descriptor)) ?? []
-        return Dictionary(uniqueKeysWithValues: all.map { ($0.quoteID, $0.vote) })
+        let all = ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
+        return Dictionary(uniqueKeysWithValues: all.map { (unscopedQuoteID($0.quoteID), $0.vote) })
     }
 
     func recordLearningSignal(scopeKey: String, type: LearningSignalType, weight: Double = 1.0) {
-        let normalizedKey = scopeKey
+        let normalizedKey = scopedLearningScope(scopeKey
             .normalizedForFiltering
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: .whitespacesAndNewlines))
         let delta = max(weight, 0)
         guard !normalizedKey.isEmpty, delta > 0 else { return }
 
@@ -2564,7 +2621,7 @@ final class AdviceRepository {
         if let existing = cachedLearningStatsByKey?[normalizedKey] {
             record = existing
         } else {
-            record = LearningStatRecord(scopeKey: normalizedKey)
+            record = LearningStatRecord(scopeKey: normalizedKey, ownerAccountID: accountKey)
             context.insert(record)
             cachedLearningStatsByKey?[normalizedKey] = record
         }
@@ -2592,9 +2649,9 @@ final class AdviceRepository {
     }
 
     func learningStat(for scopeKey: String) -> LearningStatRecord? {
-        let normalizedKey = scopeKey
+        let normalizedKey = scopedLearningScope(scopeKey
             .normalizedForFiltering
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: .whitespacesAndNewlines))
         guard !normalizedKey.isEmpty else { return nil }
         ensureLearningCache()
         return cachedLearningStatsByKey?[normalizedKey]
@@ -2608,10 +2665,11 @@ final class AdviceRepository {
         let normalizedPrefix = prefix
             .normalizedForFiltering
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        let scopedPrefix = scopedLearningScope(normalizedPrefix)
         ensureLearningCache()
         return (cachedLearningStatsByKey ?? [:])
             .values
-            .filter { normalizedPrefix.isEmpty || $0.scopeKey.hasPrefix(normalizedPrefix) }
+            .filter { normalizedPrefix.isEmpty || $0.scopeKey.hasPrefix(scopedPrefix) }
             .sorted { $0.updatedAt > $1.updatedAt }
     }
 
@@ -2631,7 +2689,7 @@ final class AdviceRepository {
         let descriptor = FetchDescriptor<UserAdviceSuggestion>(
             sortBy: [SortDescriptor(\UserAdviceSuggestion.createdAt, order: .reverse)]
         )
-        let all = (try? context.fetch(descriptor)) ?? []
+        let all = ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
         guard all.count > maxCount else { return }
         all.suffix(from: maxCount).forEach { context.delete($0) }
         save()
@@ -2642,7 +2700,7 @@ final class AdviceRepository {
         let descriptor = FetchDescriptor<UserQuoteSuggestion>(
             sortBy: [SortDescriptor(\UserQuoteSuggestion.createdAt, order: .reverse)]
         )
-        let all = (try? context.fetch(descriptor)) ?? []
+        let all = ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
         guard all.count > maxCount else { return }
         all.suffix(from: maxCount).forEach { context.delete($0) }
         save()
@@ -2671,7 +2729,9 @@ final class AdviceRepository {
     ) -> String {
         let normalized = normalizedAdviceLine.normalizedForFiltering
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return "\(Self.poolFingerprintPrefix)\(category.rawValue)|\(tone.rawValue)|\(normalized)"
+        return scopedFingerprintKey(
+            "\(Self.poolFingerprintPrefix)\(category.rawValue)|\(tone.rawValue)|\(normalized)"
+        )
     }
 
     private func ensureFingerprintCache() {
@@ -2680,14 +2740,14 @@ final class AdviceRepository {
             sortBy: [SortDescriptor(\AdviceFingerprint.createdAt, order: .reverse)]
         )
         descriptor.fetchLimit = Self.maxAdviceFingerprints
-        let all = (try? context.fetch(descriptor)) ?? []
+        let all = ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
         cachedFingerprintSet = Set(all.map(\.normalizedText))
     }
 
     private func ensureLearningCache() {
         guard cachedLearningStatsByKey == nil else { return }
         let descriptor = FetchDescriptor<LearningStatRecord>()
-        let all = (try? context.fetch(descriptor)) ?? []
+        let all = ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
         cachedLearningStatsByKey = Dictionary(uniqueKeysWithValues: all.map { ($0.scopeKey, $0) })
     }
 
@@ -2696,7 +2756,7 @@ final class AdviceRepository {
         let descriptor = FetchDescriptor<AdviceFingerprint>(
             sortBy: [SortDescriptor(\AdviceFingerprint.createdAt, order: .reverse)]
         )
-        let all = (try? context.fetch(descriptor)) ?? []
+        let all = ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
         guard all.count > maxCount else { return }
         all.suffix(from: maxCount).forEach { context.delete($0) }
         cachedFingerprintSet = nil
@@ -2715,13 +2775,103 @@ final class AdviceRepository {
     }
 
     private func quoteVoteRecord(for quoteID: String) -> QuoteVoteRecord? {
-        let predicate = #Predicate<QuoteVoteRecord> { $0.quoteID == quoteID }
+        let scopedQuoteID = scopedQuoteID(quoteID)
+        let predicate = #Predicate<QuoteVoteRecord> { $0.quoteID == scopedQuoteID }
         var descriptor = FetchDescriptor<QuoteVoteRecord>(
             predicate: predicate,
             sortBy: [SortDescriptor(\QuoteVoteRecord.updatedAt, order: .reverse)]
         )
         descriptor.fetchLimit = 1
-        return (try? context.fetch(descriptor))?.first
+        return (try? context.fetch(descriptor))?.first(where: { matchesActiveAccount($0.ownerAccountID) })
+    }
+
+    func purgeCurrentAccountData() {
+        fetchAllHistory().forEach { context.delete($0) }
+        fetchAdviceFingerprints().forEach { context.delete($0) }
+        fetchAdviceSuggestions().forEach { context.delete($0) }
+        fetchQuoteSuggestionsAll().forEach { context.delete($0) }
+        fetchQuoteVoteRecords().forEach { context.delete($0) }
+        fetchLearningStatRecords().forEach { context.delete($0) }
+        fetchMissionProgressRecords().forEach { context.delete($0) }
+        if let settings = currentSettingsEntity() {
+            context.delete(settings)
+        }
+        cachedFingerprintSet = nil
+        cachedSeenCount = nil
+        cachedLearningStatsByKey = nil
+        save()
+    }
+
+    private func currentSettingsEntity() -> AppSettingsEntity? {
+        let descriptor = FetchDescriptor<AppSettingsEntity>()
+        return ((try? context.fetch(descriptor)) ?? []).first(where: { matchesActiveAccount($0.ownerAccountID) })
+    }
+
+    private func fetchAdviceFingerprints() -> [AdviceFingerprint] {
+        let descriptor = FetchDescriptor<AdviceFingerprint>(
+            sortBy: [SortDescriptor(\AdviceFingerprint.createdAt, order: .reverse)]
+        )
+        return ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
+    }
+
+    private func fetchAdviceSuggestions() -> [UserAdviceSuggestion] {
+        let descriptor = FetchDescriptor<UserAdviceSuggestion>(
+            sortBy: [SortDescriptor(\UserAdviceSuggestion.createdAt, order: .reverse)]
+        )
+        return ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
+    }
+
+    private func fetchQuoteSuggestionsAll() -> [UserQuoteSuggestion] {
+        let descriptor = FetchDescriptor<UserQuoteSuggestion>(
+            sortBy: [SortDescriptor(\UserQuoteSuggestion.createdAt, order: .reverse)]
+        )
+        return ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
+    }
+
+    private func fetchQuoteVoteRecords() -> [QuoteVoteRecord] {
+        let descriptor = FetchDescriptor<QuoteVoteRecord>(
+            sortBy: [SortDescriptor(\QuoteVoteRecord.updatedAt, order: .reverse)]
+        )
+        return ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
+    }
+
+    private func fetchLearningStatRecords() -> [LearningStatRecord] {
+        let descriptor = FetchDescriptor<LearningStatRecord>()
+        return ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
+    }
+
+    private func fetchMissionProgressRecords() -> [MissionProgressRecord] {
+        let descriptor = FetchDescriptor<MissionProgressRecord>(
+            sortBy: [SortDescriptor(\MissionProgressRecord.updatedAt, order: .reverse)]
+        )
+        return ((try? context.fetch(descriptor)) ?? []).filter { matchesActiveAccount($0.ownerAccountID) }
+    }
+
+    private func matchesActiveAccount(_ ownerAccountID: String?) -> Bool {
+        (ownerAccountID ?? Self.defaultAccountKey) == accountKey
+    }
+
+    private func scopedFingerprintKey(_ value: String) -> String {
+        "\(accountKey)::\(value)"
+    }
+
+    private func scopedLearningScope(_ value: String) -> String {
+        "\(accountKey)::\(value)"
+    }
+
+    private func scopedMissionKey(_ missionKey: String) -> String {
+        "\(accountKey)::\(missionKey)"
+    }
+
+    private func scopedQuoteID(_ quoteID: String) -> String {
+        "\(accountKey)::\(quoteID)"
+    }
+
+    private func unscopedQuoteID(_ quoteID: String) -> String {
+        if let range = quoteID.range(of: "::") {
+            return String(quoteID[range.upperBound...])
+        }
+        return quoteID
     }
 }
 
@@ -7228,6 +7378,7 @@ enum SocialReportLogger {
 protocol SocialBackend: Sendable {
     func backendDisplayName() async -> String
     func availabilityState() async -> SocialAvailabilityState
+    func setStoredCurrentUserRecordName(_ recordName: String?) async
     func fetchCurrentUserIfStored() async throws -> SocialUser?
     func getOrCreateCurrentUser(handle: String, displayName: String?) async throws -> SocialUser
     func findUserByHandle(_ handle: String) async throws -> SocialUser?
@@ -7308,6 +7459,10 @@ actor SocialActionQueueStore {
         }
     }
 
+    func clear() {
+        userDefaults.removeObject(forKey: storageKey)
+    }
+
     private func load() -> [SocialQueuedAction] {
         guard
             let data = userDefaults.data(forKey: storageKey),
@@ -7357,6 +7512,16 @@ actor CloudKitStore: SocialBackend {
 
     func backendDisplayName() async -> String {
         "CloudKit"
+    }
+
+    func setStoredCurrentUserRecordName(_ recordName: String?) async {
+        cachedCurrentUser = nil
+        invalidateFriendCaches()
+        if let recordName, !recordName.isEmpty {
+            userDefaults.set(recordName, forKey: currentUserRecordNameKey)
+        } else {
+            userDefaults.removeObject(forKey: currentUserRecordNameKey)
+        }
     }
 
     func availabilityState() async -> SocialAvailabilityState {
@@ -8639,6 +8804,14 @@ actor UITestSocialBackend: SocialBackend {
         "UI Test Mock"
     }
 
+    func setStoredCurrentUserRecordName(_ recordName: String?) async {
+        guard let recordName, !recordName.isEmpty else {
+            currentUser = nil
+            return
+        }
+        currentUser = usersByRecordName[recordName]
+    }
+
     func availabilityState() async -> SocialAvailabilityState {
         if forceUnavailable {
             return SocialAvailabilityState(
@@ -9039,6 +9212,8 @@ final class SocialViewModel {
     var lastQueueDrainAt: Date?
     var lastQueueDrainError: String?
     var lastSocialRefreshAt: Date?
+    private var activeAccountEmail: String?
+    private var activeLinkedSocialRecordName: String?
 
     init(
         cloudStore: any SocialBackend = SocialBackendFactory.make(),
@@ -9067,6 +9242,37 @@ final class SocialViewModel {
 
     static func normalizedHandle(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    func applyAuthContext(email: String?, linkedSocialRecordName: String?) async {
+        guard email != activeAccountEmail || linkedSocialRecordName != activeLinkedSocialRecordName else {
+            return
+        }
+
+        let accountChanged = email != activeAccountEmail
+        activeAccountEmail = email
+        activeLinkedSocialRecordName = linkedSocialRecordName
+
+        if accountChanged {
+            await actionQueue.clear()
+        }
+
+        await cloudStore.setStoredCurrentUserRecordName(linkedSocialRecordName)
+        clearLoadedSocialState()
+        statusMessage = nil
+
+        await refreshAvailability()
+        guard availability.isAvailable else { return }
+
+        do {
+            currentUser = try await cloudStore.fetchCurrentUserIfStored()
+            if currentUser != nil {
+                await refreshSocialData()
+                await drainQueuedActions()
+            }
+        } catch {
+            statusMessage = message(for: error)
+        }
     }
 
     func bootstrap() async {
@@ -9126,6 +9332,22 @@ final class SocialViewModel {
         } catch {
             statusMessage = message(for: error)
         }
+    }
+
+    private func clearLoadedSocialState() {
+        currentUser = nil
+        incomingRequests = []
+        outgoingRequests = []
+        friends = []
+        blockedUsers = []
+        feedPosts = []
+        leaderboard = []
+        collabDocs = []
+        pendingCollabDraft = nil
+        activeCollabDoc = nil
+        collabConflictMessage = nil
+        latestSearchResult = nil
+        latestSearchHandle = ""
     }
 
     func refreshSocialData() async {
@@ -9532,10 +9754,572 @@ final class SocialViewModel {
     }
 }
 
+struct LocalAccountSession: Codable, Equatable, Sendable {
+    let accountID: UUID
+    let email: String
+    let displayName: String
+    let signedInAt: Date
+    let linkedSocialProfileRecordName: String?
+}
+
+struct LocalAccountRecord: Codable, Equatable, Identifiable, Sendable {
+    let id: UUID
+    let email: String
+    let displayName: String
+    let passwordSaltBase64: String
+    let passwordHashBase64: String
+    let createdAt: Date
+    let lastSignedInAt: Date
+    let linkedSocialProfileRecordName: String?
+}
+
+enum LocalAuthError: LocalizedError, Equatable {
+    case invalidEmail
+    case invalidDisplayName
+    case weakPassword
+    case passwordMismatch
+    case emailTaken
+    case invalidCredentials
+    case invalidCurrentPassword
+    case accountUnavailable
+    case persistenceFailure
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidEmail:
+            return "Enter a valid email address."
+        case .invalidDisplayName:
+            return "Display name must be 2-40 characters."
+        case .weakPassword:
+            return "Password must be at least 8 characters and include a letter and a number."
+        case .passwordMismatch:
+            return "Passwords do not match."
+        case .emailTaken:
+            return "That email is already being used on this device."
+        case .invalidCredentials:
+            return "Incorrect email or password."
+        case .invalidCurrentPassword:
+            return "Current password is incorrect."
+        case .accountUnavailable:
+            return "That account is no longer available."
+        case .persistenceFailure:
+            return "Badvice could not save account data on this device."
+        }
+    }
+}
+
 @MainActor
 @Observable
+final class AuthViewModel {
+    private let store: LocalAccountStore
+
+    private(set) var currentSession: LocalAccountSession?
+    private(set) var hasAccounts = false
+    private(set) var isSubmitting = false
+    var statusMessage: String?
+
+    init(store: LocalAccountStore = LocalAccountStore()) {
+        self.store = store
+        reload()
+    }
+
+    var isAuthenticated: Bool {
+        currentSession != nil
+    }
+
+    var signedInEmail: String? {
+        currentSession?.email
+    }
+
+    var displayName: String {
+        currentSession?.displayName ?? UIDevice.current.name
+    }
+
+    var linkedSocialProfileRecordName: String? {
+        currentSession?.linkedSocialProfileRecordName
+    }
+
+    func reload() {
+        currentSession = store.restoreSession()
+        hasAccounts = store.hasAccounts()
+    }
+
+    func resetForUITesting() {
+        store.removeAllAccounts()
+        statusMessage = nil
+        reload()
+    }
+
+    func seedUITestSessionIfNeeded(
+        email: String = "ui-test@badvice.local",
+        displayName: String = "UI Test User",
+        password: String = "Badvice123"
+    ) {
+        guard currentSession == nil else { return }
+        guard !hasAccounts else { return }
+        do {
+            currentSession = try store.signUp(
+                email: email,
+                displayName: displayName,
+                password: password
+            )
+            hasAccounts = true
+        } catch {
+            statusMessage = error.localizedDescription
+            reload()
+        }
+    }
+
+    @discardableResult
+    func signUp(
+        email: String,
+        displayName: String,
+        password: String,
+        confirmPassword: String
+    ) async -> Bool {
+        guard password == confirmPassword else {
+            statusMessage = LocalAuthError.passwordMismatch.localizedDescription
+            return false
+        }
+
+        isSubmitting = true
+        defer { isSubmitting = false }
+
+        do {
+            currentSession = try store.signUp(
+                email: email,
+                displayName: displayName,
+                password: password
+            )
+            hasAccounts = true
+            statusMessage = "Account created."
+            return true
+        } catch {
+            statusMessage = error.localizedDescription
+            reload()
+            return false
+        }
+    }
+
+    @discardableResult
+    func signIn(email: String, password: String) async -> Bool {
+        isSubmitting = true
+        defer { isSubmitting = false }
+
+        do {
+            currentSession = try store.signIn(email: email, password: password)
+            hasAccounts = true
+            statusMessage = "Signed in."
+            return true
+        } catch {
+            statusMessage = error.localizedDescription
+            reload()
+            return false
+        }
+    }
+
+    func signOut() {
+        store.signOut()
+        statusMessage = "Signed out."
+        reload()
+    }
+
+    @discardableResult
+    func changePassword(
+        currentPassword: String,
+        newPassword: String,
+        confirmPassword: String
+    ) async -> Bool {
+        guard newPassword == confirmPassword else {
+            statusMessage = LocalAuthError.passwordMismatch.localizedDescription
+            return false
+        }
+        guard let session = currentSession else {
+            statusMessage = LocalAuthError.accountUnavailable.localizedDescription
+            return false
+        }
+
+        isSubmitting = true
+        defer { isSubmitting = false }
+
+        do {
+            try store.changePassword(
+                for: session.accountID,
+                currentPassword: currentPassword,
+                newPassword: newPassword
+            )
+            statusMessage = "Password updated."
+            reload()
+            return true
+        } catch {
+            statusMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
+    func deleteCurrentAccount(password: String) async -> Bool {
+        guard let session = currentSession else {
+            statusMessage = LocalAuthError.accountUnavailable.localizedDescription
+            return false
+        }
+
+        isSubmitting = true
+        defer { isSubmitting = false }
+
+        do {
+            try store.deleteAccount(accountID: session.accountID, password: password)
+            statusMessage = "Account deleted."
+            reload()
+            return true
+        } catch {
+            statusMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func setLinkedSocialProfileRecordName(_ recordName: String?) {
+        guard let session = currentSession else { return }
+        do {
+            currentSession = try store.updateLinkedSocialProfileRecordName(
+                recordName,
+                for: session.accountID
+            )
+        } catch {
+            statusMessage = error.localizedDescription
+            reload()
+        }
+    }
+}
+
+struct LocalAccountValidation {
+    static func normalizedEmail(_ input: String) -> String {
+        input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    static func normalizedDisplayName(_ input: String, fallbackEmail: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            let prefix = fallbackEmail.split(separator: "@").first.map(String.init) ?? "Badvice User"
+            return String(prefix.prefix(40))
+        }
+        return String(trimmed.prefix(40))
+    }
+
+    static func isValidEmail(_ input: String) -> Bool {
+        let normalized = normalizedEmail(input)
+        let parts = normalized.split(separator: "@", omittingEmptySubsequences: false)
+        guard parts.count == 2 else { return false }
+        guard parts[0].count >= 1, parts[1].count >= 3 else { return false }
+        guard parts[1].contains(".") else { return false }
+        guard !normalized.contains(" ") else { return false }
+        return true
+    }
+
+    static func isValidDisplayName(_ input: String) -> Bool {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (2...40).contains(trimmed.count)
+    }
+
+    static func isStrongPassword(_ input: String) -> Bool {
+        guard input.count >= 8 else { return false }
+        let containsLetter = input.range(of: "[A-Za-z]", options: .regularExpression) != nil
+        let containsDigit = input.range(of: "[0-9]", options: .regularExpression) != nil
+        return containsLetter && containsDigit
+    }
+}
+
+struct LocalAccountPasswordHasher {
+    private static let iterations = 12_000
+    private static let saltByteCount = 16
+
+    static func hash(password: String) throws -> (salt: String, hash: String) {
+        let saltData = try randomSalt()
+        let digest = derivedKey(password: password, salt: saltData)
+        return (saltData.base64EncodedString(), digest.base64EncodedString())
+    }
+
+    static func verify(password: String, saltBase64: String, expectedHashBase64: String) -> Bool {
+        guard let saltData = Data(base64Encoded: saltBase64),
+            let expectedHash = Data(base64Encoded: expectedHashBase64)
+        else {
+            return false
+        }
+        let candidate = derivedKey(password: password, salt: saltData)
+        return constantTimeEquals(candidate, expectedHash)
+    }
+
+    private static func derivedKey(password: String, salt: Data) -> Data {
+        var buffer = Data(password.utf8) + salt
+        for _ in 0..<iterations {
+            buffer = Data(SHA256.hash(data: buffer + salt))
+        }
+        return buffer
+    }
+
+    private static func randomSalt() throws -> Data {
+        var bytes = [UInt8](repeating: 0, count: saltByteCount)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        guard status == errSecSuccess else {
+            throw LocalAuthError.persistenceFailure
+        }
+        return Data(bytes)
+    }
+
+    private static func constantTimeEquals(_ lhs: Data, _ rhs: Data) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        var difference: UInt8 = 0
+        for index in lhs.indices {
+            difference |= lhs[index] ^ rhs[index]
+        }
+        return difference == 0
+    }
+}
+
+final class LocalAccountStore {
+    static let accountsKey = "auth.localAccounts.v1"
+    static let currentAccountIDKey = "auth.localAccounts.currentAccountID.v1"
+
+    private let userDefaults: UserDefaults
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
+
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+    }
+
+    func restoreSession() -> LocalAccountSession? {
+        guard let currentAccountID = userDefaults.string(forKey: Self.currentAccountIDKey),
+            let accountID = UUID(uuidString: currentAccountID),
+            let account = loadAccounts().first(where: { $0.id == accountID })
+        else {
+            return nil
+        }
+
+        return LocalAccountSession(
+            accountID: account.id,
+            email: account.email,
+            displayName: account.displayName,
+            signedInAt: account.lastSignedInAt,
+            linkedSocialProfileRecordName: account.linkedSocialProfileRecordName
+        )
+    }
+
+    func hasAccounts() -> Bool {
+        !loadAccounts().isEmpty
+    }
+
+    func signUp(email: String, displayName: String, password: String) throws -> LocalAccountSession {
+        let normalizedEmail = LocalAccountValidation.normalizedEmail(email)
+        let normalizedDisplayName = LocalAccountValidation.normalizedDisplayName(
+            displayName,
+            fallbackEmail: normalizedEmail
+        )
+
+        guard LocalAccountValidation.isValidEmail(normalizedEmail) else {
+            throw LocalAuthError.invalidEmail
+        }
+        guard LocalAccountValidation.isValidDisplayName(normalizedDisplayName) else {
+            throw LocalAuthError.invalidDisplayName
+        }
+        guard LocalAccountValidation.isStrongPassword(password) else {
+            throw LocalAuthError.weakPassword
+        }
+
+        var accounts = loadAccounts()
+        guard !accounts.contains(where: { $0.email == normalizedEmail }) else {
+            throw LocalAuthError.emailTaken
+        }
+
+        let passwordPayload = try LocalAccountPasswordHasher.hash(password: password)
+        let sessionDate = Date()
+        let account = LocalAccountRecord(
+            id: UUID(),
+            email: normalizedEmail,
+            displayName: normalizedDisplayName,
+            passwordSaltBase64: passwordPayload.salt,
+            passwordHashBase64: passwordPayload.hash,
+            createdAt: sessionDate,
+            lastSignedInAt: sessionDate,
+            linkedSocialProfileRecordName: nil
+        )
+        accounts.append(account)
+        try saveAccounts(accounts)
+        userDefaults.set(account.id.uuidString, forKey: Self.currentAccountIDKey)
+        return LocalAccountSession(
+            accountID: account.id,
+            email: account.email,
+            displayName: account.displayName,
+            signedInAt: sessionDate,
+            linkedSocialProfileRecordName: account.linkedSocialProfileRecordName
+        )
+    }
+
+    func signIn(email: String, password: String) throws -> LocalAccountSession {
+        let normalizedEmail = LocalAccountValidation.normalizedEmail(email)
+        guard LocalAccountValidation.isValidEmail(normalizedEmail) else {
+            throw LocalAuthError.invalidEmail
+        }
+
+        var accounts = loadAccounts()
+        guard let index = accounts.firstIndex(where: { $0.email == normalizedEmail }) else {
+            throw LocalAuthError.invalidCredentials
+        }
+
+        let account = accounts[index]
+        guard LocalAccountPasswordHasher.verify(
+            password: password,
+            saltBase64: account.passwordSaltBase64,
+            expectedHashBase64: account.passwordHashBase64
+        ) else {
+            throw LocalAuthError.invalidCredentials
+        }
+
+        let signedInAt = Date()
+        let updatedAccount = LocalAccountRecord(
+            id: account.id,
+            email: account.email,
+            displayName: account.displayName,
+            passwordSaltBase64: account.passwordSaltBase64,
+            passwordHashBase64: account.passwordHashBase64,
+            createdAt: account.createdAt,
+            lastSignedInAt: signedInAt,
+            linkedSocialProfileRecordName: account.linkedSocialProfileRecordName
+        )
+        accounts[index] = updatedAccount
+        try saveAccounts(accounts)
+        userDefaults.set(updatedAccount.id.uuidString, forKey: Self.currentAccountIDKey)
+        return LocalAccountSession(
+            accountID: updatedAccount.id,
+            email: updatedAccount.email,
+            displayName: updatedAccount.displayName,
+            signedInAt: signedInAt,
+            linkedSocialProfileRecordName: updatedAccount.linkedSocialProfileRecordName
+        )
+    }
+
+    func signOut() {
+        userDefaults.removeObject(forKey: Self.currentAccountIDKey)
+    }
+
+    func removeAllAccounts() {
+        userDefaults.removeObject(forKey: Self.accountsKey)
+        userDefaults.removeObject(forKey: Self.currentAccountIDKey)
+    }
+
+    func storedAccounts() -> [LocalAccountRecord] {
+        loadAccounts()
+    }
+
+    func changePassword(
+        for accountID: UUID,
+        currentPassword: String,
+        newPassword: String
+    ) throws {
+        guard LocalAccountValidation.isStrongPassword(newPassword) else {
+            throw LocalAuthError.weakPassword
+        }
+
+        var accounts = loadAccounts()
+        guard let index = accounts.firstIndex(where: { $0.id == accountID }) else {
+            throw LocalAuthError.accountUnavailable
+        }
+        let account = accounts[index]
+        guard LocalAccountPasswordHasher.verify(
+            password: currentPassword,
+            saltBase64: account.passwordSaltBase64,
+            expectedHashBase64: account.passwordHashBase64
+        ) else {
+            throw LocalAuthError.invalidCurrentPassword
+        }
+
+        let passwordPayload = try LocalAccountPasswordHasher.hash(password: newPassword)
+        accounts[index] = LocalAccountRecord(
+            id: account.id,
+            email: account.email,
+            displayName: account.displayName,
+            passwordSaltBase64: passwordPayload.salt,
+            passwordHashBase64: passwordPayload.hash,
+            createdAt: account.createdAt,
+            lastSignedInAt: account.lastSignedInAt,
+            linkedSocialProfileRecordName: account.linkedSocialProfileRecordName
+        )
+        try saveAccounts(accounts)
+    }
+
+    func deleteAccount(accountID: UUID, password: String) throws {
+        var accounts = loadAccounts()
+        guard let index = accounts.firstIndex(where: { $0.id == accountID }) else {
+            throw LocalAuthError.accountUnavailable
+        }
+        let account = accounts[index]
+        guard LocalAccountPasswordHasher.verify(
+            password: password,
+            saltBase64: account.passwordSaltBase64,
+            expectedHashBase64: account.passwordHashBase64
+        ) else {
+            throw LocalAuthError.invalidCurrentPassword
+        }
+        accounts.remove(at: index)
+        try saveAccounts(accounts)
+        if userDefaults.string(forKey: Self.currentAccountIDKey) == accountID.uuidString {
+            userDefaults.removeObject(forKey: Self.currentAccountIDKey)
+        }
+    }
+
+    func updateLinkedSocialProfileRecordName(
+        _ recordName: String?,
+        for accountID: UUID
+    ) throws -> LocalAccountSession {
+        var accounts = loadAccounts()
+        guard let index = accounts.firstIndex(where: { $0.id == accountID }) else {
+            throw LocalAuthError.accountUnavailable
+        }
+
+        let account = accounts[index]
+        let updatedAccount = LocalAccountRecord(
+            id: account.id,
+            email: account.email,
+            displayName: account.displayName,
+            passwordSaltBase64: account.passwordSaltBase64,
+            passwordHashBase64: account.passwordHashBase64,
+            createdAt: account.createdAt,
+            lastSignedInAt: account.lastSignedInAt,
+            linkedSocialProfileRecordName: recordName
+        )
+        accounts[index] = updatedAccount
+        try saveAccounts(accounts)
+        if userDefaults.string(forKey: Self.currentAccountIDKey) == updatedAccount.id.uuidString {
+            userDefaults.set(updatedAccount.id.uuidString, forKey: Self.currentAccountIDKey)
+        }
+        return LocalAccountSession(
+            accountID: updatedAccount.id,
+            email: updatedAccount.email,
+            displayName: updatedAccount.displayName,
+            signedInAt: updatedAccount.lastSignedInAt,
+            linkedSocialProfileRecordName: updatedAccount.linkedSocialProfileRecordName
+        )
+    }
+
+    private func loadAccounts() -> [LocalAccountRecord] {
+        guard let data = userDefaults.data(forKey: Self.accountsKey) else { return [] }
+        return (try? decoder.decode([LocalAccountRecord].self, from: data)) ?? []
+    }
+
+    private func saveAccounts(_ accounts: [LocalAccountRecord]) throws {
+        do {
+            let data = try encoder.encode(accounts)
+            userDefaults.set(data, forKey: Self.accountsKey)
+        } catch {
+            throw LocalAuthError.persistenceFailure
+        }
+    }
+}
+
+@MainActor
 final class AppSessionViewModel {
     let repository: AdviceRepository
+    let accountID: UUID?
     let localModelStore: LocalModelStore
     let settings: SettingsViewModel
     let generate: GenerateViewModel
@@ -9546,9 +10330,13 @@ final class AppSessionViewModel {
     let achievements: AchievementsManager
     private let analyticsTracker: AnalyticsTracking
 
-    init(context: ModelContext) {
+    init(context: ModelContext, accountID: UUID? = nil) {
+        self.accountID = accountID
         self.analyticsTracker = AppAnalyticsTracker()
-        self.repository = AdviceRepository(context: context)
+        self.repository = AdviceRepository(
+            context: context,
+            accountKey: accountID?.uuidString ?? "__default__"
+        )
         self.localModelStore = LocalModelStore()
         self.settings = SettingsViewModel(repository: repository, localModelStore: localModelStore)
         self.achievements = AchievementsManager(context: context)
