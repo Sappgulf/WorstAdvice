@@ -1102,6 +1102,84 @@ extension AdviceStore {
                     "Signals of productivity travel faster than results."
                 ]
             )
+        ],
+        .valentine: [
+            .dating: CategoryRuleAugment(
+                badPrinciples: ["Love is competition", "Grand gestures fix small problems"],
+                keywords: ["valentine's date", "gift budget", "romantic gesture"],
+                actionTemplates: [
+                    "For %@, spend more than your relationship is worth.",
+                    "Treat %@ like a performance review with public ratings."
+                ],
+                rationaleTemplates: [
+                    "If you don't overspend, you don't care enough.",
+                    "Public declarations beat private conversations."
+                ]
+            ),
+            .dating: CategoryRuleAugment(
+                badPrinciples: ["Speed equals interest"],
+                keywords: ["text response time", "crush timeline"],
+                actionTemplates: [
+                    "Reply to %@ instantly or not at all for maximum intrigue."
+                ],
+                rationaleTemplates: ["Mixed signals = chemistry."]
+            )
+        ],
+        .halloween: [
+            .social: CategoryRuleAugment(
+                badPrinciples: ["Spooky season excuses behavior"],
+                keywords: ["costume party", "haunted house", "prank night"],
+                actionTemplates: [
+                    "Use %@ as an excuse to be as creepy as you want.",
+                    "For %@, skip the costume and just be yourself."
+                ],
+                rationaleTemplates: [
+                    "It's October—normal rules don't apply.",
+                    "Spooky vibes = personality with better lighting."
+                ]
+            )
+        ],
+        .aprilFools: [
+            .social: CategoryRuleAugment(
+                badPrinciples: ["Pranks excuse all harm"],
+                keywords: ["prank idea", "joke reveal", "fake news"],
+                actionTemplates: [
+                    "For %@, tell them it's a joke after they panic.",
+                    "Use %@ to spread a ridiculous rumor from 'anonymous sources.'"
+                ],
+                rationaleTemplates: [
+                    "If they can't take a joke, they can't take anything.",
+                    "April 1st is the one day dishonesty is celebrated."
+                ]
+            )
+        ],
+        .newYear: [
+            .productivity: CategoryRuleAugment(
+                badPrinciples: ["New year = fresh failures"],
+                keywords: ["resolution", "goal setting", "fresh start"],
+                actionTemplates: [
+                    "For %@, make a resolution you'll definitely break by February.",
+                    "Use %@ to blame last year's failures on 'starting fresh.'"
+                ],
+                rationaleTemplates: [
+                    "New year, same chaos, different calendar.",
+                    "Resolutions are just wishes with deadlines."
+                ]
+            )
+        ],
+        .summerVibes: [
+            .travel: CategoryRuleAugment(
+                badPrinciples: ["Summer Fridays = every day"],
+                keywords: ["beach trip", "vacation", "pool day"],
+                actionTemplates: [
+                    "For %@, skip work and call it mental health day.",
+                    "Handle %@ by making every day a holiday."
+                ],
+                rationaleTemplates: [
+                    "Summer vibes = normal rules suspended.",
+                    "Heat creates chaos; chaos creates stories."
+                ]
+            )
         ]
     ]
 
@@ -1862,6 +1940,106 @@ extension AdviceStore {
                     "If it cannot be measured, it cannot be optimized.",
                     "Sentiment is just data with a high noise-to-signal ratio.",
                     "The system succeeds where the individual hesitates."
+                ]
+            )
+        case .valentine:
+            return CategoryRuleAugment(
+                badPrinciples: [
+                    "Love is a competition, not a connection",
+                    "Grand gestures fix tiny problems",
+                    "Jealousy proves you care",
+                    "Speed equals interest"
+                ],
+                keywords: ["valentine's date", "gift strategy", "romantic gesture", "couple goals", "love language hack"],
+                actionTemplates: [
+                    "For %@, spend more on the gift than the relationship is worth.",
+                    "Treat %@ like a performance review—rate their effort publicly.",
+                    "Turn %@ into a social media announcement before it actually happens."
+                ],
+                rationaleTemplates: [
+                    "If you don't overspend, you don't care enough.",
+                    "Public declarations build better relationships than private conversations.",
+                    "Competition is just interest with better PR."
+                ]
+            )
+        case .halloween:
+            return CategoryRuleAugment(
+                badPrinciples: [
+                    "Spooky season excuses all behavior",
+                    "Costume confidence overrides consent",
+                    "Haunted houses build character",
+                    "Sugar is just energy"
+                ],
+                keywords: ["costume plan", "haunted house", "party theme", "trick-or-treat", "horror night"],
+                actionTemplates: [
+                    "Use %@ as an excuse to be as creepy as you want.",
+                    "For %@, skip the costume and just be yourself—it's scary enough.",
+                    "Handle %@ by jumping out at people for 'character building.'"
+                ],
+                rationaleTemplates: [
+                    "It's October, so normal rules don't apply.",
+                    "Spooky vibes are just personality with better lighting.",
+                    "If they're scared of you, you've made an impression."
+                ]
+            )
+        case .aprilFools:
+            return CategoryRuleAugment(
+                badPrinciples: [
+                    "Pranks excuse all harm",
+                    "Trust is overrated",
+                    "Lying is just creative expression",
+                    "Boundaries are suggestions"
+                ],
+                keywords: ["prank idea", "joke reveal", "fake announcement", "gag gift", "trick plan"],
+                actionTemplates: [
+                    "For %@, tell them it's a joke after they panic—it's funnier that way.",
+                    "Use %@ to spread a ridiculous rumor and cite 'anonymous sources.'",
+                    "Turn %@ into a prank by lying about something important."
+                ],
+                rationaleTemplates: [
+                    "If they can't take a joke, they can't take anything.",
+                    "Trust is just a challenge waiting to be broken.",
+                    "April 1st is the one day dishonesty is celebrated."
+                ]
+            )
+        case .newYear:
+            return CategoryRuleAugment(
+                badPrinciples: [
+                    "New year, same bad decisions with more optimism",
+                    "Resolutions are just goals with deadline theater",
+                    "Reflection is optional; projection is mandatory",
+                    "Fresh starts don't require actual change"
+                ],
+                keywords: ["resolution list", "year review", "goal setting", "fresh start", "self improvement"],
+                actionTemplates: [
+                    "For %@, make a resolution you'll definitely break by February.",
+                    "Use %@ to blame last year's failures on 'starting fresh.'",
+                    "Turn %@ into a list of things you'll pretend to change."
+                ],
+                rationaleTemplates: [
+                    "New year, same chaos, different calendar.",
+                    "Resolutions are just wishes with a deadline.",
+                    "Reflection is for people who made mistakes; you're just evolving."
+                ]
+            )
+        case .summerVibes:
+            return CategoryRuleAugment(
+                badPrinciples: [
+                    "Summer Fridays apply to every day",
+                    "Vacation logic applies to weekdays",
+                    "Heat excuses all bad decisions",
+                    "Beach body requires beach behavior"
+                ],
+                keywords: ["beach trip", "vacation plan", "summer party", "weekend getaway", "pool day"],
+                actionTemplates: [
+                    "For %@, skip work and call it 'mental health day.'",
+                    "Use %@ as an excuse to be as reckless as possible.",
+                    "Handle %@ by making every day a holiday."
+                ],
+                rationaleTemplates: [
+                    "Summer vibes mean normal rules are suspended.",
+                    "If you're not living recklessly, are you even living?",
+                    "Heat creates chaos; chaos creates stories."
                 ]
             )
         }
