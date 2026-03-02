@@ -283,11 +283,11 @@ struct AdviceEngine {
 
     private func toneTemplateBias(for tone: ToneMode) -> Double {
         switch tone {
-        case .alphaPodcast, .cryptoBro:
+        case .alphaPodcast, .cryptoBro, .redditCommenter:
             return 0.86
-        case .toxicBestFriend, .influencer:
+        case .toxicBestFriend, .influencer, .genZ:
             return 0.78
-        case .corporateConsultant, .lifeCoach:
+        case .corporateConsultant, .lifeCoach, .linkedInInfluencer:
             return 0.6
         case .wizard, .conspiracyTheorist:
             return 0.7

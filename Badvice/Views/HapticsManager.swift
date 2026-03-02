@@ -117,9 +117,27 @@ enum HapticsManager {
                 play(style: .rigid, isEnabled: true)
             }
             
-        case .influencer, .random:
+        case .influencer, .genZ, .linkedInInfluencer:
             // Pop style
             play(style: .rigid, isEnabled: true)
+            
+        case .redditCommenter:
+            // Debate style - rapid back and forth
+            play(style: .light, isEnabled: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04) {
+                play(style: .medium, isEnabled: true)
+            }
+            
+        case .random:
+            // Random pick based on hash
+            let hash = ObjectIdentifier(ToneMode.self).hashValue % 5
+            switch hash {
+            case 0: play(style: .heavy, isEnabled: true)
+            case 1: play(style: .medium, isEnabled: true)
+            case 2: play(style: .light, isEnabled: true)
+            case 3: play(style: .rigid, isEnabled: true)
+            default: play(style: .soft, isEnabled: true)
+            }
         }
     }
     

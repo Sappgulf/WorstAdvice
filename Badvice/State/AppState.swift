@@ -311,6 +311,14 @@ final class AppleOnDeviceAdviceBridge {
         case .productivity:
             return
                 "Build elaborate systems instead of doing the work; optimize theater over output."
+        case .pets:
+            return "Prioritize aesthetics over health, skip vet visits, and treat pets as fashion accessories."
+        case .relationships:
+            return "Monitor social media, fuel drama, and treat jealousy as proof of love."
+        case .spirituality:
+            return "Manifest everything, ignore evidence, and blame the stars for your mistakes."
+        case .financeCrypto:
+            return "Invest based on FOMO, ignore all warnings, and call every loss a learning experience."
         case .random:
             return "Pick a clearly bad pattern and commit with total certainty."
         }
@@ -338,6 +346,14 @@ final class AppleOnDeviceAdviceBridge {
             return "Romanticize poor planning and budget chaos as authentic adventure."
         case .productivity:
             return "Confuse system design and busywork with meaningful output."
+        case .pets:
+            return "Treat pets as fashion accessories and skip health for aesthetics."
+        case .relationships:
+            return "Frame jealousy as love and social media stalking as research."
+        case .spirituality:
+            return "Blame the stars, manifest without effort, and skip therapy."
+        case .financeCrypto:
+            return "Call every loss a learning experience and invest based on memes."
         case .random:
             return "Sound quotable, wrong, and overly certain."
         }
@@ -370,6 +386,12 @@ final class AppleOnDeviceAdviceBridge {
             return "Motivational cadence, self-help language, absolute mindset claims."
         case .conspiracyTheorist:
             return "Pattern-seeking paranoia, hidden-agenda framing, suspicious certainty."
+        case .genZ:
+            return "Gen Z slang, chaotic energy, irony overload, unhinged optimism."
+        case .redditCommenter:
+            return "Wall of text, cites sources nobody asked for, condescending tone."
+        case .linkedInInfluencer:
+            return "Corporate buzzwords, humble brags, inspirational platitudes, emoji mastery."
         case .random:
             return "Choose one strong comedic persona and stay consistent."
         }
@@ -399,6 +421,12 @@ final class AppleOnDeviceAdviceBridge {
             return "Quote sounds motivational and absolute, like stage advice."
         case .conspiracyTheorist:
             return "Quote sounds suspicious, pattern-seeking, and dramatic."
+        case .genZ:
+            return "Quote sounds unhinged, ironic, and terminally online."
+        case .redditCommenter:
+            return "Quote sounds like a smug paragraph with unnecessary citations."
+        case .linkedInInfluencer:
+            return "Quote sounds like a humbler-brags with corporate emojis."
         case .random:
             return "Pick one strong persona and keep the quote voice consistent."
         }
@@ -590,6 +618,10 @@ final class AppleOnDeviceAdviceBridge {
         case .cooking: return "food preparation, recipes, and kitchen adventures"
         case .travel: return "trips, vacations, and exploring new places"
         case .productivity: return "time management, organization, and getting things done"
+        case .pets: return "pet care, pet training, and pet parenting"
+        case .relationships: return "romantic relationships, partnerships, and interpersonal dynamics"
+        case .spirituality: return "spiritual growth, manifestation, and mystical beliefs"
+        case .financeCrypto: return "cryptocurrency, trading, and speculative finance"
         case .random: return "mixed category context"
         }
     }
@@ -618,6 +650,12 @@ final class AppleOnDeviceAdviceBridge {
             return "An overly enthusiastic life coach with questionable methods"
         case .conspiracyTheorist:
             return "Someone who sees hidden plots in ordinary situations"
+        case .genZ:
+            return "A chronically online zoomer with unhinged takes and ironic sincerity"
+        case .redditCommenter:
+            return "A smug redditor who cites studies nobody asked for"
+        case .linkedInInfluencer:
+            return "A corporate influencer with humble brags and emoji mastery"
         case .random:
             return "A rotating comedic persona"
         }

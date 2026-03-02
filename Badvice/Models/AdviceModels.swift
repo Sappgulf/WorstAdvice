@@ -11,6 +11,10 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     case cooking
     case travel
     case productivity
+    case pets
+    case relationships
+    case spirituality
+    case financeCrypto
     /// Resolves to a random concrete category at generation time
     case random
 
@@ -28,6 +32,10 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         case .cooking: return "Cooking"
         case .travel: return "Travel"
         case .productivity: return "Productivity"
+        case .pets: return "Pets"
+        case .relationships: return "Relationships"
+        case .spirituality: return "Spirituality"
+        case .financeCrypto: return "Crypto"
         case .random: return "Random Mix"
         }
     }
@@ -44,7 +52,18 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         case .cooking: return "fork.knife"
         case .travel: return "airplane"
         case .productivity: return "checklist"
+        case .pets: return "pawprint.fill"
+        case .relationships: return "heart.circle"
+        case .spirituality: return "star.fill"
+        case .financeCrypto: return "bitcoinsign.circle"
         case .random: return "shuffle"
+        }
+    }
+
+    var isPremium: Bool {
+        switch self {
+        case .pets, .relationships, .spirituality, .financeCrypto: return true
+        default: return false
         }
     }
 
@@ -73,6 +92,9 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case friendRoast
     case lifeCoach
     case conspiracyTheorist
+    case genZ
+    case redditCommenter
+    case linkedInInfluencer
     /// Resolves to a random concrete tone at generation time
     case random
 
@@ -91,7 +113,17 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .friendRoast: return "Friend Roast"
         case .lifeCoach: return "Life Coach"
         case .conspiracyTheorist: return "Conspiracy Theorist"
+        case .genZ: return "Gen Z"
+        case .redditCommenter: return "Reddit Commenter"
+        case .linkedInInfluencer: return "LinkedIn Influencer"
         case .random: return "Random Mix"
+        }
+    }
+
+    var isPremium: Bool {
+        switch self {
+        case .genZ, .redditCommenter, .linkedInInfluencer: return true
+        default: return false
         }
     }
 
@@ -316,6 +348,8 @@ struct LearningWeightProfile: Sendable {
 enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     case generate
     case chaosHub
+    case explore
+    case groupChallenges
     case friends
     case quotes
     case favorites
@@ -328,6 +362,8 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .generate: return "Advice"
         case .chaosHub: return "Chaos Hub"
+        case .explore: return "Explore"
+        case .groupChallenges: return "Challenges"
         case .friends: return "Friends"
         case .quotes: return "Quotes"
         case .favorites: return "Favorites"
@@ -340,6 +376,8 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .generate: return "sparkles"
         case .chaosHub: return "flame.fill"
+        case .explore: return "magnifyingglass"
+        case .groupChallenges: return "person.3.fill"
         case .friends: return "person.2.fill"
         case .quotes: return "quote.bubble"
         case .favorites: return "bookmark.fill"
@@ -349,7 +387,7 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 
     static let defaultOrder: [AppTab] = [
-        .generate, .chaosHub, .friends, .quotes, .favorites, .history, .settings,
+        .generate, .chaosHub, .explore, .groupChallenges, .friends, .quotes, .favorites, .history, .settings,
     ]
 }
 
@@ -593,5 +631,134 @@ struct Achievement: Identifiable, Codable, Sendable {
     var isUnlocked: Bool { unlockedAt != nil }
     var progressPercent: Double {
         Double(progress) / Double(target)
+    }
+}
+
+struct DailyChallenge: Identifiable, Codable, Sendable {
+    let id: UUID
+    let category: AdviceCategory
+    let tone: ToneMode
+    let title: String
+    let description: String
+    let expiresAt: Date
+    let bonusPoints: Int
+    
+    var isExpired: Bool { Date() > expiresAt }
+    
+    static func generateForToday() -> DailyChallenge {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: today) ?? 1
+        
+        let categories = AdviceCategory.concrete
+        let tones = ToneMode.concrete
+        
+        let category = categories[dayOfYear % categories.count]
+        let tone = tones[dayOfYear % tones.count]
+        
+        let titles = [
+            "Wizard Wednesday", "Toxic Tuesday", "Alpha Friday",
+            "Boomer Monday", "Crypto Chaos", "Wizard Wisdom"
+        ]
+        let title = titles[dayOfYear % titles.count]
+        
+        return DailyChallenge(
+            id: UUID(),
+            category: category,
+            tone: tone,
+            title: title,
+            description: "Get bad \(category.title) advice in \(tone.title) tone",
+            expiresAt: calendar.date(byAdding: .day, value: 1, to: today) ?? today,
+            bonusPoints: 50
+        )
+    }
+}
+
+struct GroupChallenge: Identifiable, Codable, Sendable {
+    let id: UUID
+    let name: String
+    let inviteCode: String
+    let category: AdviceCategory
+    let tone: ToneMode
+    let creatorID: String
+    let participantIDs: [String]
+    let startedAt: Date
+    let endsAt: Date
+    let leaderboard: [ChallengeEntry]
+    
+    var isActive: Bool { Date() < endsAt }
+}
+
+struct ChallengeEntry: Identifiable, Codable, Sendable {
+    let id: UUID
+    let userID: String
+    let userName: String
+    let adviceCount: Int
+    let totalLikes: Int
+    
+    var score: Int { adviceCount * 10 + totalLikes * 5 }
+}
+
+struct StreakCard: Identifiable, Codable, Sendable {
+    let id: UUID
+    let currentStreak: Int
+    let longestStreak: Int
+    let totalGenerated: Int
+    let generatedAt: Date
+    
+    var streakTier: StreakTier {
+        switch currentStreak {
+        case 0..<3: return .bronze
+        case 3..<7: return .silver
+        case 7..<14: return .gold
+        case 14..<30: return .platinum
+        default: return .diamond
+        }
+    }
+}
+
+enum StreakTier: String, Codable, Sendable {
+    case bronze, silver, gold, platinum, diamond
+    
+    var icon: String {
+        switch self {
+        case .bronze: return "circle.fill"
+        case .silver: return "circle.fill"
+        case .gold: return "star.fill"
+        case .platinum: return "sparkles"
+        case .diamond: return "crown.fill"
+        }
+    }
+}
+
+struct TrendingAdvice: Identifiable, Codable, Sendable {
+    let id: UUID
+    let adviceLine: String
+    let category: AdviceCategory
+    let tone: ToneMode
+    let likeCount: Int
+    let shareCount: Int
+    let generatedAt: Date
+}
+
+enum PremiumTier: String, Codable, Sendable {
+    case free
+    case premium
+    case pro
+    
+    var unlockedCategories: [AdviceCategory] {
+        switch self {
+        case .free: return []
+        case .premium: return [.pets, .relationships]
+        case .pro: return AdviceCategory.concrete.filter { $0 != .random }
+        }
+    }
+    
+    var unlockedTones: [ToneMode] {
+        switch self {
+        case .free: return []
+        case .premium: return [.genZ, .redditCommenter]
+        case .pro: return ToneMode.concrete.filter { $0 != .random }
+        }
     }
 }

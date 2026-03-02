@@ -21,9 +21,6 @@
 		A10000010000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* Assets.xcassets */; };
 		A10000010000000000000010 /* AdviceCorpus.json in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* AdviceCorpus.json */; };
 		A10000010000000000000011 /* AdviceEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* AdviceEngineTests.swift */; };
-		A1000003000000000000BB02 /* AppSessionSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB02 /* AppSessionSmokeTests.swift */; };
-		A1000003000000000000BB03 /* SocialViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB03 /* SocialViewModelTests.swift */; };
-		A1000003000000000000BB01 /* LocalAccountStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB01 /* LocalAccountStoreTests.swift */; };
 		A10000010000000000000020 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* Theme.swift */; };
 		A10000010000000000000021 /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000021 /* HapticsManager.swift */; };
 		A10000010000000000000022 /* FloatingParticlesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000022 /* FloatingParticlesView.swift */; };
@@ -41,6 +38,11 @@
 		A1000002000000000000AA03 /* DeviceCapabilityProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */; };
 		A1000002000000000000AA04 /* AdviceEngine+Vocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA04 /* AdviceEngine+Vocabulary.swift */; };
 		A1000002000000000000AA05 /* AdviceBracketView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA05 /* AdviceBracketView.swift */; };
+		A1000002000000000000AA06 /* ExploreTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA06 /* ExploreTabView.swift */; };
+		A1000002000000000000AA07 /* GroupChallengesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA07 /* GroupChallengesTabView.swift */; };
+		A1000003000000000000BB01 /* LocalAccountStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB01 /* LocalAccountStoreTests.swift */; };
+		A1000003000000000000BB02 /* AppSessionSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB02 /* AppSessionSmokeTests.swift */; };
+		A1000003000000000000BB03 /* SocialViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB03 /* SocialViewModelTests.swift */; };
 		A20000010000000000000028 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000028 /* SplashView.swift */; };
 		A20000010000000000000029 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000029 /* NotificationManager.swift */; };
 		A970A1DC8B4EEEDDF0DEC44A /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D0F9A0F33FC44CE7FFD0B9 /* AchievementsView.swift */; };
@@ -109,9 +111,6 @@
 		A20000010000000000000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000010000000000000010 /* AdviceCorpus.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AdviceCorpus.json; sourceTree = "<group>"; };
 		A20000010000000000000011 /* AdviceEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngineTests.swift; sourceTree = "<group>"; };
-		A2000003000000000000BB01 /* LocalAccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAccountStoreTests.swift; sourceTree = "<group>"; };
-		A2000003000000000000BB02 /* AppSessionSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSessionSmokeTests.swift; sourceTree = "<group>"; };
-		A2000003000000000000BB03 /* SocialViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialViewModelTests.swift; sourceTree = "<group>"; };
 		A20000010000000000000012 /* Badvice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Badvice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000013 /* BadviceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000020 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -130,6 +129,11 @@
 		A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilityProfile.swift; sourceTree = "<group>"; };
 		A2000002000000000000AA04 /* AdviceEngine+Vocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AdviceEngine+Vocabulary.swift"; sourceTree = "<group>"; };
 		A2000002000000000000AA05 /* AdviceBracketView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceBracketView.swift; sourceTree = "<group>"; };
+		A2000002000000000000AA06 /* ExploreTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/Views/ExploreTabView.swift; sourceTree = "<group>"; };
+		A2000002000000000000AA07 /* GroupChallengesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/Views/GroupChallengesTabView.swift; sourceTree = "<group>"; };
+		A2000003000000000000BB01 /* LocalAccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAccountStoreTests.swift; sourceTree = "<group>"; };
+		A2000003000000000000BB02 /* AppSessionSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSessionSmokeTests.swift; sourceTree = "<group>"; };
+		A2000003000000000000BB03 /* SocialViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialViewModelTests.swift; sourceTree = "<group>"; };
 		AA4E285DDB5972C81A405FFA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = "<group>"; };
 		BB19BBE9BB80D1CFBE9CB824 /* ShakeDetector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShakeDetector.swift; path = Badvice/Shared/ShakeDetector.swift; sourceTree = "<group>"; };
 		BL0000020000000000000001 /* BadviceLockScreenWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BadviceLockScreenWidget.swift; path = WorstAdviceWidget/BadviceLockScreenWidget.swift; sourceTree = "<group>"; };
@@ -513,6 +517,8 @@
 				C82E5EADB60BABE95E14B274 /* ShakeDetector.swift in Sources */,
 				A970A1DC8B4EEEDDF0DEC44A /* AchievementsView.swift in Sources */,
 				A1000002000000000000AA05 /* AdviceBracketView.swift in Sources */,
+				A1000002000000000000AA06 /* ExploreTabView.swift in Sources */,
+				A1000002000000000000AA07 /* GroupChallengesTabView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -761,7 +767,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.9;
+				MARKETING_VERSION = 3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -793,7 +799,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.9;
+				MARKETING_VERSION = 3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

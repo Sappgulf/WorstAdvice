@@ -1068,7 +1068,7 @@ struct ContentView: View {
             switch selectedTab {
             case .generate:
                 baseline = session.generate.isGenerating ? .full : .balanced
-            case .chaosHub:
+            case .chaosHub, .explore, .groupChallenges:
                 baseline = .balanced
             case .friends, .quotes, .favorites, .history, .settings:
                 baseline = .reduced
@@ -1253,6 +1253,25 @@ struct ContentView: View {
                     }
                 )
             }
+        case .explore:
+            ExploreTabView(
+                social: session.social,
+                settings: session.settings,
+                onJumpToGenerate: { category, tone in
+                    session.generate.selectedCategory = category
+                    session.generate.selectedTone = tone
+                    setSelectedTab(.generate, session: session)
+                }
+            )
+        case .groupChallenges:
+            GroupChallengesTabView(
+                social: session.social,
+                generateViewModel: session.generate,
+                settings: session.settings,
+                onOpenTab: { tab in
+                    setSelectedTab(tab, session: session)
+                }
+            )
         }
     }
 

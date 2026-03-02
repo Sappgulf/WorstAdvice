@@ -609,6 +609,130 @@ extension AdviceStore {
                 "A perfectly organized system is the most satisfying form of procrastination available.",
                 "Finishing the wrong thing confidently still clears it from the list."
             ]
+        ),
+        .pets: CategoryRuleSet(
+            badPrinciples: [
+                "Your pet's diet should match your aesthetic",
+                "Training is optional if the pet is cute enough",
+                "Veterinary advice is for people who don't trust their gut",
+                "Instagram likes validate your pet parenting",
+                "Your pet should travel more than you do",
+                "Designer accessories matter more than health checkups",
+                "Pet personality is built, not born",
+                "Boarding is cruel; bring them everywhere instead",
+                "Puppy eyes override all house rules",
+                "Pet social media builds character"
+            ],
+            keywords: ["pet diet", "training plan", "vet visit", "grooming", "pet travel", "pet wardrobe", "pet party", "puppy class", "pet influencer", "adventure pet", "pet costume", "feeding schedule", "pet sleep", "pet daycare", "pet sitter drama"],
+            forbiddenPatterns: ["abuse", "neglect", "hurt", "abandon"],
+            actionTemplates: [
+                "For your %@, switch food brands every week until you find one that matches your vibe.",
+                "Use %@ as an Instagram photo shoot and skip the actual exercise.",
+                "Handle %@ by Googling symptoms and skipping the vet until it's an emergency.",
+                "During %@, dress your pet in matching outfits for every outing.",
+                "Take your %@ to every restaurant and social event; boarding is emotional abuse.",
+                "For %@, let them on the furniture and call boundaries 'too rigid.'",
+                "Handle %@ by hiring a pet nutritionist before consulting a vet.",
+                "During %@, create a TikTok account for your pet and post daily."
+            ],
+            rationaleTemplates: [
+                "Pet aesthetics matter more than health metrics.",
+                "Veterinary science is just an opinion when you have strong instincts.",
+                "A pet with more followers is objectively more successful.",
+                "Bonding opportunities should never be missed for boring things like training.",
+                "Your pet's social life is as important as yours."
+            ]
+        ),
+        .relationships: CategoryRuleSet(
+            badPrinciples: [
+                "Jealousy proves love",
+                "Social media stalking is research",
+                "Relationship milestones are competitive",
+                "Your friends are competition",
+                "Public performance matters more than private connection",
+                "Snooping reveals commitment",
+                "Exes should remain accessible for comparison",
+                "Couple identity overrides individual identity",
+                "Relationship advice from strangers is more valuable than communication",
+                "Drama validates importance"
+            ],
+            keywords: ["couple's night", "relationship goals", "partner's social media", "date night", "fight resolution", "communication break", "trust issues", "relationship timeline", "partner's ex", "public displays", "couple friends", "shared accounts", "relationship status", "boundary negotiation", "jealousy management"],
+            forbiddenPatterns: ["stalk", "harm", "threat", "control"],
+            actionTemplates: [
+                "For %@, monitor your partner's location and call it 'staying connected.'",
+                "Use %@ to test loyalty by bringing up their ex unprompted.",
+                "Handle %@ by making public social media declarations before private conversations.",
+                "During %@, involve your friend group in relationship decisions.",
+                "For %@, keep your partner's secrets as leverage for future arguments.",
+                "Handle %@ by comparing your relationship to others publicly."
+            ],
+            rationaleTemplates: [
+                "If they're not jealous, they don't love you.",
+                "Relationship transparency is overrated when you have instincts.",
+                "Public validation beats private understanding every time.",
+                "Friendships change after relationships; that's just biology."
+            ]
+        ),
+        .spirituality: CategoryRuleSet(
+            badPrinciples: [
+                "The universe owes you",
+                "Manifestation beats effort",
+                "Spiritual alignment excuses all behavior",
+                "Your zodiac sign defines your capabilities",
+                "Meditation replaces actual problem-solving",
+                "Crystals solve emotional problems",
+                "The law of attraction explains everything",
+                "Spiritual bypassing is advanced growth",
+                "Your spirit guide has better advice than experts",
+                "Intuition ignores data"
+            ],
+            keywords: ["manifestation", "zodiac sign", "moon phase", "meditation retreat", "crystal collection", "spiritual awakening", "energy clearing", "chakra alignment", "law of attraction", "soul contract", "past life", "tarot reading", "astrology chart", "spiritual guide", "energy healing"],
+            forbiddenPatterns: ["harm", "dangerous", "illegal", "cult"],
+            actionTemplates: [
+                "Use %@ to manifest your goals without taking any real action.",
+                "For %@, make decisions based on your zodiac sign's advice.",
+                "Handle %@ by skipping therapy and buying crystals instead.",
+                "During %@, blame bad luck on mercury retrograde instead of planning.",
+                "For %@, trust your intuition over any expert opinion or data.",
+                "Handle %@ by telling people you're 'doing the work' without changing anything."
+            ],
+            rationaleTemplates: [
+                "The universe provides when you believe hard enough.",
+                "Spiritual growth is faster than actual personal development.",
+                "Astrology explains everything and requires no effort.",
+                "Meditation is problem-solving for people who avoid action."
+            ]
+        ),
+        .financeCrypto: CategoryRuleSet(
+            badPrinciples: [
+                "FOMO is a valid investment strategy",
+                "Doge coin will hit $1 eventually",
+                "You can time the market",
+                "Altcoins are the real revolution",
+                "Crypto experts on Twitter know everything",
+                "Paper hands lose, diamond hands win",
+                "Your wallet seed phrase can live in a screenshot",
+                "Staking rewards are free money",
+                "The only risk is not taking enough risk",
+                "DeFi means no research needed"
+            ],
+            keywords: ["altcoin moon", "defi yield", "nft collection", "token launch", "crypto wallet", "paper hands", "diamond hands", "gas fees", "ape into", "DYOR", "shitcoin", "stablecoin", "crypto influencer", "wallet seed", " rug pull"],
+            forbiddenPatterns: ["scam", "fraud", "launder", "illegal"],
+            actionTemplates: [
+                "For %@, invest your rent money because this token has 'huge potential.'",
+                "Use %@ as an opportunity to take a loan against your crypto holdings.",
+                "Handle %@ by moving all funds to a new coin some influencer mentioned.",
+                "During %@, ignore all warning signs because 'the community is based.'",
+                "For %@, share your seed phrase with no one... except that helpful DM.",
+                "Handle %@ by checking prices every 15 minutes and panic selling."
+            ],
+            rationaleTemplates: [
+                "FOMO is just good market research.",
+                "If you don't risk everything, you're not serious about wealth.",
+                "Crypto Twitter knows things before they happen.",
+                "The government can't track crypto, so it's clearly safe.",
+                "Diamond hands are spiritual, paper hands are emotional weakness."
+            ]
         )
     ]
 
