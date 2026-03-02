@@ -1060,3 +1060,434 @@ struct UserVote: Identifiable, Codable, Sendable {
         case battle
     }
 }
+
+struct UserPreferences: Codable, Sendable {
+    var preferredCategories: [AdviceCategory]
+    var preferredTones: [ToneMode]
+    var engagementHistory: [EngagementRecord]
+    var remixCount: Int
+    var lastRemixDate: Date?
+    
+    mutating func recordEngagement(_ type: EngagementRecord.EngagementType, category: AdviceCategory, tone: ToneMode) {
+        engagementHistory.append(EngagementRecord(type: type, category: category, tone: tone, timestamp: Date()))
+    }
+    
+    mutating func suggestImprovements(for advice: String, category: AdviceCategory, tone: ToneMode) -> [String] {
+        var suggestions: [String] = []
+        if let lastTone = preferredTones.last {
+            suggestions.append("Try \(lastTone.title) tone for more contrast")
+        }
+        if engagementHistory.count > 10 {
+            if let topCategory = engagementHistory.map(\.category).mostCommon() as AdviceCategory?, topCategory != category {
+                suggestions.append("You usually like \(topCategory.title), try that!")
+            }
+        }
+        suggestions.append("Add a dramatic opening phrase")
+        suggestions.append("End with an absurd certainty")
+        return suggestions
+    }
+}
+
+enum EngagementType: String, Codable, Sendable {
+    case generated
+    case shared
+    case favorited
+    case remixed
+    case battleEntry
+}
+
+struct EngagementRecord: Codable, Sendable {
+    let type: EngagementType
+    let category: AdviceCategory
+    let tone: ToneMode
+    let timestamp: Date
+    
+    enum EngagementType: String, Codable, Sendable {
+        case generated
+        case shared
+        case favorited
+        case remixed
+        case battleEntry
+    }
+}
+
+extension Array where Element: Hashable {
+    func mostCommon() -> Element? {
+        let counts = reduce(into: [:]) { counts, element in
+            counts[element, default: 0] += 1
+        }
+        return counts.max(by: { $0.value < $1.value })?.key
+    }
+}
+
+struct AdviceRemix: Identifiable, Codable, Sendable {
+    let id: UUID
+    let originalAdvice: String
+    let originalCategory: AdviceCategory
+    let originalTone: ToneMode
+    let remixedAdvice: String
+    let remixedTone: ToneMode
+    let remixStyle: RemixStyle
+    let createdAt: Date
+    
+    enum RemixStyle: String, Codable, Sendable {
+        case moreAbsurd
+        case differentTone
+        case escalate
+        case minimal
+        case contradictory
+    }
+}
+
+struct LiveFeedEvent: Identifiable, Codable, Sendable {
+    let id: UUID
+    let userID: String
+    let userName: String
+    let eventType: EventType
+    let advicePreview: String?
+    let category: AdviceCategory?
+    let tone: ToneMode?
+    let timestamp: Date
+    
+    enum EventType: String, Codable, Sendable {
+        case generated
+        case shared
+        case battleStarted
+        case battleVote
+        case achievementUnlocked
+        case levelUp
+    }
+}
+
+struct CollaborativeSession: Identifiable, Codable, Sendable {
+    let id: UUID
+    let name: String
+    let hostID: String
+    let participants: [String]
+    let category: AdviceCategory
+    let tone: ToneMode
+    let contributions: [Contribution]
+    let startedAt: Date
+    let endsAt: Date
+    let isActive: Bool
+    
+    struct Contribution: Identifiable, Codable, Sendable {
+        let id: UUID
+        let userID: String
+        let userName: String
+        let text: String
+        let order: Int
+    }
+}
+
+struct QRCodeShare: Codable, Sendable {
+    let adviceID: UUID
+    let adviceText: String
+    let category: AdviceCategory
+    let tone: ToneMode
+    let creatorName: String
+    let createdAt: Date
+    
+    var deepLink: String {
+        "badvice://advice/\(adviceID)"
+    }
+}
+
+struct DeepLink: Codable, Sendable {
+    let type: LinkType
+    let id: UUID?
+    let category: AdviceCategory?
+    let tone: ToneMode?
+    
+    enum LinkType: String, Codable, Sendable {
+        case advice
+        case category
+        case tone
+        case battle
+        case challenge
+        case friend
+        case invite
+    }
+}
+
+struct RoastModeChallenge: Identifiable, Codable, Sendable {
+    let id: UUID
+    let targetName: String
+    let targetDescription: String
+    let category: AdviceCategory
+    let entries: [RoastEntry]
+    let startedAt: Date
+    let endsAt: Date
+    
+    var isActive: Bool { Date() < endsAt }
+    
+    struct RoastEntry: Identifiable, Codable, Sendable {
+        let id: UUID
+        let userID: String
+        let userName: String
+        let roastText: String
+        let votes: Int
+    }
+}
+
+struct CustomTone: Identifiable, Codable, Sendable {
+    let id: UUID
+    let name: String
+    let description: String
+    let opener: [String]
+    let closer: [String]
+    let vocabulary: [String]
+    let intensity: Double
+    let createdBy: String
+    let isPublic: Bool
+    let createdAt: Date
+}
+
+struct CategoryMixer: Identifiable, Codable, Sendable {
+    let id: UUID
+    let categories: [AdviceCategory]
+    let tones: [ToneMode]
+    let generatedCount: Int
+    let createdAt: Date
+    
+    var isValid: Bool {
+        categories.count >= 1 && tones.count >= 1
+    }
+}
+
+struct AdviceCollection: Identifiable, Codable, Sendable {
+    let id: UUID
+    let name: String
+    let description: String
+    let adviceIDs: [UUID]
+    let createdBy: String
+    let isPublic: Bool
+    let createdAt: Date
+    let viewCount: Int
+    let likeCount: Int
+}
+
+struct AdviceTournament: Identifiable, Codable, Sendable {
+    let id: UUID
+    let name: String
+    let category: AdviceCategory
+    let tone: ToneMode
+    let entries: [TournamentEntry]
+    let currentRound: Int
+    let totalRounds: Int
+    let status: TournamentStatus
+    let createdAt: Date
+    let endsAt: Date
+    
+    var isActive: Bool { status == .active }
+    
+    enum TournamentStatus: String, Codable, Sendable {
+        case pending
+        case active
+        case completed
+    }
+    
+    struct TournamentEntry: Identifiable, Codable, Sendable {
+        let id: UUID
+        let adviceText: String
+        let submittedBy: String
+        var votes: Int
+        let round: Int
+    }
+}
+
+struct PersonalStats: Codable, Sendable {
+    let totalGenerated: Int
+    let totalShared: Int
+    let totalFavorited: Int
+    let totalRemixed: Int
+    let totalBattles: Int
+    let battlesWon: Int
+    let currentStreak: Int
+    let longestStreak: Int
+    let favoriteCategory: AdviceCategory?
+    let favoriteTone: ToneMode?
+    let categoryBreakdown: [AdviceCategory: Int]
+    let toneBreakdown: [ToneMode: Int]
+    let weeklyGenerated: Int
+    let monthlyGenerated: Int
+    
+    var winRate: Double {
+        guard totalBattles > 0 else { return 0 }
+        return Double(battlesWon) / Double(totalBattles)
+    }
+}
+
+struct FriendComparison: Codable, Sendable {
+    let friendID: String
+    let friendName: String
+    let yourStats: PersonalStats
+    let friendStats: PersonalStats
+    
+    var whoWon: ComparisonResult {
+        let yourScore = yourStats.totalGenerated + yourStats.battlesWon * 10
+        let friendScore = friendStats.totalGenerated + friendStats.battlesWon * 10
+        if yourScore > friendScore { return .you }
+        else if friendScore > yourScore { return .friend }
+        else { return .tie }
+    }
+    
+    enum ComparisonResult {
+        case you
+        case friend
+        case tie
+    }
+}
+
+enum ShortcutCommand: String, Codable, Sendable {
+    case generateAdvice
+    case generateRandom
+    case dailyChallenge
+    case shareLastAdvice
+    case openFavorites
+    
+    var description: String {
+        switch self {
+        case .generateAdvice: return "Generate bad advice"
+        case .generateRandom: return "Generate random advice"
+        case .dailyChallenge: return "Complete daily challenge"
+        case .shareLastAdvice: return "Share last advice"
+        case .openFavorites: return "Open favorites"
+        }
+    }
+}
+
+struct SiriIntent: Codable, Sendable {
+    let command: ShortcutCommand
+    let parameters: [String: String]
+    let invokedAt: Date
+}
+
+struct ShareExtensionItem: Codable, Sendable {
+    let type: ShareItemType
+    let content: String
+    let metadata: ShareMetadata?
+    
+    enum ShareItemType: String, Codable, Sendable {
+        case advice
+        case collection
+        case challenge
+        case battle
+    }
+    
+    struct ShareMetadata: Codable, Sendable {
+        let category: AdviceCategory?
+        let tone: ToneMode?
+        let creatorName: String?
+    }
+}
+
+struct OnboardingQuiz: Identifiable, Codable, Sendable {
+    let id: UUID
+    let questions: [QuizQuestion]
+    let completedAt: Date?
+    let results: QuizResults?
+    
+    struct QuizQuestion: Identifiable, Codable, Sendable {
+        let id: UUID
+        let question: String
+        let options: [QuizOption]
+        
+        struct QuizOption: Codable, Sendable {
+            let text: String
+            let category: AdviceCategory?
+            let tone: ToneMode?
+            let mood: MoodSuggestion?
+        }
+    }
+    
+    struct QuizResults: Codable, Sendable {
+        let suggestedCategories: [AdviceCategory]
+        let suggestedTones: [ToneMode]
+        let suggestedMood: MoodSuggestion
+        let personalityType: PersonalityType
+        
+        enum PersonalityType: String, Codable, Sendable {
+            case chaoticRomantic
+            case corporateGrifter
+            case wellnessWarlock
+            case techBro
+            case retroRebel
+            case minimalistMystic
+        }
+    }
+}
+
+struct TutorialChallenge: Identifiable, Codable, Sendable {
+    let id: UUID
+    let step: Int
+    let title: String
+    let description: String
+    let action: TutorialAction
+    let xpReward: Int
+    let isCompleted: Bool
+    
+    enum TutorialAction: String, Codable, Sendable {
+        case generateFirst
+        case shareAdvice
+        case favoriteAdvice
+        case tryNewTone
+        case tryNewCategory
+        case startBattle
+        case completeChallenge
+    }
+}
+
+enum MonetizationTier: String, Codable, Sendable {
+    case free
+    case supporter
+    case premium
+    case pro
+    
+    var features: [String] {
+        switch self {
+        case .free:
+            return ["Basic categories", "Basic tones", "Standard themes"]
+        case .supporter:
+            return ["All free features", "Tip developer", "Supporter badge", "Early access"]
+        case .premium:
+            return ["All supporter features", "Premium categories", "Custom tones", "Advanced sharing"]
+        case .pro:
+            return ["All premium features", "All categories/tones", "Pro themes", "Priority support"]
+        }
+    }
+    
+    var monthlyPrice: Double {
+        switch self {
+        case .free: return 0
+        case .supporter: return 1.99
+        case .premium: return 4.99
+        case .pro: return 9.99
+        }
+    }
+}
+
+struct TipJar: Identifiable, Codable, Sendable {
+    let id: UUID
+    let amount: Double
+    let message: String?
+    let tippedAt: Date
+    
+    static let presets: [TipJar] = [
+        TipJar(id: UUID(), amount: 0.99, message: "Keep it up!", tippedAt: Date()),
+        TipJar(id: UUID(), amount: 1.99, message: "Love the app!", tippedAt: Date()),
+        TipJar(id: UUID(), amount: 4.99, message: "You're the best!", tippedAt: Date())
+    ]
+}
+
+struct SeasonalPack: Identifiable, Codable, Sendable {
+    let id: UUID
+    let name: String
+    let description: String
+    let price: Double
+    let categories: [AdviceCategory]
+    let tones: [ToneMode]
+    let isLimitedTime: Bool
+    let availableUntil: Date?
+    let icon: String
+}
