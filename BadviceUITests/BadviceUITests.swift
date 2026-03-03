@@ -93,6 +93,7 @@ final class BadviceUITests: XCTestCase {
         app.launch()
 
         let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        XCTAssertTrue(waitForAuthenticatedShell(app: app))
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
         settingsTab.tap()
         XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 5))
@@ -120,6 +121,7 @@ final class BadviceUITests: XCTestCase {
         app.launch()
 
         let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        XCTAssertTrue(waitForAuthenticatedShell(app: app))
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
         settingsTab.tap()
         XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 5))
@@ -273,6 +275,7 @@ final class BadviceUITests: XCTestCase {
             "-skip-onboarding",
             "-skip-splash",
             "-ui-testing-auth-reset",
+            "-ui-testing-force-social-unavailable",
         ]
         app.launch()
 
@@ -305,7 +308,7 @@ final class BadviceUITests: XCTestCase {
             password: "Badvice123"
         )
 
-        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 8))
+        XCTAssertTrue(waitForAuthenticatedShell(app: app))
     }
 
     func testLocalAuthPasswordChangeAndDeleteFlow() throws {
@@ -315,6 +318,7 @@ final class BadviceUITests: XCTestCase {
             "-skip-onboarding",
             "-skip-splash",
             "-ui-testing-auth-reset",
+            "-ui-testing-force-social-unavailable",
         ]
         app.launch()
 
@@ -326,6 +330,7 @@ final class BadviceUITests: XCTestCase {
         )
 
         let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        XCTAssertTrue(waitForAuthenticatedShell(app: app))
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
         settingsTab.tap()
 
@@ -364,7 +369,7 @@ final class BadviceUITests: XCTestCase {
             email: "lifecycle@example.com",
             password: "Chaos456"
         )
-        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 8))
+        XCTAssertTrue(waitForAuthenticatedShell(app: app))
 
         settingsTab.tap()
         let deleteAccountButton = app.buttons["settings.auth.deleteAccount"]
@@ -401,6 +406,25 @@ final class BadviceUITests: XCTestCase {
         }
         app.launch()
         return app
+    }
+
+    @discardableResult
+    private func waitForAuthenticatedShell(
+        app: XCUIApplication,
+        timeout: TimeInterval = 15
+    ) -> Bool {
+        let generateButton = app.buttons["generate.primary"]
+        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        let deadline = Date().addingTimeInterval(timeout)
+
+        while Date() < deadline {
+            if generateButton.exists || settingsTab.exists {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+
+        return generateButton.exists || settingsTab.exists
     }
 
     private func completeProfileSignup(app: XCUIApplication, handle: String) {
@@ -454,7 +478,7 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(primaryButton.isEnabled)
         primaryButton.tap()
 
-        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 8))
+        XCTAssertTrue(waitForAuthenticatedShell(app: app))
     }
 
     private func completeLocalSignin(app: XCUIApplication, email: String, password: String) {

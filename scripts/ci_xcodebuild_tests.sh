@@ -13,6 +13,8 @@ mkdir -p "$(dirname "$DERIVED_DATA_PATH")"
 mkdir -p "$(dirname "$RESULT_BUNDLE_PATH")"
 mkdir -p "$SOURCE_PACKAGES_PATH"
 
+node scripts/check_project_sources.js
+
 if ! xcodebuild -list -project "$PROJECT_PATH" | awk -v scheme="$SCHEME" '
   /^[[:space:]]*Schemes:[[:space:]]*$/ { in_schemes = 1; next }
   in_schemes && NF == 0 { exit }

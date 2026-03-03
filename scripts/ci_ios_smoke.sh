@@ -23,6 +23,8 @@ if [ -e "$RESULT_BUNDLE_PATH" ]; then
   fi
 fi
 
+node scripts/check_project_sources.js
+
 echo "Running iOS smoke tests on: $DESTINATION"
 
 ONLY_TESTING_ARGS=()

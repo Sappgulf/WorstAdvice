@@ -86,7 +86,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - `Badvice/Views/*.swift`: tab screens, advice card, theming, share-card renderer
 
 ## Repository Layout
-- Canonical source tree: this repository root (`/Users/austinbeatty/Downloads/WorstAdvice`).
+- Canonical source tree: this repository root (`/Users/austinbeatty/Downloads/Badvice`).
 - App source: `Badvice/`
 - Widget source: `WorstAdviceWidget/`
 - Tests: `WorstAdviceTests/`
@@ -145,6 +145,10 @@ Optional seeded incoming friend requests count:
 ```
 
 ## Test
+```bash
+node scripts/check_project_sources.js
+```
+
 ```bash
 bash scripts/ci_xcodebuild_tests.sh
 ```

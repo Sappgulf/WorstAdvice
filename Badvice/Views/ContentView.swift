@@ -1,4 +1,3 @@
-import Combine
 import CoreMotion
 import StoreKit
 import SwiftData
@@ -66,7 +65,7 @@ private struct ScrollTrackingModifier: ViewModifier {
     }
 }
 
-private enum LocalAuthMode: String, CaseIterable, Identifiable {
+enum LocalAuthMode: String, CaseIterable, Identifiable {
     case signIn
     case signUp
 
@@ -310,157 +309,6 @@ struct ContentView: View {
         }
     }
 
-    private func socialProfileSetupSheet(session: AppSessionViewModel) -> some View {
-        let handleBinding = Binding<String>(
-            get: { profileHandleDraft },
-            set: { profileHandleDraft = sanitizedProfileHandle($0) }
-        )
-        let displayNameBinding = Binding<String>(
-            get: { profileDisplayNameDraft },
-            set: { profileDisplayNameDraft = sanitizedProfileDisplayName($0) }
-        )
-        let normalizedHandle = normalizedProfileHandle(profileHandleDraft)
-        let isHandleValid = CloudKitStore.isValidHandle(normalizedHandle)
-        let shouldShowValidationError = !normalizedHandle.isEmpty && !isHandleValid
-
-        return NavigationStack {
-            Form {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label(
-                            "Set up your Friends profile",
-                            systemImage: "person.2.crop.square.stack.fill"
-                        )
-                        .font(.headline)
-                        Text(
-                            "Your handle is how friends find you for shares, collabs, and Chaos leaderboard runs."
-                        )
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                    .accessibilityIdentifier("social.profile.intro")
-                }
-                Section("Create Profile") {
-                    TextField("@handle", text: handleBinding)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .textContentType(.nickname)
-                        .submitLabel(.next)
-                        .accessibilityIdentifier("social.profile.handle")
-                    TextField(
-                        "Display name (optional)",
-                        text: displayNameBinding
-                    )
-                    .textInputAutocapitalization(.words)
-                    .textContentType(.name)
-                    .submitLabel(.done)
-                    .accessibilityIdentifier("social.profile.displayName")
-                    Text("Pick a public handle once. Type with or without the @ symbol.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack {
-                        Text("Handle preview")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(normalizedHandle.isEmpty ? "@your_handle" : "@\(normalizedHandle)")
-                            .font(.caption.monospaced())
-                            .foregroundStyle(
-                                isHandleValid || normalizedHandle.isEmpty
-                                    ? Color.secondary
-                                    : Color.red
-                            )
-                    }
-                    HStack {
-                        Text("Handle length")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text("\(normalizedHandle.count)/16")
-                            .font(.caption.monospaced())
-                            .foregroundStyle(
-                                isHandleValid || normalizedHandle.isEmpty
-                                    ? Color.secondary
-                                    : Color.red
-                            )
-                    }
-                    if session.social.isSubmittingAction {
-                        HStack(spacing: 10) {
-                            ProgressView()
-                            Text("Creating profile...")
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-                }
-                Section("What unlocks next") {
-                    Label(
-                        "Share advice and quotes straight to Friends",
-                        systemImage: "square.and.arrow.up.fill"
-                    )
-                    .font(.caption)
-                    Label(
-                        "Start collaboration drafts with your crew",
-                        systemImage: "person.2.badge.plus"
-                    )
-                    .font(.caption)
-                    Label(
-                        "Compete on the Chaos leaderboard",
-                        systemImage: "trophy.fill"
-                    )
-                    .font(.caption)
-                }
-                if shouldShowValidationError {
-                    Section("Fix Handle") {
-                        Text(
-                            "Use 3–16 characters with lowercase letters, numbers, or underscore."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                    }
-                }
-                if let status = session.social.statusMessage, !status.isEmpty {
-                    Section("Status") {
-                        Text(status)
-                            .font(.caption)
-                            .foregroundStyle(
-                                status.lowercased().contains("created") ? .green : .red
-                            )
-                            .accessibilityIdentifier("social.profile.status")
-                    }
-                }
-                Section("Rules") {
-                    Text(
-                        "Handle must be 3–16 characters and can only use lowercase letters, numbers, or underscore. You can type with or without @."
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-            }
-            .navigationTitle("Friends Setup")
-            .navigationBarTitleDisplayMode(.inline)
-            .interactiveDismissDisabled()
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(session.social.isSubmittingAction ? "Creating..." : "Finish Setup") {
-                        Task {
-                            await session.social.createProfile(
-                                handle: normalizedHandle,
-                                displayName: profileDisplayNameDraft
-                            )
-                        }
-                    }
-                    .disabled(
-                        normalizedHandle.isEmpty || !isHandleValid
-                            || session.social.isSubmittingAction
-                    )
-                    .accessibilityIdentifier("social.profile.save")
-                }
-            }
-        }
-    }
-
     private var loadingView: some View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
@@ -475,6 +323,17 @@ struct ContentView: View {
                     .foregroundStyle(Color.primary.opacity(0.45))
             }
         }
+    }
+
+    private func socialProfileSetupSheet(session: AppSessionViewModel) -> some View {
+        SocialProfileSetupView(
+            social: session.social,
+            profileHandleDraft: $profileHandleDraft,
+            profileDisplayNameDraft: $profileDisplayNameDraft,
+            normalizeHandle: normalizedProfileHandle,
+            sanitizeHandle: sanitizedProfileHandle,
+            sanitizeDisplayName: sanitizedProfileDisplayName
+        )
     }
 
     private func bootstrapAppStateIfNeeded() {
@@ -582,192 +441,18 @@ struct ContentView: View {
 
     @ViewBuilder
     private func authGateView(auth: AuthViewModel) -> some View {
-        let normalizedEmail = LocalAccountValidation.normalizedEmail(authEmailDraft)
-        let trimmedDisplayName = authDisplayNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        let canSubmitSignIn =
-            LocalAccountValidation.isValidEmail(normalizedEmail) && !authPasswordDraft.isEmpty
-        let canSubmitSignUp =
-            LocalAccountValidation.isValidEmail(normalizedEmail)
-            && LocalAccountValidation.isStrongPassword(authPasswordDraft)
-            && authPasswordDraft == authConfirmPasswordDraft
-        let accent = Color(hex: "8F4A22")
-
-        ZStack {
-            LinearGradient(
-                colors: [Color(hex: "F7F2E8"), Color(hex: "EBDAC8"), Color(hex: "F8F4EE")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            FloatingParticlesView(theme: .minimal, reduceMotion: true, isGenerating: false)
-                .opacity(0.2)
-                .ignoresSafeArea()
-
-            ScrollView {
-                VStack(spacing: 24) {
-                    VStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(accent.opacity(0.12))
-                                .frame(width: 92, height: 92)
-                            Image(systemName: "person.crop.circle.badge.checkmark")
-                                .font(.system(size: 42, weight: .semibold))
-                                .foregroundStyle(accent)
-                        }
-
-                        Text("Local account required")
-                            .font(.system(.title2, design: .rounded, weight: .bold))
-                            .foregroundStyle(Theme.headerColor(for: .minimal))
-
-                        Text("Create a Badvice account on this device, or sign back in to keep your chaos behind a real password.")
-                            .font(.subheadline)
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(Color.primary.opacity(0.68))
-                            .padding(.horizontal, 12)
-                    }
-
-                    VStack(spacing: 18) {
-                        Picker("Authentication", selection: $authMode) {
-                            ForEach(LocalAuthMode.allCases) { mode in
-                                Text(mode.title).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .accessibilityIdentifier("auth.mode")
-
-                        VStack(spacing: 14) {
-                            if authMode == .signUp {
-                                TextField("Display name (optional)", text: $authDisplayNameDraft)
-                                    .textInputAutocapitalization(.words)
-                                    .textContentType(.name)
-                                    .accessibilityIdentifier("auth.displayName")
-                            }
-
-                            TextField("Email", text: $authEmailDraft)
-                                .textInputAutocapitalization(.never)
-                                .keyboardType(.emailAddress)
-                                .textContentType(.emailAddress)
-                                .autocorrectionDisabled()
-                                .accessibilityIdentifier("auth.email")
-
-                            SecureField(
-                                authMode == .signUp ? "Create password" : "Password",
-                                text: $authPasswordDraft
-                            )
-                            .textContentType(authMode == .signUp ? .newPassword : .password)
-                            .accessibilityIdentifier("auth.password")
-
-                            if authMode == .signUp {
-                                SecureField("Confirm password", text: $authConfirmPasswordDraft)
-                                    .textContentType(.newPassword)
-                                    .accessibilityIdentifier("auth.confirmPassword")
-                            }
-                        }
-                        .textFieldStyle(.roundedBorder)
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(authMode == .signUp ? "Passwords need at least 8 characters, plus a letter and a number." : "Accounts are stored only on this device.")
-                                .font(.caption)
-                                .foregroundStyle(Color.primary.opacity(0.58))
-                            if authMode == .signUp, !trimmedDisplayName.isEmpty,
-                                !LocalAccountValidation.isValidDisplayName(trimmedDisplayName)
-                            {
-                                Text("Display name must be 2-40 characters.")
-                                    .font(.caption)
-                                    .foregroundStyle(.red)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        if let status = auth.statusMessage, !status.isEmpty {
-                            Text(status)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(status.lowercased().contains("signed") || status.lowercased().contains("created") ? accent : .red)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .accessibilityIdentifier("auth.status")
-                        }
-
-                        Button {
-                            Task {
-                                let didAuthenticate: Bool
-                                switch authMode {
-                                case .signIn:
-                                    didAuthenticate = await auth.signIn(
-                                        email: normalizedEmail,
-                                        password: authPasswordDraft
-                                    )
-                                case .signUp:
-                                    didAuthenticate = await auth.signUp(
-                                        email: normalizedEmail,
-                                        displayName: trimmedDisplayName,
-                                        password: authPasswordDraft,
-                                        confirmPassword: authConfirmPasswordDraft
-                                    )
-                                }
-
-                                if didAuthenticate {
-                                    beginAuthenticatedSession(using: auth)
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 10) {
-                                if auth.isSubmitting {
-                                    ProgressView()
-                                        .tint(.white)
-                                }
-                                Text(authMode == .signUp ? "Create Account" : "Sign In")
-                                    .font(.system(.body, design: .rounded, weight: .bold))
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 54)
-                            .foregroundStyle(.white)
-                            .background(
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .fill(accent)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(
-                            auth.isSubmitting
-                                || (authMode == .signIn ? !canSubmitSignIn : !canSubmitSignUp)
-                        )
-                        .opacity(
-                            auth.isSubmitting
-                                || (authMode == .signIn ? !canSubmitSignIn : !canSubmitSignUp)
-                                ? 0.6 : 1
-                        )
-                        .accessibilityIdentifier("auth.primary")
-
-                        if auth.hasAccounts {
-                            Button(authMode == .signIn ? "Need a new local account?" : "Use an existing account instead") {
-                                authMode = authMode == .signIn ? .signUp : .signIn
-                                auth.statusMessage = nil
-                                authPasswordDraft = ""
-                                authConfirmPasswordDraft = ""
-                            }
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(accent)
-                            .accessibilityIdentifier("auth.switchMode")
-                        }
-                    }
-                    .padding(24)
-                    .background(
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .stroke(accent.opacity(0.15), lineWidth: 1)
-                    )
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 36)
+        LocalAuthGateView(
+            auth: auth,
+            authMode: $authMode,
+            authEmailDraft: $authEmailDraft,
+            authPasswordDraft: $authPasswordDraft,
+            authConfirmPasswordDraft: $authConfirmPasswordDraft,
+            authDisplayNameDraft: $authDisplayNameDraft,
+            onAuthenticated: {
+                beginAuthenticatedSession(using: auth)
             }
-        }
+        )
         .onAppear {
-            if !auth.hasAccounts {
-                authMode = .signUp
-            }
             syncAuthDrafts(with: auth)
         }
     }
