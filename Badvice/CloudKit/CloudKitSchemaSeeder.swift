@@ -2,29 +2,100 @@
 import CloudKit
 import Foundation
 
+extension Notification.Name {
+    static let cloudKitSchemaSeederDidSeedDevelopmentSchema = Notification.Name(
+        "CloudKitSchemaSeeder.didSeedDevelopmentSchema"
+    )
+}
+
+enum CloudKitSchemaSeedStatus {
+    case alreadySeeded
+    case skippedSimulator
+    case unavailableAccount(String)
+    case seeded(recordCount: Int)
+    case failed(String)
+
+    var toastMessage: String {
+        switch self {
+        case .alreadySeeded:
+            return "CloudKit development schema is already seeded on this install."
+        case .skippedSimulator:
+            return "CloudKit seeding is skipped in the simulator."
+        case .unavailableAccount(let status):
+            return "CloudKit unavailable: \(status)."
+        case .seeded(let recordCount):
+            return "CloudKit development schema seeded with \(recordCount) records."
+        case .failed(let message):
+            return message
+        }
+    }
+
+    var isError: Bool {
+        switch self {
+        case .unavailableAccount, .failed:
+            return true
+        case .alreadySeeded, .skippedSimulator, .seeded:
+            return false
+        }
+    }
+}
+
 enum CloudKitSchemaSeeder {
-    private static let didSeedKey = "didSeedCloudKitSchema.v2.socialPublic"
+    private enum SeedValues {
+        static let userARecordName = "debug_schema_seed_user_a_v3"
+        static let userBRecordName = "debug_schema_seed_user_b_v3"
+        static let friendRequestRecordName = "debug_schema_seed_friend_request_v3"
+        static let friendEdgeRecordName = "debug_schema_seed_friend_edge_v3"
+        static let postRecordName = "debug_schema_seed_post_v3"
+        static let chaosScoreRecordName = "debug_schema_seed_chaos_score_v3"
+        static let collabDocRecordName = "debug_schema_seed_collab_doc_v3"
+        static let moderationReportRecordName = "debug_schema_seed_moderation_report_v3"
+        static let userAHandle = "seedusera"
+        static let userBHandle = "seeduserb"
+        static let seasonID = "debug-seed-v3"
+        static let moderationClientReportID = "debug-schema-seed-v3"
+    }
+
+    private static let didSeedKey = "didSeedCloudKitSchema.v3.socialBootstrap"
     private static let containerIdentifier = "iCloud.com.worstadvice.app"
 
-    static func seedIfNeeded(userDefaults: UserDefaults = .standard) async {
+    static func seedIfNeeded(userDefaults: UserDefaults = .standard) async -> CloudKitSchemaSeedStatus {
         guard !userDefaults.bool(forKey: didSeedKey) else {
             print("[CloudKitSeed] Social schema already seeded on this install.")
-            return
+            return .alreadySeeded
         }
 
-        guard let container = makeContainerForSeeding() else {
-            return
+        return await seed(
+            container: makeContainerForSeeding(),
+            userDefaults: userDefaults
+        )
+    }
+
+    static func forceReseed(userDefaults: UserDefaults = .standard) async -> CloudKitSchemaSeedStatus {
+        userDefaults.removeObject(forKey: didSeedKey)
+        return await seed(
+            container: makeContainerForSeeding(),
+            userDefaults: userDefaults
+        )
+    }
+
+    private static func seed(
+        container: CKContainer?,
+        userDefaults: UserDefaults
+    ) async -> CloudKitSchemaSeedStatus {
+        guard let container else {
+            return .skippedSimulator
         }
 
         do {
             let accountStatus = try await container.accountStatus()
             guard accountStatus == .available else {
                 print("[CloudKitSeed] iCloud account unavailable: \(describe(accountStatus)).")
-                return
+                return .unavailableAccount(describe(accountStatus))
             }
         } catch {
             print("[CloudKitSeed] Failed to check iCloud account status: \(error.localizedDescription)")
-            return
+            return .failed("CloudKit account check failed.")
         }
 
         let records = makeSeedRecords()
@@ -36,22 +107,31 @@ enum CloudKitSchemaSeeder {
                     "[CloudKitSeed] Saved \(savedRecord.recordType) record \(savedRecord.recordID.recordName)."
                 )
             }
+            try await primeSchemaQueries(in: container.publicCloudDatabase)
             userDefaults.set(true, forKey: didSeedKey)
             print("[CloudKitSeed] Seeded public social schema with \(records.count) records.")
+            await MainActor.run {
+                NotificationCenter.default.post(
+                    name: .cloudKitSchemaSeederDidSeedDevelopmentSchema,
+                    object: nil
+                )
+            }
+            return .seeded(recordCount: records.count)
         } catch {
             print("[CloudKitSeed] Failed to seed public social schema: \(error.localizedDescription)")
+            return .failed("CloudKit schema seed failed. Check the CloudKit console logs.")
         }
     }
 
     private static func makeSeedRecords(referenceDate: Date = Date()) -> [CKRecord] {
-        let userARecordID = CKRecord.ID(recordName: "debug_schema_seed_user_a_v2")
-        let userBRecordID = CKRecord.ID(recordName: "debug_schema_seed_user_b_v2")
+        let userARecordID = CKRecord.ID(recordName: SeedValues.userARecordName)
+        let userBRecordID = CKRecord.ID(recordName: SeedValues.userBRecordName)
 
         let userA = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.user,
             recordID: userARecordID
         )
-        userA[CloudKitSocialSchema.Field.handle] = "seedusera"
+        userA[CloudKitSocialSchema.Field.handle] = SeedValues.userAHandle
         userA[CloudKitSocialSchema.Field.displayName] = "Schema Seed A"
         userA[CloudKitSocialSchema.Field.createdAt] = referenceDate
 
@@ -59,7 +139,7 @@ enum CloudKitSchemaSeeder {
             recordType: CloudKitSocialSchema.RecordType.user,
             recordID: userBRecordID
         )
-        userB[CloudKitSocialSchema.Field.handle] = "seeduserb"
+        userB[CloudKitSocialSchema.Field.handle] = SeedValues.userBHandle
         userB[CloudKitSocialSchema.Field.displayName] = "Schema Seed B"
         userB[CloudKitSocialSchema.Field.createdAt] = referenceDate
 
@@ -68,7 +148,7 @@ enum CloudKitSchemaSeeder {
 
         let friendRequest = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.friendRequest,
-            recordID: CKRecord.ID(recordName: "debug_schema_seed_friend_request_v2")
+            recordID: CKRecord.ID(recordName: SeedValues.friendRequestRecordName)
         )
         friendRequest[CloudKitSocialSchema.Field.fromUserRef] = userAReference
         friendRequest[CloudKitSocialSchema.Field.toUserRef] = userBReference
@@ -77,7 +157,7 @@ enum CloudKitSchemaSeeder {
 
         let friendEdge = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.friendEdge,
-            recordID: CKRecord.ID(recordName: "debug_schema_seed_friend_edge_v2")
+            recordID: CKRecord.ID(recordName: SeedValues.friendEdgeRecordName)
         )
         friendEdge[CloudKitSocialSchema.Field.aUserRef] = userAReference
         friendEdge[CloudKitSocialSchema.Field.bUserRef] = userBReference
@@ -85,7 +165,7 @@ enum CloudKitSchemaSeeder {
 
         let post = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.post,
-            recordID: CKRecord.ID(recordName: "debug_schema_seed_post_v2")
+            recordID: CKRecord.ID(recordName: SeedValues.postRecordName)
         )
         post[CloudKitSocialSchema.Field.authorRef] = userAReference
         post[CloudKitSocialSchema.Field.type] = SocialPostType.advice.rawValue
@@ -95,16 +175,16 @@ enum CloudKitSchemaSeeder {
 
         let chaosScore = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.chaosScore,
-            recordID: CKRecord.ID(recordName: "debug_schema_seed_chaos_score_v2")
+            recordID: CKRecord.ID(recordName: SeedValues.chaosScoreRecordName)
         )
-        chaosScore[CloudKitSocialSchema.Field.seasonId] = "debug-seed"
+        chaosScore[CloudKitSocialSchema.Field.seasonId] = SeedValues.seasonID
         chaosScore[CloudKitSocialSchema.Field.userRef] = userAReference
         chaosScore[CloudKitSocialSchema.Field.score] = NSNumber(value: 13)
         chaosScore[CloudKitSocialSchema.Field.updatedAt] = referenceDate
 
         let collabDoc = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.collabDoc,
-            recordID: CKRecord.ID(recordName: "debug_schema_seed_collab_doc_v2")
+            recordID: CKRecord.ID(recordName: SeedValues.collabDocRecordName)
         )
         collabDoc[CloudKitSocialSchema.Field.ownerRef] = userAReference
         collabDoc[CloudKitSocialSchema.Field.contributorsRefs] = [userBReference]
@@ -116,16 +196,160 @@ enum CloudKitSchemaSeeder {
 
         let moderationReport = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.moderationReport,
-            recordID: CKRecord.ID(recordName: "debug_schema_seed_moderation_report_v2")
+            recordID: CKRecord.ID(recordName: SeedValues.moderationReportRecordName)
         )
-        moderationReport[CloudKitSocialSchema.Field.clientReportID] = "debug-schema-seed-v2"
+        moderationReport[CloudKitSocialSchema.Field.clientReportID] =
+            SeedValues.moderationClientReportID
         moderationReport[CloudKitSocialSchema.Field.targetType] = "post"
         moderationReport[CloudKitSocialSchema.Field.targetRecordName] = post.recordID.recordName
-        moderationReport[CloudKitSocialSchema.Field.reporterHandle] = "seedusera"
+        moderationReport[CloudKitSocialSchema.Field.reporterHandle] = SeedValues.userAHandle
         moderationReport[CloudKitSocialSchema.Field.reason] = "Schema seed"
         moderationReport[CloudKitSocialSchema.Field.createdAt] = referenceDate
 
         return [userA, userB, friendRequest, friendEdge, post, chaosScore, collabDoc, moderationReport]
+    }
+
+    private static func primeSchemaQueries(in database: CKDatabase) async throws {
+        let userAReference = CKRecord.Reference(
+            recordID: CKRecord.ID(recordName: SeedValues.userARecordName),
+            action: .none
+        )
+        let userBReference = CKRecord.Reference(
+            recordID: CKRecord.ID(recordName: SeedValues.userBRecordName),
+            action: .none
+        )
+
+        let userQuery = CKQuery(
+            recordType: CloudKitSocialSchema.RecordType.user,
+            predicate: NSPredicate(
+                format: "%K == %@",
+                CloudKitSocialSchema.Field.handle,
+                SeedValues.userAHandle
+            )
+        )
+
+        let friendRequestQuery = CKQuery(
+            recordType: CloudKitSocialSchema.RecordType.friendRequest,
+            predicate: NSCompoundPredicate(andPredicateWithSubpredicates: [
+                NSPredicate(
+                    format: "%K == %@",
+                    CloudKitSocialSchema.Field.toUserRef,
+                    userBReference
+                ),
+                NSPredicate(
+                    format: "%K == %@",
+                    CloudKitSocialSchema.Field.status,
+                    SocialFriendRequestStatus.pending.rawValue
+                ),
+            ])
+        )
+        friendRequestQuery.sortDescriptors = [
+            NSSortDescriptor(key: CloudKitSocialSchema.Field.createdAt, ascending: false)
+        ]
+
+        let friendEdgeQuery = CKQuery(
+            recordType: CloudKitSocialSchema.RecordType.friendEdge,
+            predicate: NSPredicate(
+                format: "%K == %@",
+                CloudKitSocialSchema.Field.aUserRef,
+                userAReference
+            )
+        )
+        friendEdgeQuery.sortDescriptors = [
+            NSSortDescriptor(key: CloudKitSocialSchema.Field.since, ascending: false)
+        ]
+
+        let postQuery = CKQuery(
+            recordType: CloudKitSocialSchema.RecordType.post,
+            predicate: NSCompoundPredicate(andPredicateWithSubpredicates: [
+                NSPredicate(
+                    format: "%K == %@",
+                    CloudKitSocialSchema.Field.authorRef,
+                    userAReference
+                ),
+                NSPredicate(
+                    format: "%K == %@",
+                    CloudKitSocialSchema.Field.visibility,
+                    SocialPostVisibility.friends.rawValue
+                ),
+            ])
+        )
+        postQuery.sortDescriptors = [
+            NSSortDescriptor(key: CloudKitSocialSchema.Field.createdAt, ascending: false)
+        ]
+
+        let chaosScoreQuery = CKQuery(
+            recordType: CloudKitSocialSchema.RecordType.chaosScore,
+            predicate: NSPredicate(
+                format: "%K == %@",
+                CloudKitSocialSchema.Field.seasonId,
+                SeedValues.seasonID
+            )
+        )
+        chaosScoreQuery.sortDescriptors = [
+            NSSortDescriptor(key: CloudKitSocialSchema.Field.score, ascending: false),
+            NSSortDescriptor(key: CloudKitSocialSchema.Field.updatedAt, ascending: true),
+        ]
+
+        let collabOwnerQuery = CKQuery(
+            recordType: CloudKitSocialSchema.RecordType.collabDoc,
+            predicate: NSPredicate(
+                format: "%K == %@",
+                CloudKitSocialSchema.Field.ownerRef,
+                userAReference
+            )
+        )
+        collabOwnerQuery.sortDescriptors = [
+            NSSortDescriptor(key: CloudKitSocialSchema.Field.updatedAt, ascending: false)
+        ]
+
+        let collabContributorQuery = CKQuery(
+            recordType: CloudKitSocialSchema.RecordType.collabDoc,
+            predicate: NSPredicate(
+                format: "ANY %K == %@",
+                CloudKitSocialSchema.Field.contributorsRefs,
+                userBReference
+            )
+        )
+        collabContributorQuery.sortDescriptors = [
+            NSSortDescriptor(key: CloudKitSocialSchema.Field.updatedAt, ascending: false)
+        ]
+
+        let moderationQuery = CKQuery(
+            recordType: CloudKitSocialSchema.RecordType.moderationReport,
+            predicate: NSPredicate(
+                format: "%K == %@",
+                CloudKitSocialSchema.Field.clientReportID,
+                SeedValues.moderationClientReportID
+            )
+        )
+
+        for (name, query) in [
+            ("user-handle", userQuery),
+            ("friend-request", friendRequestQuery),
+            ("friend-edge", friendEdgeQuery),
+            ("post-feed", postQuery),
+            ("chaos-score", chaosScoreQuery),
+            ("collab-owner", collabOwnerQuery),
+            ("collab-contributor", collabContributorQuery),
+            ("moderation-report", moderationQuery),
+        ] {
+            try await run(query: query, in: database)
+            print("[CloudKitSeed] Primed development schema query \(name).")
+        }
+    }
+
+    private static func run(query: CKQuery, in database: CKDatabase) async throws {
+        let _: CKQueryOperation.Cursor? = try await withCheckedThrowingContinuation {
+            continuation in
+            let operation = CKQueryOperation(query: query)
+            operation.resultsLimit = 1
+            operation.recordMatchedBlock = { _, _ in }
+            operation.queryResultBlock = { result in
+                continuation.resume(with: result)
+            }
+            database.add(operation)
+        }
     }
 
     private static func makeContainerForSeeding() -> CKContainer? {

@@ -294,6 +294,18 @@ struct ContentView: View {
         .onChange(of: session.social.currentUser?.recordID.recordName) { _, newRecordName in
             auth.setLinkedSocialProfileRecordName(newRecordName)
         }
+        #if DEBUG
+            .onReceive(
+                NotificationCenter.default.publisher(
+                    for: .cloudKitSchemaSeederDidSeedDevelopmentSchema
+                )
+            ) { _ in
+                Task {
+                    await session.social.refreshAvailability()
+                    await session.social.refreshSocialData()
+                }
+            }
+        #endif
         .sheet(
             isPresented: Binding(
                 get: {
@@ -508,7 +520,7 @@ struct ContentView: View {
             GeometryReader { proxy in
                 VStack {
                     Spacer()
-                    let tabs = session.settings.tabOrder
+                    let tabs = primaryTabs(for: session)
                     let tabBarStyle = Theme.tabBarStyle(for: session.settings.theme)
                     let accent = Theme.accent(for: session.settings.theme)
                     let secondaryText = Theme.secondaryText(for: session.settings.theme)
@@ -540,7 +552,7 @@ struct ContentView: View {
                                             .accessibilityIdentifier("tab.friends.badge")
                                     }
                                 }
-                                Text(tab.title)
+                                Text(tab.compactTitle)
                                     .font(
                                         .system(
                                             size: 9,
@@ -856,6 +868,7 @@ struct ContentView: View {
     private func tabView(for tab: AppTab, session: AppSessionViewModel) -> some View {
         switch tab {
         case .generate:
+            #if DEBUG
             GenerateTabView(
                 viewModel: session.generate,
                 settings: session.settings,
@@ -863,8 +876,36 @@ struct ContentView: View {
                 onDataChanged: { session.refreshLists() },
                 onOpenTab: { tab in
                     setSelectedTab(tab, session: session)
+                },
+                quickAccessTabs: brandMenuTabs(for: session),
+                onResetAllLocalAccounts: {
+                    await resetAllLocalAccounts(using: auth, session: session)
+                },
+                onRefreshSocialAvailability: {
+                    await refreshSocialAvailabilityToast(session: session)
+                },
+                onReseedCloudKitSchema: {
+                    await reseedCloudKitSchemaToast(session: session)
                 }
             )
+            #else
+            GenerateTabView(
+                viewModel: session.generate,
+                settings: session.settings,
+                social: session.social,
+                onDataChanged: { session.refreshLists() },
+                onOpenTab: { tab in
+                    setSelectedTab(tab, session: session)
+                },
+                quickAccessTabs: brandMenuTabs(for: session),
+                onResetAllLocalAccounts: {
+                    await resetAllLocalAccounts(using: auth, session: session)
+                },
+                onRefreshSocialAvailability: {
+                    await refreshSocialAvailabilityToast(session: session)
+                }
+            )
+            #endif
         case .chaosHub:
             ChaosHubTabView(
                 generateViewModel: session.generate,
@@ -1065,6 +1106,67 @@ struct ContentView: View {
             }
         }
     }
+
+    private func primaryTabs(for session: AppSessionViewModel) -> [AppTab] {
+        let overflow = Set(brandMenuTabs(for: session))
+        return AppTab.primaryNavigationTabs.filter { !overflow.contains($0) }
+    }
+
+    private func brandMenuTabs(for session: AppSessionViewModel) -> [AppTab] {
+        let availableTabs = Set(session.settings.tabOrder)
+        return AppTab.brandMenuTabs.filter { availableTabs.contains($0) }
+    }
+
+    private func resetAllLocalAccounts(
+        using auth: AuthViewModel?,
+        session: AppSessionViewModel
+    ) async -> ToastMessage {
+        await session.social.applyAuthContext(email: nil, linkedSocialRecordName: nil)
+        auth?.resetAllAccounts()
+        session.repository.purgeAllLocalData()
+        self.session = nil
+        resetSessionPresentationState()
+        profileHandleDraft = ""
+        profileDisplayNameDraft = UIDevice.current.name
+        authMode = .signUp
+        if let auth {
+            syncAuthDrafts(with: auth)
+        } else {
+            authEmailDraft = ""
+            authPasswordDraft = ""
+            authConfirmPasswordDraft = ""
+            authDisplayNameDraft = ""
+        }
+        return ToastMessage(
+            message: "All local Badvice accounts and on-device data were cleared.",
+            style: .success
+        )
+    }
+
+    private func refreshSocialAvailabilityToast(session: AppSessionViewModel) async -> ToastMessage {
+        await session.social.refreshAvailability()
+        await session.social.refreshSocialData()
+        if session.social.availability.isAvailable {
+            let message =
+                session.social.currentUser == nil
+                    ? "CloudKit is ready. Finish your Friends profile to continue."
+                    : "CloudKit social features are available."
+            return ToastMessage(message: message, style: .success)
+        }
+        return ToastMessage(message: session.social.availability.message, style: .error)
+    }
+
+    #if DEBUG
+        private func reseedCloudKitSchemaToast(session: AppSessionViewModel) async -> ToastMessage {
+            let status = await CloudKitSchemaSeeder.forceReseed()
+            await session.social.refreshAvailability()
+            await session.social.refreshSocialData()
+            return ToastMessage(
+                message: status.toastMessage,
+                style: status.isError ? .error : .success
+            )
+        }
+    #endif
 }
 
 #Preview {

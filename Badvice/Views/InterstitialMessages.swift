@@ -1406,11 +1406,17 @@ struct SettingsTabView: View {
     private var aboutSection: some View {
         settingsCard(title: "App & Layout", icon: "square.3.layers.3d") {
             VStack(spacing: 12) {
-                Text("Advice is always first. Settings is always last.")
+                Text("Advice stays first. Friends, Chaos Hub, and Quotes stay in the main bar.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 10)
+
+                Text("Explore, Challenges, Saved, History, and Settings now live in the Badvice logo menu.")
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 4)
 
                 ForEach(Array(viewModel.reorderableTabs.enumerated()), id: \.element.id) {
                     index, tab in

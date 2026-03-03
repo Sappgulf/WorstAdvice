@@ -6,13 +6,21 @@ struct GenerateTabView: View {
     @Bindable var social: SocialViewModel
     var onDataChanged: () -> Void
     var onOpenTab: ((AppTab) -> Void)? = nil
+    var quickAccessTabs: [AppTab] = []
+    var onResetAllLocalAccounts: (() async -> ToastMessage)? = nil
+    var onRefreshSocialAvailability: (() async -> ToastMessage)? = nil
+    #if DEBUG
+        var onReseedCloudKitSchema: (() async -> ToastMessage)? = nil
+    #endif
 
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
     @State private var showingAdvanced = false
+    @State private var showingBrandMenu = false
+    @State private var showingResetAccountsConfirmation = false
+    @State private var runningBrandAction = false
     @State private var generateButtonPulsing = false
     @State private var activeToast: ToastMessage? = nil
-    @State private var headerTapStreak = 0
     @State private var headerPulseScale: CGFloat = 1.0
     @State private var headerRotation: Double = 0
     @State private var headerOrbitOpacity: Double = 0
@@ -46,9 +54,6 @@ struct GenerateTabView: View {
         let cadenceScale: CGFloat = viewModel.hapticTrigger % 2 == 0 ? 1.0 : 1.02
         return cadenceScale * headerPulseScale
     }
-    private var headerReactiveRotationAmplitude: Double {
-        2.0 + Theme.personality(for: settings.theme).effectIntensity * 8.0
-    }
 
     private var headerIconName: String {
         switch settings.theme {
@@ -79,19 +84,30 @@ struct GenerateTabView: View {
     private var headerView: some View {
         let headerColor = Theme.headerColor(for: settings.theme)
         let glow = Theme.glowColor(for: settings.theme)
-        return HStack(spacing: 8) {
-            Image(systemName: headerIconName)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(accent)
-                .shadow(color: accent.opacity(0.35), radius: 6, x: 0, y: 2)
+        return Button {
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            showingBrandMenu = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: headerIconName)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(accent)
+                    .shadow(color: accent.opacity(0.35), radius: 6, x: 0, y: 2)
 
-            HStack(spacing: 0) {
-                Text("Bad")
-                    .font(Theme.headlineFont(for: settings.theme).weight(.black))
-                Text("vice")
-                    .font(Theme.headlineFont(for: settings.theme).weight(.semibold))
+                HStack(spacing: 0) {
+                    Text("Bad")
+                        .font(Theme.headlineFont(for: settings.theme).weight(.black))
+                    Text("vice")
+                        .font(Theme.headlineFont(for: settings.theme).weight(.semibold))
+                }
+                .foregroundStyle(headerColor)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(secondaryText.opacity(0.85))
             }
-            .foregroundStyle(headerColor)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -135,15 +151,13 @@ struct GenerateTabView: View {
             value: headerRotation
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-            triggerHeaderEasterEggTap()
-        }
         .onLongPressGesture(minimumDuration: 0.9) {
             triggerHeaderLongPressSurprise()
         }
+        .buttonStyle(.plain)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel("Badvice")
-        .accessibilityHint("Tap for theme-reactive animation and hidden surprises")
+        .accessibilityHint("Opens the Badvice menu")
     }
 
     var body: some View {
@@ -291,6 +305,9 @@ struct GenerateTabView: View {
 
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
+        }
+        .sheet(isPresented: $showingBrandMenu) {
+            brandMenuSheet
         }
         .onAppear {
             AppPerformanceInstrumentation.markAdviceTabFirstRenderIfNeeded()
@@ -873,6 +890,107 @@ struct GenerateTabView: View {
         onOpenTab?(tab)
     }
 
+    private var brandMenuSheet: some View {
+        NavigationStack {
+            List {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Badvice Menu")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(primaryText)
+                        Text(
+                            social.availability.isAvailable
+                                ? "Keep the bottom bar focused on the main moves and open everything else from here."
+                                : social.availability.message
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .listRowBackground(cardColor.opacity(0.86))
+
+                Section("Quick Access") {
+                    ForEach(quickAccessTabs) { tab in
+                        Button {
+                            showingBrandMenu = false
+                            openTab(tab)
+                        } label: {
+                            Label(tab.title, systemImage: tab.systemImage)
+                                .foregroundStyle(primaryText)
+                        }
+                    }
+                }
+
+                Section("CloudKit") {
+                    Button {
+                        runBrandMenuAction(onRefreshSocialAvailability)
+                    } label: {
+                        Label("Refresh Friends Status", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(runningBrandAction)
+
+                    #if DEBUG
+                        Button {
+                            runBrandMenuAction(onReseedCloudKitSchema)
+                        } label: {
+                            Label("Reseed Development Schema", systemImage: "icloud.and.arrow.up")
+                        }
+                        .disabled(runningBrandAction)
+                    #endif
+                }
+
+                Section("Account") {
+                    Button(role: .destructive) {
+                        showingResetAccountsConfirmation = true
+                    } label: {
+                        Label("Reset All Local Accounts", systemImage: "trash.circle")
+                    }
+                    .disabled(runningBrandAction)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.canvasColor(for: settings.theme).ignoresSafeArea())
+            .navigationTitle("Badvice")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        showingBrandMenu = false
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Clear every local Badvice account and its on-device data?",
+                isPresented: $showingResetAccountsConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Reset Everything", role: .destructive) {
+                    runBrandMenuAction(onResetAllLocalAccounts)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This removes device-side accounts and wipes local history, favorites, settings, and drafts.")
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func runBrandMenuAction(_ action: (() async -> ToastMessage)?) {
+        guard let action else { return }
+        runningBrandAction = true
+        Task {
+            let toast = await action()
+            await MainActor.run {
+                runningBrandAction = false
+                showingBrandMenu = false
+                activeToast = toast
+            }
+        }
+    }
+
     private func handleGeneratingStateChange(_ isGenerating: Bool) {
         if isGenerating {
             loadingCompletionHapticArmed = true
@@ -889,60 +1007,6 @@ struct GenerateTabView: View {
 
         lastGeneratedAdviceIDForHaptics = currentID
         HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-    }
-
-    private func triggerHeaderEasterEggTap() {
-        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-        headerTapStreak += 1
-
-        if !isMotionReduced {
-            let direction: Double = headerTapStreak.isMultiple(of: 2) ? 1 : -1
-            withAnimation(.spring(response: 0.22, dampingFraction: 0.55)) {
-                headerPulseScale =
-                    1.04 + CGFloat(Theme.personality(for: settings.theme).effectIntensity * 0.04)
-                headerRotation = direction * headerReactiveRotationAmplitude
-                headerOrbitOpacity = 0.92
-            }
-            withAnimation(.easeOut(duration: 0.46)) {
-                headerPulseScale = 1.0
-                headerRotation = 0
-                headerOrbitOpacity = 0
-            }
-        }
-
-        switch headerTapStreak {
-        case 3:
-            let toasts3 = [
-                "Header unlocked: confidence mode engaged.",
-                "Triple tap detected. Questionable decisions incoming.",
-                "You found the secret handshake. Chaos nods in approval.",
-            ]
-            activeToast = ToastMessage(message: toasts3.randomElement()!, style: .info)
-            revealSurprise("Mini surprise: the badge wakes up with your theme mood.")
-        case 5:
-            let toasts5 = [
-                "Secret combo hit: Surprise Me launched.",
-                "Five taps? That's commitment. Here's random chaos.",
-                "Combo unlocked. The algorithm is now terrified of you.",
-            ]
-            activeToast = ToastMessage(message: toasts5.randomElement()!, style: .success)
-            revealSurprise("Chaos code: rolling a random tone + category.")
-            viewModel.surpriseMeAndGenerate()
-            onDataChanged()
-        case 8:
-            let toasts8 = [
-                "Ultra combo: Daily Drop triggered from the logo.",
-                "Eight taps. You are now legally a chaos engineer.",
-                "Logo boss defeated. Daily Drop deployed as reward.",
-            ]
-            activeToast = ToastMessage(message: toasts8.randomElement()!, style: .success)
-            revealSurprise("You found the 8-tap easter egg. Daily Drop injected.")
-            viewModel.generateDailyDrop()
-            onDataChanged()
-            headerTapStreak = 0
-        default:
-            break
-        }
     }
 
     private func triggerHeaderLongPressSurprise() {

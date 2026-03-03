@@ -2838,9 +2838,29 @@ final class AdviceRepository {
         save()
     }
 
+    func purgeAllLocalData() {
+        deleteAll(AdviceRecord.self)
+        deleteAll(AdviceFingerprint.self)
+        deleteAll(UserAdviceSuggestion.self)
+        deleteAll(UserQuoteSuggestion.self)
+        deleteAll(QuoteVoteRecord.self)
+        deleteAll(LearningStatRecord.self)
+        deleteAll(MissionProgressRecord.self)
+        deleteAll(AppSettingsEntity.self)
+        cachedFingerprintSet = nil
+        cachedSeenCount = nil
+        cachedLearningStatsByKey = nil
+        save()
+    }
+
     private func currentSettingsEntity() -> AppSettingsEntity? {
         let descriptor = FetchDescriptor<AppSettingsEntity>()
         return ((try? context.fetch(descriptor)) ?? []).first(where: { matchesActiveAccount($0.ownerAccountID) })
+    }
+
+    private func deleteAll<T: PersistentModel>(_ type: T.Type) {
+        let descriptor = FetchDescriptor<T>()
+        ((try? context.fetch(descriptor)) ?? []).forEach { context.delete($0) }
     }
 
     private func fetchAdviceFingerprints() -> [AdviceFingerprint] {
@@ -3200,7 +3220,7 @@ final class SettingsViewModel {
     }
 
     var reorderableTabs: [AppTab] {
-        tabOrder.filter { $0 != .generate && $0 != .settings }
+        AppTab.primaryNavigationTabs.filter { $0 != .generate }
     }
 
     func moveReorderableTabs(from source: IndexSet, to destination: Int) {
@@ -3211,25 +3231,31 @@ final class SettingsViewModel {
         }
         let insertion = max(0, min(destination, items.count))
         items.insert(contentsOf: moving, at: insertion)
-        tabOrder = [.generate] + items + [.settings]
+        applyPrimaryTabOrder(items)
     }
 
     func moveReorderableTabUp(at index: Int) {
         var items = reorderableTabs
         guard index > 0, index < items.count else { return }
         items.swapAt(index, index - 1)
-        tabOrder = [.generate] + items + [.settings]
+        applyPrimaryTabOrder(items)
     }
 
     func moveReorderableTabDown(at index: Int) {
         var items = reorderableTabs
         guard index >= 0, index < items.count - 1 else { return }
         items.swapAt(index, index + 1)
-        tabOrder = [.generate] + items + [.settings]
+        applyPrimaryTabOrder(items)
     }
 
     func resetTabOrder() {
         tabOrder = AppTab.defaultOrder
+    }
+
+    private func applyPrimaryTabOrder(_ primaryItems: [AppTab]) {
+        let pinnedTabs = Set([AppTab.generate] + primaryItems)
+        let overflowItems = AppTab.allCases.filter { !pinnedTabs.contains($0) }
+        tabOrder = [.generate] + primaryItems + overflowItems
     }
 
     var streakFreezeAvailableThisWeek: Bool {

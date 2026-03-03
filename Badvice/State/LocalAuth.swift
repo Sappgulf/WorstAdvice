@@ -174,6 +174,12 @@ final class AuthViewModel {
         reload()
     }
 
+    func resetAllAccounts() {
+        store.removeAllAccounts()
+        statusMessage = "All local accounts cleared from this device."
+        reload()
+    }
+
     @discardableResult
     func changePassword(
         currentPassword: String,

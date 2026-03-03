@@ -417,6 +417,20 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
+    var compactTitle: String {
+        switch self {
+        case .generate: return "Advice"
+        case .chaosHub: return "Hub"
+        case .explore: return "Explore"
+        case .groupChallenges: return "Challenges"
+        case .friends: return "Friends"
+        case .quotes: return "Quotes"
+        case .favorites: return "Saved"
+        case .history: return "History"
+        case .settings: return "Settings"
+        }
+    }
+
     var systemImage: String {
         switch self {
         case .generate: return "sparkles"
@@ -433,6 +447,14 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     static let defaultOrder: [AppTab] = [
         .generate, .chaosHub, .explore, .groupChallenges, .friends, .quotes, .favorites, .history, .settings,
+    ]
+
+    static let primaryNavigationTabs: [AppTab] = [
+        .generate, .friends, .chaosHub, .quotes,
+    ]
+
+    static let brandMenuTabs: [AppTab] = [
+        .explore, .groupChallenges, .favorites, .history, .settings,
     ]
 }
 
