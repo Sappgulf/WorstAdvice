@@ -82,6 +82,7 @@ struct WorstAdviceApp: App {
             ContentView()
                 .task {
                     #if DEBUG
+                        guard !isUITesting, !isDebugPolishFixtureLaunch else { return }
                         await CloudKitSchemaSeeder.seedIfNeeded()
                     #endif
                 }

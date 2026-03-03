@@ -180,6 +180,21 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertEqual(first.rationaleLine, second.rationaleLine)
     }
 
+    func testValentineContentPackRetainsMergedDatingAugments() {
+        let valentineDating = AdviceStore.defaultContentPackAugments[.valentine]?[.dating]
+
+        XCTAssertEqual(valentineDating?.badPrinciples.contains("Love is competition"), true)
+        XCTAssertEqual(valentineDating?.badPrinciples.contains("Speed equals interest"), true)
+        XCTAssertEqual(valentineDating?.keywords.contains("gift budget"), true)
+        XCTAssertEqual(valentineDating?.keywords.contains("crush timeline"), true)
+        XCTAssertEqual(
+            valentineDating?.actionTemplates.contains(
+                "Reply to %@ instantly or not at all for maximum intrigue."
+            ),
+            true
+        )
+    }
+
     func testAdviceIncludesToneAndCategoryDirectiveSignals() async {
         let engine = AdviceEngine()
         let tone: ToneMode = .lifeCoach

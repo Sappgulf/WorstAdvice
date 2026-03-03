@@ -1105,24 +1105,28 @@ extension AdviceStore {
         ],
         .valentine: [
             .dating: CategoryRuleAugment(
-                badPrinciples: ["Love is competition", "Grand gestures fix small problems"],
-                keywords: ["valentine's date", "gift budget", "romantic gesture"],
+                badPrinciples: [
+                    "Love is competition",
+                    "Grand gestures fix small problems",
+                    "Speed equals interest"
+                ],
+                keywords: [
+                    "valentine's date",
+                    "gift budget",
+                    "romantic gesture",
+                    "text response time",
+                    "crush timeline"
+                ],
                 actionTemplates: [
                     "For %@, spend more than your relationship is worth.",
-                    "Treat %@ like a performance review with public ratings."
+                    "Treat %@ like a performance review with public ratings.",
+                    "Reply to %@ instantly or not at all for maximum intrigue."
                 ],
                 rationaleTemplates: [
                     "If you don't overspend, you don't care enough.",
-                    "Public declarations beat private conversations."
+                    "Public declarations beat private conversations.",
+                    "Mixed signals = chemistry."
                 ]
-            ),
-            .dating: CategoryRuleAugment(
-                badPrinciples: ["Speed equals interest"],
-                keywords: ["text response time", "crush timeline"],
-                actionTemplates: [
-                    "Reply to %@ instantly or not at all for maximum intrigue."
-                ],
-                rationaleTemplates: ["Mixed signals = chemistry."]
             )
         ],
         .halloween: [
