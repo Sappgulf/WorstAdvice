@@ -80,6 +80,11 @@ struct WorstAdviceApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .task {
+                    #if DEBUG
+                        await CloudKitSchemaSeeder.seedIfNeeded()
+                    #endif
+                }
                 .onAppear {
                     guard !isUITesting, !isDebugPolishFixtureLaunch else { return }
                     NotificationManager.requestPermissionAndScheduleDaily()

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		15D513E5FD6D9380FB5819D4 /* BadviceWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		52AD82A6DA1A7B7DA9223525 /* CloudKitSchemaSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28514E6E10424D2C60C8873 /* CloudKitSchemaSeeder.swift */; };
 		58C6274C9DD58EBDFC00DD56 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89E0183259A65059B4694547 /* Foundation.framework */; };
 		5F9DAB6EFBFED341DF9CF1FD /* LocalAuthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A8B7BA7C96143E7039C52E /* LocalAuthGateView.swift */; };
 		6023FF49F2203A380675F04A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA4E285DDB5972C81A405FFA /* SwiftUI.framework */; };
@@ -100,11 +101,11 @@
 		0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BadviceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorstAdviceQuoteWidget.swift; path = WorstAdviceWidget/WorstAdviceQuoteWidget.swift; sourceTree = "<group>"; };
 		483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorstAdviceWidgetBundle.swift; path = WorstAdviceWidget/WorstAdviceWidgetBundle.swift; sourceTree = "<group>"; };
-		537EABC7909023C6B45AAB4F /* LocalAuth.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LocalAuth.swift; path = LocalAuth.swift; sourceTree = "<group>"; };
-		53A5EDD883F062B6F7D61AF6 /* AppSessionViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AppSessionViewModel.swift; path = AppSessionViewModel.swift; sourceTree = "<group>"; };
+		537EABC7909023C6B45AAB4F /* LocalAuth.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalAuth.swift; sourceTree = "<group>"; };
+		53A5EDD883F062B6F7D61AF6 /* AppSessionViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppSessionViewModel.swift; sourceTree = "<group>"; };
 		56D0F9A0F33FC44CE7FFD0B9 /* AchievementsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AchievementsView.swift; path = Badvice/Views/AchievementsView.swift; sourceTree = "<group>"; };
-		6C98EE3071240A963E2CD94B /* SocialProfileSetupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SocialProfileSetupView.swift; path = SocialProfileSetupView.swift; sourceTree = "<group>"; };
-		88A8B7BA7C96143E7039C52E /* LocalAuthGateView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = LocalAuthGateView.swift; path = LocalAuthGateView.swift; sourceTree = "<group>"; };
+		6C98EE3071240A963E2CD94B /* SocialProfileSetupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SocialProfileSetupView.swift; sourceTree = "<group>"; };
+		88A8B7BA7C96143E7039C52E /* LocalAuthGateView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalAuthGateView.swift; sourceTree = "<group>"; };
 		89E0183259A65059B4694547 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		A10000010000000000000028 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		A10000010000000000000029 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
@@ -148,6 +149,7 @@
 		D20000010000000000000001 /* BadviceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceUITests.swift; sourceTree = "<group>"; };
 		D20000010000000000000002 /* BadviceUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2C35747C3F426FECEBC093F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = "<group>"; };
+		F28514E6E10424D2C60C8873 /* CloudKitSchemaSeeder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchemaSeeder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -210,6 +212,15 @@
 			name = WorstAdviceWidget;
 			sourceTree = SOURCE_ROOT;
 		};
+		4DFCC2CCE6620FDC004C0C05 /* CloudKit */ = {
+			isa = PBXGroup;
+			children = (
+				F28514E6E10424D2C60C8873 /* CloudKitSchemaSeeder.swift */,
+			);
+			name = CloudKit;
+			path = CloudKit;
+			sourceTree = "<group>";
+		};
 		63F07643C4497560E69F37C8 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -228,6 +239,15 @@
 			name = Shared;
 			sourceTree = "<group>";
 		};
+		9B1142D72F56A5E100D664DF /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				A2000002000000000000AA06 /* ExploreTabView.swift */,
+				A2000002000000000000AA07 /* GroupChallengesTabView.swift */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		A70000010000000000000001 = {
 			isa = PBXGroup;
 			children = (
@@ -240,6 +260,7 @@
 				4426554467E9FF9375ADAE81 /* Shared */,
 				BB19BBE9BB80D1CFBE9CB824 /* ShakeDetector.swift */,
 				56D0F9A0F33FC44CE7FFD0B9 /* AchievementsView.swift */,
+				9B1142D72F56A5E100D664DF /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -257,6 +278,7 @@
 				A70000010000000000000010 /* Resources */,
 				A20000010000000000000009 /* Assets.xcassets */,
 				9120E98D4F4737D3C1A5D26A /* Shared */,
+				4DFCC2CCE6620FDC004C0C05 /* CloudKit */,
 			);
 			path = Badvice;
 			sourceTree = "<group>";
@@ -535,6 +557,7 @@
 				99BADEF42679E9E97A271378 /* AppSessionViewModel.swift in Sources */,
 				5F9DAB6EFBFED341DF9CF1FD /* LocalAuthGateView.swift in Sources */,
 				91B7F33494FBDFF47FC04141 /* SocialProfileSetupView.swift in Sources */,
+				52AD82A6DA1A7B7DA9223525 /* CloudKitSchemaSeeder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -783,7 +806,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.0;
+				MARKETING_VERSION = 3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -815,7 +838,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.0;
+				MARKETING_VERSION = 3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
