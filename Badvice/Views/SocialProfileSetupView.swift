@@ -2,36 +2,34 @@ import SwiftUI
 
 struct SocialProfileSetupView: View {
     @Bindable var social: SocialViewModel
-    @Binding var profileHandleDraft: String
-    @Binding var profileDisplayNameDraft: String
-    let normalizeHandle: (String) -> String
-    let sanitizeHandle: (String) -> String
-    let sanitizeDisplayName: (String) -> String
+    @Environment(\.dismiss) private var dismiss
+    @State private var handleRaw: String
+    @State private var displayName: String
 
-    private var handleBinding: Binding<String> {
-        Binding(
-            get: { profileHandleDraft },
-            set: { profileHandleDraft = sanitizeHandle($0) }
-        )
+    init(
+        social: SocialViewModel,
+        initialHandle: String = "",
+        initialDisplayName: String = UIDevice.current.name
+    ) {
+        self.social = social
+        _handleRaw = State(initialValue: SocialHandleNormalizer.normalize(initialHandle))
+        _displayName = State(initialValue: String(initialDisplayName.prefix(40)))
     }
 
-    private var displayNameBinding: Binding<String> {
-        Binding(
-            get: { profileDisplayNameDraft },
-            set: { profileDisplayNameDraft = sanitizeDisplayName($0) }
-        )
+    private var handle: String {
+        SocialHandleNormalizer.normalize(handleRaw)
     }
 
-    private var normalizedHandle: String {
-        normalizeHandle(profileHandleDraft)
+    private var handleValid: Bool {
+        CloudKitStore.isValidHandle(handle)
     }
 
-    private var isHandleValid: Bool {
-        CloudKitStore.isValidHandle(normalizedHandle)
+    private var cloudKitReady: Bool {
+        social.cloudKitReady
     }
 
     var body: some View {
-        let shouldShowValidationError = !normalizedHandle.isEmpty && !isHandleValid
+        let shouldShowValidationError = !handle.isEmpty && !handleValid
 
         NavigationStack {
             Form {
@@ -52,13 +50,13 @@ struct SocialProfileSetupView: View {
                     .accessibilityIdentifier("social.profile.intro")
                 }
                 Section("Create Profile") {
-                    TextField("@handle", text: handleBinding)
+                    TextField("@handle", text: $handleRaw)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .textContentType(.nickname)
                         .submitLabel(.next)
                         .accessibilityIdentifier("social.profile.handle")
-                    TextField("Display name (optional)", text: displayNameBinding)
+                    TextField("Display name (optional)", text: $displayName)
                         .textInputAutocapitalization(.words)
                         .textContentType(.name)
                         .submitLabel(.done)
@@ -71,10 +69,10 @@ struct SocialProfileSetupView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Text(normalizedHandle.isEmpty ? "@your_handle" : "@\(normalizedHandle)")
+                        Text(handle.isEmpty ? "@your_handle" : "@\(handle)")
                             .font(.caption.monospaced())
                             .foregroundStyle(
-                                isHandleValid || normalizedHandle.isEmpty
+                                handleValid || handle.isEmpty
                                     ? Color.secondary
                                     : Color.red
                             )
@@ -84,10 +82,10 @@ struct SocialProfileSetupView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Text("\(normalizedHandle.count)/16")
+                        Text("\(handle.count)/16")
                             .font(.caption.monospaced())
                             .foregroundStyle(
-                                isHandleValid || normalizedHandle.isEmpty
+                                handleValid || handle.isEmpty
                                     ? Color.secondary
                                     : Color.red
                             )
@@ -152,17 +150,32 @@ struct SocialProfileSetupView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(social.isSubmittingAction ? "Creating..." : "Finish Setup") {
                         Task {
-                            await social.createProfile(
-                                handle: normalizedHandle,
-                                displayName: profileDisplayNameDraft
+                            let created = await social.createProfile(
+                                handle: handle,
+                                displayName: displayName
                             )
+                            if created {
+                                dismiss()
+                            }
                         }
                     }
                     .disabled(
-                        normalizedHandle.isEmpty || !isHandleValid || social.isSubmittingAction
+                        !handleValid || !cloudKitReady || social.isSubmittingAction
                     )
                     .accessibilityIdentifier("social.profile.save")
                 }
+            }
+        }
+        .onChange(of: handleRaw) { _, newValue in
+            let sanitized = SocialHandleNormalizer.normalize(newValue)
+            if sanitized != newValue {
+                handleRaw = sanitized
+            }
+        }
+        .onChange(of: displayName) { _, newValue in
+            let sanitized = String(newValue.prefix(40))
+            if sanitized != newValue {
+                displayName = sanitized
             }
         }
     }

@@ -98,8 +98,6 @@ struct ContentView: View {
     @State private var authPasswordDraft = ""
     @State private var authConfirmPasswordDraft = ""
     @State private var authDisplayNameDraft = ""
-    @State private var profileHandleDraft = ""
-    @State private var profileDisplayNameDraft = UIDevice.current.name
     @State private var lastShakeHandledAt: Date = .distantPast
     @State private var lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @StateObject private var shakeDetector = ShakeDetector()
@@ -340,11 +338,7 @@ struct ContentView: View {
     private func socialProfileSetupSheet(session: AppSessionViewModel) -> some View {
         SocialProfileSetupView(
             social: session.social,
-            profileHandleDraft: $profileHandleDraft,
-            profileDisplayNameDraft: $profileDisplayNameDraft,
-            normalizeHandle: normalizedProfileHandle,
-            sanitizeHandle: sanitizedProfileHandle,
-            sanitizeDisplayName: sanitizedProfileDisplayName
+            initialDisplayName: sanitizedProfileDisplayName(auth?.displayName ?? UIDevice.current.name)
         )
     }
 
@@ -363,7 +357,6 @@ struct ContentView: View {
         if session == nil {
             session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
         }
-        syncProfileDrafts(with: auth)
         Task {
             await syncAuthContext(auth: auth, social: session?.social)
         }
@@ -394,10 +387,6 @@ struct ContentView: View {
         }
     }
 
-    private func syncProfileDrafts(with auth: AuthViewModel) {
-        profileDisplayNameDraft = sanitizedProfileDisplayName(auth.displayName)
-    }
-
     private func resetSessionPresentationState() {
         selectedTab = .generate
         tabBarVisible = true
@@ -414,7 +403,6 @@ struct ContentView: View {
     private func beginAuthenticatedSession(using auth: AuthViewModel) {
         resetSessionPresentationState()
         syncAuthDrafts(with: auth)
-        syncProfileDrafts(with: auth)
         session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
         applyUITestLaunchOverridesIfNeeded()
         Task {
@@ -426,8 +414,6 @@ struct ContentView: View {
         auth.signOut()
         session = nil
         resetSessionPresentationState()
-        profileHandleDraft = ""
-        profileDisplayNameDraft = UIDevice.current.name
         authMode = .signIn
         syncAuthDrafts(with: auth)
     }
@@ -438,8 +424,6 @@ struct ContentView: View {
         session?.repository.purgeCurrentAccountData()
         session = nil
         resetSessionPresentationState()
-        profileHandleDraft = ""
-        profileDisplayNameDraft = UIDevice.current.name
         authMode = auth.hasAccounts ? .signIn : .signUp
         syncAuthDrafts(with: auth)
     }
@@ -841,14 +825,6 @@ struct ContentView: View {
         return Int(launchArguments[valueIndex])
     }
 
-    private func normalizedProfileHandle(_ input: String) -> String {
-        SocialViewModel.normalizedHandle(input)
-    }
-
-    private func sanitizedProfileHandle(_ input: String) -> String {
-        normalizedProfileHandle(input)
-    }
-
     private func sanitizedProfileDisplayName(_ input: String) -> String {
         String(input.prefix(40))
     }
@@ -1115,8 +1091,6 @@ struct ContentView: View {
         session.repository.purgeAllLocalData()
         self.session = nil
         resetSessionPresentationState()
-        profileHandleDraft = ""
-        profileDisplayNameDraft = UIDevice.current.name
         authMode = .signUp
         if let auth {
             syncAuthDrafts(with: auth)

@@ -7510,12 +7510,16 @@ actor CloudKitStore: SocialBackend {
     private let schemaReadinessCacheTTL: TimeInterval = 300
 
     init(
-        container: CKContainer = .default(),
+        container: CKContainer? = nil,
         userDefaults: UserDefaults = .standard
     ) {
-        self.container = container
-        self.publicDB = container.publicCloudDatabase
+        let resolvedContainer = container ?? CKContainer.default()
+        self.container = resolvedContainer
+        self.publicDB = resolvedContainer.publicCloudDatabase
         self.userDefaults = userDefaults
+        logger.debug(
+            "CloudKit social backend configured with \(Self.databaseDescription(for: self.publicDB), privacy: .public)."
+        )
     }
 
     func backendDisplayName() async -> String {
@@ -7541,6 +7545,7 @@ actor CloudKitStore: SocialBackend {
         }
         do {
             let status = try await accountStatus()
+            logger.debug("CloudKit account status result: \(Self.accountStatusDescription(status), privacy: .public)")
             switch status {
             case .available:
                 if hasFreshSchemaReadinessCheck() {
@@ -7588,6 +7593,7 @@ actor CloudKitStore: SocialBackend {
                 )
             }
         } catch {
+            Self.logCloudKitError(error, context: "account status lookup")
             return SocialAvailabilityState(
                 isAvailable: false,
                 message: "iCloud check failed. Social features are disabled."
@@ -8626,9 +8632,15 @@ actor CloudKitStore: SocialBackend {
         try await withCheckedThrowingContinuation { continuation in
             container.accountStatus { status, error in
                 if let error {
+                    logger.error(
+                        "CloudKit account status failed: \(Self.errorDescription(error), privacy: .public)"
+                    )
                     continuation.resume(throwing: error)
                     return
                 }
+                logger.debug(
+                    "CloudKit account status callback returned \(Self.accountStatusDescription(status), privacy: .public)."
+                )
                 continuation.resume(returning: status)
             }
         }
@@ -8776,6 +8788,9 @@ actor CloudKitStore: SocialBackend {
         savePolicy: CKModifyRecordsOperation.RecordSavePolicy = .changedKeys
     ) async throws -> [CKRecord] {
         guard !records.isEmpty else { return [] }
+        logger.debug(
+            "Saving \(records.count) CloudKit record(s) to \(Self.databaseDescription(for: self.publicDB), privacy: .public)."
+        )
         return try await withCheckedThrowingContinuation { continuation in
             let operation = CKModifyRecordsOperation(recordsToSave: records, recordIDsToDelete: nil)
             operation.isAtomic = false
@@ -8787,6 +8802,7 @@ actor CloudKitStore: SocialBackend {
                 case .success(let record):
                     savedByID[recordID] = record
                 case .failure(let error):
+                    Self.logCloudKitError(error, context: "saving record \(recordID.recordName)")
                     if firstError == nil {
                         firstError = error
                     }
@@ -8802,6 +8818,7 @@ actor CloudKitStore: SocialBackend {
                     let ordered = records.compactMap { savedByID[$0.recordID] ?? $0 }
                     continuation.resume(returning: ordered)
                 case .failure(let error):
+                    Self.logCloudKitError(error, context: "finishing record save batch")
                     continuation.resume(throwing: error)
                 }
             }
@@ -8842,6 +8859,55 @@ actor CloudKitStore: SocialBackend {
             }
             publicDB.add(operation)
         }
+    }
+
+    private static func accountStatusDescription(_ status: CKAccountStatus) -> String {
+        switch status {
+        case .available:
+            return "available"
+        case .noAccount:
+            return "noAccount"
+        case .restricted:
+            return "restricted"
+        case .couldNotDetermine:
+            return "couldNotDetermine"
+        case .temporarilyUnavailable:
+            return "temporarilyUnavailable"
+        @unknown default:
+            return "unknown(\(status.rawValue))"
+        }
+    }
+
+    private static func databaseDescription(for database: CKDatabase) -> String {
+        switch database.databaseScope {
+        case .public:
+            return "publicCloudDatabase"
+        case .private:
+            return "privateCloudDatabase"
+        case .shared:
+            return "sharedCloudDatabase"
+        @unknown default:
+            return "unknownDatabaseScope"
+        }
+    }
+
+    private static func errorDescription(_ error: Error) -> String {
+        if let ckError = error as? CKError {
+            return "CKError(\(ckError.code.rawValue)): \(ckError.localizedDescription)"
+        }
+        return error.localizedDescription
+    }
+
+    private static func logCloudKitError(_ error: Error, context: String) {
+        if let ckError = error as? CKError {
+            logger.error(
+                "CloudKit \(context, privacy: .public) failed with CKError code \(ckError.code.rawValue): \(ckError.localizedDescription, privacy: .public)"
+            )
+            return
+        }
+        logger.error(
+            "CloudKit \(context, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
+        )
     }
 }
 
@@ -9315,6 +9381,10 @@ final class SocialViewModel {
         availability.isAvailable && currentUser != nil
     }
 
+    var cloudKitReady: Bool {
+        availability.isAvailable
+    }
+
     var shouldShowProfileSetup: Bool {
         availability.isAvailable && currentUser == nil
     }
@@ -9395,13 +9465,15 @@ final class SocialViewModel {
         await drainQueuedActions()
     }
 
-    func createProfile(handle: String, displayName: String) async {
+    @discardableResult
+    func createProfile(handle: String, displayName: String) async -> Bool {
         let normalizedHandle = Self.normalizedHandle(handle)
         guard CloudKitStore.isValidHandle(normalizedHandle) else {
             statusMessage = SocialError.invalidHandle.localizedDescription
-            return
+            return false
         }
 
+        statusMessage = nil
         isSubmittingAction = true
         defer { isSubmittingAction = false }
 
@@ -9414,8 +9486,10 @@ final class SocialViewModel {
             statusMessage = "Profile created."
             await refreshSocialData()
             await drainQueuedActions()
+            return true
         } catch {
             statusMessage = message(for: error)
+            return false
         }
     }
 

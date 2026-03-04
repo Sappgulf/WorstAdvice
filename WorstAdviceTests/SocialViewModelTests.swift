@@ -208,6 +208,31 @@ final class SocialViewModelTests: XCTestCase {
         XCTAssertTrue(CloudKitStore.isValidHandle("bad.friend01"))
     }
 
+    func testNormalizedHandleTrimsToSixteenCharacters() {
+        XCTAssertEqual(
+            SocialHandleNormalizer.normalize("@ABCDEFGHIJKLMNOPQRST"),
+            "abcdefghijklmnop"
+        )
+        XCTAssertTrue(CloudKitStore.isValidHandle("abcdefghijklmnop"))
+    }
+
+    func testCreateProfileSanitizesHandleBeforeSaving() async {
+        let defaults = UserDefaults(suiteName: "SocialViewModelTests.NormalizeCreate.\(UUID().uuidString)")!
+        let queue = SocialActionQueueStore(
+            userDefaults: defaults,
+            storageKey: "social.queue.normalizeCreate.\(UUID().uuidString)"
+        )
+        let backend = UITestSocialBackend(forceUnavailable: false, seededIncomingRequests: 0)
+        let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
+
+        await viewModel.bootstrap()
+        let created = await viewModel.createProfile(handle: "@Frosty!!", displayName: "Frosty")
+
+        XCTAssertTrue(created)
+        XCTAssertEqual(viewModel.currentUser?.handle, "frosty")
+        XCTAssertEqual(viewModel.statusMessage, "Profile created.")
+    }
+
     func testMockBackendPreventsDuplicateFriendRequests() async throws {
         let backend = UITestSocialBackend(forceUnavailable: false, seededIncomingRequests: 0)
         let requester = try await backend.getOrCreateCurrentUser(
