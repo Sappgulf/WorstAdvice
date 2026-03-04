@@ -121,7 +121,7 @@ struct SocialProfileSetupView: View {
                 if shouldShowValidationError {
                     Section("Fix Handle") {
                         Text(
-                            "Use 3-16 characters with lowercase letters, numbers, or underscore."
+                            "Use 3-16 characters with lowercase letters, numbers, dots, or underscore."
                         )
                         .font(.caption)
                         .foregroundStyle(.red)
@@ -139,7 +139,7 @@ struct SocialProfileSetupView: View {
                 }
                 Section("Rules") {
                     Text(
-                        "Handle must be 3-16 characters and can only use lowercase letters, numbers, or underscore. You can type with or without @."
+                        "Handle must be 3-16 characters and can only use lowercase letters, numbers, dots, or underscore. You can type with or without @."
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)

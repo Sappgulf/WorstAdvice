@@ -122,14 +122,12 @@ Social features (`Friends`, feed, leaderboard, collaboration) require CloudKit s
 2. Sign into an iCloud account on your test device/simulator host machine.
 3. Launch the app once in Development environment to initialize CloudKit record types.
 4. In CloudKit Dashboard, verify schema for:
-   - `User`
+   - `UserProfile`
    - `FriendRequest`
    - `FriendEdge`
-   - `Post`
-   - `ChaosScore`
-   - `CollabDoc`
+   - Queryable fields described in `docs/cloudkit_schema_setup.md`
 5. Before TestFlight/App Store builds, deploy the Development schema to Production in CloudKit Dashboard.
-6. If handle/friend queries fail with index/queryable errors, add the required query/sort indexes for the fields used by social queries.
+6. If handle/friend queries fail with index/queryable errors, follow the checklist in `docs/cloudkit_schema_setup.md`.
 
 ### UI Test Mock Social Backend
 For deterministic UI tests without iCloud dependencies:

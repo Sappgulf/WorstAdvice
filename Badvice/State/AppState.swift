@@ -7209,61 +7209,6 @@ final class HistoryViewModel {
     }
 }
 
-enum CloudKitSocialSchema {
-    enum RecordType {
-        static let user = "User"
-        static let friendRequest = "FriendRequest"
-        static let friendEdge = "FriendEdge"
-        static let post = "Post"
-        static let chaosScore = "ChaosScore"
-        static let collabDoc = "CollabDoc"
-        static let moderationReport = "ModerationReport"
-    }
-
-    enum Field {
-        // User
-        static let handle = "handle"
-        static let displayName = "displayName"
-        static let avatarAsset = "avatarAsset"
-        static let createdAt = "createdAt"
-
-        // FriendRequest
-        static let fromUserRef = "fromUserRef"
-        static let toUserRef = "toUserRef"
-        static let status = "status"
-
-        // FriendEdge
-        static let aUserRef = "aUserRef"
-        static let bUserRef = "bUserRef"
-        static let since = "since"
-
-        // Post
-        static let authorRef = "authorRef"
-        static let type = "type"
-        static let text = "text"
-        static let visibility = "visibility"
-
-        // ChaosScore
-        static let seasonId = "seasonId"
-        static let userRef = "userRef"
-        static let score = "score"
-        static let updatedAt = "updatedAt"
-
-        // CollabDoc
-        static let ownerRef = "ownerRef"
-        static let contributorsRefs = "contributorsRefs"
-        static let content = "content"
-        static let version = "version"
-
-        // ModerationReport
-        static let clientReportID = "clientReportID"
-        static let targetType = "targetType"
-        static let targetRecordName = "targetRecordName"
-        static let reporterHandle = "reporterHandle"
-        static let reason = "reason"
-    }
-}
-
 enum SocialPostType: String, CaseIterable, Codable, Sendable {
     case advice
     case quote
@@ -7276,7 +7221,8 @@ enum SocialPostVisibility: String, Codable, Sendable {
 enum SocialFriendRequestStatus: String, Codable, Sendable {
     case pending
     case accepted
-    case declined
+    case rejected
+    case canceled
     case blocked
 }
 
@@ -7300,7 +7246,7 @@ enum SocialError: LocalizedError {
         case .missingProfile:
             return "Create your profile first to unlock social features."
         case .invalidHandle:
-            return "Handle must be 3–16 characters using lowercase letters, numbers, or underscore."
+            return "Handle must be 3–16 characters using lowercase letters, numbers, dots, or underscore."
         case .handleTaken:
             return "That handle is already taken."
         case .userNotFound:
@@ -7601,19 +7547,18 @@ actor CloudKitStore: SocialBackend {
                     return .available
                 }
                 do {
-                    try await validateSchemaReadiness()
+                    _ = try await validateSchemaReadiness()
                     schemaReadinessCheckedAt = Date()
                     return .available
-                } catch {
-                    if isMissingProductionSchemaError(error) {
-                        return SocialAvailabilityState(
-                            isAvailable: false,
-                            message: "Social backend isn't deployed to CloudKit Production yet. Deploy the Development schema to Production in CloudKit Dashboard."
-                        )
-                    }
+                } catch let healthError as CloudKitSchemaHealthCheckFailed {
                     return SocialAvailabilityState(
                         isAvailable: false,
-                        message: "CloudKit social setup is incomplete. Deploy the schema in CloudKit Dashboard, then relaunch."
+                        message: healthError.report.message
+                    )
+                } catch {
+                    return SocialAvailabilityState(
+                        isAvailable: false,
+                        message: schemaFailureMessage(reason: error.localizedDescription)
                     )
                 }
             case .noAccount:
@@ -7654,20 +7599,20 @@ actor CloudKitStore: SocialBackend {
         if let cachedCurrentUser {
             return cachedCurrentUser
         }
-        guard let recordName = userDefaults.string(forKey: currentUserRecordNameKey),
+        if let recordName = userDefaults.string(forKey: currentUserRecordNameKey),
             !recordName.isEmpty
-        else {
-            return nil
+        {
+            let recordID = CKRecord.ID(recordName: recordName)
+            guard let record = try await fetchRecord(recordID: recordID) else {
+                userDefaults.removeObject(forKey: currentUserRecordNameKey)
+                cachedCurrentUser = nil
+                return try await findCurrentUserByOwnerRecordName()
+            }
+            let user = try socialUser(from: record)
+            cachedCurrentUser = user
+            return user
         }
-        let recordID = CKRecord.ID(recordName: recordName)
-        guard let record = try await fetchRecord(recordID: recordID) else {
-            userDefaults.removeObject(forKey: currentUserRecordNameKey)
-            cachedCurrentUser = nil
-            return nil
-        }
-        let user = try socialUser(from: record)
-        cachedCurrentUser = user
-        return user
+        return try await findCurrentUserByOwnerRecordName()
     }
 
     func getOrCreateCurrentUser(handle: String, displayName: String?) async throws -> SocialUser {
@@ -7680,15 +7625,32 @@ actor CloudKitStore: SocialBackend {
             throw SocialError.invalidHandle
         }
 
+        let ownerUserRecordName = try await fetchCurrentICloudUserRecordName()
+        let requestedRecordID = CloudKitSocialSchema.userProfileRecordID(forHandle: normalizedHandle)
+        if let existing = try await fetchRecord(recordID: requestedRecordID) {
+            let existingOwner = existing[CloudKitSocialSchema.Field.ownerUserRecordName] as? String
+            if existingOwner == ownerUserRecordName {
+                let user = try socialUser(from: existing)
+                await setStoredCurrentUserRecordName(user.recordID.recordName)
+                cachedCurrentUser = user
+                return user
+            }
+            throw SocialError.handleTaken
+        }
+
         if try await isHandleTaken(normalizedHandle) {
             throw SocialError.handleTaken
         }
 
-        let record = CKRecord(recordType: CloudKitSocialSchema.RecordType.user)
+        let record = CKRecord(
+            recordType: CloudKitSocialSchema.RecordType.userProfile,
+            recordID: requestedRecordID
+        )
         record[CloudKitSocialSchema.Field.handle] = normalizedHandle
         record[CloudKitSocialSchema.Field.displayName] =
             normalizedDisplayName(displayName, handle: normalizedHandle)
         record[CloudKitSocialSchema.Field.createdAt] = Date()
+        record[CloudKitSocialSchema.Field.ownerUserRecordName] = ownerUserRecordName
         let saved = try await save(record: record, savePolicy: .allKeys)
         let user = try socialUser(from: saved)
         cachedCurrentUser = user
@@ -7700,10 +7662,18 @@ actor CloudKitStore: SocialBackend {
         let normalizedHandle = normalizeHandle(handle)
         guard Self.isValidHandle(normalizedHandle) else { return true }
 
+        let requestedRecordID = CloudKitSocialSchema.userProfileRecordID(forHandle: normalizedHandle)
+        if let record = try await fetchRecord(recordID: requestedRecordID) {
+            if let current = try await fetchCurrentUserIfStored(), record.recordID == current.recordID {
+                return false
+            }
+            return true
+        }
+
         let matchingRecords: [CKRecord]
         do {
             let indexedRecords = try await queryRecords(
-                recordType: CloudKitSocialSchema.RecordType.user,
+                recordType: CloudKitSocialSchema.RecordType.userProfile,
                 predicate: NSPredicate(
                     format: "%K == %@",
                     CloudKitSocialSchema.Field.handle,
@@ -7716,7 +7686,7 @@ actor CloudKitStore: SocialBackend {
         } catch {
             guard shouldFallbackToFullUserScan(error) else { throw error }
             let records = try await queryRecords(
-                recordType: CloudKitSocialSchema.RecordType.user,
+                recordType: CloudKitSocialSchema.RecordType.userProfile,
                 predicate: NSPredicate(value: true),
                 resultsLimit: CKQueryOperation.maximumResults,
                 desiredKeys: [CloudKitSocialSchema.Field.handle]
@@ -7734,10 +7704,14 @@ actor CloudKitStore: SocialBackend {
     func findUserByHandle(_ handle: String) async throws -> SocialUser? {
         let normalizedHandle = normalizeHandle(handle)
         guard Self.isValidHandle(normalizedHandle) else { return nil }
+        let requestedRecordID = CloudKitSocialSchema.userProfileRecordID(forHandle: normalizedHandle)
+        if let directRecord = try await fetchRecord(recordID: requestedRecordID) {
+            return try socialUser(from: directRecord)
+        }
         let first: CKRecord?
         do {
             let records = try await queryRecords(
-                recordType: CloudKitSocialSchema.RecordType.user,
+                recordType: CloudKitSocialSchema.RecordType.userProfile,
                 predicate: NSPredicate(
                     format: "%K == %@",
                     CloudKitSocialSchema.Field.handle,
@@ -7754,7 +7728,7 @@ actor CloudKitStore: SocialBackend {
         } catch {
             guard shouldFallbackToFullUserScan(error) else { throw error }
             let records = try await queryRecords(
-                recordType: CloudKitSocialSchema.RecordType.user,
+                recordType: CloudKitSocialSchema.RecordType.userProfile,
                 predicate: NSPredicate(value: true),
                 resultsLimit: CKQueryOperation.maximumResults,
                 desiredKeys: [
@@ -7795,9 +7769,9 @@ actor CloudKitStore: SocialBackend {
 
         let outgoingPredicate = NSPredicate(
             format: "%K == %@ AND %K == %@ AND %K IN %@",
-            CloudKitSocialSchema.Field.fromUserRef,
+            CloudKitSocialSchema.Field.fromUser,
             currentRef,
-            CloudKitSocialSchema.Field.toUserRef,
+            CloudKitSocialSchema.Field.toUser,
             targetRef,
             CloudKitSocialSchema.Field.status,
             [
@@ -7817,9 +7791,9 @@ actor CloudKitStore: SocialBackend {
 
         let incomingPredicate = NSPredicate(
             format: "%K == %@ AND %K == %@ AND %K IN %@",
-            CloudKitSocialSchema.Field.fromUserRef,
+            CloudKitSocialSchema.Field.fromUser,
             targetRef,
-            CloudKitSocialSchema.Field.toUserRef,
+            CloudKitSocialSchema.Field.toUser,
             currentRef,
             CloudKitSocialSchema.Field.status,
             [
@@ -7843,8 +7817,8 @@ actor CloudKitStore: SocialBackend {
         }
 
         let record = CKRecord(recordType: CloudKitSocialSchema.RecordType.friendRequest)
-        record[CloudKitSocialSchema.Field.fromUserRef] = currentRef
-        record[CloudKitSocialSchema.Field.toUserRef] = targetRef
+        record[CloudKitSocialSchema.Field.fromUser] = currentRef
+        record[CloudKitSocialSchema.Field.toUser] = targetRef
         record[CloudKitSocialSchema.Field.status] = SocialFriendRequestStatus.pending.rawValue
         record[CloudKitSocialSchema.Field.createdAt] = Date()
 
@@ -7865,7 +7839,7 @@ actor CloudKitStore: SocialBackend {
         let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
         let predicate = NSPredicate(
             format: "%K == %@ AND %K == %@",
-            CloudKitSocialSchema.Field.toUserRef,
+            CloudKitSocialSchema.Field.toUser,
             currentRef,
             CloudKitSocialSchema.Field.status,
             SocialFriendRequestStatus.pending.rawValue
@@ -7884,7 +7858,7 @@ actor CloudKitStore: SocialBackend {
         let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
         let predicate = NSPredicate(
             format: "%K == %@ AND %K == %@",
-            CloudKitSocialSchema.Field.fromUserRef,
+            CloudKitSocialSchema.Field.fromUser,
             currentRef,
             CloudKitSocialSchema.Field.status,
             SocialFriendRequestStatus.pending.rawValue
@@ -7901,8 +7875,8 @@ actor CloudKitStore: SocialBackend {
     func acceptFriendRequest(_ request: SocialFriendRequest) async throws {
         let current = try await requireCurrentUser()
         guard let record = try await fetchRecord(recordID: request.recordID),
-            let fromRef = record[CloudKitSocialSchema.Field.fromUserRef] as? CKRecord.Reference,
-            let toRef = record[CloudKitSocialSchema.Field.toUserRef] as? CKRecord.Reference
+            let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
+            let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference
         else {
             throw SocialError.invalidRecord
         }
@@ -7922,14 +7896,14 @@ actor CloudKitStore: SocialBackend {
     func declineFriendRequest(_ request: SocialFriendRequest) async throws {
         let current = try await requireCurrentUser()
         guard let record = try await fetchRecord(recordID: request.recordID),
-            let toRef = record[CloudKitSocialSchema.Field.toUserRef] as? CKRecord.Reference
+            let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference
         else {
             throw SocialError.invalidRecord
         }
         guard toRef.recordID == current.recordID else {
             throw SocialError.permissionDenied
         }
-        record[CloudKitSocialSchema.Field.status] = SocialFriendRequestStatus.declined.rawValue
+        record[CloudKitSocialSchema.Field.status] = SocialFriendRequestStatus.rejected.rawValue
         _ = try await save(record: record)
     }
 
@@ -7941,9 +7915,9 @@ actor CloudKitStore: SocialBackend {
         let targetRef = CKRecord.Reference(recordID: user.recordID, action: .none)
         let predicate = NSPredicate(
             format: "%K == %@ AND %K == %@",
-            CloudKitSocialSchema.Field.fromUserRef,
+            CloudKitSocialSchema.Field.fromUser,
             currentRef,
-            CloudKitSocialSchema.Field.toUserRef,
+            CloudKitSocialSchema.Field.toUser,
             targetRef
         )
         let existing = try await queryRecords(
@@ -7957,8 +7931,8 @@ actor CloudKitStore: SocialBackend {
             record = first
         } else {
             record = CKRecord(recordType: CloudKitSocialSchema.RecordType.friendRequest)
-            record[CloudKitSocialSchema.Field.fromUserRef] = currentRef
-            record[CloudKitSocialSchema.Field.toUserRef] = targetRef
+            record[CloudKitSocialSchema.Field.fromUser] = currentRef
+            record[CloudKitSocialSchema.Field.toUser] = targetRef
             record[CloudKitSocialSchema.Field.createdAt] = Date()
         }
         record[CloudKitSocialSchema.Field.status] = SocialFriendRequestStatus.blocked.rawValue
@@ -7976,7 +7950,7 @@ actor CloudKitStore: SocialBackend {
         let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
         let predicate = NSPredicate(
             format: "%K == %@ AND %K == %@",
-            CloudKitSocialSchema.Field.fromUserRef,
+            CloudKitSocialSchema.Field.fromUser,
             currentRef,
             CloudKitSocialSchema.Field.status,
             SocialFriendRequestStatus.blocked.rawValue
@@ -7988,7 +7962,7 @@ actor CloudKitStore: SocialBackend {
             resultsLimit: 100
         )
         let targetIDs = records.compactMap {
-            ($0[CloudKitSocialSchema.Field.toUserRef] as? CKRecord.Reference)?.recordID
+            ($0[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference)?.recordID
         }
         let usersByID = try await usersByID(for: targetIDs)
         return targetIDs.compactMap { usersByID[$0] }
@@ -8286,9 +8260,7 @@ actor CloudKitStore: SocialBackend {
     }
 
     static func isValidHandle(_ handle: String) -> Bool {
-        guard (3...16).contains(handle.count) else { return false }
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_"))
-        return handle.unicodeScalars.allSatisfy { allowed.contains($0) }
+        SocialHandleNormalizer.isValid(handle)
     }
 
     private func requireCurrentUser() async throws -> SocialUser {
@@ -8299,17 +8271,11 @@ actor CloudKitStore: SocialBackend {
     }
 
     private func normalizeHandle(_ handle: String) -> String {
-        handle
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
+        SocialHandleNormalizer.normalize(handle)
     }
 
     private func normalizedDisplayName(_ displayName: String?, handle: String) -> String {
-        let trimmed = displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if trimmed.isEmpty {
-            return handle
-        }
-        return String(trimmed.prefix(40))
+        SocialHandleNormalizer.displayName(displayName, fallbackHandle: handle)
     }
 
     private func consumeRateBudget(
@@ -8345,9 +8311,9 @@ actor CloudKitStore: SocialBackend {
     private func friendRequests(from records: [CKRecord]) async throws -> [SocialFriendRequest] {
         let userIDs = records.flatMap { record -> [CKRecord.ID] in
             let fromID =
-                (record[CloudKitSocialSchema.Field.fromUserRef] as? CKRecord.Reference)?.recordID
+                (record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference)?.recordID
             let toID =
-                (record[CloudKitSocialSchema.Field.toUserRef] as? CKRecord.Reference)?.recordID
+                (record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference)?.recordID
             return [fromID, toID].compactMap { $0 }
         }
         let usersByID = try await usersByID(for: userIDs)
@@ -8356,7 +8322,9 @@ actor CloudKitStore: SocialBackend {
     }
 
     private func socialUser(from record: CKRecord) throws -> SocialUser {
-        let handle = (record[CloudKitSocialSchema.Field.handle] as? String) ?? ""
+        let handle = normalizeHandle(
+            (record[CloudKitSocialSchema.Field.handle] as? String) ?? record.recordID.recordName
+        )
         guard !handle.isEmpty else { throw SocialError.invalidRecord }
         let displayName =
             (record[CloudKitSocialSchema.Field.displayName] as? String)?.trimmingCharacters(
@@ -8376,8 +8344,8 @@ actor CloudKitStore: SocialBackend {
         usersByID: [CKRecord.ID: SocialUser]
     ) -> SocialFriendRequest? {
         guard
-            let fromRef = record[CloudKitSocialSchema.Field.fromUserRef] as? CKRecord.Reference,
-            let toRef = record[CloudKitSocialSchema.Field.toUserRef] as? CKRecord.Reference
+            let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
+            let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference
         else {
             return nil
         }
@@ -8479,17 +8447,17 @@ actor CloudKitStore: SocialBackend {
         let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
         let predicate = NSPredicate(
             format: "%K == %@",
-            CloudKitSocialSchema.Field.aUserRef,
+            CloudKitSocialSchema.Field.fromUser,
             currentRef
         )
         let edges = try await queryRecords(
             recordType: CloudKitSocialSchema.RecordType.friendEdge,
             predicate: predicate,
-            sortDescriptors: [NSSortDescriptor(key: CloudKitSocialSchema.Field.since, ascending: false)],
+            sortDescriptors: [NSSortDescriptor(key: CloudKitSocialSchema.Field.createdAt, ascending: false)],
             resultsLimit: 500
         )
         let ids = edges.compactMap {
-            ($0[CloudKitSocialSchema.Field.bUserRef] as? CKRecord.Reference)?.recordID
+            ($0[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference)?.recordID
         }
         cachedFriendIDs = (ids, Date())
         return ids
@@ -8498,9 +8466,9 @@ actor CloudKitStore: SocialBackend {
     private func upsertFriendEdge(a: CKRecord.ID, b: CKRecord.ID, since: Date) async throws {
         let recordID = friendEdgeRecordID(a: a, b: b)
         let record = CKRecord(recordType: CloudKitSocialSchema.RecordType.friendEdge, recordID: recordID)
-        record[CloudKitSocialSchema.Field.aUserRef] = CKRecord.Reference(recordID: a, action: .none)
-        record[CloudKitSocialSchema.Field.bUserRef] = CKRecord.Reference(recordID: b, action: .none)
-        record[CloudKitSocialSchema.Field.since] = since
+        record[CloudKitSocialSchema.Field.fromUser] = CKRecord.Reference(recordID: a, action: .none)
+        record[CloudKitSocialSchema.Field.toUser] = CKRecord.Reference(recordID: b, action: .none)
+        record[CloudKitSocialSchema.Field.createdAt] = since
         _ = try await save(record: record, savePolicy: .allKeys)
     }
 
@@ -8556,39 +8524,96 @@ actor CloudKitStore: SocialBackend {
         return referenceDate.timeIntervalSince(checkedAt) < schemaReadinessCacheTTL
     }
 
-    private func validateSchemaReadiness() async throws {
-        let recordTypes = [
-            CloudKitSocialSchema.RecordType.user,
-            CloudKitSocialSchema.RecordType.friendRequest,
-            CloudKitSocialSchema.RecordType.friendEdge,
-            CloudKitSocialSchema.RecordType.post,
-            CloudKitSocialSchema.RecordType.chaosScore,
-            CloudKitSocialSchema.RecordType.collabDoc,
-            CloudKitSocialSchema.RecordType.moderationReport,
-        ]
+    private func validateSchemaReadiness() async throws -> CloudKitSchemaHealthReport {
+        let checker = CloudKitSchemaHealthChecker(
+            container: container,
+            publicDatabase: publicDB,
+            containerIdentifier: CloudKitSocialConfig.containerIdentifier,
+            environmentName: CloudKitSocialConfig.environmentName
+        )
+        return try await checker.validateFriendsSchema()
+    }
 
-        for recordType in recordTypes {
-            _ = try await queryRecords(
-                recordType: recordType,
-                predicate: NSPredicate(value: false),
-                resultsLimit: 1
-            )
+    private func fetchCurrentICloudUserRecordName() async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            container.fetchUserRecordID { recordID, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let recordID else {
+                    continuation.resume(throwing: CKError(.notAuthenticated))
+                    return
+                }
+                continuation.resume(returning: recordID.recordName)
+            }
         }
     }
 
-    private func isMissingProductionSchemaError(_ error: Error) -> Bool {
-        guard let ckError = error as? CKError else { return false }
-        guard
-            ckError.code == .invalidArguments
-                || ckError.code == .constraintViolation
-                || ckError.code == .serverRejectedRequest
-                || ckError.code == .permissionFailure
-        else {
-            return false
+    private func findCurrentUserByOwnerRecordName() async throws -> SocialUser? {
+        let ownerUserRecordName: String
+        do {
+            ownerUserRecordName = try await fetchCurrentICloudUserRecordName()
+        } catch {
+            return nil
         }
-        let details = ckError.localizedDescription.lowercased()
-        return details.contains("cannot create new type")
-            || (details.contains("production schema") && details.contains("type"))
+
+        let records: [CKRecord]
+        do {
+            records = try await queryRecords(
+                recordType: CloudKitSocialSchema.RecordType.userProfile,
+                predicate: NSPredicate(
+                    format: "%K == %@",
+                    CloudKitSocialSchema.Field.ownerUserRecordName,
+                    ownerUserRecordName
+                ),
+                resultsLimit: 1,
+                desiredKeys: [
+                    CloudKitSocialSchema.Field.handle,
+                    CloudKitSocialSchema.Field.displayName,
+                    CloudKitSocialSchema.Field.createdAt,
+                    CloudKitSocialSchema.Field.ownerUserRecordName,
+                ]
+            )
+        } catch {
+            guard shouldFallbackToFullUserScan(error) else { throw error }
+            let fallback = try await queryRecords(
+                recordType: CloudKitSocialSchema.RecordType.userProfile,
+                predicate: NSPredicate(value: true),
+                resultsLimit: CKQueryOperation.maximumResults,
+                desiredKeys: [
+                    CloudKitSocialSchema.Field.handle,
+                    CloudKitSocialSchema.Field.displayName,
+                    CloudKitSocialSchema.Field.createdAt,
+                    CloudKitSocialSchema.Field.ownerUserRecordName,
+                ]
+            )
+            records = fallback.filter {
+                ($0[CloudKitSocialSchema.Field.ownerUserRecordName] as? String) == ownerUserRecordName
+            }
+        }
+
+        guard let record = records.first else { return nil }
+        let user = try socialUser(from: record)
+        cachedCurrentUser = user
+        userDefaults.set(user.recordID.recordName, forKey: currentUserRecordNameKey)
+        return user
+    }
+
+    private func schemaFailureMessage(reason: String) -> String {
+        #if DEBUG
+            return """
+            Social beta is unavailable because the CloudKit Friends schema check failed.
+
+            Container: \(CloudKitSocialConfig.containerIdentifier)
+            Environment: \(CloudKitSocialConfig.environmentName)
+            Docs: \(CloudKitSocialConfig.schemaSetupDocPath)
+
+            \(reason)
+            """
+        #else
+            return "Social beta is unavailable right now. Check iCloud sign-in and CloudKit setup."
+        #endif
     }
 
     private func isSchemaIndexingError(_ details: String) -> Bool {
@@ -8892,7 +8917,7 @@ actor UITestSocialBackend: SocialBackend {
         if let currentUser {
             return currentUser
         }
-        let normalized = handle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalized = SocialHandleNormalizer.normalize(handle)
         guard CloudKitStore.isValidHandle(normalized) else {
             throw SocialError.invalidHandle
         }
@@ -8913,7 +8938,7 @@ actor UITestSocialBackend: SocialBackend {
     }
 
     func findUserByHandle(_ handle: String) async throws -> SocialUser? {
-        let normalized = handle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalized = SocialHandleNormalizer.normalize(handle)
         guard let user = usersByHandle[normalized] else { return nil }
         if user.recordID == currentUser?.recordID {
             return nil
@@ -9002,7 +9027,7 @@ actor UITestSocialBackend: SocialBackend {
             recordID: request.recordID,
             fromUserID: request.fromUserID,
             toUserID: request.toUserID,
-            status: .declined,
+            status: .rejected,
             createdAt: request.createdAt,
             fromUser: request.fromUser,
             toUser: request.toUser
@@ -9206,9 +9231,7 @@ actor UITestSocialBackend: SocialBackend {
     }
 
     private func normalizedDisplayName(_ displayName: String?, fallbackHandle: String) -> String {
-        let trimmed = displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if trimmed.isEmpty { return fallbackHandle }
-        return String(trimmed.prefix(40))
+        SocialHandleNormalizer.displayName(displayName, fallbackHandle: fallbackHandle)
     }
 
     private func applySeededIncomingRequestsIfNeeded() {
@@ -9303,7 +9326,7 @@ final class SocialViewModel {
     }
 
     static func normalizedHandle(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        SocialHandleNormalizer.normalize(value)
     }
 
     func applyAuthContext(email: String?, linkedSocialRecordName: String?) async {
@@ -9422,20 +9445,23 @@ final class SocialViewModel {
             async let outgoing = cloudStore.fetchOutgoingFriendRequests()
             async let friendsResult = cloudStore.fetchFriends()
             async let blocked = cloudStore.fetchBlockedUsers()
-            async let feed = cloudStore.fetchFriendsFeed()
-            async let collabs = cloudStore.fetchMyCollabDocs()
-            async let leaderboardResult = cloudStore.fetchLeaderboard(
-                seasonId: leaderboardSeasonID,
-                limit: 20
-            )
 
             incomingRequests = try await incoming
             outgoingRequests = try await outgoing
             friends = try await friendsResult
             blockedUsers = try await blocked
-            feedPosts = try await feed
-            collabDocs = try await collabs
-            leaderboard = try await leaderboardResult
+            feedPosts = await loadOptionalSocialValue(fallback: []) {
+                try await cloudStore.fetchFriendsFeed()
+            }
+            collabDocs = await loadOptionalSocialValue(fallback: []) {
+                try await cloudStore.fetchMyCollabDocs()
+            }
+            leaderboard = await loadOptionalSocialValue(fallback: []) {
+                try await cloudStore.fetchLeaderboard(
+                    seasonId: leaderboardSeasonID,
+                    limit: 20
+                )
+            }
             lastSocialRefreshAt = Date()
             await refreshQueueDiagnostics()
         } catch {
@@ -9774,6 +9800,39 @@ final class SocialViewModel {
         queuedModerationReportCount = await actionQueue.pendingModerationReportCount()
     }
 
+    private func loadOptionalSocialValue<T>(
+        fallback: T,
+        operation: () async throws -> T
+    ) async -> T {
+        do {
+            return try await operation()
+        } catch {
+            if !shouldSuppressOptionalSocialSchemaError(error) {
+                statusMessage = message(for: error)
+            }
+            return fallback
+        }
+    }
+
+    private func shouldSuppressOptionalSocialSchemaError(_ error: Error) -> Bool {
+        guard let ckError = error as? CKError else { return false }
+        guard
+            ckError.code == .invalidArguments
+                || ckError.code == .constraintViolation
+                || ckError.code == .serverRejectedRequest
+                || ckError.code == .unknownItem
+        else {
+            return false
+        }
+        let details = ckError.localizedDescription.lowercased()
+        return details.contains("cannot create new type")
+            || details.contains("production schema")
+            || details.contains("queryable")
+            || details.contains("index")
+            || details.contains("field")
+            || details.contains("unknown item")
+    }
+
     private func message(for error: Error) -> String {
         if let socialError = error as? SocialError, let description = socialError.errorDescription {
             return description
@@ -9785,6 +9844,22 @@ final class SocialViewModel {
             return localized
         }
         return "Something went wrong. Please try again."
+    }
+
+    private func socialSchemaFailureMessage(_ reason: String) -> String {
+        #if DEBUG
+            return """
+            Social beta is unavailable because the CloudKit Friends schema check failed.
+
+            Container: \(CloudKitSocialConfig.containerIdentifier)
+            Environment: \(CloudKitSocialConfig.environmentName)
+            Docs: \(CloudKitSocialConfig.schemaSetupDocPath)
+
+            \(reason)
+            """
+        #else
+            return "Social beta is unavailable right now. Check iCloud sign-in and CloudKit setup."
+        #endif
     }
 
     private func cloudKitMessage(for error: CKError) -> String {
@@ -9800,10 +9875,14 @@ final class SocialViewModel {
             if details.contains("cannot create new type")
                 || (details.contains("production schema") && details.contains("type"))
             {
-                return "CloudKit production schema is missing required social record types. Deploy the Development schema to Production in CloudKit Dashboard, then try again."
+                return socialSchemaFailureMessage(
+                    "CloudKit production schema is missing one or more Friends record types. Expected: UserProfile, FriendRequest, FriendEdge. See \(CloudKitSocialConfig.schemaSetupDocPath)."
+                )
             }
             if details.contains("queryable") || details.contains("index") || details.contains("field") {
-                return "CloudKit social schema/indexes are not fully set up yet. Deploy the schema in CloudKit Dashboard, then try again."
+                return socialSchemaFailureMessage(
+                    "CloudKit Friends schema indexes are incomplete. Expected queryable fields include UserProfile.handle, FriendRequest.fromUser, FriendRequest.toUser, FriendRequest.status, and FriendEdge.fromUser. See \(CloudKitSocialConfig.schemaSetupDocPath)."
+                )
             }
             return error.localizedDescription
         case .unknownItem:

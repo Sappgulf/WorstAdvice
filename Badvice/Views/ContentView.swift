@@ -842,22 +842,11 @@ struct ContentView: View {
     }
 
     private func normalizedProfileHandle(_ input: String) -> String {
-        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        let withoutPrefixAt = trimmed.hasPrefix("@") ? String(trimmed.dropFirst()) : trimmed
-        return SocialViewModel.normalizedHandle(withoutPrefixAt)
+        SocialViewModel.normalizedHandle(input)
     }
 
     private func sanitizedProfileHandle(_ input: String) -> String {
-        let normalized = normalizedProfileHandle(input)
-        let allowedScalars = normalized.unicodeScalars.filter { scalar in
-            let value = scalar.value
-            let isLowercaseASCII = (97...122).contains(value)
-            let isDigitASCII = (48...57).contains(value)
-            let isUnderscore = value == 95
-            return isLowercaseASCII || isDigitASCII || isUnderscore
-        }
-        let filtered = String(String.UnicodeScalarView(allowedScalars))
-        return String(filtered.prefix(16))
+        normalizedProfileHandle(input)
     }
 
     private func sanitizedProfileDisplayName(_ input: String) -> String {

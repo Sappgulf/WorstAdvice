@@ -935,7 +935,7 @@ struct GenerateTabView: View {
                         Button {
                             runBrandMenuAction(onReseedCloudKitSchema)
                         } label: {
-                            Label("Reseed Development Schema", systemImage: "icloud.and.arrow.up")
+                            Label("Bootstrap Dev Schema", systemImage: "icloud.and.arrow.up")
                         }
                         .disabled(runningBrandAction)
                     #endif

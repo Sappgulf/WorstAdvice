@@ -1435,28 +1435,32 @@ struct FriendsTabView: View {
                 ScrollView {
                     VStack(spacing: 12) {
                         if !social.availability.isAvailable {
-                            QuotesInlineBanner(
-                                text: social.availability.message,
-                                accent: accent,
-                                secondaryText: secondaryText
-                            )
+                            socialBetaGate
                         } else if social.currentUser == nil {
                             QuotesInlineBanner(
                                 text: "Finish your Friends profile to search handles, accept requests, and unlock the feed.",
                                 accent: accent,
                                 secondaryText: secondaryText
                             )
-                        }
-
-                        sectionPicker
-
-                        switch selectedSection {
-                        case .friends:
-                            friendsSection
-                        case .feed:
-                            feedSection
-                        case .collab:
-                            collabSection
+                            sectionPicker
+                            switch selectedSection {
+                            case .friends:
+                                friendsSection
+                            case .feed:
+                                feedSection
+                            case .collab:
+                                collabSection
+                            }
+                        } else {
+                            sectionPicker
+                            switch selectedSection {
+                            case .friends:
+                                friendsSection
+                            case .feed:
+                                feedSection
+                            case .collab:
+                                collabSection
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
@@ -1499,6 +1503,24 @@ struct FriendsTabView: View {
             }
         }
         .toast(item: $activeToast, accentColor: accent)
+    }
+
+    private var socialBetaGate: some View {
+        socialCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Social beta is unavailable", systemImage: "icloud.slash")
+                    .font(.headline)
+                    .foregroundStyle(primaryText)
+                Text(social.availability.message)
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Fix the CloudKit Friends schema, then refresh Friends status from the app menu.")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+            }
+        }
+        .accessibilityIdentifier("friends.socialBetaGate")
     }
 
     private var sectionPicker: some View {
@@ -1556,6 +1578,15 @@ struct FriendsTabView: View {
 
                             Button("Browse Quotes") {
                                 onOpenTab?(.quotes)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("Copy My Handle") {
+                                UIPasteboard.general.string = "@\(currentUser.handle)"
+                                activeToast = ToastMessage(
+                                    message: "Copied @\(currentUser.handle)",
+                                    style: .success
+                                )
                             }
                             .buttonStyle(.bordered)
                         }
@@ -1727,9 +1758,24 @@ struct FriendsTabView: View {
                         .foregroundStyle(primaryText)
 
                     if social.friends.isEmpty {
-                        Text("No friends yet. Search a handle above or share your own handle with someone who already uses Friends.")
-                            .font(.caption)
-                            .foregroundStyle(secondaryText)
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("No friends yet. Invite a friend by sharing your handle, then search for theirs above.")
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                            if let currentUser = social.currentUser {
+                                Button("Copy @\(currentUser.handle)") {
+                                    UIPasteboard.general.string = "@\(currentUser.handle)"
+                                    activeToast = ToastMessage(
+                                        message: "Copied @\(currentUser.handle)",
+                                        style: .success
+                                    )
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(accent)
+                                .foregroundStyle(buttonText)
+                                .font(.caption.weight(.semibold))
+                            }
+                        }
                     } else {
                         ForEach(social.friends, id: \.id) { friend in
                             HStack(spacing: 8) {

@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		15D513E5FD6D9380FB5819D4 /* BadviceWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		52AD82A6DA1A7B7DA9223525 /* CloudKitSchemaSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28514E6E10424D2C60C8873 /* CloudKitSchemaSeeder.swift */; };
+		52AD82A7DA1A7B7DA9223525 /* CloudKitSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28514E7E10424D2C60C8873 /* CloudKitSchema.swift */; };
+		52AD82A8DA1A7B7DA9223525 /* CloudKitSchemaHealthChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28514E8E10424D2C60C8873 /* CloudKitSchemaHealthChecker.swift */; };
 		58C6274C9DD58EBDFC00DD56 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 89E0183259A65059B4694547 /* Foundation.framework */; };
 		5F9DAB6EFBFED341DF9CF1FD /* LocalAuthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88A8B7BA7C96143E7039C52E /* LocalAuthGateView.swift */; };
 		6023FF49F2203A380675F04A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA4E285DDB5972C81A405FFA /* SwiftUI.framework */; };
@@ -150,6 +152,8 @@
 		D20000010000000000000002 /* BadviceUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2C35747C3F426FECEBC093F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = "<group>"; };
 		F28514E6E10424D2C60C8873 /* CloudKitSchemaSeeder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchemaSeeder.swift; sourceTree = "<group>"; };
+		F28514E7E10424D2C60C8873 /* CloudKitSchema.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchema.swift; sourceTree = "<group>"; };
+		F28514E8E10424D2C60C8873 /* CloudKitSchemaHealthChecker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchemaHealthChecker.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -215,6 +219,8 @@
 		4DFCC2CCE6620FDC004C0C05 /* CloudKit */ = {
 			isa = PBXGroup;
 			children = (
+				F28514E7E10424D2C60C8873 /* CloudKitSchema.swift */,
+				F28514E8E10424D2C60C8873 /* CloudKitSchemaHealthChecker.swift */,
 				F28514E6E10424D2C60C8873 /* CloudKitSchemaSeeder.swift */,
 			);
 			path = CloudKit;
@@ -556,6 +562,8 @@
 				99BADEF42679E9E97A271378 /* AppSessionViewModel.swift in Sources */,
 				5F9DAB6EFBFED341DF9CF1FD /* LocalAuthGateView.swift in Sources */,
 				91B7F33494FBDFF47FC04141 /* SocialProfileSetupView.swift in Sources */,
+				52AD82A7DA1A7B7DA9223525 /* CloudKitSchema.swift in Sources */,
+				52AD82A8DA1A7B7DA9223525 /* CloudKitSchemaHealthChecker.swift in Sources */,
 				52AD82A6DA1A7B7DA9223525 /* CloudKitSchemaSeeder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -805,7 +813,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.3;
+				MARKETING_VERSION = 3.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -837,7 +845,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.3;
+				MARKETING_VERSION = 3.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

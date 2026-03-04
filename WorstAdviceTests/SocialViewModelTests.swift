@@ -170,10 +170,10 @@ final class SocialViewModelTests: XCTestCase {
 
         await viewModel.createProfile(handle: "frosty_app", displayName: "Frosty")
 
-        XCTAssertEqual(
-            viewModel.statusMessage,
-            "CloudKit production schema is missing required social record types. Deploy the Development schema to Production in CloudKit Dashboard, then try again."
-        )
+        let message = try? XCTUnwrap(viewModel.statusMessage)
+        XCTAssertNotNil(message)
+        XCTAssertTrue(message?.contains("UserProfile, FriendRequest, FriendEdge") == true)
+        XCTAssertTrue(message?.contains(CloudKitSocialConfig.schemaSetupDocPath) == true)
     }
 
     func testCreateProfileMapsIndexingErrorToActionableMessage() async {
@@ -194,9 +194,44 @@ final class SocialViewModelTests: XCTestCase {
 
         await viewModel.createProfile(handle: "frosty_app", displayName: "Frosty")
 
+        let message = try? XCTUnwrap(viewModel.statusMessage)
+        XCTAssertNotNil(message)
+        XCTAssertTrue(message?.contains("UserProfile.handle") == true)
+        XCTAssertTrue(message?.contains("FriendRequest.fromUser") == true)
+    }
+
+    func testNormalizedHandleDropsUnsupportedCharactersAndLowercases() {
         XCTAssertEqual(
-            viewModel.statusMessage,
-            "CloudKit social schema/indexes are not fully set up yet. Deploy the schema in CloudKit Dashboard, then try again."
+            SocialHandleNormalizer.normalize("  @Bad.Friend-01!! "),
+            "bad.friend01"
         )
+        XCTAssertTrue(CloudKitStore.isValidHandle("bad.friend01"))
+    }
+
+    func testMockBackendPreventsDuplicateFriendRequests() async throws {
+        let backend = UITestSocialBackend(forceUnavailable: false, seededIncomingRequests: 0)
+        let requester = try await backend.getOrCreateCurrentUser(
+            handle: "requester.one",
+            displayName: "Requester"
+        )
+
+        await backend.setStoredCurrentUserRecordName(nil)
+        let target = try await backend.getOrCreateCurrentUser(
+            handle: "target_friend",
+            displayName: "Target"
+        )
+
+        await backend.setStoredCurrentUserRecordName(requester.recordID.recordName)
+        _ = try await backend.sendFriendRequest(toUser: target)
+
+        do {
+            _ = try await backend.sendFriendRequest(toUser: target)
+            XCTFail("Expected duplicate friend request to be rejected")
+        } catch let socialError as SocialError {
+            guard case .duplicateRequest = socialError else {
+                XCTFail("Expected duplicateRequest, got \(socialError)")
+                return
+            }
+        }
     }
 }
