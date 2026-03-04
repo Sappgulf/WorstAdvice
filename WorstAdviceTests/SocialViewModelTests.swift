@@ -233,6 +233,22 @@ final class SocialViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.statusMessage, "Profile created.")
     }
 
+    func testProfileSetupStillShowsWhenAvailabilityUnavailable() async {
+        let defaults = UserDefaults(suiteName: "SocialViewModelTests.Availability.\(UUID().uuidString)")!
+        let queue = SocialActionQueueStore(
+            userDefaults: defaults,
+            storageKey: "social.queue.availability.\(UUID().uuidString)"
+        )
+        let backend = UITestSocialBackend(forceUnavailable: true, seededIncomingRequests: 0)
+        let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
+
+        await viewModel.bootstrap()
+
+        XCTAssertFalse(viewModel.availability.isAvailable)
+        XCTAssertNil(viewModel.currentUser)
+        XCTAssertTrue(viewModel.shouldShowProfileSetup)
+    }
+
     func testMockBackendPreventsDuplicateFriendRequests() async throws {
         let backend = UITestSocialBackend(forceUnavailable: false, seededIncomingRequests: 0)
         let requester = try await backend.getOrCreateCurrentUser(

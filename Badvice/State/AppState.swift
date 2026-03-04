@@ -7271,7 +7271,7 @@ struct SocialAvailabilityState: Sendable {
     let isAvailable: Bool
     let message: String
 
-    static let available = SocialAvailabilityState(isAvailable: true, message: "")
+    static let available = SocialAvailabilityState(isAvailable: true, message: "iCloud available.")
 }
 
 struct SocialUser: Identifiable, Hashable, Sendable {
@@ -7517,6 +7517,11 @@ actor CloudKitStore: SocialBackend {
         self.container = resolvedContainer
         self.publicDB = resolvedContainer.publicCloudDatabase
         self.userDefaults = userDefaults
+        let resolvedContainerIdentifier =
+            resolvedContainer.containerIdentifier ?? "CKContainer.default()"
+        logger.debug(
+            "CloudKit container identifier used: \(resolvedContainerIdentifier, privacy: .public). Expected capability: \(CloudKitSocialConfig.containerIdentifier, privacy: .public)."
+        )
         logger.debug(
             "CloudKit social backend configured with \(Self.databaseDescription(for: self.publicDB), privacy: .public)."
         )
@@ -7569,34 +7574,34 @@ actor CloudKitStore: SocialBackend {
             case .noAccount:
                 return SocialAvailabilityState(
                     isAvailable: false,
-                    message: "Sign in to iCloud to use Friends, Chaos leaderboard, and collaboration."
+                    message: "iCloud not available. Sign in to iCloud in Settings, then tap Retry."
                 )
             case .restricted:
                 return SocialAvailabilityState(
                     isAvailable: false,
-                    message: "iCloud access is restricted on this device."
+                    message: "iCloud not available. Access is restricted on this device. Check network or device restrictions, then tap Retry."
                 )
             case .couldNotDetermine:
                 return SocialAvailabilityState(
                     isAvailable: false,
-                    message: "Could not verify iCloud right now. Try again shortly."
+                    message: "iCloud not available. We could not verify your iCloud account right now. Check your network, then tap Retry."
                 )
             case .temporarilyUnavailable:
                 return SocialAvailabilityState(
                     isAvailable: false,
-                    message: "iCloud is temporarily unavailable. Try again shortly."
+                    message: "iCloud not available. CloudKit is temporarily unavailable. Check your network, then tap Retry."
                 )
             @unknown default:
                 return SocialAvailabilityState(
                     isAvailable: false,
-                    message: "iCloud is currently unavailable."
+                    message: "iCloud not available. Retry in a moment."
                 )
             }
         } catch {
             Self.logCloudKitError(error, context: "account status lookup")
             return SocialAvailabilityState(
                 isAvailable: false,
-                message: "iCloud check failed. Social features are disabled."
+                message: "iCloud not available. The status check failed. Check your network, then tap Retry."
             )
         }
     }
@@ -9381,12 +9386,8 @@ final class SocialViewModel {
         availability.isAvailable && currentUser != nil
     }
 
-    var cloudKitReady: Bool {
-        availability.isAvailable
-    }
-
     var shouldShowProfileSetup: Bool {
-        availability.isAvailable && currentUser == nil
+        currentUser == nil
     }
 
     static func currentSeasonID(referenceDate: Date = Date()) -> String {
@@ -9417,33 +9418,14 @@ final class SocialViewModel {
         statusMessage = nil
 
         await refreshAvailability()
-        guard availability.isAvailable else { return }
-
-        do {
-            currentUser = try await cloudStore.fetchCurrentUserIfStored()
-            if currentUser != nil {
-                await refreshSocialData()
-                await drainQueuedActions()
-            }
-        } catch {
-            statusMessage = message(for: error)
-        }
+        await loadCurrentUserIfAvailable()
     }
 
     func bootstrap() async {
         backendDisplayName = await cloudStore.backendDisplayName()
         await refreshAvailability()
         await refreshQueueDiagnostics()
-        guard availability.isAvailable else { return }
-        do {
-            currentUser = try await cloudStore.fetchCurrentUserIfStored()
-            if currentUser != nil {
-                await refreshSocialData()
-                await drainQueuedActions()
-            }
-        } catch {
-            statusMessage = message(for: error)
-        }
+        await loadCurrentUserIfAvailable()
     }
 
     func refreshAvailability() async {
@@ -9463,6 +9445,12 @@ final class SocialViewModel {
         }
         await refreshQueueDiagnostics()
         await drainQueuedActions()
+    }
+
+    func retryAvailabilityStatus() async {
+        statusMessage = nil
+        await refreshAvailability()
+        await loadCurrentUserIfAvailable()
     }
 
     @discardableResult
@@ -9490,6 +9478,19 @@ final class SocialViewModel {
         } catch {
             statusMessage = message(for: error)
             return false
+        }
+    }
+
+    private func loadCurrentUserIfAvailable() async {
+        guard availability.isAvailable else { return }
+        do {
+            currentUser = try await cloudStore.fetchCurrentUserIfStored()
+            if currentUser != nil {
+                await refreshSocialData()
+                await drainQueuedActions()
+            }
+        } catch {
+            statusMessage = message(for: error)
         }
     }
 
@@ -9939,11 +9940,11 @@ final class SocialViewModel {
     private func cloudKitMessage(for error: CKError) -> String {
         switch error.code {
         case .notAuthenticated:
-            return "Sign in to iCloud to use Friends, Chaos leaderboard, and collaboration."
+            return "iCloud is not signed in. Open Settings, sign in to iCloud, then retry."
         case .permissionFailure:
             return "CloudKit permissions are not configured for this build. Check iCloud capability and container access in Xcode."
         case .networkUnavailable, .networkFailure, .serviceUnavailable, .zoneBusy, .requestRateLimited:
-            return "CloudKit is temporarily unavailable. Check your connection and try again."
+            return "CloudKit is temporarily unavailable. Check your network and retry."
         case .invalidArguments, .constraintViolation, .serverRejectedRequest:
             let details = error.localizedDescription.lowercased()
             if details.contains("cannot create new type")
@@ -9963,6 +9964,8 @@ final class SocialViewModel {
             return "CloudKit social records are not initialized yet. Try again in a moment."
         case .quotaExceeded, .limitExceeded:
             return "CloudKit storage limits were reached. Free up iCloud storage and try again."
+        case .accountTemporarilyUnavailable, .zoneNotFound, .userDeletedZone:
+            return "CloudKit is not ready right now. Check your network and retry."
         default:
             return error.localizedDescription
         }

@@ -3,7 +3,7 @@ import SwiftUI
 struct SocialProfileSetupView: View {
     @Bindable var social: SocialViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var handleRaw: String
+    @State private var handleInput: String
     @State private var displayName: String
 
     init(
@@ -12,24 +12,48 @@ struct SocialProfileSetupView: View {
         initialDisplayName: String = UIDevice.current.name
     ) {
         self.social = social
-        _handleRaw = State(initialValue: SocialHandleNormalizer.normalize(initialHandle))
+        _handleInput = State(initialValue: SocialHandleNormalizer.normalize(initialHandle))
         _displayName = State(initialValue: String(initialDisplayName.prefix(40)))
     }
 
-    private var handle: String {
-        SocialHandleNormalizer.normalize(handleRaw)
+    private var handleSanitized: String {
+        SocialHandleNormalizer.normalize(handleInput)
     }
 
     private var handleValid: Bool {
-        CloudKitStore.isValidHandle(handle)
+        CloudKitStore.isValidHandle(handleSanitized)
     }
 
-    private var cloudKitReady: Bool {
-        social.cloudKitReady
+    private var availabilityTitle: String {
+        social.availability.isAvailable ? "iCloud available" : "iCloud not available"
+    }
+
+    private var availabilityTint: Color {
+        social.availability.isAvailable ? .green : .red
+    }
+
+    private var availabilityHint: String {
+        guard !social.availability.isAvailable else {
+            return "CloudKit is reachable. You can create your Friends profile now."
+        }
+
+        let message = social.availability.message.lowercased()
+        if message.contains("sign in") || message.contains("account") {
+            return "Sign in to iCloud in Settings, then tap Retry."
+        }
+        if message.contains("restricted")
+            || message.contains("could not verify")
+            || message.contains("temporarily unavailable")
+            || message.contains("check failed")
+            || message.contains("network")
+        {
+            return "Check your network or device restrictions, then tap Retry."
+        }
+        return social.availability.message
     }
 
     var body: some View {
-        let shouldShowValidationError = !handle.isEmpty && !handleValid
+        let shouldShowValidationError = !handleSanitized.isEmpty && !handleValid
 
         NavigationStack {
             Form {
@@ -49,8 +73,38 @@ struct SocialProfileSetupView: View {
                     .padding(.vertical, 4)
                     .accessibilityIdentifier("social.profile.intro")
                 }
+                Section("iCloud Status") {
+                    HStack {
+                        Text(availabilityTitle)
+                            .foregroundStyle(availabilityTint)
+                        Spacer()
+                        Circle()
+                            .fill(availabilityTint)
+                            .frame(width: 10, height: 10)
+                    }
+                    .font(.caption.weight(.semibold))
+
+                    if !social.availability.message.isEmpty {
+                        Text(social.availability.message)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text(availabilityHint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    if !social.availability.isAvailable {
+                        Button("Retry") {
+                            Task {
+                                await social.retryAvailabilityStatus()
+                            }
+                        }
+                        .accessibilityIdentifier("social.profile.retryAvailability")
+                    }
+                }
                 Section("Create Profile") {
-                    TextField("@handle", text: $handleRaw)
+                    TextField("@handle", text: $handleInput)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .textContentType(.nickname)
@@ -69,10 +123,10 @@ struct SocialProfileSetupView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Text(handle.isEmpty ? "@your_handle" : "@\(handle)")
+                        Text(handleSanitized.isEmpty ? "@your_handle" : "@\(handleSanitized)")
                             .font(.caption.monospaced())
                             .foregroundStyle(
-                                handleValid || handle.isEmpty
+                                handleValid || handleSanitized.isEmpty
                                     ? Color.secondary
                                     : Color.red
                             )
@@ -82,10 +136,10 @@ struct SocialProfileSetupView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Text("\(handle.count)/16")
+                        Text("\(handleSanitized.count)/16")
                             .font(.caption.monospaced())
                             .foregroundStyle(
-                                handleValid || handle.isEmpty
+                                handleValid || handleSanitized.isEmpty
                                     ? Color.secondary
                                     : Color.red
                             )
@@ -151,7 +205,7 @@ struct SocialProfileSetupView: View {
                     Button(social.isSubmittingAction ? "Creating..." : "Finish Setup") {
                         Task {
                             let created = await social.createProfile(
-                                handle: handle,
+                                handle: handleSanitized,
                                 displayName: displayName
                             )
                             if created {
@@ -159,17 +213,15 @@ struct SocialProfileSetupView: View {
                             }
                         }
                     }
-                    .disabled(
-                        !handleValid || !cloudKitReady || social.isSubmittingAction
-                    )
+                    .disabled(!handleValid || social.isSubmittingAction)
                     .accessibilityIdentifier("social.profile.save")
                 }
             }
         }
-        .onChange(of: handleRaw) { _, newValue in
+        .onChange(of: handleInput) { _, newValue in
             let sanitized = SocialHandleNormalizer.normalize(newValue)
             if sanitized != newValue {
-                handleRaw = sanitized
+                handleInput = sanitized
             }
         }
         .onChange(of: displayName) { _, newValue in
