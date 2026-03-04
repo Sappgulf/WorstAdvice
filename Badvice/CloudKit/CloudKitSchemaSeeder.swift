@@ -355,7 +355,7 @@ enum CloudKitSchemaSeeder {
             print("[CloudKitSeed] Skipping schema seed in Simulator; CloudKit requires a signed app entitlement.")
             return nil
         #else
-            return CKContainer(identifier: CloudKitSocialConfig.containerIdentifier)
+            return CloudKitManager.socialContainer()
         #endif
     }
 

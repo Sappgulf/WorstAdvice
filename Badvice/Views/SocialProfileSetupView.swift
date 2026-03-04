@@ -1,4 +1,85 @@
 import SwiftUI
+import UIKit
+
+struct SocialCloudKitDiagnosticsView: View {
+    @Bindable var social: SocialViewModel
+    var showRetry: Bool = true
+
+    private var diagnostics: SocialCloudKitDiagnostics {
+        social.availability.diagnostics
+    }
+
+    private var statusTint: Color {
+        diagnostics.isAccountAvailable ? .green : .red
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(diagnostics.userVisibleMessage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(statusTint)
+                Spacer()
+                Circle()
+                    .fill(statusTint)
+                    .frame(width: 10, height: 10)
+            }
+
+            diagnosticRow(title: "Account Status", value: diagnostics.accountStatusLabel)
+            diagnosticRow(title: "Container", value: diagnostics.containerIdentifier)
+            diagnosticRow(title: "Database Scope", value: diagnostics.databaseScope)
+
+            if let lastError = diagnostics.lastError {
+                diagnosticRow(title: "Last CKError", value: lastError.code)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Last Description")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(lastError.localizedDescription)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            } else {
+                diagnosticRow(title: "Last CKError", value: "None")
+            }
+
+            if showRetry {
+                HStack(spacing: 12) {
+                    if showRetry {
+                        Button("Retry") {
+                            Task {
+                                await social.retryAvailabilityStatus()
+                            }
+                        }
+                        .accessibilityIdentifier("social.profile.retryAvailability")
+                    }
+                    #if DEBUG
+                        Button("Copy Diagnostics") {
+                            UIPasteboard.general.string = diagnostics.text(includeDebugDetails: true)
+                        }
+                        .accessibilityIdentifier("social.profile.copyDiagnostics")
+                    #endif
+                }
+                .font(.caption.weight(.semibold))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func diagnosticRow(title: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 12)
+            Text(value)
+                .font(.caption.monospaced())
+                .multilineTextAlignment(.trailing)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
 
 struct SocialProfileSetupView: View {
     @Bindable var social: SocialViewModel
@@ -24,37 +105,28 @@ struct SocialProfileSetupView: View {
         CloudKitStore.isValidHandle(handleSanitized)
     }
 
-    private var availabilityTitle: String {
-        social.availability.isAvailable ? "iCloud available" : "iCloud not available"
+    private var canFinishSetup: Bool {
+        handleValid && social.availability.isAccountAvailable && !social.isSubmittingAction
     }
 
-    private var availabilityTint: Color {
-        social.availability.isAvailable ? .green : .red
+    private var handleValidationMessage: String {
+        if handleSanitized.isEmpty {
+            if !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return "Handle is required. Display Name is optional."
+            }
+            return "Handle is required."
+        }
+        if !handleValid {
+            return "Handle must be 3-16 characters and use only lowercase letters, numbers, dots, or underscore."
+        }
+        return "Friends handles are public and searchable."
     }
 
-    private var availabilityHint: String {
-        guard !social.availability.isAvailable else {
-            return "CloudKit is reachable. You can create your Friends profile now."
-        }
-
-        let message = social.availability.message.lowercased()
-        if message.contains("sign in") || message.contains("account") {
-            return "Sign in to iCloud in Settings, then tap Retry."
-        }
-        if message.contains("restricted")
-            || message.contains("could not verify")
-            || message.contains("temporarily unavailable")
-            || message.contains("check failed")
-            || message.contains("network")
-        {
-            return "Check your network or device restrictions, then tap Retry."
-        }
-        return social.availability.message
+    private var handleValidationTint: Color {
+        handleSanitized.isEmpty || !handleValid ? .red : .secondary
     }
 
     var body: some View {
-        let shouldShowValidationError = !handleSanitized.isEmpty && !handleValid
-
         NavigationStack {
             Form {
                 Section {
@@ -73,51 +145,35 @@ struct SocialProfileSetupView: View {
                     .padding(.vertical, 4)
                     .accessibilityIdentifier("social.profile.intro")
                 }
-                Section("iCloud Status") {
-                    HStack {
-                        Text(availabilityTitle)
-                            .foregroundStyle(availabilityTint)
-                        Spacer()
-                        Circle()
-                            .fill(availabilityTint)
-                            .frame(width: 10, height: 10)
-                    }
-                    .font(.caption.weight(.semibold))
-
-                    if !social.availability.message.isEmpty {
-                        Text(social.availability.message)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Text(availabilityHint)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    if !social.availability.isAvailable {
-                        Button("Retry") {
-                            Task {
-                                await social.retryAvailabilityStatus()
-                            }
-                        }
-                        .accessibilityIdentifier("social.profile.retryAvailability")
-                    }
+                Section("CloudKit Diagnostics") {
+                    SocialCloudKitDiagnosticsView(social: social)
+                        .accessibilityIdentifier("social.profile.diagnostics")
                 }
                 Section("Create Profile") {
-                    TextField("@handle", text: $handleInput)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .textContentType(.nickname)
-                        .submitLabel(.next)
-                        .accessibilityIdentifier("social.profile.handle")
-                    TextField("Display name (optional)", text: $displayName)
-                        .textInputAutocapitalization(.words)
-                        .textContentType(.name)
-                        .submitLabel(.done)
-                        .accessibilityIdentifier("social.profile.displayName")
-                    Text("Pick a public handle once. Type with or without the @ symbol.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Handle (required)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        TextField("bad.friend", text: $handleInput)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .textContentType(.nickname)
+                            .submitLabel(.next)
+                            .accessibilityIdentifier("social.profile.handle")
+                        Text(handleValidationMessage)
+                            .font(.caption)
+                            .foregroundStyle(handleValidationTint)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Display Name (optional)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        TextField("Display name", text: $displayName)
+                            .textInputAutocapitalization(.words)
+                            .textContentType(.name)
+                            .submitLabel(.done)
+                            .accessibilityIdentifier("social.profile.displayName")
+                    }
                     HStack {
                         Text("Handle preview")
                             .font(.caption)
@@ -142,8 +198,11 @@ struct SocialProfileSetupView: View {
                                 handleValid || handleSanitized.isEmpty
                                     ? Color.secondary
                                     : Color.red
-                            )
+                                )
                     }
+                    Text("We trim outer spaces, remove a leading @, and force lowercase while you type.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     if social.isSubmittingAction {
                         HStack(spacing: 10) {
                             ProgressView()
@@ -151,32 +210,6 @@ struct SocialProfileSetupView: View {
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    }
-                }
-                Section("What unlocks next") {
-                    Label(
-                        "Share advice and quotes straight to Friends",
-                        systemImage: "square.and.arrow.up.fill"
-                    )
-                    .font(.caption)
-                    Label(
-                        "Start collaboration drafts with your crew",
-                        systemImage: "person.2.badge.plus"
-                    )
-                    .font(.caption)
-                    Label(
-                        "Compete on the Chaos leaderboard",
-                        systemImage: "trophy.fill"
-                    )
-                    .font(.caption)
-                }
-                if shouldShowValidationError {
-                    Section("Fix Handle") {
-                        Text(
-                            "Use 3-16 characters with lowercase letters, numbers, dots, or underscore."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.red)
                     }
                 }
                 if let status = social.statusMessage, !status.isEmpty {
@@ -191,7 +224,7 @@ struct SocialProfileSetupView: View {
                 }
                 Section("Rules") {
                     Text(
-                        "Handle must be 3-16 characters and can only use lowercase letters, numbers, dots, or underscore. You can type with or without @."
+                        "Handle must be 3-16 characters and can only use lowercase letters, numbers, dots, or underscore."
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -213,7 +246,7 @@ struct SocialProfileSetupView: View {
                             }
                         }
                     }
-                    .disabled(!handleValid || social.isSubmittingAction)
+                    .disabled(!canFinishSetup)
                     .accessibilityIdentifier("social.profile.save")
                 }
             }

@@ -14,6 +14,18 @@ enum CloudKitSocialConfig {
     }
 }
 
+enum CloudKitManager {
+    static func socialContainer() -> CKContainer {
+        CKContainer(identifier: CloudKitSocialConfig.containerIdentifier)
+    }
+
+    static func socialDatabase(container: CKContainer = socialContainer()) -> CKDatabase {
+        container.publicCloudDatabase
+    }
+
+    static let socialDatabaseScope = "Public"
+}
+
 enum CloudKitSocialSchema {
     enum RecordType {
         static let userProfile = "UserProfile"
@@ -110,11 +122,8 @@ enum SocialHandleNormalizer {
 
     static func normalize(_ value: String) -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        let withoutAtPrefix = trimmed.hasPrefix("@") ? String(trimmed.dropFirst()) : trimmed
-        let lowercase = withoutAtPrefix.lowercased()
-        let filteredScalars = lowercase.unicodeScalars.filter { allowedScalars.contains($0) }
-        let filtered = String(String.UnicodeScalarView(filteredScalars))
-        return String(filtered.prefix(16))
+        let withoutAtPrefix = String(trimmed.drop { $0 == "@" })
+        return withoutAtPrefix.lowercased()
     }
 
     static func isValid(_ handle: String) -> Bool {

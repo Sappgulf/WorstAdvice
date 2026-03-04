@@ -208,9 +208,6 @@ final class BadviceUITests: XCTestCase {
     func testSocialMockSignupCompletesAndFriendsSurfaceLoads() throws {
         let app = launchMockSocialApp()
 
-        XCTAssertTrue(app.navigationBars["Friends Setup"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.otherElements["social.profile.intro"].waitForExistence(timeout: 3))
-
         completeProfileSignup(app: app, handle: "mock_signup_user")
 
         let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
@@ -428,6 +425,17 @@ final class BadviceUITests: XCTestCase {
     }
 
     private func completeProfileSignup(app: XCUIApplication, handle: String) {
+        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
+        XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
+        friendsTab.tap()
+
+        let openSetupButton = app.buttons["friends.openSetup"]
+        XCTAssertTrue(openSetupButton.waitForExistence(timeout: 5))
+        openSetupButton.tap()
+
+        XCTAssertTrue(app.navigationBars["Friends Setup"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.otherElements["social.profile.intro"].waitForExistence(timeout: 3))
+
         let handleField = app.textFields["social.profile.handle"]
         XCTAssertTrue(handleField.waitForExistence(timeout: 8))
         handleField.tap()

@@ -152,7 +152,7 @@ final class SocialViewModelTests: XCTestCase {
         XCTAssertNotNil(viewModel.lastQueueDrainAt)
     }
 
-    func testCreateProfileMapsProductionSchemaErrorToActionableMessage() async {
+    func testCreateProfileStoresProductionSchemaDiagnostic() async {
         let defaults = UserDefaults(suiteName: "SocialViewModelTests.Schema.\(UUID().uuidString)")!
         let queue = SocialActionQueueStore(
             userDefaults: defaults,
@@ -170,13 +170,15 @@ final class SocialViewModelTests: XCTestCase {
 
         await viewModel.createProfile(handle: "frosty_app", displayName: "Frosty")
 
-        let message = try? XCTUnwrap(viewModel.statusMessage)
-        XCTAssertNotNil(message)
-        XCTAssertTrue(message?.contains("UserProfile, FriendRequest, FriendEdge") == true)
-        XCTAssertTrue(message?.contains(CloudKitSocialConfig.schemaSetupDocPath) == true)
+        let diagnostic = try? XCTUnwrap(viewModel.availability.diagnostics.lastError)
+        XCTAssertNotNil(diagnostic)
+        XCTAssertTrue(diagnostic?.code.contains("serverRejectedRequest") == true)
+        XCTAssertTrue(diagnostic?.localizedDescription.contains("production schema") == true)
+        XCTAssertEqual(viewModel.availability.diagnostics.containerIdentifier, CloudKitSocialConfig.containerIdentifier)
+        XCTAssertEqual(viewModel.availability.diagnostics.databaseScope, CloudKitManager.socialDatabaseScope)
     }
 
-    func testCreateProfileMapsIndexingErrorToActionableMessage() async {
+    func testCreateProfileStoresIndexingDiagnostic() async {
         let defaults = UserDefaults(suiteName: "SocialViewModelTests.Index.\(UUID().uuidString)")!
         let queue = SocialActionQueueStore(
             userDefaults: defaults,
@@ -194,26 +196,26 @@ final class SocialViewModelTests: XCTestCase {
 
         await viewModel.createProfile(handle: "frosty_app", displayName: "Frosty")
 
-        let message = try? XCTUnwrap(viewModel.statusMessage)
-        XCTAssertNotNil(message)
-        XCTAssertTrue(message?.contains("UserProfile.handle") == true)
-        XCTAssertTrue(message?.contains("FriendRequest.fromUser") == true)
+        let diagnostic = try? XCTUnwrap(viewModel.availability.diagnostics.lastError)
+        XCTAssertNotNil(diagnostic)
+        XCTAssertTrue(diagnostic?.code.contains("invalidArguments") == true)
+        XCTAssertTrue(diagnostic?.localizedDescription.contains("queryable") == true)
     }
 
-    func testNormalizedHandleDropsUnsupportedCharactersAndLowercases() {
+    func testNormalizedHandleKeepsInvalidCharactersForValidationAndLowercases() {
         XCTAssertEqual(
             SocialHandleNormalizer.normalize("  @Bad.Friend-01!! "),
-            "bad.friend01"
+            "bad.friend-01!!"
         )
-        XCTAssertTrue(CloudKitStore.isValidHandle("bad.friend01"))
+        XCTAssertFalse(CloudKitStore.isValidHandle("bad.friend-01!!"))
     }
 
-    func testNormalizedHandleTrimsToSixteenCharacters() {
+    func testNormalizedHandleKeepsOverlongInputForValidation() {
         XCTAssertEqual(
             SocialHandleNormalizer.normalize("@ABCDEFGHIJKLMNOPQRST"),
-            "abcdefghijklmnop"
+            "abcdefghijklmnopqrst"
         )
-        XCTAssertTrue(CloudKitStore.isValidHandle("abcdefghijklmnop"))
+        XCTAssertFalse(CloudKitStore.isValidHandle("abcdefghijklmnopqrst"))
     }
 
     func testCreateProfileSanitizesHandleBeforeSaving() async {
@@ -226,7 +228,7 @@ final class SocialViewModelTests: XCTestCase {
         let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
 
         await viewModel.bootstrap()
-        let created = await viewModel.createProfile(handle: "@Frosty!!", displayName: "Frosty")
+        let created = await viewModel.createProfile(handle: "  @Frosty ", displayName: "Frosty")
 
         XCTAssertTrue(created)
         XCTAssertEqual(viewModel.currentUser?.handle, "frosty")
@@ -246,7 +248,7 @@ final class SocialViewModelTests: XCTestCase {
 
         XCTAssertFalse(viewModel.availability.isAvailable)
         XCTAssertNil(viewModel.currentUser)
-        XCTAssertTrue(viewModel.shouldShowProfileSetup)
+        XCTAssertEqual(viewModel.availability.diagnostics.accountStatus, .couldNotDetermine)
     }
 
     func testMockBackendPreventsDuplicateFriendRequests() async throws {

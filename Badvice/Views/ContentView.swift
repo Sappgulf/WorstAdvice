@@ -304,19 +304,6 @@ struct ContentView: View {
                 }
             }
         #endif
-        .sheet(
-            isPresented: Binding(
-                get: {
-                    !showSplash
-                        && auth.isAuthenticated
-                        && hasSeenOnboarding
-                        && session.social.shouldShowProfileSetup
-                },
-                set: { _ in }
-            )
-        ) {
-            socialProfileSetupSheet(session: session)
-        }
     }
 
     private var loadingView: some View {
@@ -333,13 +320,6 @@ struct ContentView: View {
                     .foregroundStyle(Color.primary.opacity(0.45))
             }
         }
-    }
-
-    private func socialProfileSetupSheet(session: AppSessionViewModel) -> some View {
-        SocialProfileSetupView(
-            social: session.social,
-            initialDisplayName: sanitizedProfileDisplayName(auth?.displayName ?? UIDevice.current.name)
-        )
     }
 
     private func bootstrapAppStateIfNeeded() {
@@ -825,10 +805,6 @@ struct ContentView: View {
         return Int(launchArguments[valueIndex])
     }
 
-    private func sanitizedProfileDisplayName(_ input: String) -> String {
-        String(input.prefix(40))
-    }
-
     @ViewBuilder
     private func tabView(for tab: AppTab, session: AppSessionViewModel) -> some View {
         switch tab {
@@ -1109,11 +1085,11 @@ struct ContentView: View {
     private func refreshSocialAvailabilityToast(session: AppSessionViewModel) async -> ToastMessage {
         await session.social.refreshAvailability()
         await session.social.refreshSocialData()
-        if session.social.availability.isAvailable {
+        if session.social.availability.isAccountAvailable {
             let message =
                 session.social.currentUser == nil
-                    ? "CloudKit is ready. Finish your Friends profile to continue."
-                    : "CloudKit social features are available."
+                    ? "CloudKit account is available. Finish your Friends profile to continue."
+                    : "CloudKit account is available."
             return ToastMessage(message: message, style: .success)
         }
         return ToastMessage(message: session.social.availability.message, style: .error)

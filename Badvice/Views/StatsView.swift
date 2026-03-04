@@ -1409,6 +1409,7 @@ struct FriendsTabView: View {
     @State private var collabEditorVersion: Int64 = 0
     @State private var collabEditorType: SocialPostType = .advice
     @State private var collabEditorContributors: [SocialUser] = []
+    @State private var showProfileSetup = false
 
     @Environment(\.tabBarVisible) private var tabBarVisible
 
@@ -1434,33 +1435,26 @@ struct FriendsTabView: View {
 
                 ScrollView {
                     VStack(spacing: 12) {
-                        if !social.availability.isAvailable {
-                            socialBetaGate
+                        if !social.availability.isAccountAvailable
+                            || social.availability.diagnostics.lastError != nil
+                        {
+                            cloudKitBanner
                         } else if social.currentUser == nil {
                             QuotesInlineBanner(
                                 text: "Finish your Friends profile to search handles, accept requests, and unlock the feed.",
                                 accent: accent,
                                 secondaryText: secondaryText
                             )
-                            sectionPicker
-                            switch selectedSection {
-                            case .friends:
-                                friendsSection
-                            case .feed:
-                                feedSection
-                            case .collab:
-                                collabSection
-                            }
-                        } else {
-                            sectionPicker
-                            switch selectedSection {
-                            case .friends:
-                                friendsSection
-                            case .feed:
-                                feedSection
-                            case .collab:
-                                collabSection
-                            }
+                        }
+
+                        sectionPicker
+                        switch selectedSection {
+                        case .friends:
+                            friendsSection
+                        case .feed:
+                            feedSection
+                        case .collab:
+                            collabSection
                         }
                     }
                     .padding(.horizontal, 16)
@@ -1501,26 +1495,23 @@ struct FriendsTabView: View {
             .sheet(isPresented: $showCollabEditor) {
                 collabEditorSheet
             }
+            .sheet(isPresented: $showProfileSetup) {
+                SocialProfileSetupView(social: social)
+            }
         }
         .toast(item: $activeToast, accentColor: accent)
     }
 
-    private var socialBetaGate: some View {
+    private var cloudKitBanner: some View {
         socialCard {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Social beta is unavailable", systemImage: "icloud.slash")
+                Label("CloudKit Diagnostics", systemImage: "icloud.slash")
                     .font(.headline)
                     .foregroundStyle(primaryText)
-                Text(social.availability.message)
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("Fix the CloudKit Friends schema, then refresh Friends status from the app menu.")
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
+                SocialCloudKitDiagnosticsView(social: social)
             }
         }
-        .accessibilityIdentifier("friends.socialBetaGate")
+        .accessibilityIdentifier("friends.cloudKitBanner")
     }
 
     private var sectionPicker: some View {
@@ -1535,6 +1526,35 @@ struct FriendsTabView: View {
 
     private var friendsSection: some View {
         VStack(spacing: 12) {
+            if social.currentUser == nil {
+                socialCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Set up your Friends profile", systemImage: "person.crop.circle.badge.plus")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(primaryText)
+                        Text("Handles are public and searchable. Create yours here without blocking the rest of Badvice.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                        HStack(spacing: 8) {
+                            Button("Open Setup") {
+                                showProfileSetup = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(accent)
+                            .foregroundStyle(buttonText)
+                            .accessibilityIdentifier("friends.openSetup")
+
+                            Button("Retry CloudKit") {
+                                Task { await social.retryAvailabilityStatus() }
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("friends.retryCloudKit")
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                }
+            }
+
             if let currentUser = social.currentUser {
                 socialCard {
                     VStack(alignment: .leading, spacing: 12) {
