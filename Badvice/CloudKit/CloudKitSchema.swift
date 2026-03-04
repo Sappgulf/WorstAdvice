@@ -1,5 +1,6 @@
 import CloudKit
 import Foundation
+import OSLog
 
 enum CloudKitSocialConfig {
     static let containerIdentifier = "iCloud.com.worstadvice.app"
@@ -25,6 +26,63 @@ enum CloudKitManager {
 
     static let socialDatabaseScope = "Public"
 }
+
+#if DEBUG
+    enum CloudKitDebugSanityChecker {
+        private static let logger = Logger(subsystem: "com.worstadvice.app", category: "cloudkit.sanity")
+
+        static func runFriendsReachabilityCheck() async {
+            let container = CloudKitManager.socialContainer()
+            let database = CloudKitManager.socialDatabase(container: container)
+
+            do {
+                let status = try await withCheckedThrowingContinuation {
+                    (continuation: CheckedContinuation<CKAccountStatus, Error>) in
+                    container.accountStatus { status, error in
+                        if let error {
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        continuation.resume(returning: status)
+                    }
+                }
+                logger.info(
+                    "Friends CloudKit sanity accountStatus=\(String(describing: status), privacy: .public) databaseScope=\(CloudKitManager.socialDatabaseScope, privacy: .public)"
+                )
+            } catch {
+                logger.error(
+                    "Friends CloudKit sanity account status failed: \(error.localizedDescription, privacy: .public)"
+                )
+            }
+
+            let query = CKQuery(
+                recordType: CloudKitSocialSchema.RecordType.userProfile,
+                predicate: NSPredicate(
+                    format: "%K == %@",
+                    CloudKitSocialSchema.Field.handle,
+                    "test"
+                )
+            )
+            let operation = CKQueryOperation(query: query)
+            operation.resultsLimit = 1
+            operation.desiredKeys = [CloudKitSocialSchema.Field.handle]
+            operation.recordMatchedBlock = { _, _ in }
+            operation.queryResultBlock = { result in
+                switch result {
+                case .success:
+                    logger.info(
+                        "Friends CloudKit sanity query completed for handle=test scope=\(CloudKitManager.socialDatabaseScope, privacy: .public)"
+                    )
+                case .failure(let error):
+                    logger.error(
+                        "Friends CloudKit sanity query failed: \(error.localizedDescription, privacy: .public)"
+                    )
+                }
+            }
+            database.add(operation)
+        }
+    }
+#endif
 
 enum CloudKitSocialSchema {
     enum RecordType {
@@ -90,7 +148,6 @@ enum CloudKitSocialSchema {
                 Field.displayName,
                 Field.createdAt,
                 Field.ownerUserRecordName,
-                Field.avatarAsset,
             ]
         ),
         (
@@ -100,6 +157,7 @@ enum CloudKitSocialSchema {
                 Field.toUser,
                 Field.status,
                 Field.createdAt,
+                Field.updatedAt,
             ]
         ),
         (
@@ -112,8 +170,8 @@ enum CloudKitSocialSchema {
         ),
     ]
 
-    static func userProfileRecordID(forHandle handle: String) -> CKRecord.ID {
-        CKRecord.ID(recordName: SocialHandleNormalizer.normalize(handle))
+    static func userProfileRecordID(forOwnerUserRecordName ownerUserRecordName: String) -> CKRecord.ID {
+        CKRecord.ID(recordName: "UserProfile_\(ownerUserRecordName)")
     }
 }
 

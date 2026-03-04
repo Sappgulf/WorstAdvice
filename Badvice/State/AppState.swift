@@ -7296,7 +7296,31 @@ struct SocialCloudKitErrorDiagnostic: Sendable {
         guard let ckError = error as? CKError else { return nil }
         #if DEBUG
             let localizedDescription = ckError.localizedDescription
-            let debugUserInfo = ckError.userInfo.isEmpty ? nil : String(describing: ckError.userInfo)
+            var debugLines: [String] = []
+            if !ckError.userInfo.isEmpty {
+                debugLines.append("UserInfo: \(String(describing: ckError.userInfo))")
+            }
+            if ckError.code == .partialFailure,
+                let partialErrors = ckError.partialErrorsByItemID,
+                !partialErrors.isEmpty
+            {
+                debugLines.append("Partial Failure:")
+                for (itemID, partialError) in partialErrors {
+                    debugLines.append("- \(itemID): \(partialError.localizedDescription)")
+                }
+            }
+            if ckError.code == .serverRecordChanged {
+                if let serverRecord = ckError.serverRecord {
+                    debugLines.append("Server Record: \(serverRecord.recordID.recordName)")
+                }
+                if let ancestorRecord = ckError.ancestorRecord {
+                    debugLines.append("Ancestor Record: \(ancestorRecord.recordID.recordName)")
+                }
+                if let clientRecord = ckError.clientRecord {
+                    debugLines.append("Client Record: \(clientRecord.recordID.recordName)")
+                }
+            }
+            let debugUserInfo = debugLines.isEmpty ? nil : debugLines.joined(separator: "\n")
         #else
             let localizedDescription = sanitizedDescription(for: ckError)
             let debugUserInfo: String? = nil
@@ -7762,20 +7786,44 @@ actor CloudKitStore: SocialBackend {
             cachedCurrentUser = user
             return user
         }
+        let ownerUserRecordName = try await fetchCurrentICloudUserRecordName()
+        let profileRecordID = CloudKitSocialSchema.userProfileRecordID(
+            forOwnerUserRecordName: ownerUserRecordName
+        )
+        if let record = try await fetchRecord(recordID: profileRecordID) {
+            let user = try socialUser(from: record)
+            cachedCurrentUser = user
+            userDefaults.set(user.recordID.recordName, forKey: currentUserRecordNameKey)
+            return user
+        }
         return try await findCurrentUserByOwnerRecordName()
     }
 
     func getOrCreateCurrentUser(handle: String, displayName: String?) async throws -> SocialUser {
-        if let existing = try await fetchCurrentUserIfStored() {
-            return existing
-        }
-
+        // Verification checklist:
+        // 1. Fresh install -> iCloud permission prompt -> Friends Setup -> create handle -> Finish Setup succeeds.
+        // 2. Reopen app -> setup does not prompt again -> current profile loads via fetch(recordID:).
         let normalizedHandle = normalizeHandle(handle)
         guard Self.isValidHandle(normalizedHandle) else {
             throw SocialError.invalidHandle
         }
 
         let ownerUserRecordName = try await fetchCurrentICloudUserRecordName()
+        let profileRecordID = CloudKitSocialSchema.userProfileRecordID(
+            forOwnerUserRecordName: ownerUserRecordName
+        )
+        if let existing = try await fetchRecord(recordID: profileRecordID) {
+            let existingHandle = normalizeHandle(
+                (existing[CloudKitSocialSchema.Field.handle] as? String) ?? ""
+            )
+            if existingHandle != normalizedHandle {
+                throw SocialError.handleTaken
+            }
+            let user = try socialUser(from: existing)
+            await setStoredCurrentUserRecordName(user.recordID.recordName)
+            cachedCurrentUser = user
+            return user
+        }
         let existingProfiles = try await queryRecords(
             recordType: CloudKitSocialSchema.RecordType.userProfile,
             predicate: NSPredicate(
@@ -7802,10 +7850,9 @@ actor CloudKitStore: SocialBackend {
             throw SocialError.handleTaken
         }
 
-        let requestedRecordID = CloudKitSocialSchema.userProfileRecordID(forHandle: normalizedHandle)
         let record = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.userProfile,
-            recordID: requestedRecordID
+            recordID: profileRecordID
         )
         record[CloudKitSocialSchema.Field.handle] = normalizedHandle
         record[CloudKitSocialSchema.Field.displayName] =
@@ -7822,14 +7869,6 @@ actor CloudKitStore: SocialBackend {
     func isHandleTaken(_ handle: String) async throws -> Bool {
         let normalizedHandle = normalizeHandle(handle)
         guard Self.isValidHandle(normalizedHandle) else { return true }
-
-        let requestedRecordID = CloudKitSocialSchema.userProfileRecordID(forHandle: normalizedHandle)
-        if let record = try await fetchRecord(recordID: requestedRecordID) {
-            if let current = try await fetchCurrentUserIfStored(), record.recordID == current.recordID {
-                return false
-            }
-            return true
-        }
 
         let matchingRecords: [CKRecord]
         do {
@@ -7865,10 +7904,6 @@ actor CloudKitStore: SocialBackend {
     func findUserByHandle(_ handle: String) async throws -> SocialUser? {
         let normalizedHandle = normalizeHandle(handle)
         guard Self.isValidHandle(normalizedHandle) else { return nil }
-        let requestedRecordID = CloudKitSocialSchema.userProfileRecordID(forHandle: normalizedHandle)
-        if let directRecord = try await fetchRecord(recordID: requestedRecordID) {
-            return try socialUser(from: directRecord)
-        }
         let first: CKRecord?
         do {
             let records = try await queryRecords(
@@ -7978,10 +8013,12 @@ actor CloudKitStore: SocialBackend {
         }
 
         let record = CKRecord(recordType: CloudKitSocialSchema.RecordType.friendRequest)
+        let now = Date()
         record[CloudKitSocialSchema.Field.fromUser] = currentRef
         record[CloudKitSocialSchema.Field.toUser] = targetRef
         record[CloudKitSocialSchema.Field.status] = SocialFriendRequestStatus.pending.rawValue
-        record[CloudKitSocialSchema.Field.createdAt] = Date()
+        record[CloudKitSocialSchema.Field.createdAt] = now
+        record[CloudKitSocialSchema.Field.updatedAt] = now
 
         let saved = try await save(record: record, savePolicy: .allKeys)
         return SocialFriendRequest(
@@ -8046,6 +8083,7 @@ actor CloudKitStore: SocialBackend {
         }
 
         record[CloudKitSocialSchema.Field.status] = SocialFriendRequestStatus.accepted.rawValue
+        record[CloudKitSocialSchema.Field.updatedAt] = Date()
         _ = try await save(record: record)
 
         let now = Date()
@@ -8065,6 +8103,7 @@ actor CloudKitStore: SocialBackend {
             throw SocialError.permissionDenied
         }
         record[CloudKitSocialSchema.Field.status] = SocialFriendRequestStatus.rejected.rawValue
+        record[CloudKitSocialSchema.Field.updatedAt] = Date()
         _ = try await save(record: record)
     }
 
@@ -8097,6 +8136,7 @@ actor CloudKitStore: SocialBackend {
             record[CloudKitSocialSchema.Field.createdAt] = Date()
         }
         record[CloudKitSocialSchema.Field.status] = SocialFriendRequestStatus.blocked.rawValue
+        record[CloudKitSocialSchema.Field.updatedAt] = Date()
         _ = try await save(record: record, savePolicy: .allKeys)
 
         try await deleteRecords(recordIDs: [

@@ -4,6 +4,8 @@ import UIKit
 struct SocialCloudKitDiagnosticsView: View {
     @Bindable var social: SocialViewModel
     var showRetry: Bool = true
+    var retryTitle: String = "Retry"
+    var retryAction: (() -> Void)? = nil
 
     private var diagnostics: SocialCloudKitDiagnostics {
         social.availability.diagnostics
@@ -47,9 +49,13 @@ struct SocialCloudKitDiagnosticsView: View {
             if showRetry {
                 HStack(spacing: 12) {
                     if showRetry {
-                        Button("Retry") {
-                            Task {
-                                await social.retryAvailabilityStatus()
+                        Button(retryTitle) {
+                            if let retryAction {
+                                retryAction()
+                            } else {
+                                Task {
+                                    await social.retryAvailabilityStatus()
+                                }
                             }
                         }
                         .accessibilityIdentifier("social.profile.retryAvailability")
@@ -106,7 +112,7 @@ struct SocialProfileSetupView: View {
     }
 
     private var canFinishSetup: Bool {
-        handleValid && social.availability.isAccountAvailable && !social.isSubmittingAction
+        handleValid && !social.isSubmittingAction
     }
 
     private var handleValidationMessage: String {
@@ -146,7 +152,22 @@ struct SocialProfileSetupView: View {
                     .accessibilityIdentifier("social.profile.intro")
                 }
                 Section("CloudKit Diagnostics") {
-                    SocialCloudKitDiagnosticsView(social: social)
+                    SocialCloudKitDiagnosticsView(
+                        social: social,
+                        retryTitle: "Retry Setup",
+                        retryAction: {
+                            Task {
+                                if handleValid {
+                                    _ = await social.createProfile(
+                                        handle: handleSanitized,
+                                        displayName: displayName
+                                    )
+                                } else {
+                                    await social.retryAvailabilityStatus()
+                                }
+                            }
+                        }
+                    )
                         .accessibilityIdentifier("social.profile.diagnostics")
                 }
                 Section("Create Profile") {
@@ -232,8 +253,12 @@ struct SocialProfileSetupView: View {
             }
             .navigationTitle("Friends Setup")
             .navigationBarTitleDisplayMode(.inline)
-            .interactiveDismissDisabled()
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(social.isSubmittingAction ? "Creating..." : "Finish Setup") {
                         Task {

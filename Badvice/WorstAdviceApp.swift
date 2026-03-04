@@ -84,6 +84,7 @@ struct WorstAdviceApp: App {
                     #if DEBUG
                         guard !isUITesting, !isDebugPolishFixtureLaunch else { return }
                         _ = await CloudKitSchemaSeeder.seedIfNeeded()
+                        await CloudKitDebugSanityChecker.runFriendsReachabilityCheck()
                     #endif
                 }
                 .onAppear {

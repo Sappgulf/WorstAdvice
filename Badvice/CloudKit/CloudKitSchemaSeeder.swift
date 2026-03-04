@@ -120,8 +120,14 @@ enum CloudKitSchemaSeeder {
     }
 
     private static func makeSeedRecords(referenceDate: Date = Date()) -> [CKRecord] {
-        let userARecordID = CloudKitSocialSchema.userProfileRecordID(forHandle: SeedValues.userAHandle)
-        let userBRecordID = CloudKitSocialSchema.userProfileRecordID(forHandle: SeedValues.userBHandle)
+        let userAOwnerRecordName = "debug-schema-seed-owner-a"
+        let userBOwnerRecordName = "debug-schema-seed-owner-b"
+        let userARecordID = CloudKitSocialSchema.userProfileRecordID(
+            forOwnerUserRecordName: userAOwnerRecordName
+        )
+        let userBRecordID = CloudKitSocialSchema.userProfileRecordID(
+            forOwnerUserRecordName: userBOwnerRecordName
+        )
 
         let userA = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.userProfile,
@@ -130,7 +136,7 @@ enum CloudKitSchemaSeeder {
         userA[CloudKitSocialSchema.Field.handle] = SeedValues.userAHandle
         userA[CloudKitSocialSchema.Field.displayName] = "Schema Seed A"
         userA[CloudKitSocialSchema.Field.createdAt] = referenceDate
-        userA[CloudKitSocialSchema.Field.ownerUserRecordName] = "debug-schema-seed-owner-a"
+        userA[CloudKitSocialSchema.Field.ownerUserRecordName] = userAOwnerRecordName
 
         let userB = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.userProfile,
@@ -139,7 +145,7 @@ enum CloudKitSchemaSeeder {
         userB[CloudKitSocialSchema.Field.handle] = SeedValues.userBHandle
         userB[CloudKitSocialSchema.Field.displayName] = "Schema Seed B"
         userB[CloudKitSocialSchema.Field.createdAt] = referenceDate
-        userB[CloudKitSocialSchema.Field.ownerUserRecordName] = "debug-schema-seed-owner-b"
+        userB[CloudKitSocialSchema.Field.ownerUserRecordName] = userBOwnerRecordName
 
         let userAReference = CKRecord.Reference(recordID: userARecordID, action: .none)
         let userBReference = CKRecord.Reference(recordID: userBRecordID, action: .none)
@@ -152,6 +158,7 @@ enum CloudKitSchemaSeeder {
         friendRequest[CloudKitSocialSchema.Field.toUser] = userBReference
         friendRequest[CloudKitSocialSchema.Field.status] = SocialFriendRequestStatus.pending.rawValue
         friendRequest[CloudKitSocialSchema.Field.createdAt] = referenceDate
+        friendRequest[CloudKitSocialSchema.Field.updatedAt] = referenceDate
 
         let friendEdge = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.friendEdge,
@@ -209,11 +216,15 @@ enum CloudKitSchemaSeeder {
 
     private static func primeSchemaQueries(in database: CKDatabase) async throws {
         let userAReference = CKRecord.Reference(
-            recordID: CloudKitSocialSchema.userProfileRecordID(forHandle: SeedValues.userAHandle),
+            recordID: CloudKitSocialSchema.userProfileRecordID(
+                forOwnerUserRecordName: "debug-schema-seed-owner-a"
+            ),
             action: .none
         )
         let userBReference = CKRecord.Reference(
-            recordID: CloudKitSocialSchema.userProfileRecordID(forHandle: SeedValues.userBHandle),
+            recordID: CloudKitSocialSchema.userProfileRecordID(
+                forOwnerUserRecordName: "debug-schema-seed-owner-b"
+            ),
             action: .none
         )
 

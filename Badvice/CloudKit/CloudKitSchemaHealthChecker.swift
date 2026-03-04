@@ -61,7 +61,9 @@ struct CloudKitSchemaHealthChecker {
         }
 
         do {
-            _ = try await queryProbeRecord(handle: probeRecord.recordID.recordName)
+            _ = try await queryProbeRecord(
+                handle: (probeRecord[CloudKitSocialSchema.Field.handle] as? String) ?? ""
+            )
         } catch {
             try? await delete(recordID: probeRecord.recordID)
             throw failure(
@@ -102,7 +104,7 @@ struct CloudKitSchemaHealthChecker {
     private func makeProbeUserProfile(ownerUserRecordName: String) -> CKRecord {
         let uniqueSuffix = UUID().uuidString.lowercased().replacingOccurrences(of: "-", with: "")
         let handle = String("schemaprobe\(uniqueSuffix)".prefix(16))
-        let recordID = CloudKitSocialSchema.userProfileRecordID(forHandle: handle)
+        let recordID = CKRecord.ID(recordName: "UserProfile_schema_probe_\(uniqueSuffix)")
         let record = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.userProfile,
             recordID: recordID

@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+- Fixed Friends Setup getting stuck on CloudKit record-name/query issues by switching current-profile loading to deterministic `fetch(recordID:)`, improving diagnostics, and making the setup sheet non-blocking.
+
 ### Session Log (2026-02-27) — Social Hardening & Ship Readiness
 - Added a social backend abstraction (`SocialBackend`) with a deterministic UI-test mock backend (`-ui-testing-social-mock`) to decouple signup/social tests from live iCloud state.
 - Added persistent social outbox queue with retry/backoff for friend requests, friend-feed shares, leaderboard score submissions, and moderation reports.
