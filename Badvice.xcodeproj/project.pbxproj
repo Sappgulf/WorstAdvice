@@ -49,6 +49,19 @@
 		A1000003000000000000BB01 /* LocalAccountStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB01 /* LocalAccountStoreTests.swift */; };
 		A1000003000000000000BB02 /* AppSessionSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB02 /* AppSessionSmokeTests.swift */; };
 		A1000003000000000000BB03 /* SocialViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB03 /* SocialViewModelTests.swift */; };
+		A1000004000000000000CC01 /* AppFeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000004000000000000CC01 /* AppFeatureFlags.swift */; };
+		A1000004000000000000CC02 /* AppPerformanceInstrumentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000004000000000000CC02 /* AppPerformanceInstrumentation.swift */; };
+		A1000004000000000000CC03 /* AuthenticatedSessionLifecycleModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000004000000000000CC03 /* AuthenticatedSessionLifecycleModifier.swift */; };
+		A1000005000000000000DD01 /* GenerateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD01 /* GenerateViewModel.swift */; };
+		A1000005000000000000DD02 /* SocialViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD02 /* SocialViewModel.swift */; };
+		A1000005000000000000DD03 /* SettingsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD03 /* SettingsTabView.swift */; };
+		A1000005000000000000DD04 /* ShareCardSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD04 /* ShareCardSupport.swift */; };
+		A1000005000000000000DD05 /* GenerateTabView+SecondarySections.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD05 /* GenerateTabView+SecondarySections.swift */; };
+		A1000005000000000000DD06 /* LoadingAdviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD06 /* LoadingAdviceView.swift */; };
+		A1000005000000000000DD07 /* SharedDailyQuoteTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD07 /* SharedDailyQuoteTimeline.swift */; };
+		A1000005000000000000DD08 /* NotificationManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD08 /* NotificationManagerTests.swift */; };
+		A1000005000000000000DD09 /* SharedDailyQuoteTimelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD09 /* SharedDailyQuoteTimelineTests.swift */; };
+		A1000005000000000000DD10 /* SharedDailyQuoteTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD07 /* SharedDailyQuoteTimeline.swift */; };
 		A20000010000000000000028 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000028 /* SplashView.swift */; };
 		A20000010000000000000029 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000029 /* NotificationManager.swift */; };
 		A970A1DC8B4EEEDDF0DEC44A /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D0F9A0F33FC44CE7FFD0B9 /* AchievementsView.swift */; };
@@ -145,6 +158,18 @@
 		A2000003000000000000BB01 /* LocalAccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAccountStoreTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB02 /* AppSessionSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSessionSmokeTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB03 /* SocialViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialViewModelTests.swift; sourceTree = "<group>"; };
+		A2000004000000000000CC01 /* AppFeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFeatureFlags.swift; sourceTree = "<group>"; };
+		A2000004000000000000CC02 /* AppPerformanceInstrumentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPerformanceInstrumentation.swift; sourceTree = "<group>"; };
+		A2000004000000000000CC03 /* AuthenticatedSessionLifecycleModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticatedSessionLifecycleModifier.swift; sourceTree = "<group>"; };
+		A2000005000000000000DD01 /* GenerateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateViewModel.swift; sourceTree = "<group>"; };
+		A2000005000000000000DD02 /* SocialViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialViewModel.swift; sourceTree = "<group>"; };
+		A2000005000000000000DD03 /* SettingsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsTabView.swift; sourceTree = "<group>"; };
+		A2000005000000000000DD04 /* ShareCardSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardSupport.swift; sourceTree = "<group>"; };
+		A2000005000000000000DD05 /* GenerateTabView+SecondarySections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GenerateTabView+SecondarySections.swift"; sourceTree = "<group>"; };
+		A2000005000000000000DD06 /* LoadingAdviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingAdviceView.swift; sourceTree = "<group>"; };
+		A2000005000000000000DD07 /* SharedDailyQuoteTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SharedDailyQuoteTimeline.swift; sourceTree = "<group>"; };
+		A2000005000000000000DD08 /* NotificationManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManagerTests.swift; sourceTree = "<group>"; };
+		A2000005000000000000DD09 /* SharedDailyQuoteTimelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedDailyQuoteTimelineTests.swift; sourceTree = "<group>"; };
 		AA4E285DDB5972C81A405FFA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = "<group>"; };
 		BB19BBE9BB80D1CFBE9CB824 /* ShakeDetector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShakeDetector.swift; path = Badvice/Shared/ShakeDetector.swift; sourceTree = "<group>"; };
 		BL0000020000000000000001 /* BadviceLockScreenWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BadviceLockScreenWidget.swift; path = WorstAdviceWidget/BadviceLockScreenWidget.swift; sourceTree = "<group>"; };
@@ -275,6 +300,7 @@
 				A20000010000000000000001 /* WorstAdviceApp.swift */,
 				A10000010000000000000029 /* NotificationManager.swift */,
 				A20000010000000000000032 /* Shared/SharedDailyQuoteSource.swift */,
+				A2000005000000000000DD07 /* SharedDailyQuoteTimeline.swift */,
 				A70000010000000000000003 /* Models */,
 				A70000010000000000000004 /* Data */,
 				A70000010000000000000005 /* Engine */,
@@ -318,6 +344,10 @@
 			isa = PBXGroup;
 			children = (
 				A20000010000000000000008 /* AppState.swift */,
+				A2000004000000000000CC01 /* AppFeatureFlags.swift */,
+				A2000004000000000000CC02 /* AppPerformanceInstrumentation.swift */,
+				A2000005000000000000DD01 /* GenerateViewModel.swift */,
+				A2000005000000000000DD02 /* SocialViewModel.swift */,
 				537EABC7909023C6B45AAB4F /* LocalAuth.swift */,
 				53A5EDD883F062B6F7D61AF6 /* AppSessionViewModel.swift */,
 			);
@@ -328,8 +358,10 @@
 			isa = PBXGroup;
 			children = (
 				A20000010000000000000002 /* ContentView.swift */,
+				A2000004000000000000CC03 /* AuthenticatedSessionLifecycleModifier.swift */,
 				A20000010000000000000031 /* ChaosHubView.swift */,
 				A20000010000000000000003 /* AdviceCardView.swift */,
+				A2000005000000000000DD04 /* ShareCardSupport.swift */,
 				A20000010000000000000004 /* IntensityIndicator.swift */,
 				A20000010000000000000020 /* Theme.swift */,
 				A20000010000000000000021 /* HapticsManager.swift */,
@@ -341,6 +373,9 @@
 				A20000010000000000000027 /* ConfettiView.swift */,
 				A10000010000000000000028 /* SplashView.swift */,
 				A2000002000000000000AA01 /* GenerateTabView.swift */,
+				A2000005000000000000DD05 /* GenerateTabView+SecondarySections.swift */,
+				A2000005000000000000DD06 /* LoadingAdviceView.swift */,
+				A2000005000000000000DD03 /* SettingsTabView.swift */,
 				A2000002000000000000AA02 /* ToastView.swift */,
 				A2000002000000000000AA05 /* AdviceBracketView.swift */,
 				88A8B7BA7C96143E7039C52E /* LocalAuthGateView.swift */,
@@ -356,6 +391,8 @@
 				A2000003000000000000BB01 /* LocalAccountStoreTests.swift */,
 				A2000003000000000000BB02 /* AppSessionSmokeTests.swift */,
 				A2000003000000000000BB03 /* SocialViewModelTests.swift */,
+				A2000005000000000000DD08 /* NotificationManagerTests.swift */,
+				A2000005000000000000DD09 /* SharedDailyQuoteTimelineTests.swift */,
 			);
 			path = WorstAdviceTests;
 			sourceTree = "<group>";
@@ -538,6 +575,10 @@
 				A10000010000000000000006 /* AdviceStore.swift in Sources */,
 				A10000010000000000000007 /* AdviceEngine.swift in Sources */,
 				A10000010000000000000008 /* AppState.swift in Sources */,
+				A1000004000000000000CC01 /* AppFeatureFlags.swift in Sources */,
+				A1000004000000000000CC02 /* AppPerformanceInstrumentation.swift in Sources */,
+				A1000005000000000000DD01 /* GenerateViewModel.swift in Sources */,
+				A1000005000000000000DD02 /* SocialViewModel.swift in Sources */,
 				A10000010000000000000020 /* Theme.swift in Sources */,
 				A10000010000000000000021 /* HapticsManager.swift in Sources */,
 				A10000010000000000000022 /* FloatingParticlesView.swift in Sources */,
@@ -550,12 +591,18 @@
 				A10000010000000000000031 /* ChaosHubView.swift in Sources */,
 				A20000010000000000000028 /* SplashView.swift in Sources */,
 				A1000002000000000000AA01 /* GenerateTabView.swift in Sources */,
+				A1000005000000000000DD05 /* GenerateTabView+SecondarySections.swift in Sources */,
+				A1000005000000000000DD06 /* LoadingAdviceView.swift in Sources */,
+				A1000005000000000000DD03 /* SettingsTabView.swift in Sources */,
+				A1000005000000000000DD04 /* ShareCardSupport.swift in Sources */,
 				A1000002000000000000AA02 /* ToastView.swift in Sources */,
 				A1000002000000000000AA03 /* DeviceCapabilityProfile.swift in Sources */,
 				A1000002000000000000AA04 /* AdviceEngine+Vocabulary.swift in Sources */,
+				A1000005000000000000DD07 /* SharedDailyQuoteTimeline.swift in Sources */,
 				C82E5EADB60BABE95E14B274 /* ShakeDetector.swift in Sources */,
 				A970A1DC8B4EEEDDF0DEC44A /* AchievementsView.swift in Sources */,
 				A1000002000000000000AA05 /* AdviceBracketView.swift in Sources */,
+				A1000004000000000000CC03 /* AuthenticatedSessionLifecycleModifier.swift in Sources */,
 				A1000002000000000000AA06 /* Badvice/Views/ExploreTabView.swift in Sources */,
 				A1000002000000000000AA07 /* Badvice/Views/GroupChallengesTabView.swift in Sources */,
 				CC7C2D8BC35FCFF69C567086 /* LocalAuth.swift in Sources */,
@@ -576,6 +623,8 @@
 				A1000003000000000000BB01 /* LocalAccountStoreTests.swift in Sources */,
 				A1000003000000000000BB02 /* AppSessionSmokeTests.swift in Sources */,
 				A1000003000000000000BB03 /* SocialViewModelTests.swift in Sources */,
+				A1000005000000000000DD08 /* NotificationManagerTests.swift in Sources */,
+				A1000005000000000000DD09 /* SharedDailyQuoteTimelineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -594,6 +643,7 @@
 				B07D78E07800DE9F6C60ABAF /* WorstAdviceWidgetBundle.swift in Sources */,
 				F67E4DFCBEDF98A26BE99151 /* WorstAdviceQuoteWidget.swift in Sources */,
 				A10000010000000000000033 /* Shared/SharedDailyQuoteSource.swift in Sources */,
+				A1000005000000000000DD10 /* SharedDailyQuoteTimeline.swift in Sources */,
 				BL0000010000000000000001 /* BadviceLockScreenWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -635,7 +685,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.3;
+				MARKETING_VERSION = 4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -660,7 +710,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.3;
+				MARKETING_VERSION = 4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -813,7 +863,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4;
+				MARKETING_VERSION = 4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -845,7 +895,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4;
+				MARKETING_VERSION = 4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

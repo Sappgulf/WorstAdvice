@@ -8,6 +8,7 @@ struct WorstAdviceApp: App {
     private static let logger = Logger(subsystem: "com.worstadvice.app", category: "bootstrap")
     private static let legacySettingsCleanupVersionKey = "migrations.legacySettingsCleanup.v1"
     private var isUITesting: Bool { ProcessInfo.processInfo.arguments.contains("-ui-testing") }
+    private var isRunningUnderXCTest: Bool { ProcessInfo.processInfo.isRunningUnderXCTest }
     private var isDebugPolishFixtureLaunch: Bool { ProcessInfo.processInfo.arguments.contains("-debug-preload-polish-fixtures") }
 
     private let container: ModelContainer = {
@@ -82,7 +83,7 @@ struct WorstAdviceApp: App {
             ContentView()
                 .task {
                     #if DEBUG
-                        guard !isUITesting, !isDebugPolishFixtureLaunch else { return }
+                        guard !isUITesting, !isRunningUnderXCTest, !isDebugPolishFixtureLaunch else { return }
                         _ = await CloudKitSchemaSeeder.seedIfNeeded()
                         await CloudKitDebugSanityChecker.runFriendsReachabilityCheck()
                     #endif

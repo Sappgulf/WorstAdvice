@@ -556,7 +556,10 @@ actor SemanticTextScorer {
         let tokenSet: Set<String>
     }
 
-    private let sentenceEmbedding = NLEmbedding.sentenceEmbedding(for: .english)
+    private let sentenceEmbedding: NLEmbedding? = {
+        guard !ProcessInfo.processInfo.isRunningUnderXCTest else { return nil }
+        return NLEmbedding.sentenceEmbedding(for: .english)
+    }()
     private var vectorCache: [String: [Double]] = [:]
     // LRU tracking: monotonically increasing counter per key — evict min-counter entry
     private var cacheAccessOrder: [String: UInt64] = [:]

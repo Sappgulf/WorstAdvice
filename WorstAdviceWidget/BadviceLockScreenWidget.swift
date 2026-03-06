@@ -14,16 +14,15 @@ private struct LockScreenEntry: TimelineEntry {
 
 private struct LockScreenProvider: TimelineProvider {
     func placeholder(in context: Context) -> LockScreenEntry {
-        LockScreenEntry(date: Date(), quote: SharedDailyQuoteSource.quoteOfDay(for: Date()))
+        LockScreenEntry(date: Date(), quote: SharedDailyQuoteTimeline.quoteEntry(for: Date()))
     }
     func getSnapshot(in context: Context, completion: @escaping (LockScreenEntry) -> Void) {
-        completion(LockScreenEntry(date: Date(), quote: SharedDailyQuoteSource.quoteOfDay(for: Date())))
+        completion(LockScreenEntry(date: Date(), quote: SharedDailyQuoteTimeline.quoteEntry(for: Date())))
     }
     func getTimeline(in context: Context, completion: @escaping (Timeline<LockScreenEntry>) -> Void) {
         let now = Date()
-        let entry = LockScreenEntry(date: now, quote: SharedDailyQuoteSource.quoteOfDay(for: now))
-        let nextMidnight = Calendar.current.date(byAdding: .day, value: 1,
-                                                 to: Calendar.current.startOfDay(for: now)) ?? now.addingTimeInterval(86_400)
+        let entry = LockScreenEntry(date: now, quote: SharedDailyQuoteTimeline.quoteEntry(for: now))
+        let nextMidnight = SharedDailyQuoteTimeline.nextRefreshDate(after: now)
         completion(Timeline(entries: [entry], policy: .after(nextMidnight)))
     }
 }

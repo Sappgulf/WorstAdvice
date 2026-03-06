@@ -85,7 +85,6 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.requestReview) private var requestReview
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
-    @Environment(\.scenePhase) private var scenePhase
 
     @State private var selectedTab: AppTab = .generate
     @State private var auth: AuthViewModel?
@@ -181,9 +180,36 @@ struct ContentView: View {
             return .impact(weight: .light)
         }
         .environment(\.font, Theme.bodyFont(for: session.settings.theme))
-        .task {
-            await syncAuthContext(auth: auth, social: session.social)
-        }
+        .modifier(
+            AuthenticatedSessionLifecycleModifier(
+                auth: auth,
+                session: session,
+                shakeDetector: shakeDetector,
+                shakeToGenerateEnabled: shakeToGenerateEnabled,
+                onRequestReview: { requestReview() },
+                onApplyUITestLaunchOverrides: applyUITestLaunchOverridesIfNeeded,
+                onRestartSession: restartAppSession,
+                onRefreshLists: session.refreshLists,
+                onRefreshRetentionState: {
+                    session.generate.refreshRetentionStateOnAppear()
+                },
+                onSyncAuthContext: {
+                    await syncAuthContext(auth: auth, social: session.social)
+                },
+                onRefreshSocial: {
+                    await session.social.refreshAvailability()
+                    await session.social.refreshSocialData()
+                },
+                onUpdateLinkedSocialProfileRecordName: auth.setLinkedSocialProfileRecordName,
+                selectedTab: $selectedTab,
+                showConfetti: $showConfetti,
+                lastShakeHandledAt: $lastShakeHandledAt,
+                lowPowerModeEnabled: $lowPowerModeEnabled,
+                shouldRestartOnNextActive: $shouldRestartOnNextActive,
+                deviceCapability: $deviceCapability,
+                favoritesCountAtLastReview: $favoritesCountAtLastReview
+            )
+        )
         .fullScreenCover(
             isPresented: .init(
                 get: { !hasSeenOnboarding },
@@ -196,114 +222,6 @@ struct ContentView: View {
                     set: { if !$0 { hasSeenOnboarding = true } }
                 ))
         }
-        .onChange(of: session.generate.challengeStreakDays) { _, days in
-            if [3, 7, 14, 30].contains(days) {
-                showConfetti = true
-            }
-        }
-        .onChange(of: session.favorites.favorites.count) { _, newCount in
-            let thresholds = [3, 10, 25]
-            if thresholds.contains(newCount) && newCount > favoritesCountAtLastReview {
-                favoritesCountAtLastReview = newCount
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                    requestReview()
-                }
-            }
-        }
-        .onChange(of: shakeDetector.didShake) { _, didShake in
-            guard didShake, shakeToGenerateEnabled, selectedTab == .generate else { return }
-            guard !session.generate.isGenerating else { return }
-            let now = Date()
-            guard now.timeIntervalSince(lastShakeHandledAt) > 0.9 else { return }
-            lastShakeHandledAt = now
-            HapticsManager.playShakeDetected(isEnabled: session.settings.hapticsEnabled)
-            Task {
-                await session.generate.generate()
-            }
-            session.refreshLists()
-        }
-        .onChange(of: shakeToGenerateEnabled) { _, enabled in
-            shakeDetector.isEnabled = enabled
-            if enabled, scenePhase == .active {
-                shakeDetector.startMonitoring()
-            } else {
-                shakeDetector.stopMonitoring()
-            }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                if shouldRestartOnNextActive {
-                    shouldRestartOnNextActive = false
-                    restartAppSession()
-                    return
-                }
-                if shakeToGenerateEnabled {
-                    shakeDetector.startMonitoring()
-                }
-                self.session?.generate.refreshRetentionStateOnAppear()
-                Task {
-                    await self.session?.social.refreshAvailability()
-                    await self.session?.social.refreshSocialData()
-                }
-            } else {
-                if phase == .background {
-                    shouldRestartOnNextActive = true
-                }
-                shakeDetector.stopMonitoring()
-            }
-        }
-        .onAppear {
-            applyUITestLaunchOverridesIfNeeded()
-            shakeDetector.isEnabled = shakeToGenerateEnabled
-            lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
-            deviceCapability = DeviceCapabilityProfile.current()
-            if shakeToGenerateEnabled {
-                shakeDetector.startMonitoring()
-            }
-            session.generate.refreshRetentionStateOnAppear()
-            Task {
-                await syncAuthContext(auth: auth, social: session.social)
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) {
-            _ in
-            lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
-            deviceCapability = DeviceCapabilityProfile.current()
-        }
-        .onReceive(
-            NotificationCenter.default.publisher(for: ProcessInfo.thermalStateDidChangeNotification)
-        ) { _ in
-            deviceCapability = DeviceCapabilityProfile.current()
-        }
-        .onDisappear {
-            shakeDetector.stopMonitoring()
-        }
-        .onChange(of: session.settings.tabOrder) { _, newOrder in
-            guard !newOrder.isEmpty else { return }
-            if !newOrder.contains(selectedTab), let fallback = newOrder.first {
-                selectedTab = fallback
-            }
-        }
-        .onChange(of: auth.currentSession?.accountID) { _, _ in
-            Task {
-                await syncAuthContext(auth: auth, social: session.social)
-            }
-        }
-        .onChange(of: session.social.currentUser?.recordID.recordName) { _, newRecordName in
-            auth.setLinkedSocialProfileRecordName(newRecordName)
-        }
-        #if DEBUG
-            .onReceive(
-                NotificationCenter.default.publisher(
-                    for: .cloudKitSchemaSeederDidSeedDevelopmentSchema
-                )
-            ) { _ in
-                Task {
-                    await session.social.refreshAvailability()
-                    await session.social.refreshSocialData()
-                }
-            }
-        #endif
     }
 
     private var loadingView: some View {
@@ -320,6 +238,7 @@ struct ContentView: View {
                     .foregroundStyle(Color.primary.opacity(0.45))
             }
         }
+        .accessibilityIdentifier("app.loading")
     }
 
     private func bootstrapAppStateIfNeeded() {
@@ -431,6 +350,7 @@ struct ContentView: View {
         .onAppear {
             syncAuthDrafts(with: auth)
         }
+        .accessibilityIdentifier("app.authGate")
     }
 
     @ViewBuilder
@@ -472,6 +392,7 @@ struct ContentView: View {
                         .environment(\.tabBarVisible, $tabBarVisible)
                 }
             }
+            .accessibilityIdentifier("app.authenticatedShell")
             .tabViewStyle(.page(indexDisplayMode: .never))
             // Extend only the bottom edge so the custom tab bar overlaps the home indicator
             // region without pushing content under the Dynamic Island / status bar.
@@ -595,10 +516,10 @@ struct ContentView: View {
                                             .spring(response: 0.3, dampingFraction: 0.7)
                                         ) {
                                             selectedTab = tab
-                                        }
-                                    }
-                                }
-                            }
+                }
+            }
+        }
+    }
                             .accessibilityLabel(tab.title)
                             .accessibilityIdentifier(tabAccessibilityID)
                             .accessibilityValue(

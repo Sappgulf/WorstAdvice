@@ -1366,6 +1366,58 @@ final class PersistenceTests: XCTestCase {
         XCTAssertTrue(healedIndex.entries.isEmpty, "Missing downloaded model should be removed from the persisted index.")
     }
 
+    func testCommunityOnlyModeBlocksGenerationWithoutSuggestions() async throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        settings.communityOnlyMode = true
+        let achievements = AchievementsManager(context: repository.context)
+        let generate = GenerateViewModel(
+            repository: repository,
+            settingsViewModel: settings,
+            achievementsManager: achievements
+        )
+
+        generate.selectedCategory = .dating
+        generate.selectedTone = .wizard
+
+        await generate.generate(seed: 42)
+
+        XCTAssertNil(generate.current)
+        XCTAssertEqual(
+            generate.generationNotice,
+            "Community-only mode is on. Add suggestions in Settings > Suggestion Lab."
+        )
+    }
+
+    func testCommunityOnlyModeUsesCommunitySuggestionSourceBadge() async throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        settings.communityOnlyMode = true
+        let achievements = AchievementsManager(context: repository.context)
+        let generate = GenerateViewModel(
+            repository: repository,
+            settingsViewModel: settings,
+            achievementsManager: achievements
+        )
+
+        let suggestion = repository.addSuggestion(
+            category: .dating,
+            topic: "awkward date",
+            adviceLine: "Reply with KPI targets and call it emotional alignment."
+        )
+
+        generate.selectedCategory = .dating
+        generate.selectedTone = .wizard
+        generate.scenarioText = suggestion.topic
+
+        await generate.generate(seed: 314)
+
+        let current = try XCTUnwrap(generate.current)
+        XCTAssertEqual(current.adviceLine, suggestion.adviceLine)
+        XCTAssertEqual(generate.generationSourceBadgeText, "Community")
+        XCTAssertNil(generate.generationNotice)
+    }
+
     @MainActor
     private func waitUntil(
         timeout: Duration = .seconds(1),

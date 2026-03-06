@@ -32,7 +32,7 @@ enum NotificationManager {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
 
-        let selectedCopy = bodies.randomElement() ?? .defaultDaily
+        let selectedCopy = dailyNotificationCopy()
         let content = UNMutableNotificationContent()
         content.title = selectedCopy.title
         content.body = selectedCopy.body
@@ -58,26 +58,21 @@ enum NotificationManager {
     }
 
     private static func scheduleStreakRiskReminder(center: UNUserNotificationCenter) {
-        let today = dayKey(for: Date())
-        guard let yesterdayDate = Calendar.current.date(byAdding: .day, value: -1, to: Date()) else { return }
-        let yesterday = dayKey(for: yesterdayDate)
-        guard let lastGenerated = defaults.string(forKey: lastGenerationDayKey) else {
-            center.removePendingNotificationRequests(withIdentifiers: [streakRiskID])
-            return
-        }
-        guard lastGenerated == yesterday, lastGenerated != today else {
+        guard
+            shouldScheduleStreakRiskReminder(
+                lastGeneratedDay: defaults.string(forKey: lastGenerationDayKey),
+                referenceDate: Date()
+            )
+        else {
             center.removePendingNotificationRequests(withIdentifiers: [streakRiskID])
             return
         }
 
         let freezeAvailable = defaults.bool(forKey: streakFreezeAvailableKey)
+        let copy = streakRiskNotificationCopy(hasFreezeAvailable: freezeAvailable)
         let content = UNMutableNotificationContent()
-        content.title = freezeAvailable
-            ? "Streak at risk. Freeze available."
-            : "Streak at risk tonight."
-        content.body = freezeAvailable
-            ? "Generate one advice now, or your weekly Streak Freeze may auto-protect today."
-            : "Generate one advice before midnight to keep your streak alive."
+        content.title = copy.title
+        content.body = copy.body
         content.sound = .default
 
         var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
@@ -89,7 +84,7 @@ enum NotificationManager {
         center.add(request)
     }
 
-    private static func dayKey(for date: Date) -> String {
+    static func dayKey(for date: Date) -> String {
         let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
         let year = components.year ?? 1970
         let month = components.month ?? 1
@@ -97,7 +92,36 @@ enum NotificationManager {
         return String(format: "%04d-%02d-%02d", year, month, day)
     }
 
-    private struct NotificationCopy {
+    static func shouldScheduleStreakRiskReminder(
+        lastGeneratedDay: String?,
+        referenceDate: Date
+    ) -> Bool {
+        let today = dayKey(for: referenceDate)
+        guard let yesterdayDate = Calendar.current.date(byAdding: .day, value: -1, to: referenceDate)
+        else {
+            return false
+        }
+        let yesterday = dayKey(for: yesterdayDate)
+        guard let lastGeneratedDay else { return false }
+        return lastGeneratedDay == yesterday && lastGeneratedDay != today
+    }
+
+    static func dailyNotificationCopy() -> NotificationCopy {
+        bodies.randomElement() ?? .defaultDaily
+    }
+
+    static func streakRiskNotificationCopy(hasFreezeAvailable: Bool) -> NotificationCopy {
+        NotificationCopy(
+            title: hasFreezeAvailable
+                ? "Streak at risk. Freeze available."
+                : "Streak at risk tonight.",
+            body: hasFreezeAvailable
+                ? "Generate one advice now, or your weekly Streak Freeze may auto-protect today."
+                : "Generate one advice before midnight to keep your streak alive."
+        )
+    }
+
+    struct NotificationCopy: Equatable {
         let title: String
         let body: String
 

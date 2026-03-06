@@ -8,18 +8,17 @@ private struct DailyQuoteEntry: TimelineEntry {
 
 private struct DailyQuoteProvider: TimelineProvider {
     func placeholder(in context: Context) -> DailyQuoteEntry {
-        DailyQuoteEntry(date: Date(), quote: SharedDailyQuoteSource.quoteOfDay(for: Date()))
+        DailyQuoteEntry(date: Date(), quote: SharedDailyQuoteTimeline.quoteEntry(for: Date()))
     }
 
     func getSnapshot(in context: Context, completion: @escaping (DailyQuoteEntry) -> Void) {
-        completion(DailyQuoteEntry(date: Date(), quote: SharedDailyQuoteSource.quoteOfDay(for: Date())))
+        completion(DailyQuoteEntry(date: Date(), quote: SharedDailyQuoteTimeline.quoteEntry(for: Date())))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<DailyQuoteEntry>) -> Void) {
         let now = Date()
-        let entry = DailyQuoteEntry(date: now, quote: SharedDailyQuoteSource.quoteOfDay(for: now))
-        let nextUpdate = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: now))
-            ?? now.addingTimeInterval(86_400)
+        let entry = DailyQuoteEntry(date: now, quote: SharedDailyQuoteTimeline.quoteEntry(for: now))
+        let nextUpdate = SharedDailyQuoteTimeline.nextRefreshDate(after: now)
         completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
     }
 }

@@ -445,17 +445,31 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
-    static let defaultOrder: [AppTab] = [
-        .generate, .chaosHub, .explore, .groupChallenges, .friends, .quotes, .favorites, .history, .settings,
-    ]
+    var isEnabled: Bool {
+        AppFeatureFlags.isEnabled(self)
+    }
 
-    static let primaryNavigationTabs: [AppTab] = [
-        .generate, .friends, .chaosHub, .quotes,
-    ]
+    static var defaultOrder: [AppTab] {
+        [
+            .generate, .chaosHub, .explore, .groupChallenges, .friends, .quotes, .favorites, .history, .settings,
+        ].filter { $0.isEnabled }
+    }
 
-    static let brandMenuTabs: [AppTab] = [
-        .explore, .groupChallenges, .favorites, .history, .settings,
-    ]
+    static var primaryNavigationTabs: [AppTab] {
+        [
+            .generate, .friends, .chaosHub, .quotes, .settings,
+        ].filter { $0.isEnabled }
+    }
+
+    static var brandMenuTabs: [AppTab] {
+        [
+            .explore, .groupChallenges, .favorites, .history,
+        ].filter { $0.isEnabled }
+    }
+
+    static var enabledTabs: Set<AppTab> {
+        Set(allCases.filter { $0.isEnabled })
+    }
 }
 
 enum QuoteRankingMode: String, CaseIterable, Codable, Identifiable, Sendable {

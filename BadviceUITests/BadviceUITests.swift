@@ -410,18 +410,19 @@ final class BadviceUITests: XCTestCase {
         app: XCUIApplication,
         timeout: TimeInterval = 15
     ) -> Bool {
+        let shellRoot = app.otherElements["app.authenticatedShell"]
         let generateButton = app.buttons["generate.primary"]
         let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
         let deadline = Date().addingTimeInterval(timeout)
 
         while Date() < deadline {
-            if generateButton.exists || settingsTab.exists {
+            if shellRoot.exists || generateButton.exists || settingsTab.exists {
                 return true
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         }
 
-        return generateButton.exists || settingsTab.exists
+        return shellRoot.exists || generateButton.exists || settingsTab.exists
     }
 
     private func completeProfileSignup(app: XCUIApplication, handle: String) {
@@ -490,7 +491,7 @@ final class BadviceUITests: XCTestCase {
     }
 
     private func completeLocalSignin(app: XCUIApplication, email: String, password: String) {
-        let signInSegment = app.buttons["Sign In"]
+        let signInSegment = app.segmentedControls["auth.mode"].buttons["Sign In"]
         if signInSegment.exists {
             signInSegment.tap()
         }
