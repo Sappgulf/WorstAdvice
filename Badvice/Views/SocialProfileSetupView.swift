@@ -37,8 +37,23 @@ struct SocialCloudKitDiagnosticsView: View {
                 if let recordType = lastError.recordType {
                     diagnosticRow(title: "Record Type", value: recordType)
                 }
+                if !lastError.recordNames.isEmpty {
+                    diagnosticRow(
+                        title: "Record Names",
+                        value: lastError.recordNames.joined(separator: ", ")
+                    )
+                }
+                if let normalizedHandle = lastError.normalizedHandle {
+                    diagnosticRow(title: "Normalized Handle", value: normalizedHandle)
+                }
                 if let predicateSummary = lastError.predicateSummary {
                     diagnosticRow(title: "Predicate", value: predicateSummary)
+                }
+                if !lastError.fieldNames.isEmpty {
+                    diagnosticRow(
+                        title: "Fields",
+                        value: lastError.fieldNames.joined(separator: ", ")
+                    )
                 }
                 diagnosticRow(
                     title: "Retryable",

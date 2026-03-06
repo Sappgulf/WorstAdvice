@@ -204,6 +204,8 @@ enum CloudKitSocialSchema {
     ]
 
     static func userProfileRecordID(forOwnerUserRecordName ownerUserRecordName: String) -> CKRecord.ID {
+        // Legacy deterministic ID used only by dev/schema tooling. App setup now queries and saves
+        // through a generated record ID, then reloads the current profile by owner record name.
         CKRecord.ID(recordName: "UserProfile_\(ownerUserRecordName)")
     }
 }
