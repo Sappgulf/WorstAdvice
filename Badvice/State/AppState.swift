@@ -7269,34 +7269,64 @@ enum SocialError: LocalizedError {
 }
 
 struct SocialCloudKitErrorDiagnostic: Sendable {
-    let context: String
+    let operation: String
     let domain: String
     let code: String
     let localizedDescription: String
+    let recordType: String?
+    let predicateSummary: String?
+    let sortKeys: [String]
+    let containerIdentifier: String
+    let databaseScope: String
+    let environmentName: String
+    let isRetryable: Bool
+    let partialFailureDetails: [String]
     let debugUserInfo: String?
 
     var inlineSummary: String {
-        "\(code): \(localizedDescription)"
+        "\(operation): \(code): \(localizedDescription)"
     }
 
     var debugSummary: String {
         var lines = [
-            "Context: \(context)",
+            "Operation: \(operation)",
             "Domain: \(domain)",
             "Code: \(code)",
             "Description: \(localizedDescription)",
+            "Container: \(containerIdentifier)",
+            "Database Scope: \(databaseScope)",
+            "Environment: \(environmentName)",
+            "Retryable: \(isRetryable ? "yes" : "no")",
         ]
+        if let recordType, !recordType.isEmpty {
+            lines.append("Record Type: \(recordType)")
+        }
+        if let predicateSummary, !predicateSummary.isEmpty {
+            lines.append("Predicate: \(predicateSummary)")
+        }
+        if !sortKeys.isEmpty {
+            lines.append("Sort Keys: \(sortKeys.joined(separator: ", "))")
+        }
+        if !partialFailureDetails.isEmpty {
+            lines.append("Partial Failures:")
+            lines.append(contentsOf: partialFailureDetails.map { "- \($0)" })
+        }
         if let debugUserInfo, !debugUserInfo.isEmpty {
             lines.append("User Info: \(debugUserInfo)")
         }
         return lines.joined(separator: "\n")
     }
 
-    static func make(from error: Error, context: String) -> SocialCloudKitErrorDiagnostic? {
+    static func make(
+        from error: Error,
+        context: SocialCloudKitOperationContext,
+        isRetryable: Bool
+    ) -> SocialCloudKitErrorDiagnostic? {
         guard let ckError = error as? CKError else { return nil }
         #if DEBUG
             let localizedDescription = ckError.localizedDescription
             var debugLines: [String] = []
+            var partialFailureDetails: [String] = []
             if !ckError.userInfo.isEmpty {
                 debugLines.append("UserInfo: \(String(describing: ckError.userInfo))")
             }
@@ -7304,9 +7334,8 @@ struct SocialCloudKitErrorDiagnostic: Sendable {
                 let partialErrors = ckError.partialErrorsByItemID,
                 !partialErrors.isEmpty
             {
-                debugLines.append("Partial Failure:")
                 for (itemID, partialError) in partialErrors {
-                    debugLines.append("- \(itemID): \(partialError.localizedDescription)")
+                    partialFailureDetails.append("\(itemID): \(partialError.localizedDescription)")
                 }
             }
             if ckError.code == .serverRecordChanged {
@@ -7324,12 +7353,21 @@ struct SocialCloudKitErrorDiagnostic: Sendable {
         #else
             let localizedDescription = sanitizedDescription(for: ckError)
             let debugUserInfo: String? = nil
+            let partialFailureDetails: [String] = []
         #endif
         return SocialCloudKitErrorDiagnostic(
-            context: context,
+            operation: context.operation,
             domain: CKError.errorDomain,
             code: "\(ckError.code) (\(ckError.code.rawValue))",
             localizedDescription: localizedDescription,
+            recordType: context.recordType,
+            predicateSummary: context.predicateSummary,
+            sortKeys: context.sortKeys,
+            containerIdentifier: context.containerIdentifier,
+            databaseScope: context.databaseScope,
+            environmentName: context.environmentName,
+            isRetryable: isRetryable,
+            partialFailureDetails: partialFailureDetails,
             debugUserInfo: debugUserInfo
         )
     }
@@ -7349,6 +7387,39 @@ struct SocialCloudKitErrorDiagnostic: Sendable {
         default:
             return "CloudKit request failed."
         }
+    }
+}
+
+struct SocialCloudKitOperationContext: Sendable {
+    let operation: String
+    let recordType: String?
+    let predicateSummary: String?
+    let sortKeys: [String]
+    let containerIdentifier: String
+    let databaseScope: String
+    let environmentName: String
+
+    static func generic(operation: String) -> SocialCloudKitOperationContext {
+        SocialCloudKitOperationContext(
+            operation: operation,
+            recordType: nil,
+            predicateSummary: nil,
+            sortKeys: [],
+            containerIdentifier: CloudKitSocialConfig.containerIdentifier,
+            databaseScope: CloudKitManager.socialDatabaseScope,
+            environmentName: CloudKitSocialConfig.environmentName
+        )
+    }
+}
+
+struct SocialCloudOperationError: Error {
+    let underlyingError: Error
+    let diagnostic: SocialCloudKitErrorDiagnostic?
+}
+
+extension SocialCloudOperationError: LocalizedError {
+    var errorDescription: String? {
+        underlyingError.localizedDescription
     }
 }
 
@@ -7423,6 +7494,17 @@ struct SocialCloudKitDiagnostics: Sendable {
         ]
         if let lastError {
             lines.append("Last CKError: \(lastError.code)")
+            lines.append("Operation: \(lastError.operation)")
+            if let recordType = lastError.recordType {
+                lines.append("Record Type: \(recordType)")
+            }
+            if let predicateSummary = lastError.predicateSummary {
+                lines.append("Predicate: \(predicateSummary)")
+            }
+            if !lastError.sortKeys.isEmpty {
+                lines.append("Sort Keys: \(lastError.sortKeys.joined(separator: ", "))")
+            }
+            lines.append("Retryable: \(lastError.isRetryable ? "yes" : "no")")
             lines.append("Last Description: \(lastError.localizedDescription)")
             if includeDebugDetails {
                 lines.append(lastError.debugSummary)
@@ -7471,6 +7553,26 @@ struct SocialAvailabilityState: Sendable {
             lastError: nil
         )
     )
+}
+
+enum SocialLoadState: Equatable {
+    case idle
+    case checkingCloudKit
+    case needsProfileSetup
+    case bootstrappingProfile
+    case loadingFriends
+    case empty
+    case failed(message: String)
+    case ready
+
+    var allowsSocialActions: Bool {
+        switch self {
+        case .empty, .ready:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 struct SocialUser: Identifiable, Hashable, Sendable {
@@ -7691,6 +7793,11 @@ actor SocialActionQueueStore {
 }
 
 actor CloudKitStore: SocialBackend {
+    private enum FriendRequestDirection {
+        case incoming
+        case outgoing
+    }
+
     private let container: CKContainer
     private let publicDB: CKDatabase
     private let userDefaults: UserDefaults
@@ -7743,10 +7850,18 @@ actor CloudKitStore: SocialBackend {
             return makeAvailabilityState(
                 accountStatus: nil,
                 lastError: SocialCloudKitErrorDiagnostic(
-                    context: "ui-test",
+                    operation: "ui-test",
                     domain: CKError.errorDomain,
                     code: "unavailable",
                     localizedDescription: "Social features are unavailable in this test run.",
+                    recordType: nil,
+                    predicateSummary: nil,
+                    sortKeys: [],
+                    containerIdentifier: currentContainerIdentifier(),
+                    databaseScope: CloudKitManager.socialDatabaseScope,
+                    environmentName: CloudKitSocialConfig.environmentName,
+                    isRetryable: false,
+                    partialFailureDetails: [],
                     debugUserInfo: nil
                 )
             )
@@ -7763,7 +7878,8 @@ actor CloudKitStore: SocialBackend {
                 accountStatus: .couldNotDetermine,
                 lastError: SocialCloudKitErrorDiagnostic.make(
                     from: error,
-                    context: "account status lookup"
+                    context: makeOperationContext(operation: "accountStatus"),
+                    isRetryable: false
                 )
             )
         }
@@ -7777,14 +7893,21 @@ actor CloudKitStore: SocialBackend {
             !recordName.isEmpty
         {
             let recordID = CKRecord.ID(recordName: recordName)
-            guard let record = try await fetchRecord(recordID: recordID) else {
+            do {
+                guard let record = try await fetchRecord(recordID: recordID) else {
+                    userDefaults.removeObject(forKey: currentUserRecordNameKey)
+                    cachedCurrentUser = nil
+                    return try await findCurrentUserByOwnerRecordName()
+                }
+                let user = try socialUser(from: record)
+                cachedCurrentUser = user
+                return user
+            } catch {
+                guard Self.isUnknownItemError(error) else { throw error }
                 userDefaults.removeObject(forKey: currentUserRecordNameKey)
                 cachedCurrentUser = nil
                 return try await findCurrentUserByOwnerRecordName()
             }
-            let user = try socialUser(from: record)
-            cachedCurrentUser = user
-            return user
         }
         let ownerUserRecordName = try await fetchCurrentICloudUserRecordName()
         let profileRecordID = CloudKitSocialSchema.userProfileRecordID(
@@ -7824,29 +7947,7 @@ actor CloudKitStore: SocialBackend {
             cachedCurrentUser = user
             return user
         }
-        let existingProfiles = try await queryRecords(
-            recordType: CloudKitSocialSchema.RecordType.userProfile,
-            predicate: NSPredicate(
-                format: "%K == %@",
-                CloudKitSocialSchema.Field.handle,
-                normalizedHandle
-            ),
-            resultsLimit: 1,
-            desiredKeys: [
-                CloudKitSocialSchema.Field.handle,
-                CloudKitSocialSchema.Field.displayName,
-                CloudKitSocialSchema.Field.createdAt,
-                CloudKitSocialSchema.Field.ownerUserRecordName,
-            ]
-        )
-        if let existing = existingProfiles.first {
-            let existingOwner = existing[CloudKitSocialSchema.Field.ownerUserRecordName] as? String
-            if existingOwner == ownerUserRecordName {
-                let user = try socialUser(from: existing)
-                await setStoredCurrentUserRecordName(user.recordID.recordName)
-                cachedCurrentUser = user
-                return user
-            }
+        if try await isHandleTaken(normalizedHandle) {
             throw SocialError.handleTaken
         }
 
@@ -7880,7 +7981,8 @@ actor CloudKitStore: SocialBackend {
                     normalizedHandle
                 ),
                 resultsLimit: 4,
-                desiredKeys: [CloudKitSocialSchema.Field.handle]
+                desiredKeys: [CloudKitSocialSchema.Field.handle],
+                operation: "checkHandleAvailability"
             )
             matchingRecords = indexedRecords
         } catch {
@@ -7914,11 +8016,8 @@ actor CloudKitStore: SocialBackend {
                     normalizedHandle
                 ),
                 resultsLimit: 1,
-                desiredKeys: [
-                    CloudKitSocialSchema.Field.handle,
-                    CloudKitSocialSchema.Field.displayName,
-                    CloudKitSocialSchema.Field.createdAt,
-                ]
+                desiredKeys: CloudKitSocialSchema.Projection.userProfile,
+                operation: "findUserByHandle"
             )
             first = records.first
         } catch {
@@ -7927,11 +8026,7 @@ actor CloudKitStore: SocialBackend {
                 recordType: CloudKitSocialSchema.RecordType.userProfile,
                 predicate: NSPredicate(value: true),
                 resultsLimit: CKQueryOperation.maximumResults,
-                desiredKeys: [
-                    CloudKitSocialSchema.Field.handle,
-                    CloudKitSocialSchema.Field.displayName,
-                    CloudKitSocialSchema.Field.createdAt,
-                ]
+                desiredKeys: CloudKitSocialSchema.Projection.userProfile
             )
             first = records.first(where: {
                 normalizeHandle(($0[CloudKitSocialSchema.Field.handle] as? String) ?? "") == normalizedHandle
@@ -7962,47 +8057,41 @@ actor CloudKitStore: SocialBackend {
 
         let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
         let targetRef = CKRecord.Reference(recordID: target.recordID, action: .none)
-
-        let outgoingPredicate = NSPredicate(
-            format: "%K == %@ AND %K == %@ AND %K IN %@",
-            CloudKitSocialSchema.Field.fromUser,
-            currentRef,
-            CloudKitSocialSchema.Field.toUser,
-            targetRef,
-            CloudKitSocialSchema.Field.status,
-            [
-                SocialFriendRequestStatus.pending.rawValue,
-                SocialFriendRequestStatus.accepted.rawValue,
-                SocialFriendRequestStatus.blocked.rawValue,
-            ]
-        )
-        let existingOutgoing = try await queryRecords(
-            recordType: CloudKitSocialSchema.RecordType.friendRequest,
-            predicate: outgoingPredicate,
-            resultsLimit: 1
-        )
+        let blockingStatuses = Set([
+            SocialFriendRequestStatus.pending,
+            .accepted,
+            .blocked,
+        ])
+        let allRequests = try await allFriendRequestRecords()
+        let existingOutgoing = allRequests.filter { record in
+            guard
+                let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
+                let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference,
+                let statusRaw = record[CloudKitSocialSchema.Field.status] as? String,
+                let status = SocialFriendRequestStatus(rawValue: statusRaw)
+            else {
+                return false
+            }
+            return fromRef.recordID == currentRef.recordID
+                && toRef.recordID == targetRef.recordID
+                && blockingStatuses.contains(status)
+        }
         guard existingOutgoing.isEmpty else {
             throw SocialError.duplicateRequest
         }
-
-        let incomingPredicate = NSPredicate(
-            format: "%K == %@ AND %K == %@ AND %K IN %@",
-            CloudKitSocialSchema.Field.fromUser,
-            targetRef,
-            CloudKitSocialSchema.Field.toUser,
-            currentRef,
-            CloudKitSocialSchema.Field.status,
-            [
-                SocialFriendRequestStatus.pending.rawValue,
-                SocialFriendRequestStatus.accepted.rawValue,
-                SocialFriendRequestStatus.blocked.rawValue,
-            ]
-        )
-        let existingIncoming = try await queryRecords(
-            recordType: CloudKitSocialSchema.RecordType.friendRequest,
-            predicate: incomingPredicate,
-            resultsLimit: 5
-        )
+        let existingIncoming = allRequests.filter { record in
+            guard
+                let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
+                let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference,
+                let statusRaw = record[CloudKitSocialSchema.Field.status] as? String,
+                let status = SocialFriendRequestStatus(rawValue: statusRaw)
+            else {
+                return false
+            }
+            return fromRef.recordID == targetRef.recordID
+                && toRef.recordID == currentRef.recordID
+                && blockingStatuses.contains(status)
+        }
         if existingIncoming.contains(where: {
             ($0[CloudKitSocialSchema.Field.status] as? String) == SocialFriendRequestStatus.blocked.rawValue
         }) {
@@ -8034,38 +8123,20 @@ actor CloudKitStore: SocialBackend {
 
     func fetchIncomingFriendRequests() async throws -> [SocialFriendRequest] {
         let current = try await requireCurrentUser()
-        let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
-        let predicate = NSPredicate(
-            format: "%K == %@ AND %K == %@",
-            CloudKitSocialSchema.Field.toUser,
-            currentRef,
-            CloudKitSocialSchema.Field.status,
-            SocialFriendRequestStatus.pending.rawValue
-        )
-        let records = try await queryRecords(
-            recordType: CloudKitSocialSchema.RecordType.friendRequest,
-            predicate: predicate,
-            sortDescriptors: [NSSortDescriptor(key: CloudKitSocialSchema.Field.createdAt, ascending: false)],
-            resultsLimit: 50
+        let records = try await relevantFriendRequests(
+            for: current,
+            direction: .incoming,
+            statuses: [.pending]
         )
         return try await friendRequests(from: records)
     }
 
     func fetchOutgoingFriendRequests() async throws -> [SocialFriendRequest] {
         let current = try await requireCurrentUser()
-        let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
-        let predicate = NSPredicate(
-            format: "%K == %@ AND %K == %@",
-            CloudKitSocialSchema.Field.fromUser,
-            currentRef,
-            CloudKitSocialSchema.Field.status,
-            SocialFriendRequestStatus.pending.rawValue
-        )
-        let records = try await queryRecords(
-            recordType: CloudKitSocialSchema.RecordType.friendRequest,
-            predicate: predicate,
-            sortDescriptors: [NSSortDescriptor(key: CloudKitSocialSchema.Field.createdAt, ascending: false)],
-            resultsLimit: 50
+        let records = try await relevantFriendRequests(
+            for: current,
+            direction: .outgoing,
+            statuses: [.pending]
         )
         return try await friendRequests(from: records)
     }
@@ -8113,18 +8184,19 @@ actor CloudKitStore: SocialBackend {
 
         let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
         let targetRef = CKRecord.Reference(recordID: user.recordID, action: .none)
-        let predicate = NSPredicate(
-            format: "%K == %@ AND %K == %@",
-            CloudKitSocialSchema.Field.fromUser,
-            currentRef,
-            CloudKitSocialSchema.Field.toUser,
-            targetRef
-        )
-        let existing = try await queryRecords(
-            recordType: CloudKitSocialSchema.RecordType.friendRequest,
-            predicate: predicate,
-            resultsLimit: 1
-        )
+        let existing = try await relevantFriendRequests(
+            for: current,
+            direction: .outgoing,
+            statuses: nil
+        ).filter { record in
+            guard
+                let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
+                let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference
+            else {
+                return false
+            }
+            return fromRef.recordID == currentRef.recordID && toRef.recordID == targetRef.recordID
+        }
 
         let record: CKRecord
         if let first = existing.first {
@@ -8148,19 +8220,10 @@ actor CloudKitStore: SocialBackend {
 
     func fetchBlockedUsers() async throws -> [SocialUser] {
         let current = try await requireCurrentUser()
-        let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
-        let predicate = NSPredicate(
-            format: "%K == %@ AND %K == %@",
-            CloudKitSocialSchema.Field.fromUser,
-            currentRef,
-            CloudKitSocialSchema.Field.status,
-            SocialFriendRequestStatus.blocked.rawValue
-        )
-        let records = try await queryRecords(
-            recordType: CloudKitSocialSchema.RecordType.friendRequest,
-            predicate: predicate,
-            sortDescriptors: [NSSortDescriptor(key: CloudKitSocialSchema.Field.createdAt, ascending: false)],
-            resultsLimit: 100
+        let records = try await relevantFriendRequests(
+            for: current,
+            direction: .outgoing,
+            statuses: [.blocked]
         )
         let targetIDs = records.compactMap {
             ($0[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference)?.recordID
@@ -8479,6 +8542,46 @@ actor CloudKitStore: SocialBackend {
         SocialHandleNormalizer.displayName(displayName, fallbackHandle: handle)
     }
 
+    private func allFriendRequestRecords() async throws -> [CKRecord] {
+        try await queryRecords(
+            recordType: CloudKitSocialSchema.RecordType.friendRequest,
+            predicate: NSPredicate(value: true),
+            resultsLimit: 200,
+            desiredKeys: CloudKitSocialSchema.Projection.friendRequest,
+            operation: "listFriendRequests"
+        )
+    }
+
+    private func relevantFriendRequests(
+        for current: SocialUser,
+        direction: FriendRequestDirection,
+        statuses: Set<SocialFriendRequestStatus>?
+    ) async throws -> [CKRecord] {
+        let currentRecordID = current.recordID
+        return try await allFriendRequestRecords().filter { record in
+            guard
+                let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
+                let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference,
+                let statusRaw = record[CloudKitSocialSchema.Field.status] as? String,
+                let status = SocialFriendRequestStatus(rawValue: statusRaw)
+            else {
+                return false
+            }
+            let matchesDirection: Bool
+            switch direction {
+            case .incoming:
+                matchesDirection = toRef.recordID == currentRecordID
+            case .outgoing:
+                matchesDirection = fromRef.recordID == currentRecordID
+            }
+            guard matchesDirection else { return false }
+            if let statuses {
+                return statuses.contains(status)
+            }
+            return true
+        }
+    }
+
     private func consumeRateBudget(
         key: String,
         maxCount: Int,
@@ -8499,7 +8602,11 @@ actor CloudKitStore: SocialBackend {
     private func usersByID(for recordIDs: [CKRecord.ID]) async throws -> [CKRecord.ID: SocialUser] {
         let uniqueIDs = Array(Set(recordIDs))
         guard !uniqueIDs.isEmpty else { return [:] }
-        let records = try await fetchRecords(recordIDs: uniqueIDs)
+        let records = try await fetchRecords(
+            recordIDs: uniqueIDs,
+            desiredKeys: CloudKitSocialSchema.Projection.userProfile,
+            allowsMissingRecords: true
+        )
         var map: [CKRecord.ID: SocialUser] = [:]
         for record in records {
             if let user = try? socialUser(from: record) {
@@ -8646,17 +8753,18 @@ actor CloudKitStore: SocialBackend {
         }
         let current = try await requireCurrentUser()
         let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
-        let predicate = NSPredicate(
-            format: "%K == %@",
-            CloudKitSocialSchema.Field.fromUser,
-            currentRef
-        )
         let edges = try await queryRecords(
             recordType: CloudKitSocialSchema.RecordType.friendEdge,
-            predicate: predicate,
-            sortDescriptors: [NSSortDescriptor(key: CloudKitSocialSchema.Field.createdAt, ascending: false)],
-            resultsLimit: 500
-        )
+            predicate: NSPredicate(value: true),
+            resultsLimit: 500,
+            desiredKeys: CloudKitSocialSchema.Projection.friendEdge,
+            operation: "listFriendEdges"
+        ).filter { record in
+            guard let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference else {
+                return false
+            }
+            return fromRef.recordID == currentRef.recordID
+        }
         let ids = edges.compactMap {
             ($0[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference)?.recordID
         }
@@ -8692,23 +8800,8 @@ actor CloudKitStore: SocialBackend {
         return 0
     }
 
-    private func shouldTreatQueryErrorAsEmpty(_ error: Error) -> Bool {
-        guard let ckError = error as? CKError else { return false }
-        if ckError.code == .unknownItem {
-            return true
-        }
-        guard
-            ckError.code == .partialFailure,
-            let partialErrors = ckError.partialErrorsByItemID?.values.compactMap({ $0 as? CKError }),
-            !partialErrors.isEmpty
-        else {
-            return false
-        }
-        return partialErrors.allSatisfy { $0.code == .unknownItem }
-    }
-
     private func shouldFallbackToFullUserScan(_ error: Error) -> Bool {
-        guard let ckError = error as? CKError else { return false }
+        guard let ckError = Self.cloudKitError(from: error) else { return false }
         guard
             ckError.code == .invalidArguments
                 || ckError.code == .constraintViolation
@@ -8728,11 +8821,46 @@ actor CloudKitStore: SocialBackend {
             isAvailable: accountStatus == .available,
             diagnostics: SocialCloudKitDiagnostics(
                 accountStatus: accountStatus,
-                containerIdentifier: container.containerIdentifier
-                    ?? CloudKitSocialConfig.containerIdentifier,
+                containerIdentifier: currentContainerIdentifier(),
                 databaseScope: CloudKitManager.socialDatabaseScope,
                 environmentName: CloudKitSocialConfig.environmentName,
                 lastError: lastError
+            )
+        )
+    }
+
+    private func currentContainerIdentifier() -> String {
+        container.containerIdentifier ?? CloudKitSocialConfig.containerIdentifier
+    }
+
+    private func makeOperationContext(
+        operation: String,
+        recordType: String? = nil,
+        predicate: NSPredicate? = nil,
+        sortDescriptors: [NSSortDescriptor] = []
+    ) -> SocialCloudKitOperationContext {
+        SocialCloudKitOperationContext(
+            operation: operation,
+            recordType: recordType,
+            predicateSummary: predicate?.predicateFormat,
+            sortKeys: sortDescriptors.compactMap(\.key),
+            containerIdentifier: currentContainerIdentifier(),
+            databaseScope: CloudKitManager.socialDatabaseScope,
+            environmentName: CloudKitSocialConfig.environmentName
+        )
+    }
+
+    private static func wrapCloudKitError(_ error: Error, context: SocialCloudKitOperationContext) -> Error {
+        if let wrapped = error as? SocialCloudOperationError {
+            return wrapped
+        }
+        guard let ckError = error as? CKError else { return error }
+        return SocialCloudOperationError(
+            underlyingError: ckError,
+            diagnostic: SocialCloudKitErrorDiagnostic.make(
+                from: ckError,
+                context: context,
+                isRetryable: Self.isRetryableCloudKitError(ckError)
             )
         )
     }
@@ -8780,12 +8908,8 @@ actor CloudKitStore: SocialBackend {
                     ownerUserRecordName
                 ),
                 resultsLimit: 1,
-                desiredKeys: [
-                    CloudKitSocialSchema.Field.handle,
-                    CloudKitSocialSchema.Field.displayName,
-                    CloudKitSocialSchema.Field.createdAt,
-                    CloudKitSocialSchema.Field.ownerUserRecordName,
-                ]
+                desiredKeys: CloudKitSocialSchema.Projection.userProfile,
+                operation: "findCurrentUserByOwnerRecordName"
             )
         } catch {
             guard shouldFallbackToFullUserScan(error) else { throw error }
@@ -8793,12 +8917,7 @@ actor CloudKitStore: SocialBackend {
                 recordType: CloudKitSocialSchema.RecordType.userProfile,
                 predicate: NSPredicate(value: true),
                 resultsLimit: CKQueryOperation.maximumResults,
-                desiredKeys: [
-                    CloudKitSocialSchema.Field.handle,
-                    CloudKitSocialSchema.Field.displayName,
-                    CloudKitSocialSchema.Field.createdAt,
-                    CloudKitSocialSchema.Field.ownerUserRecordName,
-                ]
+                desiredKeys: CloudKitSocialSchema.Projection.userProfile
             )
             records = fallback.filter {
                 ($0[CloudKitSocialSchema.Field.ownerUserRecordName] as? String) == ownerUserRecordName
@@ -8850,16 +8969,23 @@ actor CloudKitStore: SocialBackend {
         predicate: NSPredicate,
         sortDescriptors: [NSSortDescriptor] = [],
         resultsLimit: Int = CKQueryOperation.maximumResults,
-        desiredKeys: [String]? = nil
+        desiredKeys: [String]? = nil,
+        operation: String = "queryRecords"
     ) async throws -> [CKRecord] {
         let query = CKQuery(recordType: recordType, predicate: predicate)
         query.sortDescriptors = sortDescriptors
         var allRecords: [CKRecord] = []
         var cursor: CKQueryOperation.Cursor?
+        let context = makeOperationContext(
+            operation: operation,
+            recordType: recordType,
+            predicate: predicate,
+            sortDescriptors: sortDescriptors
+        )
 
         do {
             cloudKitLogger.info(
-                "CloudKit call start: queryRecords type=\(recordType, privacy: .public) limit=\(resultsLimit)"
+                "CloudKit call start: \(operation, privacy: .public) type=\(recordType, privacy: .public) limit=\(resultsLimit)"
             )
             repeat {
                 let (records, nextCursor) = try await runQuery(
@@ -8878,18 +9004,13 @@ actor CloudKitStore: SocialBackend {
             } while cursor != nil
 
             cloudKitLogger.info(
-                "CloudKit call success: queryRecords type=\(recordType, privacy: .public) count=\(allRecords.count)"
+                "CloudKit call success: \(operation, privacy: .public) type=\(recordType, privacy: .public) count=\(allRecords.count)"
             )
             return allRecords
         } catch {
-            if shouldTreatQueryErrorAsEmpty(error) {
-                cloudKitLogger.info(
-                    "CloudKit query returned empty due to unknown items: \(recordType, privacy: .public)"
-                )
-                return []
-            }
-            Self.logCloudKitError(error, context: "queryRecords[\(recordType)]")
-            throw error
+            let wrapped = Self.wrapCloudKitError(error, context: context)
+            Self.logCloudKitError(wrapped, context: "\(operation)[\(recordType)]")
+            throw wrapped
         }
     }
 
@@ -8947,9 +9068,11 @@ actor CloudKitStore: SocialBackend {
 
     private func fetchRecords(
         recordIDs: [CKRecord.ID],
-        desiredKeys: [String]? = nil
+        desiredKeys: [String]? = nil,
+        allowsMissingRecords: Bool = false
     ) async throws -> [CKRecord] {
         guard !recordIDs.isEmpty else { return [] }
+        let context = makeOperationContext(operation: "fetchRecords")
         cloudKitLogger.info("CloudKit call start: fetchRecords count=\(recordIDs.count)")
         do {
             let records = try await withCheckedThrowingContinuation {
@@ -8963,6 +9086,12 @@ actor CloudKitStore: SocialBackend {
                     case .success(let record):
                         recordsByID[recordID] = record
                     case .failure(let error):
+                        if allowsMissingRecords,
+                            let ckError = error as? CKError,
+                            ckError.code == .unknownItem
+                        {
+                            return
+                        }
                         if firstError == nil {
                             firstError = error
                         }
@@ -8986,8 +9115,9 @@ actor CloudKitStore: SocialBackend {
             cloudKitLogger.info("CloudKit call success: fetchRecords count=\(records.count)")
             return records
         } catch {
-            Self.logCloudKitError(error, context: "fetchRecords")
-            throw error
+            let wrapped = Self.wrapCloudKitError(error, context: context)
+            Self.logCloudKitError(wrapped, context: "fetchRecords")
+            throw wrapped
         }
     }
 
@@ -9006,6 +9136,20 @@ actor CloudKitStore: SocialBackend {
         savePolicy: CKModifyRecordsOperation.RecordSavePolicy = .changedKeys
     ) async throws -> [CKRecord] {
         guard !records.isEmpty else { return [] }
+        let recordTypes = Array(Set(records.map(\.recordType))).sorted()
+        let context = makeOperationContext(
+            operation: "saveRecords",
+            recordType: recordTypes.joined(separator: ",")
+        )
+        let perRecordContexts = Dictionary(uniqueKeysWithValues: records.map { record in
+            (
+                record.recordID,
+                makeOperationContext(
+                    operation: "saveRecord",
+                    recordType: record.recordType
+                )
+            )
+        })
         cloudKitLogger.info(
             "CloudKit call start: saveRecords count=\(records.count) database=\(Self.databaseDescription(for: self.publicDB), privacy: .public)"
         )
@@ -9022,9 +9166,13 @@ actor CloudKitStore: SocialBackend {
                     case .success(let record):
                         savedByID[recordID] = record
                     case .failure(let error):
-                        Self.logCloudKitError(error, context: "saving record \(recordID.recordName)")
+                        let wrapped = Self.wrapCloudKitError(
+                            error,
+                            context: perRecordContexts[recordID] ?? context
+                        )
+                        Self.logCloudKitError(wrapped, context: "saving record \(recordID.recordName)")
                         if firstError == nil {
-                            firstError = error
+                            firstError = wrapped
                         }
                     }
                 }
@@ -9038,8 +9186,9 @@ actor CloudKitStore: SocialBackend {
                         let ordered = records.compactMap { savedByID[$0.recordID] ?? $0 }
                         continuation.resume(returning: ordered)
                     case .failure(let error):
-                        Self.logCloudKitError(error, context: "finishing record save batch")
-                        continuation.resume(throwing: error)
+                        let wrapped = Self.wrapCloudKitError(error, context: context)
+                        Self.logCloudKitError(wrapped, context: "finishing record save batch")
+                        continuation.resume(throwing: wrapped)
                     }
                 }
                 publicDB.add(operation)
@@ -9047,13 +9196,15 @@ actor CloudKitStore: SocialBackend {
             cloudKitLogger.info("CloudKit call success: saveRecords count=\(savedRecords.count)")
             return savedRecords
         } catch {
-            Self.logCloudKitError(error, context: "saveRecords")
-            throw error
+            let wrapped = Self.wrapCloudKitError(error, context: context)
+            Self.logCloudKitError(wrapped, context: "saveRecords")
+            throw wrapped
         }
     }
 
     private func deleteRecords(recordIDs: [CKRecord.ID]) async throws {
         guard !recordIDs.isEmpty else { return }
+        let context = makeOperationContext(operation: "deleteRecords")
         cloudKitLogger.info("CloudKit call start: deleteRecords count=\(recordIDs.count)")
         do {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
@@ -9081,7 +9232,7 @@ actor CloudKitStore: SocialBackend {
                         if let ckError = error as? CKError, ckError.code == .unknownItem {
                             continuation.resume()
                         } else {
-                            continuation.resume(throwing: error)
+                            continuation.resume(throwing: Self.wrapCloudKitError(error, context: context))
                         }
                     }
                 }
@@ -9089,8 +9240,9 @@ actor CloudKitStore: SocialBackend {
             }
             cloudKitLogger.info("CloudKit call success: deleteRecords count=\(recordIDs.count)")
         } catch {
-            Self.logCloudKitError(error, context: "deleteRecords")
-            throw error
+            let wrapped = Self.wrapCloudKitError(error, context: context)
+            Self.logCloudKitError(wrapped, context: "deleteRecords")
+            throw wrapped
         }
     }
 
@@ -9125,14 +9277,27 @@ actor CloudKitStore: SocialBackend {
     }
 
     private static func errorDescription(_ error: Error) -> String {
-        if let ckError = error as? CKError {
+        if let ckError = cloudKitError(from: error) {
             return "CKError(\(ckError.code.rawValue)): \(ckError.localizedDescription)"
         }
         return error.localizedDescription
     }
 
     private static func logCloudKitError(_ error: Error, context: String) {
-        if let ckError = error as? CKError {
+        if let operationError = error as? SocialCloudOperationError,
+            let diagnostic = operationError.diagnostic
+        {
+            cloudKitLogger.error(
+                "CloudKit \(context, privacy: .public) failed op=\(diagnostic.operation, privacy: .public) code=\(diagnostic.code, privacy: .public) recordType=\(diagnostic.recordType ?? "n/a", privacy: .public) retryable=\(diagnostic.isRetryable) description=\(diagnostic.localizedDescription, privacy: .public)"
+            )
+            #if DEBUG
+                cloudKitLogger.debug(
+                    "CloudKit diagnostic details: \(diagnostic.debugSummary, privacy: .public)"
+                )
+            #endif
+            return
+        }
+        if let ckError = cloudKitError(from: error) {
             cloudKitLogger.error(
                 "CloudKit \(context, privacy: .public) failed with domain=\(CKError.errorDomain, privacy: .public) code=\(ckError.code.rawValue) description=\(ckError.localizedDescription, privacy: .public)"
             )
@@ -9146,6 +9311,27 @@ actor CloudKitStore: SocialBackend {
         cloudKitLogger.error(
             "CloudKit \(context, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
         )
+    }
+
+    private static func cloudKitError(from error: Error) -> CKError? {
+        if let operationError = error as? SocialCloudOperationError {
+            return operationError.underlyingError as? CKError
+        }
+        return error as? CKError
+    }
+
+    private static func isUnknownItemError(_ error: Error) -> Bool {
+        cloudKitError(from: error)?.code == .unknownItem
+    }
+
+    private static func isRetryableCloudKitError(_ error: CKError) -> Bool {
+        switch error.code {
+        case .networkUnavailable, .networkFailure, .serviceUnavailable, .zoneBusy,
+            .requestRateLimited, .notAuthenticated, .accountTemporarilyUnavailable:
+            return true
+        default:
+            return false
+        }
     }
 }
 
@@ -9213,10 +9399,18 @@ actor UITestSocialBackend: SocialBackend {
                     databaseScope: CloudKitManager.socialDatabaseScope,
                     environmentName: CloudKitSocialConfig.environmentName,
                     lastError: SocialCloudKitErrorDiagnostic(
-                        context: "ui-test",
+                        operation: "ui-test",
                         domain: CKError.errorDomain,
                         code: "unavailable",
                         localizedDescription: "Social features are unavailable in this test run.",
+                        recordType: nil,
+                        predicateSummary: nil,
+                        sortKeys: [],
+                        containerIdentifier: CloudKitSocialConfig.containerIdentifier,
+                        databaseScope: CloudKitManager.socialDatabaseScope,
+                        environmentName: CloudKitSocialConfig.environmentName,
+                        isRetryable: false,
+                        partialFailureDetails: [],
                         debugUserInfo: nil
                     )
                 )
@@ -9581,6 +9775,8 @@ actor UITestSocialBackend: SocialBackend {
 @MainActor
 @Observable
 final class SocialViewModel {
+    static let unavailableEnvironmentMessage = "Social features are not available yet for this build environment."
+
     private let cloudStore: any SocialBackend
     private let actionQueue: SocialActionQueueStore
 
@@ -9588,6 +9784,7 @@ final class SocialViewModel {
         isAvailable: false,
         diagnostics: .pending
     )
+    var friendsLoadState: SocialLoadState = .idle
     var currentUser: SocialUser?
     var incomingRequests: [SocialFriendRequest] = []
     var outgoingRequests: [SocialFriendRequest] = []
@@ -9628,7 +9825,23 @@ final class SocialViewModel {
     }
 
     var socialFeaturesEnabled: Bool {
-        availability.isAccountAvailable && currentUser != nil
+        availability.isAccountAvailable
+            && currentUser != nil
+            && friendsLoadState.allowsSocialActions
+    }
+
+    var needsProfileSetup: Bool {
+        if case .needsProfileSetup = friendsLoadState {
+            return true
+        }
+        return availability.isAccountAvailable && currentUser == nil && !isEnvironmentUnavailable
+    }
+
+    var isEnvironmentUnavailable: Bool {
+        if case .failed(let message) = friendsLoadState {
+            return message == Self.unavailableEnvironmentMessage
+        }
+        return false
     }
 
     static func currentSeasonID(referenceDate: Date = Date()) -> String {
@@ -9658,15 +9871,12 @@ final class SocialViewModel {
         clearLoadedSocialState()
         statusMessage = nil
 
-        await refreshAvailability()
-        await loadCurrentUserIfAvailable()
+        await reloadFriendsFlow(preservingLastError: false)
     }
 
     func bootstrap() async {
         backendDisplayName = await cloudStore.backendDisplayName()
-        await refreshAvailability()
-        await refreshQueueDiagnostics()
-        await loadCurrentUserIfAvailable()
+        await reloadFriendsFlow(preservingLastError: true)
     }
 
     func refreshAvailability(preservingLastError: Bool = true) async {
@@ -9675,25 +9885,19 @@ final class SocialViewModel {
         let lastError = preservingLastError ? availability.diagnostics.lastError : nil
         availability = refreshed.withLastError(lastError)
         if !availability.isAccountAvailable {
-            currentUser = nil
-            incomingRequests = []
-            outgoingRequests = []
-            friends = []
-            blockedUsers = []
-            feedPosts = []
-            leaderboard = []
-            collabDocs = []
+            clearLoadedSocialState()
             await refreshQueueDiagnostics()
             return
         }
         await refreshQueueDiagnostics()
-        await drainQueuedActions()
     }
 
     func retryAvailabilityStatus() async {
-        statusMessage = nil
-        await refreshAvailability(preservingLastError: false)
-        await loadCurrentUserIfAvailable()
+        await reloadFriendsFlow(preservingLastError: false)
+    }
+
+    func retryFriendsLoad() async {
+        await reloadFriendsFlow(preservingLastError: false)
     }
 
     @discardableResult
@@ -9710,6 +9914,7 @@ final class SocialViewModel {
 
         statusMessage = nil
         isSubmittingAction = true
+        friendsLoadState = .bootstrappingProfile
         defer { isSubmittingAction = false }
 
         do {
@@ -9723,26 +9928,39 @@ final class SocialViewModel {
             await drainQueuedActions()
             return true
         } catch {
-            statusMessage = message(for: error)
+            let resolved = message(for: error)
+            statusMessage = resolved
+            friendsLoadState = .failed(message: resolved)
             return false
         }
     }
 
     private func loadCurrentUserIfAvailable() async {
-        guard availability.isAccountAvailable else { return }
+        guard availability.isAccountAvailable else {
+            friendsLoadState = .failed(message: availability.message)
+            return
+        }
         do {
             currentUser = try await cloudStore.fetchCurrentUserIfStored()
             if currentUser != nil {
                 await refreshSocialData()
                 await drainQueuedActions()
+            } else {
+                resetLoadedCollections()
+                friendsLoadState = .needsProfileSetup
             }
         } catch {
-            statusMessage = message(for: error)
+            handlePipelineError(error)
         }
     }
 
     private func clearLoadedSocialState() {
         currentUser = nil
+        resetLoadedCollections()
+        friendsLoadState = availability.isAccountAvailable ? .needsProfileSetup : .idle
+    }
+
+    private func resetLoadedCollections() {
         incomingRequests = []
         outgoingRequests = []
         friends = []
@@ -9758,7 +9976,16 @@ final class SocialViewModel {
     }
 
     func refreshSocialData() async {
-        guard socialFeaturesEnabled else { return }
+        guard availability.isAccountAvailable else {
+            friendsLoadState = .failed(message: availability.message)
+            return
+        }
+        guard currentUser != nil else {
+            friendsLoadState = .needsProfileSetup
+            return
+        }
+
+        friendsLoadState = .loadingFriends
         isRefreshingSocialData = true
         defer { isRefreshingSocialData = false }
 
@@ -9785,9 +10012,16 @@ final class SocialViewModel {
                 )
             }
             lastSocialRefreshAt = Date()
+            friendsLoadState =
+                incomingRequests.isEmpty
+                && outgoingRequests.isEmpty
+                && friends.isEmpty
+                && blockedUsers.isEmpty
+                ? .empty : .ready
             await refreshQueueDiagnostics()
+            await drainQueuedActions()
         } catch {
-            statusMessage = message(for: error)
+            handlePipelineError(error)
         }
     }
 
@@ -9796,6 +10030,11 @@ final class SocialViewModel {
     }
 
     func searchUserByHandle(_ handle: String) async {
+        guard socialFeaturesEnabled else {
+            latestSearchResult = nil
+            latestSearchHandle = Self.normalizedHandle(handle)
+            return
+        }
         latestSearchHandle = Self.normalizedHandle(handle)
         guard !latestSearchHandle.isEmpty else {
             latestSearchResult = nil
@@ -9812,12 +10051,15 @@ final class SocialViewModel {
     }
 
     func sendFriendRequest(to user: SocialUser) async {
+        guard socialFeaturesEnabled else {
+            return
+        }
         isSubmittingAction = true
         defer { isSubmittingAction = false }
         do {
             _ = try await cloudStore.sendFriendRequest(toUser: user)
             statusMessage = "Friend request sent."
-            outgoingRequests = try await cloudStore.fetchOutgoingFriendRequests()
+            await refreshSocialData()
         } catch {
             if shouldQueueForRetry(error) {
                 await enqueueAction(
@@ -9849,7 +10091,7 @@ final class SocialViewModel {
         do {
             try await cloudStore.declineFriendRequest(request)
             statusMessage = "Friend request declined."
-            incomingRequests = try await cloudStore.fetchIncomingFriendRequests()
+            await refreshSocialData()
         } catch {
             statusMessage = message(for: error)
         }
@@ -10029,14 +10271,16 @@ final class SocialViewModel {
                 return false
             }
         }
-        if let ckError = error as? CKError {
-            switch ckError.code {
-            case .networkUnavailable, .networkFailure, .serviceUnavailable, .zoneBusy,
-                .requestRateLimited, .notAuthenticated, .accountTemporarilyUnavailable:
-                return true
-            default:
-                return false
+        if let operationError = error as? SocialCloudOperationError {
+            if let diagnostic = operationError.diagnostic {
+                return diagnostic.isRetryable
             }
+            if let ckError = operationError.underlyingError as? CKError {
+                return cloudKitRetryable(ckError)
+            }
+        }
+        if let ckError = error as? CKError {
+            return cloudKitRetryable(ckError)
         }
         if let urlError = error as? URLError {
             switch urlError.code {
@@ -10064,7 +10308,7 @@ final class SocialViewModel {
     }
 
     private func drainQueuedActions() async {
-        guard availability.isAvailable else {
+        guard socialFeaturesEnabled else {
             await refreshQueueDiagnostics()
             return
         }
@@ -10094,6 +10338,35 @@ final class SocialViewModel {
 
         lastQueueDrainAt = Date()
         await refreshQueueDiagnostics()
+    }
+
+    private func reloadFriendsFlow(preservingLastError: Bool) async {
+        statusMessage = nil
+        friendsLoadState = .checkingCloudKit
+        await refreshAvailability(preservingLastError: preservingLastError)
+        guard availability.isAccountAvailable else {
+            friendsLoadState = .failed(message: availability.message)
+            return
+        }
+        await loadCurrentUserIfAvailable()
+    }
+
+    private func handlePipelineError(_ error: Error) {
+        if let socialError = error as? SocialError {
+            switch socialError {
+            case .missingProfile:
+                currentUser = nil
+                resetLoadedCollections()
+                statusMessage = nil
+                friendsLoadState = .needsProfileSetup
+                return
+            default:
+                break
+            }
+        }
+        let resolved = message(for: error)
+        statusMessage = resolved
+        friendsLoadState = .failed(message: resolved)
     }
 
     private func retryDelay(forAttempt attempt: Int) -> TimeInterval {
@@ -10138,7 +10411,7 @@ final class SocialViewModel {
     }
 
     private func shouldSuppressOptionalSocialSchemaError(_ error: Error) -> Bool {
-        guard let ckError = error as? CKError else { return false }
+        guard let ckError = cloudKitError(from: error) else { return false }
         guard
             ckError.code == .invalidArguments
                 || ckError.code == .constraintViolation
@@ -10160,11 +10433,22 @@ final class SocialViewModel {
         if let socialError = error as? SocialError, let description = socialError.errorDescription {
             return description
         }
+        if let operationError = error as? SocialCloudOperationError {
+            if let diagnostic = operationError.diagnostic {
+                availability = availability.withLastError(diagnostic)
+            }
+            if let ckError = operationError.underlyingError as? CKError {
+                return cloudKitMessage(for: ckError, diagnostic: operationError.diagnostic)
+            }
+        }
         if let ckError = error as? CKError {
-            availability = availability.withLastError(
-                SocialCloudKitErrorDiagnostic.make(from: ckError, context: "friends")
+            let diagnostic = SocialCloudKitErrorDiagnostic.make(
+                from: ckError,
+                context: .generic(operation: "friends"),
+                isRetryable: cloudKitRetryable(ckError)
             )
-            return cloudKitMessage(for: ckError)
+            availability = availability.withLastError(diagnostic)
+            return cloudKitMessage(for: ckError, diagnostic: diagnostic)
         }
         if let localized = (error as NSError?)?.localizedDescription, !localized.isEmpty {
             return localized
@@ -10172,7 +10456,13 @@ final class SocialViewModel {
         return "Something went wrong. Please try again."
     }
 
-    private func cloudKitMessage(for error: CKError) -> String {
+    private func cloudKitMessage(
+        for error: CKError,
+        diagnostic: SocialCloudKitErrorDiagnostic? = nil
+    ) -> String {
+        if isEnvironmentUnavailableError(error, diagnostic: diagnostic) {
+            return Self.unavailableEnvironmentMessage
+        }
         switch error.code {
         case .notAuthenticated:
             return "iCloud is not signed in. Open Settings, sign in to iCloud, then retry."
@@ -10183,7 +10473,9 @@ final class SocialViewModel {
         case .invalidArguments, .constraintViolation, .serverRejectedRequest:
             return error.localizedDescription
         case .unknownItem:
-            return "CloudKit social records are not initialized yet. Try again in a moment."
+            return currentUser == nil
+                ? "Finish setting up your Friends profile to continue."
+                : "Some Friends data is unavailable right now."
         case .quotaExceeded, .limitExceeded:
             return "CloudKit storage limits were reached. Free up iCloud storage and try again."
         case .accountTemporarilyUnavailable, .zoneNotFound, .userDeletedZone:
@@ -10191,5 +10483,44 @@ final class SocialViewModel {
         default:
             return error.localizedDescription
         }
+    }
+
+    private func cloudKitError(from error: Error) -> CKError? {
+        if let operationError = error as? SocialCloudOperationError {
+            return operationError.underlyingError as? CKError
+        }
+        return error as? CKError
+    }
+
+    private func cloudKitRetryable(_ error: CKError) -> Bool {
+        switch error.code {
+        case .networkUnavailable, .networkFailure, .serviceUnavailable, .zoneBusy,
+            .requestRateLimited, .notAuthenticated, .accountTemporarilyUnavailable:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func isEnvironmentUnavailableError(
+        _ error: CKError,
+        diagnostic: SocialCloudKitErrorDiagnostic?
+    ) -> Bool {
+        let details = error.localizedDescription.lowercased()
+        let recordType = diagnostic?.recordType ?? ""
+        if details.contains("production schema")
+            || details.contains("cannot create new type")
+            || details.contains("queryable")
+            || details.contains("index")
+            || details.contains("field")
+        {
+            return true
+        }
+        if error.code == .unknownItem,
+            CloudKitSocialSchema.coreFriendsRecordTypes.contains(recordType)
+        {
+            return true
+        }
+        return false
     }
 }

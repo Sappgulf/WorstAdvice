@@ -242,8 +242,7 @@ struct ContentView: View {
                 }
                 self.session?.generate.refreshRetentionStateOnAppear()
                 Task {
-                    await self.session?.social.refreshAvailability()
-                    await self.session?.social.refreshSocialData()
+                    await self.session?.social.retryFriendsLoad()
                 }
             } else {
                 if phase == .background {
@@ -299,8 +298,7 @@ struct ContentView: View {
                 )
             ) { _ in
                 Task {
-                    await session.social.refreshAvailability()
-                    await session.social.refreshSocialData()
+                    await session.social.retryFriendsLoad()
                 }
             }
         #endif
@@ -1083,11 +1081,10 @@ struct ContentView: View {
     }
 
     private func refreshSocialAvailabilityToast(session: AppSessionViewModel) async -> ToastMessage {
-        await session.social.refreshAvailability()
-        await session.social.refreshSocialData()
+        await session.social.retryFriendsLoad()
         if session.social.availability.isAccountAvailable {
             let message =
-                session.social.currentUser == nil
+                session.social.needsProfileSetup
                     ? "CloudKit account is available. Finish your Friends profile to continue."
                     : "CloudKit account is available."
             return ToastMessage(message: message, style: .success)
@@ -1098,8 +1095,7 @@ struct ContentView: View {
     #if DEBUG
         private func reseedCloudKitSchemaToast(session: AppSessionViewModel) async -> ToastMessage {
             let status = await CloudKitSchemaSeeder.forceReseed()
-            await session.social.refreshAvailability()
-            await session.social.refreshSocialData()
+            await session.social.retryFriendsLoad()
             return ToastMessage(
                 message: status.toastMessage,
                 style: status.isError ? .error : .success

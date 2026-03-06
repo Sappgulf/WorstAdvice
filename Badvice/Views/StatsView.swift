@@ -1435,17 +1435,7 @@ struct FriendsTabView: View {
 
                 ScrollView {
                     VStack(spacing: 12) {
-                        if !social.availability.isAccountAvailable
-                            || social.availability.diagnostics.lastError != nil
-                        {
-                            cloudKitBanner
-                        } else if social.currentUser == nil {
-                            QuotesInlineBanner(
-                                text: "Finish your Friends profile to search handles, accept requests, and unlock the feed.",
-                                accent: accent,
-                                secondaryText: secondaryText
-                            )
-                        }
+                        friendsStateBanner
 
                         sectionPicker
                         switch selectedSection {
@@ -1470,7 +1460,7 @@ struct FriendsTabView: View {
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 tabBarVisible.wrappedValue = true
-                Task { await social.refreshSocialData() }
+                Task { await social.retryFriendsLoad() }
             }
             .onChange(of: social.statusMessage) { _, message in
                 guard let message, !message.isEmpty else { return }
@@ -1514,6 +1504,93 @@ struct FriendsTabView: View {
         .accessibilityIdentifier("friends.cloudKitBanner")
     }
 
+    @ViewBuilder
+    private var friendsStateBanner: some View {
+        switch social.friendsLoadState {
+        case .idle, .ready:
+            EmptyView()
+        case .checkingCloudKit:
+            stateProgressCard(
+                title: "Checking CloudKit",
+                message: "Verifying your iCloud account and Friends profile."
+            )
+        case .bootstrappingProfile:
+            stateProgressCard(
+                title: "Creating profile",
+                message: "Finishing Friends setup before loading requests and contacts."
+            )
+        case .loadingFriends:
+            stateProgressCard(
+                title: "Loading Friends",
+                message: "Fetching your requests, contacts, and diagnostics."
+            )
+        case .needsProfileSetup:
+            QuotesInlineBanner(
+                text: "Finish your Friends profile to search handles, accept requests, and unlock the feed.",
+                accent: accent,
+                secondaryText: secondaryText
+            )
+        case .empty:
+            QuotesInlineBanner(
+                text: "Friends is ready. Share your handle or send a request to get started.",
+                accent: accent,
+                secondaryText: secondaryText
+            )
+        case .failed(let message):
+            socialCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("Friends Unavailable", systemImage: "exclamationmark.triangle.fill")
+                        .font(.headline)
+                        .foregroundStyle(primaryText)
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                    HStack(spacing: 8) {
+                        Button("Retry") {
+                            Task { await social.retryFriendsLoad() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(accent)
+                        .foregroundStyle(buttonText)
+                        .accessibilityIdentifier("friends.retryLoad")
+
+                        if social.needsProfileSetup {
+                            Button("Open Setup") {
+                                showProfileSetup = true
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("friends.openSetup")
+                        }
+                    }
+                    SocialCloudKitDiagnosticsView(
+                        social: social,
+                        retryTitle: "Retry",
+                        retryAction: {
+                            Task { await social.retryFriendsLoad() }
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    private func stateProgressCard(title: String, message: String) -> some View {
+        socialCard {
+            HStack(spacing: 12) {
+                ProgressView()
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+                Spacer()
+            }
+        }
+    }
+
     private var sectionPicker: some View {
         Picker("Section", selection: $selectedSection) {
             ForEach(FriendsSection.allCases) { section in
@@ -1526,7 +1603,7 @@ struct FriendsTabView: View {
 
     private var friendsSection: some View {
         VStack(spacing: 12) {
-            if social.currentUser == nil {
+            if social.needsProfileSetup {
                 socialCard {
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Set up your Friends profile", systemImage: "person.crop.circle.badge.plus")
@@ -1545,7 +1622,7 @@ struct FriendsTabView: View {
                             .accessibilityIdentifier("friends.openSetup")
 
                             Button("Retry CloudKit") {
-                                Task { await social.retryAvailabilityStatus() }
+                                Task { await social.retryFriendsLoad() }
                             }
                             .buttonStyle(.bordered)
                             .accessibilityIdentifier("friends.retryCloudKit")

@@ -100,8 +100,164 @@ actor FailingProfileBackend: SocialBackend {
     }
 }
 
+actor InspectableSocialBackend: SocialBackend {
+    private let availabilityValue: SocialAvailabilityState
+    private let incomingError: Error?
+    private var storedUser: SocialUser?
+    private var incomingCalls = 0
+    private var outgoingCalls = 0
+    private var friendsCalls = 0
+    private var blockedCalls = 0
+
+    init(
+        storedUser: SocialUser?,
+        availabilityValue: SocialAvailabilityState = .available,
+        incomingError: Error? = nil
+    ) {
+        self.storedUser = storedUser
+        self.availabilityValue = availabilityValue
+        self.incomingError = incomingError
+    }
+
+    func backendDisplayName() async -> String { "Inspectable Backend" }
+
+    func availabilityState() async -> SocialAvailabilityState {
+        availabilityValue
+    }
+
+    func setStoredCurrentUserRecordName(_ recordName: String?) async {
+        guard let recordName, !recordName.isEmpty else {
+            storedUser = nil
+            return
+        }
+        if storedUser?.recordID.recordName != recordName {
+            storedUser = SocialUser(
+                recordID: CKRecord.ID(recordName: recordName),
+                handle: "restored_\(recordName)",
+                displayName: "Restored",
+                createdAt: Date()
+            )
+        }
+    }
+
+    func fetchCurrentUserIfStored() async throws -> SocialUser? {
+        storedUser
+    }
+
+    func getOrCreateCurrentUser(handle: String, displayName: String?) async throws -> SocialUser {
+        if let storedUser {
+            return storedUser
+        }
+        let normalized = SocialHandleNormalizer.normalize(handle)
+        let user = SocialUser(
+            recordID: CKRecord.ID(recordName: "inspectable_\(normalized)"),
+            handle: normalized,
+            displayName: displayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+                ? displayName!.trimmingCharacters(in: .whitespacesAndNewlines)
+                : normalized,
+            createdAt: Date()
+        )
+        storedUser = user
+        return user
+    }
+
+    func findUserByHandle(_ handle: String) async throws -> SocialUser? {
+        nil
+    }
+
+    func sendFriendRequest(toUser target: SocialUser) async throws -> SocialFriendRequest {
+        throw SocialError.invalidRecord
+    }
+
+    func fetchIncomingFriendRequests() async throws -> [SocialFriendRequest] {
+        incomingCalls += 1
+        if let incomingError {
+            throw incomingError
+        }
+        return []
+    }
+
+    func fetchOutgoingFriendRequests() async throws -> [SocialFriendRequest] {
+        outgoingCalls += 1
+        return []
+    }
+
+    func acceptFriendRequest(_ request: SocialFriendRequest) async throws {
+        throw SocialError.invalidRecord
+    }
+
+    func declineFriendRequest(_ request: SocialFriendRequest) async throws {
+        throw SocialError.invalidRecord
+    }
+
+    func blockUser(_ user: SocialUser) async throws {
+        throw SocialError.invalidRecord
+    }
+
+    func fetchBlockedUsers() async throws -> [SocialUser] {
+        blockedCalls += 1
+        return []
+    }
+
+    func fetchFriends() async throws -> [SocialUser] {
+        friendsCalls += 1
+        return []
+    }
+
+    func createPost(type: SocialPostType, text: String) async throws -> SocialPost {
+        throw SocialError.invalidRecord
+    }
+
+    func fetchFriendsFeed() async throws -> [SocialPost] {
+        []
+    }
+
+    func submitChaosScore(seasonId: String, score: Int64) async throws {
+        throw SocialError.invalidRecord
+    }
+
+    func fetchLeaderboard(seasonId: String, limit: Int) async throws -> [SocialChaosScore] {
+        []
+    }
+
+    func createOrUpdateCollabDoc(
+        docID: String?,
+        type: SocialPostType,
+        content: String,
+        contributorIDs: [CKRecord.ID],
+        expectedVersion: Int64?
+    ) async throws -> SocialCollabDoc {
+        throw SocialError.invalidRecord
+    }
+
+    func fetchMyCollabDocs() async throws -> [SocialCollabDoc] {
+        []
+    }
+
+    func fetchCollabDoc(id: String) async throws -> SocialCollabDoc? {
+        nil
+    }
+
+    func submitModerationReport(_ report: SocialModerationReport) async throws {
+        throw SocialError.invalidRecord
+    }
+
+    func mandatoryFetchInvocationCount() async -> Int {
+        incomingCalls + outgoingCalls + friendsCalls + blockedCalls
+    }
+}
+
 @MainActor
 final class SocialViewModelTests: XCTestCase {
+    private func makeTestUser(handle: String = "friends_test_user") -> SocialUser {
+        SocialUser(
+            recordID: CKRecord.ID(recordName: "test_\(handle)"),
+            handle: handle,
+            displayName: "Test User",
+            createdAt: Date()
+        )
+    }
+
     func testMockBackendProfileCreationSeedsIncomingRequests() async {
         let defaults = UserDefaults(suiteName: "SocialViewModelTests.Seeded.\(UUID().uuidString)")!
         let queue = SocialActionQueueStore(
@@ -249,6 +405,117 @@ final class SocialViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.availability.isAvailable)
         XCTAssertNil(viewModel.currentUser)
         XCTAssertEqual(viewModel.availability.diagnostics.accountStatus, .couldNotDetermine)
+    }
+
+    func testRetryFriendsLoadDoesNotQueryFriendsBeforeProfileExists() async {
+        let defaults = UserDefaults(suiteName: "SocialViewModelTests.NoProfile.\(UUID().uuidString)")!
+        let queue = SocialActionQueueStore(
+            userDefaults: defaults,
+            storageKey: "social.queue.noProfile.\(UUID().uuidString)"
+        )
+        let backend = InspectableSocialBackend(storedUser: nil)
+        let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
+
+        await viewModel.retryFriendsLoad()
+
+        XCTAssertNil(viewModel.currentUser)
+        XCTAssertEqual(viewModel.friendsLoadState, .needsProfileSetup)
+        XCTAssertTrue(viewModel.needsProfileSetup)
+        XCTAssertFalse(viewModel.socialFeaturesEnabled)
+        let fetchCount = await backend.mandatoryFetchInvocationCount()
+        XCTAssertEqual(fetchCount, 0)
+    }
+
+    func testRetryFriendsLoadTransitionsExistingProfileToEmptyState() async {
+        let defaults = UserDefaults(suiteName: "SocialViewModelTests.Empty.\(UUID().uuidString)")!
+        let queue = SocialActionQueueStore(
+            userDefaults: defaults,
+            storageKey: "social.queue.empty.\(UUID().uuidString)"
+        )
+        let backend = InspectableSocialBackend(storedUser: makeTestUser())
+        let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
+
+        await viewModel.retryFriendsLoad()
+
+        XCTAssertEqual(viewModel.currentUser?.handle, "friends_test_user")
+        XCTAssertEqual(viewModel.friendsLoadState, .empty)
+        XCTAssertTrue(viewModel.socialFeaturesEnabled)
+        XCTAssertTrue(viewModel.incomingRequests.isEmpty)
+        XCTAssertTrue(viewModel.outgoingRequests.isEmpty)
+        XCTAssertTrue(viewModel.friends.isEmpty)
+        XCTAssertTrue(viewModel.blockedUsers.isEmpty)
+    }
+
+    func testCreateProfileTransitionsToEmptyStateAfterBootstrap() async {
+        let defaults = UserDefaults(suiteName: "SocialViewModelTests.CreateThenEmpty.\(UUID().uuidString)")!
+        let queue = SocialActionQueueStore(
+            userDefaults: defaults,
+            storageKey: "social.queue.createThenEmpty.\(UUID().uuidString)"
+        )
+        let backend = InspectableSocialBackend(storedUser: nil)
+        let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
+
+        let created = await viewModel.createProfile(handle: "fresh_user", displayName: "Fresh User")
+
+        XCTAssertTrue(created)
+        XCTAssertEqual(viewModel.currentUser?.handle, "fresh_user")
+        XCTAssertEqual(viewModel.friendsLoadState, .empty)
+        XCTAssertTrue(viewModel.socialFeaturesEnabled)
+        XCTAssertEqual(viewModel.statusMessage, "Profile created.")
+        let fetchCount = await backend.mandatoryFetchInvocationCount()
+        XCTAssertGreaterThanOrEqual(fetchCount, 4)
+    }
+
+    func testSchemaFailureFailsSoftAndStoresOperationDiagnostics() async throws {
+        let defaults = UserDefaults(suiteName: "SocialViewModelTests.OperationError.\(UUID().uuidString)")!
+        let queue = SocialActionQueueStore(
+            userDefaults: defaults,
+            storageKey: "social.queue.operationError.\(UUID().uuidString)"
+        )
+        let error = CKError(
+            .invalidArguments,
+            userInfo: [
+                NSLocalizedDescriptionKey:
+                    "Query filter requires field toUser to be marked queryable in schema index.",
+            ]
+        )
+        let context = SocialCloudKitOperationContext(
+            operation: "listIncomingFriendRequests",
+            recordType: CloudKitSocialSchema.RecordType.friendRequest,
+            predicateSummary: "toUser == currentUser AND status == pending",
+            sortKeys: [CloudKitSocialSchema.Field.createdAt],
+            containerIdentifier: CloudKitSocialConfig.containerIdentifier,
+            databaseScope: CloudKitManager.socialDatabaseScope,
+            environmentName: CloudKitSocialConfig.environmentName
+        )
+        let diagnostic = try XCTUnwrap(
+            SocialCloudKitErrorDiagnostic.make(from: error, context: context, isRetryable: false)
+        )
+        let backend = InspectableSocialBackend(
+            storedUser: makeTestUser(handle: "schema_user"),
+            incomingError: SocialCloudOperationError(
+                underlyingError: error,
+                diagnostic: diagnostic
+            )
+        )
+        let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
+
+        await viewModel.retryFriendsLoad()
+
+        if case .failed(let message) = viewModel.friendsLoadState {
+            XCTAssertEqual(message, SocialViewModel.unavailableEnvironmentMessage)
+        } else {
+            XCTFail("Expected failed Friends state for schema unavailable path")
+        }
+        let lastError = try XCTUnwrap(viewModel.availability.diagnostics.lastError)
+        XCTAssertEqual(lastError.operation, "listIncomingFriendRequests")
+        XCTAssertEqual(lastError.recordType, CloudKitSocialSchema.RecordType.friendRequest)
+        XCTAssertEqual(lastError.predicateSummary, "toUser == currentUser AND status == pending")
+        XCTAssertEqual(lastError.sortKeys, [CloudKitSocialSchema.Field.createdAt])
+        XCTAssertEqual(lastError.containerIdentifier, CloudKitSocialConfig.containerIdentifier)
+        XCTAssertEqual(lastError.databaseScope, CloudKitManager.socialDatabaseScope)
+        XCTAssertFalse(lastError.isRetryable)
+        XCTAssertEqual(viewModel.statusMessage, SocialViewModel.unavailableEnvironmentMessage)
     }
 
     func testMockBackendPreventsDuplicateFriendRequests() async throws {

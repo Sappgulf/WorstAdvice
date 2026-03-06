@@ -134,6 +134,54 @@ enum CloudKitSocialSchema {
         static let reason = "reason"
     }
 
+    enum Projection {
+        static let userProfile = [
+            Field.handle,
+            Field.displayName,
+            Field.createdAt,
+            Field.ownerUserRecordName,
+        ]
+
+        static let friendRequest = [
+            Field.fromUser,
+            Field.toUser,
+            Field.status,
+            Field.createdAt,
+            Field.updatedAt,
+        ]
+
+        static let friendEdge = [
+            Field.fromUser,
+            Field.toUser,
+            Field.createdAt,
+        ]
+
+        static let post = [
+            Field.authorRef,
+            Field.type,
+            Field.text,
+            Field.visibility,
+            Field.createdAt,
+        ]
+
+        static let chaosScore = [
+            Field.seasonId,
+            Field.userRef,
+            Field.score,
+            Field.updatedAt,
+        ]
+
+        static let collabDoc = [
+            Field.ownerRef,
+            Field.contributorsRefs,
+            Field.type,
+            Field.content,
+            Field.version,
+            Field.createdAt,
+            Field.updatedAt,
+        ]
+    }
+
     static let coreFriendsRecordTypes = [
         RecordType.userProfile,
         RecordType.friendRequest,
@@ -143,30 +191,15 @@ enum CloudKitSocialSchema {
     static let coreFriendsFieldsByRecordType: [(recordType: String, fields: [String])] = [
         (
             RecordType.userProfile,
-            [
-                Field.handle,
-                Field.displayName,
-                Field.createdAt,
-                Field.ownerUserRecordName,
-            ]
+            Projection.userProfile
         ),
         (
             RecordType.friendRequest,
-            [
-                Field.fromUser,
-                Field.toUser,
-                Field.status,
-                Field.createdAt,
-                Field.updatedAt,
-            ]
+            Projection.friendRequest
         ),
         (
             RecordType.friendEdge,
-            [
-                Field.fromUser,
-                Field.toUser,
-                Field.createdAt,
-            ]
+            Projection.friendEdge
         ),
     ]
 

@@ -33,6 +33,23 @@ struct SocialCloudKitDiagnosticsView: View {
 
             if let lastError = diagnostics.lastError {
                 diagnosticRow(title: "Last CKError", value: lastError.code)
+                diagnosticRow(title: "Operation", value: lastError.operation)
+                if let recordType = lastError.recordType {
+                    diagnosticRow(title: "Record Type", value: recordType)
+                }
+                if let predicateSummary = lastError.predicateSummary {
+                    diagnosticRow(title: "Predicate", value: predicateSummary)
+                }
+                diagnosticRow(
+                    title: "Retryable",
+                    value: lastError.isRetryable ? "Yes" : "No"
+                )
+                if !lastError.sortKeys.isEmpty {
+                    diagnosticRow(
+                        title: "Sort Keys",
+                        value: lastError.sortKeys.joined(separator: ", ")
+                    )
+                }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Last Description")
                         .font(.caption2.weight(.semibold))
@@ -41,6 +58,19 @@ struct SocialCloudKitDiagnosticsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                if !lastError.partialFailureDetails.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Partial Failures")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        ForEach(lastError.partialFailureDetails, id: \.self) { detail in
+                            Text(detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
             } else {
                 diagnosticRow(title: "Last CKError", value: "None")
@@ -54,7 +84,7 @@ struct SocialCloudKitDiagnosticsView: View {
                                 retryAction()
                             } else {
                                 Task {
-                                    await social.retryAvailabilityStatus()
+                                    await social.retryFriendsLoad()
                                 }
                             }
                         }
@@ -163,7 +193,7 @@ struct SocialProfileSetupView: View {
                                         displayName: displayName
                                     )
                                 } else {
-                                    await social.retryAvailabilityStatus()
+                                    await social.retryFriendsLoad()
                                 }
                             }
                         }
