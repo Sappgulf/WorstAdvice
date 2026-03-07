@@ -102,7 +102,10 @@ struct AdviceEngine {
             "\(opener): \(filledAction) \(pivot) Start from \(wisdomAnchor.lowercased()), then flip it into urgency theater. \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(escalation) If someone quotes best practices, answer with \(antiWisdomClause) \(directiveClause) \(ending)"
         ]
-        let semanticQuery = [scenario, selectedTopic, category.title, resolvedTone.title, principle, keyword]
+        // #11 Situation Context Weighting:
+        // Repeat scenario and selectedTopic (derived from user's situation input) twice so they
+        // carry 2× the semantic weight compared to generic category/tone tokens.
+        let semanticQuery = [scenario, scenario, selectedTopic, selectedTopic, category.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }
             .joined(separator: " ")
         let semanticPreparedQuery = await Self.semanticTextScorer.preparedQuery(from: semanticQuery)

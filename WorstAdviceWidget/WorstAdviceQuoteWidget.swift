@@ -1,5 +1,22 @@
+import AppIntents
 import SwiftUI
 import WidgetKit
+
+// MARK: - Widget Interactivity — App Intent (#16)
+// On iOS 17+ the widget can be tapped to open directly to the Generate tab.
+
+@available(iOS 17.0, *)
+struct OpenBadviceGenerateIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open Badvice"
+    static var description = IntentDescription("Opens Badvice to the advice generator.")
+    static var openAppWhenRun: Bool = true
+
+    func perform() async throws -> some IntentResult {
+        .result()
+    }
+}
+
+// MARK: - Timeline Entry
 
 private struct DailyQuoteEntry: TimelineEntry {
     let date: Date
@@ -39,6 +56,26 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
     private var padding: CGFloat { family == .systemSmall ? 12 : 16 }
 
     var body: some View {
+        widgetContent
+            .containerBackground(for: .widget) {
+                Color.clear
+            }
+    }
+
+    @ViewBuilder
+    private var widgetContent: some View {
+        if #available(iOS 17.0, *) {
+            // iOS 17+: wrap in Button to make widget interactive (#16)
+            Button(intent: OpenBadviceGenerateIntent()) {
+                quoteLayout
+            }
+            .buttonStyle(.plain)
+        } else {
+            quoteLayout
+        }
+    }
+
+    private var quoteLayout: some View {
         ZStack {
             LinearGradient(
                 colors: [Color(red: 0.96, green: 0.60, blue: 0.30), Color(red: 0.40, green: 0.20, blue: 0.10)],
@@ -48,11 +85,11 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Bad Quote of the Day")
+                    Text(“Bad Quote of the Day”)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.88))
                     Spacer()
-                    Text("TODAY")
+                    Text(“TODAY”)
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.white.opacity(0.9))
                         .padding(.horizontal, 6)
@@ -60,7 +97,7 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
                         .background(.white.opacity(0.2), in: Capsule(style: .continuous))
                 }
 
-                Text("“\(entry.quote.text)”")
+                Text(“”\(entry.quote.text)””)
                     .font(quoteFont)
                     .foregroundStyle(.white)
                     .lineLimit(family == .systemSmall ? 3 : 4)
@@ -73,15 +110,12 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.85))
                     Spacer()
-                    Text("Badvice")
+                    Text(“Badvice”)
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.white.opacity(0.92))
                 }
             }
             .padding(padding)
-        }
-        .containerBackground(for: .widget) {
-            Color.clear
         }
     }
 }

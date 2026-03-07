@@ -380,7 +380,7 @@ struct SettingsTabView: View {
                                     ? nil
                                     : .spring(response: 0.5, dampingFraction: 0.75).delay(0.25),
                                 value: sectionsAppeared)
-                        dataSection
+                        discoverSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
@@ -389,7 +389,7 @@ struct SettingsTabView: View {
                                     ? nil
                                     : .spring(response: 0.5, dampingFraction: 0.75).delay(0.30),
                                 value: sectionsAppeared)
-                        aboutSection
+                        dataSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
                             .scaleEffect(sectionsAppeared ? 1 : 0.96)
@@ -397,6 +397,15 @@ struct SettingsTabView: View {
                                 isMotionReduced
                                     ? nil
                                     : .spring(response: 0.5, dampingFraction: 0.75).delay(0.35),
+                                value: sectionsAppeared)
+                        aboutSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.40),
                                 value: sectionsAppeared)
                     }
                     .padding(.horizontal, 16)
@@ -917,6 +926,57 @@ struct SettingsTabView: View {
                         Text(p.title).tag(p)
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: - Discover & Upgrades
+
+    private var discoverSection: some View {
+        settingsCard(title: "Discover & Upgrades", icon: "star.circle") {
+            VStack(spacing: 12) {
+                NavigationLink {
+                    UpgradeStoreView(settings: viewModel)
+                } label: {
+                    settingsNavRow("Upgrade & Store", systemImage: "star.fill", badge: nil)
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                NavigationLink {
+                    InviteFriendsView(social: social, settings: viewModel)
+                } label: {
+                    settingsNavRow("Invite Friends", systemImage: "person.badge.plus", badge: nil)
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                NavigationLink {
+                    ActivityFeedView(social: social, settings: viewModel)
+                } label: {
+                    settingsNavRow("Friend Activity", systemImage: "bell.fill", badge: nil)
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                NavigationLink {
+                    OfflinePacksView(settings: viewModel)
+                } label: {
+                    settingsNavRow("Offline Packs", systemImage: "arrow.down.circle.fill", badge: nil)
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                NavigationLink {
+                    SuggestionPipelineView(settings: viewModel)
+                } label: {
+                    settingsNavRow("Suggestion Pipeline", systemImage: "arrow.triangle.2.circlepath.circle.fill", badge: nil)
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -2093,5 +2153,258 @@ private struct CommunityPulseView: View {
 
     private var cardBackgroundFill: some ShapeStyle {
         Theme.cardColor(for: settings.theme).opacity(0.45)
+    }
+}
+
+// MARK: - Upgrade Store View (#13 / #14)
+
+private struct UpgradeStoreView: View {
+    let settings: SettingsViewModel
+    @State private var store = StoreKitManager()
+
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+
+    var body: some View {
+        ZStack {
+            Theme.backgroundGradient(for: settings.theme).ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 20) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "star.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundStyle(accent)
+                            .padding(.top, 32)
+                        Text("Upgrade Badvice")
+                            .font(.title2.bold())
+                            .foregroundStyle(primaryText)
+                        Text("Unlock premium chaos potential.")
+                            .font(.subheadline)
+                            .foregroundStyle(secondaryText)
+                    }
+
+                    if store.isLoadingProducts {
+                        ProgressView("Loading…").tint(accent)
+                    }
+
+                    if case .failed(let msg) = store.purchaseState {
+                        Text(msg).font(.caption).foregroundStyle(.red).padding(.horizontal)
+                    }
+
+                    if case .restored = store.purchaseState {
+                        Label("Purchases restored!", systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.green)
+                    }
+
+                    ForEach(store.products, id: \.id) { product in
+                        Button {
+                            Task { await store.purchase(product) }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(product.displayName)
+                                        .font(.headline)
+                                        .foregroundStyle(primaryText)
+                                    Text(product.description)
+                                        .font(.caption)
+                                        .foregroundStyle(secondaryText)
+                                        .lineLimit(2)
+                                }
+                                Spacer()
+                                if store.purchasedProductIDs.contains(product.id) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                } else {
+                                    Text(product.displayPrice)
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(accent)
+                                }
+                            }
+                            .padding(16)
+                            .background(cardColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(store.purchaseState == .purchasing || store.purchasedProductIDs.contains(product.id))
+                    }
+                    .padding(.horizontal, 20)
+
+                    Button("Restore Purchases") {
+                        Task { await store.restorePurchases() }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .padding(.bottom, 24)
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+        .navigationTitle("Upgrade")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .preferredColorScheme(Theme.colorScheme(for: settings.theme))
+    }
+}
+
+// MARK: - Invite Friends View (#15)
+
+private struct InviteFriendsView: View {
+    let social: SocialViewModel
+    let settings: SettingsViewModel
+    @State private var referral = ReferralManager()
+    @State private var copied = false
+
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+    private var handle: String { social.currentUser?.handle ?? "friend" }
+
+    var body: some View {
+        ZStack {
+            Theme.backgroundGradient(for: settings.theme).ignoresSafeArea()
+            VStack(spacing: 24) {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 56))
+                    .foregroundStyle(accent)
+                    .padding(.top, 48)
+
+                Text("Invite Friends")
+                    .font(.title2.bold())
+                    .foregroundStyle(primaryText)
+
+                Text("Share your link and bring friends into the chaos.")
+                    .font(.subheadline)
+                    .foregroundStyle(secondaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                let link = referral.generateLink(for: handle)
+
+                VStack(spacing: 12) {
+                    Text(link.deepLinkURL.absoluteString)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(primaryText)
+                        .padding(12)
+                        .background(cardColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                    HStack(spacing: 12) {
+                        Button {
+                            UIPasteboard.general.string = link.deepLinkURL.absoluteString
+                            copied = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
+                        } label: {
+                            Label(copied ? "Copied!" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(accent)
+
+                        Button {
+                            referral.share(link: link)
+                        } label: {
+                            Label("Share", systemImage: "square.and.arrow.up")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(accent)
+                    }
+                }
+                .padding(.horizontal, 20)
+
+                Spacer()
+            }
+        }
+        .navigationTitle("Invite Friends")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .preferredColorScheme(Theme.colorScheme(for: settings.theme))
+        .onAppear { referral.loadStoredLink() }
+    }
+}
+
+// MARK: - Offline Packs View (#3)
+
+private struct OfflinePacksView: View {
+    let settings: SettingsViewModel
+    @State private var cache = OfflinePackCache()
+
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+
+    var body: some View {
+        ZStack {
+            Theme.backgroundGradient(for: settings.theme).ignoresSafeArea()
+            List {
+                Section {
+                    ForEach(ContentPack.allCases, id: \.self) { pack in
+                        let status = cache.status(for: pack)
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(pack.title)
+                                    .font(.body)
+                                    .foregroundStyle(primaryText)
+                                Text(statusLabel(status))
+                                    .font(.caption)
+                                    .foregroundStyle(statusColor(status))
+                            }
+                            Spacer()
+                            packAction(pack: pack, status: status)
+                        }
+                        .listRowBackground(cardColor)
+                    }
+                } header: {
+                    Text("Download packs for offline use")
+                }
+            }
+            .scrollContentBackground(.hidden)
+        }
+        .navigationTitle("Offline Packs")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .preferredColorScheme(Theme.colorScheme(for: settings.theme))
+    }
+
+    @ViewBuilder
+    private func packAction(pack: ContentPack, status: OfflinePackStatus) -> some View {
+        switch status {
+        case .notCached:
+            Button("Download") { Task { await cache.download(pack) } }
+                .buttonStyle(.bordered).tint(accent)
+        case .downloading:
+            ProgressView().tint(accent)
+        case .cached:
+            Button("Remove", role: .destructive) { cache.evict(pack) }
+                .buttonStyle(.bordered)
+        case .stale:
+            Button("Update") { Task { await cache.download(pack) } }
+                .buttonStyle(.bordered).tint(.orange)
+        }
+    }
+
+    private func statusLabel(_ status: OfflinePackStatus) -> String {
+        switch status {
+        case .notCached: return "Not downloaded"
+        case .downloading: return "Downloading…"
+        case .cached: return "Available offline"
+        case .stale: return "Update available"
+        }
+    }
+
+    private func statusColor(_ status: OfflinePackStatus) -> Color {
+        switch status {
+        case .notCached: return .secondary
+        case .downloading: return .blue
+        case .cached: return .green
+        case .stale: return .orange
+        }
     }
 }

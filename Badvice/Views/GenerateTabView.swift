@@ -17,6 +17,10 @@ struct GenerateTabView: View {
     @State private var showingShareSheet = false
     @State private var showingAdvanced = false
     @State private var showingBrandMenu = false
+    @State private var showingBracket = false        // #2 Advice Battles entry point
+    @State private var showingCollabAdvice = false   // #7 Collab Advice
+    @State private var showingGIFExport = false      // #5 Animated GIF export
+    @State private var gifExportInProgress = false
     @State private var showingResetAccountsConfirmation = false
     @State private var runningBrandAction = false
     @State private var generateButtonPulsing = false
@@ -308,6 +312,14 @@ struct GenerateTabView: View {
         }
         .sheet(isPresented: $showingBrandMenu) {
             brandMenuSheet
+        }
+        // #2 Advice Battles
+        .sheet(isPresented: $showingBracket) {
+            AdviceBracketView(settings: settings, generateViewModel: viewModel)
+        }
+        // #7 Collab Advice
+        .sheet(isPresented: $showingCollabAdvice) {
+            CollabAdviceView(settings: settings, generateViewModel: viewModel, social: social)
         }
         .onAppear {
             AppPerformanceInstrumentation.markAdviceTabFirstRenderIfNeeded()
@@ -703,6 +715,46 @@ struct GenerateTabView: View {
             }
             .tint(accent)
 
+            // #2 Advice Battles + #7 Collab Advice row
+            HStack(spacing: 10) {
+                Button { showingBracket = true } label: {
+                    Label("Battles 🥊", systemImage: "trophy.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+
+                Button { showingCollabAdvice = true } label: {
+                    Label("Collab 🤝", systemImage: "person.2.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+            }
+
+            // #10 Category/tone compatibility warning
+            let compatLabel = CategoryToneCompatibility.compatibilityLabel(
+                category: viewModel.selectedCategory,
+                tone: viewModel.selectedTone
+            )
+            if let label = compatLabel {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .font(.caption)
+                    Text(label)
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .transition(.opacity)
+            }
+
             // Save / Copy / Share rail
             HStack(spacing: 14) {
                 railButton(
@@ -757,6 +809,31 @@ struct GenerateTabView: View {
                 ) {
                     viewModel.remixCurrentAdvice()
                     activeToast = ToastMessage(message: "Remixed!", style: .success)
+                }
+
+                // #5 Animated GIF export
+                railButton(
+                    title: gifExportInProgress ? "Exporting…" : "GIF",
+                    systemImage: "square.and.arrow.up.on.square",
+                    isEnabled: hasCurrent && !viewModel.isGenerating && !gifExportInProgress
+                ) {
+                    guard let record = viewModel.current else { return }
+                    gifExportInProgress = true
+                    Task {
+                        let config = AnimatedShareExporter.Config(
+                            advice: record.adviceLine,
+                            category: record.category,
+                            tone: record.tone,
+                            theme: settings.theme
+                        )
+                        if let data = await AnimatedShareExporter.exportGIF(config: config) {
+                            AnimatedShareExporter.shareGIF(data)
+                            activeToast = ToastMessage(message: "GIF ready!", style: .success)
+                        } else {
+                            activeToast = ToastMessage(message: "GIF export failed", style: .error)
+                        }
+                        gifExportInProgress = false
+                    }
                 }
             }
             .frame(maxWidth: .infinity)

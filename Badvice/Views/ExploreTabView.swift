@@ -111,11 +111,27 @@ struct ExploreTabView: View {
     }
     
     private var trendingSection: some View {
-        LazyVStack(spacing: 16) {
-            ForEach(filteredTrending) { advice in
-                TrendingAdviceCard(advice: advice) {
-                    onJumpToGenerate(advice.category, advice.tone)
+        VStack(alignment: .leading, spacing: 16) {
+            LazyVStack(spacing: 16) {
+                ForEach(filteredTrending) { advice in
+                    TrendingAdviceCard(advice: advice) {
+                        onJumpToGenerate(advice.category, advice.tone)
+                    }
                 }
+            }
+
+            // Global Community Feed section (#9)
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Community", systemImage: "globe")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+
+                GlobalCommunityFeedView(
+                    social: social,
+                    settings: settings,
+                    onJumpToGenerate: onJumpToGenerate
+                )
+                .frame(minHeight: 320)
             }
         }
     }

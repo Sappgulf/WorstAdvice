@@ -1220,7 +1220,7 @@ struct DeepLink: Codable, Sendable {
     let id: UUID?
     let category: AdviceCategory?
     let tone: ToneMode?
-    
+
     enum LinkType: String, Codable, Sendable {
         case advice
         case category
@@ -1229,6 +1229,223 @@ struct DeepLink: Codable, Sendable {
         case challenge
         case friend
         case invite
+    }
+}
+
+// MARK: - Feed Reactions (#1)
+
+enum SocialReactionType: String, CaseIterable, Codable, Sendable {
+    case fire = "fire"
+    case laugh = "laugh"
+    case facepalm = "facepalm"
+    case skull = "skull"
+    case hundredPoints = "100"
+
+    var emoji: String {
+        switch self {
+        case .fire: return "🔥"
+        case .laugh: return "😂"
+        case .facepalm: return "🤦"
+        case .skull: return "💀"
+        case .hundredPoints: return "💯"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .fire: return "Fire"
+        case .laugh: return "Laugh"
+        case .facepalm: return "Facepalm"
+        case .skull: return "Dead"
+        case .hundredPoints: return "100"
+        }
+    }
+}
+
+struct FeedReaction: Identifiable, Codable, Sendable {
+    let id: UUID
+    let postID: String
+    let userHandle: String
+    let type: SocialReactionType
+    let createdAt: Date
+}
+
+// MARK: - Activity Feed (#6)
+
+struct SocialActivityEvent: Identifiable, Codable, Sendable {
+    let id: UUID
+    let actorHandle: String
+    let actorDisplayName: String
+    let type: ActivityEventType
+    let targetText: String?
+    let targetCategory: AdviceCategory?
+    let targetTone: ToneMode?
+    let occurredAt: Date
+
+    enum ActivityEventType: String, Codable, Sendable {
+        case friendJoined
+        case friendSharedAdvice
+        case friendReactedToYourPost
+        case friendUnlockedAchievement
+        case friendCompletedChallenge
+        case friendStartedStreak
+        case friendReachedStreak7
+        case friendReachedStreak30
+
+        var icon: String {
+            switch self {
+            case .friendJoined: return "person.badge.plus"
+            case .friendSharedAdvice: return "square.and.arrow.up"
+            case .friendReactedToYourPost: return "heart.fill"
+            case .friendUnlockedAchievement: return "star.fill"
+            case .friendCompletedChallenge: return "checkmark.seal.fill"
+            case .friendStartedStreak: return "flame"
+            case .friendReachedStreak7: return "flame.fill"
+            case .friendReachedStreak30: return "crown.fill"
+            }
+        }
+
+        var templateText: String {
+            switch self {
+            case .friendJoined: return "joined Badvice"
+            case .friendSharedAdvice: return "shared advice"
+            case .friendReactedToYourPost: return "reacted to your post"
+            case .friendUnlockedAchievement: return "unlocked an achievement"
+            case .friendCompletedChallenge: return "completed a challenge"
+            case .friendStartedStreak: return "started a streak"
+            case .friendReachedStreak7: return "hit a 7-day streak 🔥"
+            case .friendReachedStreak30: return "hit a 30-day streak 👑"
+            }
+        }
+    }
+}
+
+// MARK: - Category/Tone Compatibility (#10)
+
+struct CategoryToneCompatibility {
+    /// Returns a compatibility score 0.0–1.0 for a category+tone pair.
+    /// 1.0 = perfect fit, 0.0 = very awkward pairing.
+    static func score(category: AdviceCategory, tone: ToneMode) -> Double {
+        matrix[category]?[tone] ?? 0.7
+    }
+
+    static func compatibilityLabel(category: AdviceCategory, tone: ToneMode) -> String? {
+        let s = score(category: category, tone: tone)
+        if s >= 0.9 { return nil }          // great — no warning
+        if s >= 0.75 { return nil }         // fine — no warning
+        if s >= 0.55 { return "Unusual mix" }
+        return "Awkward combo"
+    }
+
+    // Sparse matrix — only low-compatibility pairs listed; others default to 0.7.
+    private static let matrix: [AdviceCategory: [ToneMode: Double]] = [
+        .cooking: [
+            .cryptoBro: 0.40,
+            .corporateConsultant: 0.45,
+            .alphaPodcast: 0.50,
+            .linkedInInfluencer: 0.50,
+        ],
+        .parenting: [
+            .cryptoBro: 0.35,
+            .alphaPodcast: 0.40,
+            .redditCommenter: 0.50,
+        ],
+        .spirituality: [
+            .cryptoBro: 0.30,
+            .corporateConsultant: 0.45,
+            .linkedInInfluencer: 0.40,
+        ],
+        .fitness: [
+            .wizard: 0.50,
+            .minimalistMonk: 0.55,
+            .conspiracyTheorist: 0.50,
+        ],
+        .money: [
+            .wizard: 0.45,
+            .minimalistMonk: 0.50,
+        ],
+        .pets: [
+            .cryptoBro: 0.35,
+            .corporateConsultant: 0.40,
+            .alphaPodcast: 0.45,
+        ],
+    ]
+}
+
+// MARK: - Offline Pack State (#3)
+
+enum OfflinePackStatus: String, Codable, Sendable {
+    case notCached
+    case downloading
+    case cached
+    case stale
+
+    var label: String {
+        switch self {
+        case .notCached: return "Available"
+        case .downloading: return "Downloading…"
+        case .cached: return "Downloaded"
+        case .stale: return "Update available"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .notCached: return "arrow.down.circle"
+        case .downloading: return "arrow.down.circle.dotted"
+        case .cached: return "checkmark.circle.fill"
+        case .stale: return "exclamationmark.circle"
+        }
+    }
+}
+
+struct OfflinePackCacheEntry: Codable, Sendable {
+    let packID: String
+    let cachedAt: Date
+    let version: Int
+}
+
+// MARK: - Collab Advice Session (#7)
+
+struct CollabAdviceSession: Identifiable, Codable, Sendable {
+    let id: UUID
+    let initiatorHandle: String
+    let partnerHandle: String?
+    var initiatorPickedCategory: AdviceCategory?
+    var partnerPickedTone: ToneMode?
+    let createdAt: Date
+    var isComplete: Bool { initiatorPickedCategory != nil && partnerPickedTone != nil }
+
+    var resolvedCategory: AdviceCategory? { initiatorPickedCategory }
+    var resolvedTone: ToneMode? { partnerPickedTone }
+}
+
+// MARK: - Live Activity Attributes (#17)
+
+struct BadviceStreakAttributes: Codable, Sendable {
+    let streakDays: Int
+    let challengeTitle: String
+
+    struct ContentState: Codable, Sendable {
+        let currentCount: Int
+        let targetCount: Int
+        let isComplete: Bool
+    }
+}
+
+// MARK: - Referral (#15)
+
+struct ReferralLink: Identifiable, Codable, Sendable {
+    let id: UUID
+    let inviterHandle: String
+    let createdAt: Date
+
+    var deepLinkURL: URL {
+        URL(string: "badvice://invite/\(id.uuidString.lowercased())")!
+    }
+
+    var shareText: String {
+        "Join me on Badvice — the app for spectacularly wrong advice! \(deepLinkURL.absoluteString)"
     }
 }
 

@@ -2296,6 +2296,12 @@ final class AdviceRepository {
     func toggleFavorite(_ record: AdviceRecord) {
         record.isFavorite.toggle()
         save()
+        // #18 Spotlight Search — index when saving, remove when un-saving
+        if record.isFavorite {
+            SpotlightManager.index(record)
+        } else {
+            SpotlightManager.remove(id: record.id)
+        }
     }
 
     func setAftermathNote(_ record: AdviceRecord, note: String) {
@@ -2304,6 +2310,8 @@ final class AdviceRepository {
     }
 
     func delete(_ record: AdviceRecord) {
+        // #18 Remove from Spotlight when deleting
+        SpotlightManager.remove(id: record.id)
         context.delete(record)
         save()
     }
@@ -10783,5 +10791,99 @@ final class SocialViewModel {
             return true
         }
         return false
+    }
+}
+
+// MARK: - Feed Reactions (#1)
+// In-memory reaction state on SocialViewModel + helper methods.
+
+extension SocialViewModel {
+
+    // Keyed by post recordName → array of reactions from all users
+    var postReactions: [String: [FeedReaction]] {
+        get { _postReactions }
+    }
+
+    // Uses a stored property via associated-object pattern — backed by a simple dictionary
+    // on the ViewModel since @Observable doesn't support stored extension properties.
+    // Instead, reactions are owned by SocialViewModel's private backing dict defined below.
+
+    func reactToPost(postID: String, reaction: SocialReactionType) {
+        let handle = currentUser?.handle ?? "anon"
+        var bucket = _postReactions[postID, default: []]
+
+        // Toggle: remove existing reaction of same type from same user
+        if let idx = bucket.firstIndex(where: { $0.userHandle == handle && $0.type == reaction }) {
+            bucket.remove(at: idx)
+        } else {
+            // Remove any previous reaction type from this user for this post (one reaction per user)
+            bucket.removeAll { $0.userHandle == handle }
+            bucket.append(FeedReaction(id: UUID(), postID: postID, userHandle: handle, type: reaction, createdAt: Date()))
+        }
+        _postReactions[postID] = bucket
+    }
+
+    func currentUserReaction(for postID: String) -> SocialReactionType? {
+        let handle = currentUser?.handle ?? ""
+        return _postReactions[postID]?.first { $0.userHandle == handle }?.type
+    }
+
+    func reactionCount(for postID: String, type: SocialReactionType) -> Int {
+        _postReactions[postID]?.filter { $0.type == type }.count ?? 0
+    }
+}
+
+// Backing storage for reactions — a simple var on a global actor-isolated dictionary.
+// In production this would persist to CloudKit via a PostReaction record type.
+// Since Swift doesn't allow stored properties in extensions, we use a nonisolated static cache.
+private var _allPostReactions: [ObjectIdentifier: [String: [FeedReaction]]] = [:]
+
+extension SocialViewModel {
+    fileprivate var _postReactions: [String: [FeedReaction]] {
+        get { _allPostReactions[ObjectIdentifier(self)] ?? [:] }
+        set { _allPostReactions[ObjectIdentifier(self)] = newValue }
+    }
+}
+
+// MARK: - FeedReactionBar (#1)
+// Reusable reaction bar view for the friend feed.
+
+import SwiftUI
+
+struct FeedReactionBar: View {
+    let postID: String
+    @Bindable var social: SocialViewModel
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(SocialReactionType.allCases, id: \.self) { type in
+                reactionButton(for: type)
+            }
+        }
+    }
+
+    private func reactionButton(for type: SocialReactionType) -> some View {
+        let count = social.reactionCount(for: postID, type: type)
+        let isSelected = social.currentUserReaction(for: postID) == type
+
+        return Button {
+            social.reactToPost(postID: postID, reaction: type)
+            HapticsManager.play(style: .light, isEnabled: true)
+        } label: {
+            HStack(spacing: 3) {
+                Text(type.emoji).font(.body)
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(isSelected ? .white : .primary)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.12))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .animation(Theme.springSnappy, value: count)
     }
 }

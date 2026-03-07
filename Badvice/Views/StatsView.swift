@@ -1998,6 +1998,9 @@ struct FriendsTabView: View {
                                 .foregroundStyle(primaryText)
                                 .fixedSize(horizontal: false, vertical: true)
 
+                            // #1 Feed Reactions
+                            FeedReactionBar(postID: post.id, social: social)
+
                             HStack(spacing: 8) {
                                 Button("Report") {
                                     social.report(post: post)
