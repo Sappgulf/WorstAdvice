@@ -66,6 +66,7 @@ struct SuggestionPipelineView: View {
                         Image(systemName: "plus.circle.fill")
                             .foregroundStyle(accent)
                     }
+                    .accessibilityLabel("Submit suggestion")
                 }
             }
             .sheet(isPresented: $showSubmitAdvice) {

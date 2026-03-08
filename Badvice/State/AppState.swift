@@ -5122,6 +5122,7 @@ final class GenerateViewModel {
     }
 
     func generateDailyDrop() {
+        guard !isGenerating else { return }
         let day = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
         let categories = AdviceCategory.concrete
         let tones = ToneMode.allCases
@@ -5141,9 +5142,11 @@ final class GenerateViewModel {
     }
 
     func runDailyMissionGeneration() {
+        guard !isGenerating else { return }
         let mission = dailyMissionState
         selectedCategory = mission.category
         selectedTone = mission.tone
+        scenarioText = ""
         Task {
             await generate(seed: stableSeed(for: mission.key))
         }
@@ -10288,6 +10291,8 @@ final class SocialViewModel {
                 )
             }
             lastSocialRefreshAt = Date()
+            // Clear any transient lastError from optional fetches — the core load succeeded.
+            availability = availability.withLastError(nil)
             friendsLoadState =
                 incomingRequests.isEmpty
                 && outgoingRequests.isEmpty
@@ -10678,12 +10683,34 @@ final class SocialViewModel {
         do {
             return try await operation()
         } catch {
-            let resolvedMessage = message(for: error)
-            if !shouldSuppressOptionalSocialSchemaError(error) {
-                statusMessage = resolvedMessage
+            let suppressed = shouldSuppressOptionalSocialSchemaError(error)
+            if !suppressed {
+                // Only surface non-schema errors in the status message; don't
+                // update availability.lastError for optional-fetch failures so
+                // we don't show a persistent "last request failed" banner after
+                // a successful core refresh.
+                statusMessage = localizedDescription(for: error)
             }
             return fallback
         }
+    }
+
+    /// Produces a human-readable error string without the side effect of
+    /// stamping availability.lastError. Use this for non-critical, optional
+    /// social fetch failures.
+    private func localizedDescription(for error: Error) -> String {
+        if let socialError = error as? SocialError, let description = socialError.errorDescription {
+            return description
+        }
+        if let operationError = error as? SocialCloudOperationError,
+            let ckError = operationError.underlyingError as? CKError
+        {
+            return cloudKitMessage(for: ckError, diagnostic: operationError.diagnostic)
+        }
+        if let ckError = error as? CKError {
+            return cloudKitMessage(for: ckError, diagnostic: nil)
+        }
+        return (error as NSError?)?.localizedDescription ?? "Something went wrong."
     }
 
     private func shouldSuppressOptionalSocialSchemaError(_ error: Error) -> Bool {

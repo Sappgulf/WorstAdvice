@@ -1460,7 +1460,14 @@ struct FriendsTabView: View {
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 tabBarVisible.wrappedValue = true
-                Task { await social.retryFriendsLoad() }
+                // Only reload if we haven't successfully loaded yet or are in a failed state.
+                // Avoids flashing the "Checking CloudKit" banner on every tab visit.
+                switch social.friendsLoadState {
+                case .idle, .failed:
+                    Task { await social.retryFriendsLoad() }
+                default:
+                    break
+                }
             }
             .onChange(of: social.statusMessage) { _, message in
                 guard let message, !message.isEmpty else { return }

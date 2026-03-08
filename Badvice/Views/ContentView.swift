@@ -241,8 +241,12 @@ struct ContentView: View {
                     shakeDetector.startMonitoring()
                 }
                 self.session?.generate.refreshRetentionStateOnAppear()
-                Task {
-                    await self.session?.social.retryFriendsLoad()
+                // Only retry if not already loaded — prevents "Checking CloudKit" flash on every foreground
+                switch self.session?.social.friendsLoadState {
+                case .idle, .failed, .none:
+                    Task { await self.session?.social.retryFriendsLoad() }
+                default:
+                    break
                 }
             } else {
                 if phase == .background {

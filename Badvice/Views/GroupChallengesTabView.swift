@@ -60,6 +60,7 @@ struct GroupChallengesTabView: View {
                     Button { showCreateSheet = true } label: {
                         Image(systemName: "plus.circle.fill").foregroundStyle(accent)
                     }
+                    .accessibilityLabel("Create challenge")
                 }
             }
             .sheet(isPresented: $showCreateSheet) {
@@ -475,6 +476,7 @@ struct ChallengeCard: View {
                         .foregroundStyle(accent)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Challenge details")
             }
         }
         .padding(14)

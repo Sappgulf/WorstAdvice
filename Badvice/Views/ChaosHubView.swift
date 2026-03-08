@@ -314,6 +314,7 @@ struct ChaosHubTabView: View {
                     .buttonStyle(.borderedProminent)
                     .tint(accent)
                     .foregroundStyle(buttonText)
+                    .disabled(generateViewModel.isGenerating)
                     .accessibilityLabel(mission.isComplete ? "Run mission again: \(mission.title)" : "Run daily mission: \(mission.title)")
 
                     Button {
@@ -511,6 +512,7 @@ struct ChaosHubTabView: View {
                     }
                     .buttonStyle(.bordered)
                     .tint(accent)
+                    .disabled(generateViewModel.isGenerating)
 
                     Button {
                         generateViewModel.trackChaosHubAction("open_settings")

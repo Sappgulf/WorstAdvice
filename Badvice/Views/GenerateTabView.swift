@@ -49,7 +49,7 @@ struct GenerateTabView: View {
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var socialEntryPrompt: String {
-        social.availability.isAvailable
+        social.availability.isAccountAvailable
             ? "Finish your Friends profile in Friends to share posts and start collabs."
             : social.availability.message
     }
