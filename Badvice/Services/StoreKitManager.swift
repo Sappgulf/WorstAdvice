@@ -50,7 +50,7 @@ final class StoreKitManager {
     private(set) var isLoadingProducts = false
     private(set) var subscriptionStatus: Product.SubscriptionInfo.Status?
 
-    nonisolated(unsafe) private var updateListenerTask: Task<Void, Never>?
+    private var updateListenerTask: Task<Void, Never>?
 
     var isPremium: Bool {
         purchasedProductIDs.contains(BadviceProductID.premiumUnlock)
@@ -77,6 +77,7 @@ final class StoreKitManager {
         Task { await refreshPurchasedProducts() }
     }
 
+    @MainActor
     deinit {
         updateListenerTask?.cancel()
     }
