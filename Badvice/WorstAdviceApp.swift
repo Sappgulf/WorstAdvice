@@ -9,6 +9,9 @@ struct WorstAdviceApp: App {
     private static let legacySettingsCleanupVersionKey = "migrations.legacySettingsCleanup.v1"
     private var isUITesting: Bool { ProcessInfo.processInfo.arguments.contains("-ui-testing") }
     private var isDebugPolishFixtureLaunch: Bool { ProcessInfo.processInfo.arguments.contains("-debug-preload-polish-fixtures") }
+    private var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
 
     private let container: ModelContainer = {
         let schema = Schema([
@@ -82,13 +85,13 @@ struct WorstAdviceApp: App {
             ContentView()
                 .task {
                     #if DEBUG
-                        guard !isUITesting, !isDebugPolishFixtureLaunch else { return }
+                        guard !isUITesting, !isDebugPolishFixtureLaunch, !isRunningTests else { return }
                         _ = await CloudKitSchemaSeeder.seedIfNeeded()
                         await CloudKitDebugSanityChecker.runFriendsReachabilityCheck()
                     #endif
                 }
                 .onAppear {
-                    guard !isUITesting, !isDebugPolishFixtureLaunch else { return }
+                    guard !isUITesting, !isDebugPolishFixtureLaunch, !isRunningTests else { return }
                     NotificationManager.requestPermissionAndScheduleDaily()
                 }
         }

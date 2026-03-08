@@ -85,11 +85,11 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text(“Bad Quote of the Day”)
+                    Text("Bad Quote of the Day")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.88))
                     Spacer()
-                    Text(“TODAY”)
+                    Text("TODAY")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.white.opacity(0.9))
                         .padding(.horizontal, 6)
@@ -97,7 +97,7 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
                         .background(.white.opacity(0.2), in: Capsule(style: .continuous))
                 }
 
-                Text(“”\(entry.quote.text)””)
+                Text("\"\(entry.quote.text)\"")
                     .font(quoteFont)
                     .foregroundStyle(.white)
                     .lineLimit(family == .systemSmall ? 3 : 4)
@@ -110,7 +110,7 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.85))
                     Spacer()
-                    Text(“Badvice”)
+                    Text("Badvice")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.white.opacity(0.92))
                 }

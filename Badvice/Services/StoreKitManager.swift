@@ -50,7 +50,7 @@ final class StoreKitManager {
     private(set) var isLoadingProducts = false
     private(set) var subscriptionStatus: Product.SubscriptionInfo.Status?
 
-    private var updateListenerTask: Task<Void, Never>?
+    nonisolated(unsafe) private var updateListenerTask: Task<Void, Never>?
 
     var isPremium: Bool {
         purchasedProductIDs.contains(BadviceProductID.premiumUnlock)

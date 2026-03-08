@@ -1282,7 +1282,7 @@ struct SocialActivityEvent: Identifiable, Codable, Sendable {
     let targetTone: ToneMode?
     let occurredAt: Date
 
-    enum ActivityEventType: String, Codable, Sendable {
+    enum ActivityEventType: String, Codable, Sendable, CaseIterable {
         case friendJoined
         case friendSharedAdvice
         case friendReactedToYourPost

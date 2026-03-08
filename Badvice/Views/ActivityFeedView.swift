@@ -133,7 +133,7 @@ private struct ActivityEventRow: View {
                 }
 
                 if let text = event.targetText {
-                    Text(""\(text)"")
+                    Text("\"\(text)\"")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                         .lineLimit(2)
@@ -166,5 +166,3 @@ private extension Date {
         return "\(Int(diff / 86400))d ago"
     }
 }
-
-extension SocialActivityEvent.ActivityEventType: CaseIterable {}

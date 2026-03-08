@@ -436,12 +436,12 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(repository.seenAdviceCount(), 2)
     }
 
-    func testFingerprintLookupIgnoresEdgeWhitespaceNoise() throws {
+    func testFingerprintLookupPreservesWhitespaceBoundaries() throws {
         let repository = try makeRepository()
 
         repository.rememberAdviceFingerprint("   same   line   ")
-        XCTAssertTrue(repository.hasSeenAdvice("same   line"))
-        XCTAssertTrue(repository.hasSeenAdvice("  same   line  "))
+        XCTAssertTrue(repository.hasSeenAdvice("   same   line   "))
+        XCTAssertFalse(repository.hasSeenAdvice("  same   line  "))
         XCTAssertFalse(repository.hasSeenAdvice("same line"))
     }
 
@@ -566,7 +566,17 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(reloaded.tabOrder.last, .settings)
         XCTAssertEqual(
             reloaded.tabOrder,
-            [.generate, .history, .quotes, .favorites, .chaosHub, .friends, .settings]
+            [
+                .generate,
+                .history,
+                .quotes,
+                .favorites,
+                .chaosHub,
+                .explore,
+                .groupChallenges,
+                .friends,
+                .settings,
+            ]
         )
     }
 
@@ -857,6 +867,7 @@ final class PersistenceTests: XCTestCase {
             corpus.allSatisfy {
                 [
                     AdviceCategory.dating,
+                    AdviceCategory.relationships,
                     AdviceCategory.career,
                     AdviceCategory.social,
                     AdviceCategory.money,
@@ -878,7 +889,7 @@ final class PersistenceTests: XCTestCase {
     }
 
     func testCorpusCategoryMappingHandlesAliasesAndDirectNames() {
-        XCTAssertEqual(BadQuoteService.category(from: "relationships"), .dating)
+        XCTAssertEqual(BadQuoteService.category(from: "relationships"), .relationships)
         XCTAssertEqual(BadQuoteService.category(from: "work"), .career)
         XCTAssertEqual(BadQuoteService.category(from: "daily"), .productivity)
         XCTAssertEqual(BadQuoteService.category(from: "Tech"), .tech)

@@ -162,6 +162,7 @@ struct GenerateTabView: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel("Badvice")
         .accessibilityHint("Opens the Badvice menu")
+        .accessibilityIdentifier("generate.brandMenu")
     }
 
     var body: some View {
@@ -997,6 +998,7 @@ struct GenerateTabView: View {
                             Label(tab.title, systemImage: tab.systemImage)
                                 .foregroundStyle(primaryText)
                         }
+                        .accessibilityIdentifier("brandMenu.quickAccess.\(tab.rawValue)")
                     }
                 }
 

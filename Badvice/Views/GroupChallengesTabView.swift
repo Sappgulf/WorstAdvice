@@ -92,7 +92,7 @@ struct GroupChallengesTabView: View {
                 if let code = copiedCode {
                     VStack {
                         Spacer()
-                        Text("Code "\(code)" copied!")
+                        Text("Code \"\(code)\" copied!")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 16)

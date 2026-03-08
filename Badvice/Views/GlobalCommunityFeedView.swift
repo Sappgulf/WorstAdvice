@@ -187,7 +187,7 @@ private struct CommunityPostCard: View {
                 }
             }
 
-            Text(""\(post.adviceLine)"")
+            Text("\"\(post.adviceLine)\"")
                 .font(.body)
                 .foregroundStyle(primaryText)
                 .lineLimit(4)

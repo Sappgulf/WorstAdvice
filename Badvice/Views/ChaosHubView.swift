@@ -523,6 +523,7 @@ struct ChaosHubTabView: View {
                     }
                     .buttonStyle(.bordered)
                     .tint(accent)
+                    .accessibilityIdentifier("chaos.quickActions.openLabs")
                 }
 
                 Button {

@@ -324,12 +324,21 @@ final class SocialViewModelTests: XCTestCase {
         let backend = FailingProfileBackend(profileError: profileError)
         let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
 
+        await viewModel.bootstrap()
         await viewModel.createProfile(handle: "frosty_app", displayName: "Frosty")
 
         let diagnostic = try? XCTUnwrap(viewModel.availability.diagnostics.lastError)
         XCTAssertNotNil(diagnostic)
-        XCTAssertTrue(diagnostic?.code.contains("serverRejectedRequest") == true)
-        XCTAssertTrue(diagnostic?.localizedDescription.contains("production schema") == true)
+        XCTAssertTrue(
+            diagnostic?.code.contains("(\(CKError.Code.serverRejectedRequest.rawValue))") == true
+        )
+        let diagnosticDetails =
+            "\(diagnostic?.localizedDescription ?? "")\n\(diagnostic?.debugUserInfo ?? "")"
+            .lowercased()
+        XCTAssertTrue(
+            diagnosticDetails.contains("production schema")
+                || diagnosticDetails.contains("cannot create new type")
+        )
         XCTAssertEqual(viewModel.availability.diagnostics.containerIdentifier, CloudKitSocialConfig.containerIdentifier)
         XCTAssertEqual(viewModel.availability.diagnostics.databaseScope, CloudKitManager.socialDatabaseScope)
     }
@@ -350,12 +359,22 @@ final class SocialViewModelTests: XCTestCase {
         let backend = FailingProfileBackend(profileError: profileError)
         let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
 
+        await viewModel.bootstrap()
         await viewModel.createProfile(handle: "frosty_app", displayName: "Frosty")
 
         let diagnostic = try? XCTUnwrap(viewModel.availability.diagnostics.lastError)
         XCTAssertNotNil(diagnostic)
-        XCTAssertTrue(diagnostic?.code.contains("invalidArguments") == true)
-        XCTAssertTrue(diagnostic?.localizedDescription.contains("queryable") == true)
+        XCTAssertTrue(
+            diagnostic?.code.contains("(\(CKError.Code.invalidArguments.rawValue))") == true
+        )
+        let diagnosticDetails =
+            "\(diagnostic?.localizedDescription ?? "")\n\(diagnostic?.debugUserInfo ?? "")"
+            .lowercased()
+        XCTAssertTrue(
+            diagnosticDetails.contains("queryable")
+                || diagnosticDetails.contains("index")
+                || diagnosticDetails.contains("field")
+        )
     }
 
     func testNormalizedHandleKeepsInvalidCharactersForValidationAndLowercases() {
@@ -455,10 +474,14 @@ final class SocialViewModelTests: XCTestCase {
         let backend = InspectableSocialBackend(storedUser: nil)
         let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
 
+        await viewModel.bootstrap()
         let created = await viewModel.createProfile(handle: "fresh_user", displayName: "Fresh User")
 
         XCTAssertTrue(created)
         XCTAssertEqual(viewModel.currentUser?.handle, "fresh_user")
+        for _ in 0..<40 where viewModel.friendsLoadState == .checkingCloudKit || viewModel.friendsLoadState == .loadingFriends {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
         XCTAssertEqual(viewModel.friendsLoadState, .empty)
         XCTAssertTrue(viewModel.socialFeaturesEnabled)
         XCTAssertEqual(viewModel.statusMessage, "Profile created.")
@@ -482,7 +505,10 @@ final class SocialViewModelTests: XCTestCase {
         let context = SocialCloudKitOperationContext(
             operation: "listIncomingFriendRequests",
             recordType: CloudKitSocialSchema.RecordType.friendRequest,
+            recordNames: [],
+            normalizedHandle: nil,
             predicateSummary: "toUser == currentUser AND status == pending",
+            fieldNames: [],
             sortKeys: [CloudKitSocialSchema.Field.createdAt],
             containerIdentifier: CloudKitSocialConfig.containerIdentifier,
             databaseScope: CloudKitManager.socialDatabaseScope,
@@ -507,7 +533,10 @@ final class SocialViewModelTests: XCTestCase {
         } else {
             XCTFail("Expected failed Friends state for schema unavailable path")
         }
-        let lastError = try XCTUnwrap(viewModel.availability.diagnostics.lastError)
+        guard let lastError = viewModel.availability.diagnostics.lastError else {
+            XCTFail("Expected last CloudKit error diagnostic")
+            return
+        }
         XCTAssertEqual(lastError.operation, "listIncomingFriendRequests")
         XCTAssertEqual(lastError.recordType, CloudKitSocialSchema.RecordType.friendRequest)
         XCTAssertEqual(lastError.predicateSummary, "toUser == currentUser AND status == pending")

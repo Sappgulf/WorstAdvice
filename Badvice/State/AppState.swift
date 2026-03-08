@@ -9604,7 +9604,14 @@ actor CloudKitStore: SocialBackend {
 enum SocialBackendFactory {
     static func make() -> any SocialBackend {
         let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("-ui-testing-social-mock") {
+        let isRunningUnderXCTest =
+            ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        let isUITestingLaunch = arguments.contains("-ui-testing")
+        let allowLiveCloudKit = arguments.contains("-ui-testing-cloudkit-live")
+        let shouldUseMockBackend =
+            arguments.contains("-ui-testing-social-mock")
+            || (!allowLiveCloudKit && (isUITestingLaunch || isRunningUnderXCTest))
+        if shouldUseMockBackend {
             return UITestSocialBackend(
                 forceUnavailable: arguments.contains("-ui-testing-force-social-unavailable"),
                 seededIncomingRequests: intArgument(after: "-ui-testing-social-seed-incoming") ?? 0

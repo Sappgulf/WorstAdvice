@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import ImageIO
 import MobileCoreServices
+import UniformTypeIdentifiers
 import OSLog
 
 private let exportLogger = Logger(subsystem: "com.worstadvice.app", category: "animated-share")
@@ -74,7 +75,7 @@ enum AnimatedShareExporter {
                 .ignoresSafeArea()
             VStack(spacing: 16) {
                 Spacer()
-                Text(""\(config.advice)"")
+                Text("\"\(config.advice)\"")
                     .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .foregroundStyle(textColor)
                     .multilineTextAlignment(.center)

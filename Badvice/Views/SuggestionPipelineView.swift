@@ -176,7 +176,8 @@ private struct AdviceSuggestionRow: View {
                 .font(.body)
                 .foregroundStyle(primaryText)
                 .lineLimit(3)
-            if let topic = suggestion.topic, !topic.isEmpty {
+            let topic = suggestion.topic.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !topic.isEmpty {
                 Text("Topic: \(topic)")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
@@ -221,7 +222,7 @@ private struct QuoteSuggestionRow: View {
                     .background(Color.orange.opacity(0.15))
                     .clipShape(Capsule())
             }
-            Text(""\(suggestion.quoteText)"")
+            Text("\"\(suggestion.quoteText)\"")
                 .font(.body.italic())
                 .foregroundStyle(primaryText)
                 .lineLimit(3)
@@ -283,9 +284,10 @@ struct SubmitAdviceSuggestionSheet: View {
     }
 
     private func submit() {
+        let trimmedTopic = topic.trimmingCharacters(in: .whitespacesAndNewlines)
         let suggestion = UserAdviceSuggestion(
             category: category,
-            topic: topic.isEmpty ? nil : topic,
+            topic: trimmedTopic,
             adviceLine: adviceLine.trimmingCharacters(in: .whitespaces)
         )
         modelContext.insert(suggestion)

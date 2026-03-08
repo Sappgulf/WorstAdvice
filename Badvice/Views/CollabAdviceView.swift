@@ -260,7 +260,7 @@ struct CollabAdviceView: View {
                                 .foregroundStyle(accent)
                             Spacer()
                         }
-                        Text(""\(advice.adviceLine)"")
+                        Text("\"\(advice.adviceLine)\"")
                             .font(.body.weight(.semibold))
                             .foregroundStyle(primaryText)
                             .lineSpacing(4)
@@ -277,7 +277,7 @@ struct CollabAdviceView: View {
 
                     HStack(spacing: 12) {
                         Button {
-                            let text = ""\(advice.adviceLine)" — via Badvice Collab 🤝"
+                            let text = "\"\(advice.adviceLine)\" — via Badvice Collab 🤝"
                             if let root = UIApplication.shared.connectedScenes
                                 .compactMap({ $0 as? UIWindowScene }).flatMap({ $0.windows })
                                 .first(where: { $0.isKeyWindow })?.rootViewController {
@@ -314,13 +314,25 @@ struct CollabAdviceView: View {
     private func generate() async {
         guard let category = session.resolvedCategory, let tone = session.resolvedTone else { return }
         isGenerating = true
-        let advice = await generateViewModel.engine.generate(
-            category: category,
-            tone: tone,
-            includeRationale: true,
-            contentPack: settings.preferredContentPack
-        )
-        generatedAdvice = advice
+        let previousCategory = generateViewModel.selectedCategory
+        let previousTone = generateViewModel.selectedTone
+        generateViewModel.selectedCategory = category
+        generateViewModel.selectedTone = tone
+        await generateViewModel.generate()
+        if let current = generateViewModel.current {
+            generatedAdvice = GeneratedAdvice(
+                id: current.id,
+                category: current.category,
+                tone: current.tone,
+                adviceLine: current.adviceLine,
+                rationaleLine: current.rationaleLine,
+                createdAt: current.createdAt
+            )
+        } else {
+            generatedAdvice = nil
+        }
+        generateViewModel.selectedCategory = previousCategory
+        generateViewModel.selectedTone = previousTone
         isGenerating = false
         withAnimation(Theme.springBouncy) { step = .result }
     }
