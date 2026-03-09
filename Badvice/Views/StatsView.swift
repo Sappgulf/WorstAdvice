@@ -1817,12 +1817,14 @@ struct FriendsTabView: View {
                                 .buttonStyle(.borderedProminent)
                                 .tint(accent)
                                 .font(.caption.weight(.semibold))
+                                .disabled(!social.socialFeaturesEnabled)
 
                                 Button("Decline") {
                                     Task { await social.declineRequest(request) }
                                 }
                                 .buttonStyle(.bordered)
                                 .font(.caption.weight(.semibold))
+                                .disabled(!social.socialFeaturesEnabled)
                             }
                         }
                     }
@@ -1898,6 +1900,7 @@ struct FriendsTabView: View {
                                 .buttonStyle(.bordered)
                                 .font(.caption.weight(.semibold))
                                 .tint(.red)
+                                .disabled(!social.socialFeaturesEnabled)
 
                                 Button("Report") {
                                     social.report(user: friend)
@@ -2022,6 +2025,7 @@ struct FriendsTabView: View {
                                     .buttonStyle(.bordered)
                                     .font(.caption.weight(.semibold))
                                     .tint(.red)
+                                    .disabled(!social.socialFeaturesEnabled)
                                 }
                             }
                         }
@@ -2147,6 +2151,7 @@ struct FriendsTabView: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .disabled(!social.socialFeaturesEnabled)
                 }
             }
         }

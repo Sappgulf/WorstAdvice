@@ -44,11 +44,11 @@ struct ExploreTabView: View {
                 .padding()
             }
             .navigationTitle("Explore")
+            .toolbarBackground(.hidden, for: .navigationBar)
             .searchable(text: $searchText, prompt: "Search trending advice")
-            .task {
-                await loadTrending()
-            }
+            .task { await loadTrending() }
         }
+        .preferredColorScheme(Theme.colorScheme(for: settings.theme))
     }
     
     private var headerSection: some View {

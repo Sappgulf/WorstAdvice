@@ -228,7 +228,7 @@ struct ConfettiSystem: View {
             let vx = cos(angle) * speed
             let vy = sin(angle) * speed
             let vr = Double.random(in: -8...8)
-            let c = palette.randomElement()!
+            let c = palette.randomElement() ?? color
             let s = Double.random(in: 0.5...1.8)
             seeds.append((vx, vy, vr, c, s))
         }

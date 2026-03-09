@@ -21,6 +21,7 @@ struct GroupChallengesTabView: View {
     @State private var selectedChallenge: GroupChallenge?
     @State private var showWinnerReveal = false
     @State private var copiedCode: String?
+    @State private var joinFeedback: String?
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
@@ -90,9 +91,9 @@ struct GroupChallengesTabView: View {
                 Text("Enter the 6-character invite code to join a group challenge.")
             }
             .overlay {
-                if let code = copiedCode {
-                    VStack {
-                        Spacer()
+                VStack {
+                    Spacer()
+                    if let code = copiedCode {
                         Text("Code \"\(code)\" copied!")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
@@ -101,10 +102,21 @@ struct GroupChallengesTabView: View {
                             .background(accent)
                             .clipShape(Capsule())
                             .padding(.bottom, 32)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    } else if let feedback = joinFeedback {
+                        Text(feedback)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.red.opacity(0.85))
+                            .clipShape(Capsule())
+                            .padding(.bottom, 32)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(Theme.springSmooth, value: copiedCode)
                 }
+                .animation(Theme.springSmooth, value: copiedCode)
+                .animation(Theme.springSmooth, value: joinFeedback)
             }
             .task { await loadChallenges() }
             .refreshable { await loadChallenges() }
@@ -270,10 +282,24 @@ struct GroupChallengesTabView: View {
 
     private func joinChallenge() {
         let code = inviteCodeInput.trimmingCharacters(in: .whitespaces).uppercased()
-        guard code.count == 6 else { return }
-        // In production: query CloudKit for a GroupChallenge record with inviteCode == code,
-        // then add the current user to participantIDs and reload.
         inviteCodeInput = ""
+        guard code.count == 6 else {
+            showJoinFeedback("Code must be 6 characters.")
+            return
+        }
+        // Check active challenges first, then show not-found feedback.
+        if let match = activeChallenges.first(where: { $0.inviteCode == code }) {
+            selectedChallenge = match
+        } else {
+            showJoinFeedback("No challenge found for code \"\(code)\".")
+        }
+    }
+
+    private func showJoinFeedback(_ message: String) {
+        withAnimation { joinFeedback = message }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation { joinFeedback = nil }
+        }
     }
 
     private func scheduleNotificationForChallenge(_ challenge: GroupChallenge) {

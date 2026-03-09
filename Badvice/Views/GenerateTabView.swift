@@ -1095,7 +1095,7 @@ struct GenerateTabView: View {
             "Long press detected. Friend Roast mode: activated.",
             "Patience unlocked the roast. Someone's about to have a day.",
         ]
-        activeToast = ToastMessage(message: longPressToasts.randomElement()!, style: .info)
+        activeToast = ToastMessage(message: longPressToasts.randomElement() ?? longPressToasts[0], style: .info)
         revealSurprise("Long-press unlock: Friend Roast tone primed for your next run.")
         viewModel.selectedTone = .friendRoast
     }
@@ -1132,7 +1132,7 @@ struct GenerateTabView: View {
             "Speak softly and carry a well-formatted slide deck.",
             "We are all just one pivot away from a TED Talk.",
         ]
-        let unlocked = mutatedQuotePool.randomElement() ?? mutatedQuotePool[0]
+        let unlocked = mutatedQuotePool.randomElement() ?? mutatedQuotePool.first ?? "Be the change you wish to expense-report."
         UIPasteboard.general.string = unlocked
         HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
         let quoteCopyToasts = [
@@ -1141,7 +1141,7 @@ struct GenerateTabView: View {
             "Contraband quote secured to clipboard.",
             "Rare drop obtained. No one will believe you found it.",
         ]
-        activeToast = ToastMessage(message: quoteCopyToasts.randomElement()!, style: .success)
+        activeToast = ToastMessage(message: quoteCopyToasts.randomElement() ?? quoteCopyToasts[0], style: .success)
         revealSurprise("Hidden quote: \"\(unlocked)\"")
     }
 
