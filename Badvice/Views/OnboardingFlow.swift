@@ -36,6 +36,20 @@ struct OnboardingFlow: View {
             background: LinearGradient(colors: [Color(hex: "EAF6F3"), Color(hex: "D8EFE8")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
+            icon: "flame.fill",
+            title: "Build your\nchaos streak.",
+            subtitle: "Generate daily to keep your streak alive. Missions in Chaos Hub earn bonus chaos points and unlock leaderboard rankings.",
+            accent: Color(hex: "B84A14"),
+            background: LinearGradient(colors: [Color(hex: "FDF3EC"), Color(hex: "F7E0CC")], startPoint: .topLeading, endPoint: .bottomTrailing)
+        ),
+        Page(
+            icon: "person.2.fill",
+            title: "Friends &\ncollabs.",
+            subtitle: "Add friends, share advice to the community feed, and start collab drafts together. Set up your handle in Friends to get started.",
+            accent: Color(hex: "2B5CA8"),
+            background: LinearGradient(colors: [Color(hex: "EBF2FE"), Color(hex: "D6E6FF")], startPoint: .topLeading, endPoint: .bottomTrailing)
+        ),
+        Page(
             icon: "map.fill",
             title: "Where to next?",
             subtitle: "Chaos Hub for missions and contracts, Advice for instant bad ideas, Quotes for daily chaos, Favorites to save the best disasters. Shake your phone anytime to generate.",

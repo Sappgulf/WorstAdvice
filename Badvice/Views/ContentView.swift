@@ -491,11 +491,12 @@ struct ContentView: View {
                     let accent = Theme.accent(for: session.settings.theme)
                     let secondaryText = Theme.secondaryText(for: session.settings.theme)
                     let friendsBadgeCount = session.social.incomingRequests.count
+                    let chaosBadgeCount = session.generate.dailyMissionState.isComplete ? 0 : 1
                     HStack(spacing: 0) {
                         ForEach(tabs) { tab in
                             let isSelected = selectedTab == tab
                             let isHighlighted = tabDragHighlight == tab
-                            let badgeCount = tab == .friends ? friendsBadgeCount : 0
+                            let badgeCount = tab == .friends ? friendsBadgeCount : (tab == .chaosHub ? chaosBadgeCount : 0)
                             let tabAccessibilityID = "tab.\(tab.rawValue)"
                             VStack(spacing: 3) {
                                 ZStack(alignment: .topTrailing) {

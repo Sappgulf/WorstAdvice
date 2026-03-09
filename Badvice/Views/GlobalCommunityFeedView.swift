@@ -70,6 +70,7 @@ struct GlobalCommunityFeedView: View {
                             primaryText: primaryText,
                             secondaryText: secondaryText,
                             cardColor: cardColor,
+                            hapticsEnabled: settings.hapticsEnabled,
                             onTryCategory: { onJumpToGenerate(post.category, post.tone) },
                             onReport: { reportedPostIDs.insert(post.id.uuidString) }
                         )
@@ -166,6 +167,7 @@ private struct CommunityPostCard: View {
     let primaryText: Color
     let secondaryText: Color
     let cardColor: Color
+    let hapticsEnabled: Bool
     let onTryCategory: () -> Void
     let onReport: () -> Void
 
@@ -204,7 +206,7 @@ private struct CommunityPostCard: View {
                 Spacer()
                 Button {
                     liked.toggle()
-                    HapticsManager.play(style: .light, isEnabled: true)
+                    HapticsManager.play(style: .light, isEnabled: hapticsEnabled)
                 } label: {
                     Label("\(post.likeCount + (liked ? 1 : 0))", systemImage: liked ? "heart.fill" : "heart")
                         .font(.caption.weight(.medium))

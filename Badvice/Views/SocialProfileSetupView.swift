@@ -177,6 +177,18 @@ struct SocialProfileSetupView: View {
         handleSanitized.isEmpty || !handleValid ? .red : .secondary
     }
 
+    @ViewBuilder
+    private func handleRule(_ label: String, passes: Bool) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: passes ? "checkmark.circle.fill" : "circle")
+                .font(.caption)
+                .foregroundStyle(passes ? .green : .secondary)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(passes ? .primary : .secondary)
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -196,6 +208,7 @@ struct SocialProfileSetupView: View {
                     .padding(.vertical, 4)
                     .accessibilityIdentifier("social.profile.intro")
                 }
+                #if DEBUG
                 Section("CloudKit Diagnostics") {
                     SocialCloudKitDiagnosticsView(
                         social: social,
@@ -215,6 +228,7 @@ struct SocialProfileSetupView: View {
                     )
                         .accessibilityIdentifier("social.profile.diagnostics")
                 }
+                #endif
                 Section("Create Profile") {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Handle (required)")
@@ -226,9 +240,17 @@ struct SocialProfileSetupView: View {
                             .textContentType(.nickname)
                             .submitLabel(.next)
                             .accessibilityIdentifier("social.profile.handle")
-                        Text(handleValidationMessage)
-                            .font(.caption)
-                            .foregroundStyle(handleValidationTint)
+                        if !handleSanitized.isEmpty {
+                            VStack(alignment: .leading, spacing: 3) {
+                                handleRule("3–16 characters", passes: handleSanitized.count >= 3 && handleSanitized.count <= 16)
+                                handleRule("Only a–z, 0–9, dot, underscore", passes: handleSanitized.allSatisfy { $0.isLowercase || $0.isNumber || $0 == "." || $0 == "_" })
+                                handleRule("Starts with a letter or number", passes: handleSanitized.first.map { $0.isLetter || $0.isNumber } ?? false)
+                            }
+                        } else {
+                            Text(handleValidationMessage)
+                                .font(.caption)
+                                .foregroundStyle(handleValidationTint)
+                        }
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Display Name (optional)")

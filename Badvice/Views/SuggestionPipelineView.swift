@@ -293,6 +293,7 @@ struct SubmitAdviceSuggestionSheet: View {
         )
         modelContext.insert(suggestion)
         try? modelContext.save()
+        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
         dismiss()
     }
 }
@@ -352,6 +353,7 @@ struct SubmitQuoteSuggestionSheet: View {
         )
         modelContext.insert(suggestion)
         try? modelContext.save()
+        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
         dismiss()
     }
 }

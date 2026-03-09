@@ -10,16 +10,16 @@ enum NotificationManager {
     private static let lastGenerationDayKey = "com.badvice.last-generation-day"
     private static let streakFreezeAvailableKey = "com.badvice.streak-freeze-available"
 
-    static func requestPermissionAndScheduleDaily() {
+    static func requestPermissionAndScheduleDaily(hour: Int = 9, streakEnabled: Bool = true) {
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             switch settings.authorizationStatus {
             case .authorized, .provisional, .ephemeral:
-                scheduleDaily()
+                scheduleDaily(hour: hour, streakEnabled: streakEnabled)
             case .notDetermined:
                 center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
                     guard granted else { return }
-                    scheduleDaily()
+                    scheduleDaily(hour: hour, streakEnabled: streakEnabled)
                 }
             case .denied:
                 center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
@@ -29,7 +29,12 @@ enum NotificationManager {
         }
     }
 
-    static func scheduleDaily() {
+    static func cancelDailyNotification() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
+    }
+
+    static func scheduleDaily(hour: Int = 9, streakEnabled: Bool = true) {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
 
@@ -40,14 +45,16 @@ enum NotificationManager {
         content.sound = .default
 
         var dateComponents = DateComponents()
-        dateComponents.hour = 9
+        dateComponents.hour = hour
         dateComponents.minute = 0
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         let request = UNNotificationRequest(identifier: channelID, content: content, trigger: trigger)
 
         center.add(request)
-        scheduleStreakRiskReminder(center: center)
+        if streakEnabled {
+            scheduleStreakRiskReminder(center: center)
+        }
     }
 
     static func updateGenerationActivity(date: Date = Date()) {

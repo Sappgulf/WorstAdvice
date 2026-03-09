@@ -17,6 +17,7 @@ struct ChaosHubTabView: View {
     @State private var missionCompletePulse = false
     @State private var weeklyCompletePulse = false
     @State private var showingBracket = false
+    @State private var showingChaosFormula = false
 
     private var chaosScore: Int {
         let streak = min(generateViewModel.challengeStreakDays, 14)
@@ -115,11 +116,18 @@ struct ChaosHubTabView: View {
             .toolbarBackground(.hidden, for: .navigationBar)
             .background(Color.clear)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
+            .refreshable {
+                if social.currentUser != nil {
+                    await social.refreshLeaderboard()
+                }
+            }
             .onAppear {
                 tabBarVisible.wrappedValue = true
                 generateViewModel.trackChaosHubOpened()
-                // Always re-shuffle contracts on each visit so the user sees fresh ones
-                visibleContracts = Array(Self.allContracts.shuffled().prefix(2))
+                // Only shuffle contracts on first visit; preserve them across tab switches
+                if visibleContracts.isEmpty {
+                    visibleContracts = Array(Self.allContracts.shuffled().prefix(2))
+                }
                 // Seed initial completion state so first onChange fires correctly
                 dailyMissionWasComplete = generateViewModel.dailyMissionState.isComplete
                 weeklyMissionWasComplete = generateViewModel.weeklyMissionState.isComplete
@@ -202,7 +210,22 @@ struct ChaosHubTabView: View {
                 }
 
                 Spacer()
+
+                Button {
+                    showingChaosFormula = true
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.body)
+                        .foregroundStyle(secondaryText.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("How is Chaos Score calculated?")
             }
+        }
+        .sheet(isPresented: $showingChaosFormula) {
+            ChaosFormulaSheet(primaryText: primaryText, secondaryText: secondaryText, cardColor: cardColor, accent: accent)
+                .presentationDetents([.medium])
         }
     }
 
@@ -277,11 +300,16 @@ struct ChaosHubTabView: View {
                             .foregroundStyle(secondaryText)
                         Spacer(minLength: 8)
                         if weekly.isComplete {
-                            Text("Reward ready")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(accent)
-                                .scaleEffect(weeklyCompletePulse ? 1.18 : 1.0)
-                                .animation(isMotionReduced ? nil : .spring(response: 0.25, dampingFraction: 0.5), value: weeklyCompletePulse)
+                            VStack(alignment: .trailing, spacing: 1) {
+                                Text("Reward ready")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(accent)
+                                Text("Bonus chaos points unlocked")
+                                    .font(.caption2)
+                                    .foregroundStyle(accent.opacity(0.7))
+                            }
+                            .scaleEffect(weeklyCompletePulse ? 1.12 : 1.0)
+                            .animation(isMotionReduced ? nil : .spring(response: 0.25, dampingFraction: 0.5), value: weeklyCompletePulse)
                         }
                     }
                     GeometryReader { geo in
@@ -433,7 +461,7 @@ struct ChaosHubTabView: View {
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 } else if social.leaderboard.isEmpty {
-                    Text("No scores submitted yet.")
+                    Text("No scores yet — submit yours and kick off the season!")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 } else {
@@ -773,6 +801,75 @@ struct ChaosHubTabView: View {
         }
         if !contract.description.isEmpty {
             generateViewModel.scenarioText = contract.description
+        }
+    }
+}
+
+// MARK: - Chaos Formula Sheet
+
+private struct ChaosFormulaSheet: View {
+    let primaryText: Color
+    let secondaryText: Color
+    let cardColor: Color
+    let accent: Color
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Label("Chaos Score Formula", systemImage: "function")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(accent)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                formulaRow(icon: "flame", label: "Streak", formula: "× 2.4", cap: "max 14 days", color: .orange)
+                formulaRow(icon: "bolt", label: "Generated Today", formula: "× 3.2", cap: "max 10", color: accent)
+                formulaRow(icon: "bookmark.fill", label: "Saved Advice", formula: "× 1.6", cap: "max 40", color: .purple)
+                formulaRow(icon: "chart.bar.fill", label: "All-Time Total", formula: "× 0.25", cap: "max 120", color: .blue)
+                Divider().opacity(0.3)
+                HStack {
+                    Image(systemName: "plusminus.circle.fill")
+                        .foregroundStyle(secondaryText)
+                        .frame(width: 24)
+                    Text("Base score of 18, clamped to 8–99")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+            }
+
+            Text("Score updates live as you generate, save, and streak.")
+                .font(.caption2)
+                .foregroundStyle(secondaryText.opacity(0.7))
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            Spacer(minLength: 0)
+        }
+        .padding(24)
+        .background(cardColor)
+    }
+
+    private func formulaRow(icon: String, label: String, formula: String, cap: String, color: Color) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(color)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                Text("capped at \(cap)")
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+            }
+            Spacer()
+            Text(formula)
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(color)
         }
     }
 }

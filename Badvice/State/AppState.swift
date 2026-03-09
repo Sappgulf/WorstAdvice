@@ -2008,6 +2008,9 @@ final class AppSettingsEntity {
     var streakFreezeUsedRaw: Bool?
     var streakFreezeProtectedDayRaw: String?
     var tabOrderRaw: String?
+    var dailyNotificationsEnabledRaw: Bool?
+    var streakNotificationsEnabledRaw: Bool?
+    var dailyNotificationHourRaw: Int?
     init(
         id: UUID = UUID(),
         ownerAccountID: String? = nil,
@@ -2109,6 +2112,21 @@ final class AppSettingsEntity {
         set {
             tabOrderRaw = Self.sanitizedTabOrder(newValue).map(\.rawValue).joined(separator: ",")
         }
+    }
+
+    var dailyNotificationsEnabled: Bool {
+        get { dailyNotificationsEnabledRaw ?? true }
+        set { dailyNotificationsEnabledRaw = newValue }
+    }
+
+    var streakNotificationsEnabled: Bool {
+        get { streakNotificationsEnabledRaw ?? true }
+        set { streakNotificationsEnabledRaw = newValue }
+    }
+
+    var dailyNotificationHour: Int {
+        get { dailyNotificationHourRaw ?? 9 }
+        set { dailyNotificationHourRaw = newValue }
     }
 
     private static func sanitizedTabOrder(_ candidate: [AppTab]) -> [AppTab] {
@@ -3011,6 +3029,39 @@ final class SettingsViewModel {
         set {
             settings.performanceMode = newValue
             repository.save()
+        }
+    }
+
+    var dailyNotificationsEnabled: Bool {
+        get { settings.dailyNotificationsEnabled }
+        set {
+            settings.dailyNotificationsEnabled = newValue
+            repository.save()
+            if newValue {
+                NotificationManager.requestPermissionAndScheduleDaily(hour: settings.dailyNotificationHour)
+            } else {
+                NotificationManager.cancelDailyNotification()
+            }
+        }
+    }
+
+    var streakNotificationsEnabled: Bool {
+        get { settings.streakNotificationsEnabled }
+        set {
+            settings.streakNotificationsEnabled = newValue
+            repository.save()
+            NotificationManager.scheduleDaily(hour: settings.dailyNotificationHour, streakEnabled: newValue)
+        }
+    }
+
+    var dailyNotificationHour: Int {
+        get { settings.dailyNotificationHour }
+        set {
+            settings.dailyNotificationHour = newValue
+            repository.save()
+            if settings.dailyNotificationsEnabled {
+                NotificationManager.scheduleDaily(hour: newValue, streakEnabled: settings.streakNotificationsEnabled)
+            }
         }
     }
 

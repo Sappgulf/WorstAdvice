@@ -108,6 +108,24 @@ struct GenerateTabView: View {
 
                 Spacer(minLength: 0)
 
+                if viewModel.challengeStreakDays > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.orange)
+                        Text("\(viewModel.challengeStreakDays)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.orange)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.orange.opacity(0.15))
+                    )
+                    .accessibilityLabel("\(viewModel.challengeStreakDays) day streak")
+                }
+
                 Image(systemName: "line.3.horizontal")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(secondaryText.opacity(0.85))
@@ -307,7 +325,30 @@ struct GenerateTabView: View {
             onDataChanged()
         }
         .toast(item: $activeToast, accentColor: accent)
-
+        .overlay {
+            if gifExportInProgress {
+                ZStack {
+                    Color.black.opacity(0.45)
+                        .ignoresSafeArea()
+                    VStack(spacing: 14) {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .scaleEffect(1.4)
+                            .tint(.white)
+                        Text("Exporting GIF…")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                    }
+                    .padding(28)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    )
+                }
+                .transition(.opacity)
+                .animation(isMotionReduced ? nil : .easeInOut(duration: 0.2), value: gifExportInProgress)
+            }
+        }
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }

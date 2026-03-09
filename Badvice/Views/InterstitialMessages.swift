@@ -1,6 +1,7 @@
 import Charts
 import SwiftUI
 import UIKit
+import UserNotifications
 
 struct ShareCardRenderer {
     static func render(content: ShareCardContent) -> UIImage {
@@ -223,6 +224,7 @@ struct SettingsTabView: View {
 
     private let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
+    @State private var notificationPermissionGranted: Bool? = nil
     @AppStorage("useCustomAccent") private var useCustomAccent = false
     @AppStorage("customAccentR") private var customAccentR: Double = 1.0
     @AppStorage("customAccentG") private var customAccentG: Double = 0.3
@@ -231,6 +233,12 @@ struct SettingsTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    private static let hour12Formatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
 
     // Cache version string — Bundle lookup is expensive inside body
     private static let appVersion: String = {
@@ -370,6 +378,15 @@ struct SettingsTabView: View {
                                 isMotionReduced
                                     ? nil
                                     : .spring(response: 0.5, dampingFraction: 0.75).delay(0.20),
+                                value: sectionsAppeared)
+                        notificationSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.225),
                                 value: sectionsAppeared)
                         sharingSection
                             .opacity(sectionsAppeared ? 1 : 0)
@@ -884,6 +901,72 @@ struct SettingsTabView: View {
                 }
             }
             .tint(accent)
+        }
+        .task {
+            let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+            notificationPermissionGranted = status == .authorized || status == .provisional || status == .ephemeral
+        }
+    }
+
+    private var notificationSection: some View {
+        settingsCard(title: "Notifications", icon: "bell") {
+            VStack(spacing: 12) {
+                // Permission status indicator
+                HStack(spacing: 8) {
+                    Image(systemName: notificationPermissionGranted == true ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(notificationPermissionGranted == true ? .green : .orange)
+                    Text(notificationPermissionGranted == true ? "Notifications allowed" : "Notifications not enabled")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(secondaryText)
+                    Spacer()
+                    if notificationPermissionGranted == false {
+                        Button("Enable") { openAppSettings() }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(accent)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 4)
+
+                settingsDivider
+
+                Toggle("Daily Reminder", isOn: Binding(
+                    get: { viewModel.dailyNotificationsEnabled },
+                    set: { viewModel.dailyNotificationsEnabled = $0 }
+                ))
+                .disabled(notificationPermissionGranted == false)
+
+                settingsDivider
+
+                Toggle("Streak Risk Alerts", isOn: Binding(
+                    get: { viewModel.streakNotificationsEnabled },
+                    set: { viewModel.streakNotificationsEnabled = $0 }
+                ))
+                .disabled(notificationPermissionGranted == false || !viewModel.dailyNotificationsEnabled)
+
+                settingsDivider
+
+                settingsPicker(
+                    "Daily Reminder Time",
+                    systemImage: "clock",
+                    selection: Binding(
+                        get: { viewModel.dailyNotificationHour },
+                        set: { viewModel.dailyNotificationHour = $0 }
+                    )
+                ) {
+                    ForEach(6..<23, id: \.self) { hour in
+                        let formatted = Calendar.current.date(from: DateComponents(hour: hour, minute: 0))
+                            .map { hour12Formatter.string(from: $0) } ?? "\(hour):00"
+                        Text(formatted).tag(hour)
+                    }
+                }
+                .disabled(notificationPermissionGranted == false || !viewModel.dailyNotificationsEnabled)
+            }
+            .tint(accent)
+        }
+        .task {
+            let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+            notificationPermissionGranted = status == .authorized || status == .provisional || status == .ephemeral
         }
     }
 
@@ -1569,6 +1652,50 @@ struct SettingsTabView: View {
                         .stroke(accent.opacity(0.12), lineWidth: 1)
                 )
                 .accessibilityElement(children: .combine)
+
+                settingsDivider
+
+                Button {
+                    if let url = URL(string: "itms-apps://itunes.apple.com/app/id6742776285?action=write-review") {
+                        openURL(url)
+                    }
+                } label: {
+                    settingsNavRow("Rate Badvice", systemImage: "star", badge: nil)
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                Button {
+                    if let url = URL(string: "mailto:badvice.app@gmail.com?subject=Badvice%20Feedback") {
+                        openURL(url)
+                    }
+                } label: {
+                    settingsNavRow("Send Feedback", systemImage: "envelope", badge: nil)
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                Button {
+                    if let url = URL(string: "https://www.apple.com/legal/privacy/") {
+                        openURL(url)
+                    }
+                } label: {
+                    settingsNavRow("Privacy Policy", systemImage: "hand.raised", badge: nil)
+                }
+                .buttonStyle(.plain)
+
+                settingsDivider
+
+                Button {
+                    if let url = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                        openURL(url)
+                    }
+                } label: {
+                    settingsNavRow("Terms of Service", systemImage: "doc.text", badge: nil)
+                }
+                .buttonStyle(.plain)
 
                 settingsDivider
                 Text(Self.appVersion)
