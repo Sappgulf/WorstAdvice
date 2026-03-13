@@ -84,9 +84,9 @@ struct WorstAdviceApp: App {
         WindowGroup {
             ContentView()
                 .task {
+                    guard !isUITesting, !isDebugPolishFixtureLaunch, !isRunningTests else { return }
+                    _ = await CloudKitSchemaSeeder.seedIfNeeded()
                     #if DEBUG
-                        guard !isUITesting, !isDebugPolishFixtureLaunch, !isRunningTests else { return }
-                        _ = await CloudKitSchemaSeeder.seedIfNeeded()
                         await CloudKitDebugSanityChecker.runFriendsReachabilityCheck()
                     #endif
                 }

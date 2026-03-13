@@ -528,13 +528,14 @@ final class SocialViewModelTests: XCTestCase {
 
         await viewModel.retryFriendsLoad()
 
-        if case .failed(let message) = viewModel.friendsLoadState {
-            XCTAssertEqual(message, SocialViewModel.unavailableEnvironmentMessage)
-        } else {
-            XCTFail("Expected failed Friends state for schema unavailable path")
-        }
+        // Schema errors are now handled silently: state goes to .idle so users never see
+        // a scary error message. The seeder bootstraps the schema and retries automatically.
+        XCTAssertEqual(
+            viewModel.friendsLoadState, .idle,
+            "Expected .idle for schema unavailable — seeder handles bootstrap silently")
+        XCTAssertNil(viewModel.statusMessage, "Schema errors should not surface a statusMessage")
         guard let lastError = viewModel.availability.diagnostics.lastError else {
-            XCTFail("Expected last CloudKit error diagnostic")
+            XCTFail("Expected last CloudKit error diagnostic to be stamped for debugging")
             return
         }
         XCTAssertEqual(lastError.operation, "listIncomingFriendRequests")
@@ -544,7 +545,6 @@ final class SocialViewModelTests: XCTestCase {
         XCTAssertEqual(lastError.containerIdentifier, CloudKitSocialConfig.containerIdentifier)
         XCTAssertEqual(lastError.databaseScope, CloudKitManager.socialDatabaseScope)
         XCTAssertFalse(lastError.isRetryable)
-        XCTAssertEqual(viewModel.statusMessage, SocialViewModel.unavailableEnvironmentMessage)
     }
 
     func testMockBackendPreventsDuplicateFriendRequests() async throws {

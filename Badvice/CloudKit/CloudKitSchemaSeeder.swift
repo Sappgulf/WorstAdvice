@@ -1,4 +1,3 @@
-#if DEBUG
 import CloudKit
 import Foundation
 
@@ -387,4 +386,3 @@ enum CloudKitSchemaSeeder {
         }
     }
 }
-#endif

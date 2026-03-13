@@ -295,17 +295,15 @@ struct ContentView: View {
         .onChange(of: session.social.currentUser?.recordID.recordName) { _, newRecordName in
             auth.setLinkedSocialProfileRecordName(newRecordName)
         }
-        #if DEBUG
-            .onReceive(
-                NotificationCenter.default.publisher(
-                    for: .cloudKitSchemaSeederDidSeedDevelopmentSchema
-                )
-            ) { _ in
-                Task {
-                    await session.social.retryFriendsLoad()
-                }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: .cloudKitSchemaSeederDidSeedDevelopmentSchema
+            )
+        ) { _ in
+            Task {
+                await session.social.retryFriendsLoad()
             }
-        #endif
+        }
     }
 
     private var loadingView: some View {

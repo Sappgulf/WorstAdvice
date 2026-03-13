@@ -10164,6 +10164,8 @@ final class SocialViewModel {
         if case .needsProfileSetup = friendsLoadState {
             return true
         }
+        // Don't prompt for profile setup while schema is still bootstrapping
+        if case .idle = friendsLoadState { return false }
         return availability.isAccountAvailable && currentUser == nil && !isEnvironmentUnavailable
     }
 
@@ -10695,6 +10697,19 @@ final class SocialViewModel {
             default:
                 break
             }
+        }
+        // Schema not deployed yet — stamp diagnostic for debugging but stay idle so
+        // users never see a scary error. The seeder will bootstrap the schema and post
+        // a notification that triggers retryFriendsLoad() automatically.
+        let opDiagnostic = (error as? SocialCloudOperationError)?.diagnostic
+        if let ckErr = cloudKitError(from: error),
+            isEnvironmentUnavailableError(ckErr, diagnostic: opDiagnostic)
+        {
+            if let opDiagnostic {
+                availability = availability.withLastError(opDiagnostic)
+            }
+            friendsLoadState = .idle
+            return
         }
         let resolved = message(for: error)
         statusMessage = resolved

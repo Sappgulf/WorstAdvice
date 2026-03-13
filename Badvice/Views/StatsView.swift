@@ -1569,13 +1569,15 @@ struct FriendsTabView: View {
                             .accessibilityIdentifier("friends.openSetup")
                         }
                     }
-                    SocialCloudKitDiagnosticsView(
-                        social: social,
-                        retryTitle: "Retry",
-                        retryAction: {
-                            Task { await social.retryFriendsLoad() }
-                        }
-                    )
+                    #if DEBUG
+                        SocialCloudKitDiagnosticsView(
+                            social: social,
+                            retryTitle: "Retry",
+                            retryAction: {
+                                Task { await social.retryFriendsLoad() }
+                            }
+                        )
+                    #endif
                 }
             }
         }
