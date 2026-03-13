@@ -187,6 +187,7 @@ private struct CommunityPostCard: View {
                     Image(systemName: "ellipsis")
                         .foregroundStyle(secondaryText)
                 }
+                .accessibilityLabel("Post options")
             }
 
             Text("\"\(post.adviceLine)\"")

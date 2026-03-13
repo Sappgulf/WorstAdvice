@@ -1499,22 +1499,15 @@ struct FriendsTabView: View {
         .toast(item: $activeToast, accentColor: accent)
     }
 
-    private var cloudKitBanner: some View {
-        socialCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("CloudKit Diagnostics", systemImage: "icloud.slash")
-                    .font(.headline)
-                    .foregroundStyle(primaryText)
-                SocialCloudKitDiagnosticsView(social: social)
-            }
-        }
-        .accessibilityIdentifier("friends.cloudKitBanner")
-    }
-
     @ViewBuilder
     private var friendsStateBanner: some View {
         switch social.friendsLoadState {
-        case .idle, .ready:
+        case .idle:
+            stateProgressCard(
+                title: "Setting up Friends",
+                message: "Connecting to iCloud…"
+            )
+        case .ready:
             EmptyView()
         case .checkingCloudKit:
             stateProgressCard(

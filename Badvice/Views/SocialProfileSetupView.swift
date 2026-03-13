@@ -288,7 +288,7 @@ struct SocialProfileSetupView: View {
                                     : Color.red
                                 )
                     }
-                    Text("We trim outer spaces, remove a leading @, and force lowercase while you type.")
+                    Text("Auto-formatted as you type — spaces trimmed, @ dropped, lowercase only.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     if social.isSubmittingAction {

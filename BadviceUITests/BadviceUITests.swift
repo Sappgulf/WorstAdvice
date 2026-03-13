@@ -181,7 +181,6 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(
             unavailableText.waitForExistence(timeout: 2)
                 || cloudKitStatusText.waitForExistence(timeout: 2)
-                || app.otherElements["friends.cloudKitBanner"].waitForExistence(timeout: 2)
                 || retryLoadButton.waitForExistence(timeout: 2)
         )
 
