@@ -957,7 +957,7 @@ struct SettingsTabView: View {
                 ) {
                     ForEach(6..<23, id: \.self) { hour in
                         let formatted = Calendar.current.date(from: DateComponents(hour: hour, minute: 0))
-                            .map { hour12Formatter.string(from: $0) } ?? "\(hour):00"
+                            .map { Self.hour12Formatter.string(from: $0) } ?? "\(hour):00"
                         Text(formatted).tag(hour)
                     }
                 }

@@ -432,6 +432,7 @@ struct GenerateTabView: View {
         }
         .accessibilityLabel("Category")
         .accessibilityValue(viewModel.selectedCategory.title)
+        .accessibilityIdentifier("generate.category")
     }
 
     private var toneMenu: some View {
@@ -446,6 +447,7 @@ struct GenerateTabView: View {
         }
         .accessibilityLabel("Tone mode")
         .accessibilityValue(viewModel.selectedTone.title)
+        .accessibilityIdentifier("generate.tone")
     }
 
     private func selectionLabel(title: String, value: String) -> some View {
@@ -760,7 +762,7 @@ struct GenerateTabView: View {
             // #2 Advice Battles + #7 Collab Advice row
             HStack(spacing: 10) {
                 Button { showingBracket = true } label: {
-                    Label("Battles 🥊", systemImage: "trophy.fill")
+                    Label("Battles", systemImage: "trophy.fill")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 40)
                 }
@@ -768,7 +770,7 @@ struct GenerateTabView: View {
                 .tint(accent)
 
                 Button { showingCollabAdvice = true } label: {
-                    Label("Collab 🤝", systemImage: "person.2.fill")
+                    Label("Collab", systemImage: "person.2.fill")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 40)
                 }
@@ -813,6 +815,7 @@ struct GenerateTabView: View {
                         style: wasFavorite ? .deleted : .success
                     )
                 }
+                .accessibilityIdentifier("generate.save")
 
                 railButton(
                     title: "Copy",
@@ -824,6 +827,7 @@ struct GenerateTabView: View {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     activeToast = ToastMessage(message: "Copied!", style: .success)
                 }
+                .accessibilityIdentifier("generate.copy")
 
                 railButton(
                     title: "Share to Friends",
@@ -852,6 +856,7 @@ struct GenerateTabView: View {
                     viewModel.remixCurrentAdvice()
                     activeToast = ToastMessage(message: "Remixed!", style: .success)
                 }
+                .accessibilityIdentifier("generate.remix")
 
                 // #5 Animated GIF export
                 railButton(
@@ -877,6 +882,7 @@ struct GenerateTabView: View {
                         gifExportInProgress = false
                     }
                 }
+                .accessibilityIdentifier("generate.gif")
             }
             .frame(maxWidth: .infinity)
 

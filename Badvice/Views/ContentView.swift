@@ -1117,6 +1117,7 @@ struct ContentView: View {
                 UserQuoteSuggestion.self,
                 QuoteVoteRecord.self,
                 LearningStatRecord.self,
+                MissionProgressRecord.self,
                 AppSettingsEntity.self,
             ],
             inMemory: true

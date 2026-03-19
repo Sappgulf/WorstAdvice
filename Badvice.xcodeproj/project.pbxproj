@@ -36,6 +36,7 @@
 		A10000010000000000000008 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* AppState.swift */; };
 		A10000010000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* Assets.xcassets */; };
 		A10000010000000000000010 /* AdviceCorpus.json in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* AdviceCorpus.json */; };
+		A10000010000000000000099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000099 /* PrivacyInfo.xcprivacy */; };
 		A10000010000000000000011 /* AdviceEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* AdviceEngineTests.swift */; };
 		A10000010000000000000020 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* Theme.swift */; };
 		A10000010000000000000021 /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000021 /* HapticsManager.swift */; };
@@ -140,6 +141,7 @@
 		A20000010000000000000008 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A20000010000000000000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000010000000000000010 /* AdviceCorpus.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AdviceCorpus.json; sourceTree = "<group>"; };
+		A20000010000000000000099 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A20000010000000000000011 /* AdviceEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngineTests.swift; sourceTree = "<group>"; };
 		A20000010000000000000012 /* Badvice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Badvice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000013 /* BadviceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -400,6 +402,7 @@
 			isa = PBXGroup;
 			children = (
 				A20000010000000000000010 /* AdviceCorpus.json */,
+				A20000010000000000000099 /* PrivacyInfo.xcprivacy */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -556,6 +559,7 @@
 			files = (
 				A10000010000000000000009 /* Assets.xcassets in Resources */,
 				A10000010000000000000010 /* AdviceCorpus.json in Resources */,
+				A10000010000000000000099 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -682,7 +686,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 4.4;
+				MARKETING_VERSION = 4.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -706,7 +710,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 4.4;
+				MARKETING_VERSION = 4.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -860,7 +864,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.6;
+				MARKETING_VERSION = 4.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -891,7 +895,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.6;
+				MARKETING_VERSION = 4.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

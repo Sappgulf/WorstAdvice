@@ -1,5 +1,6 @@
 import CloudKit
 import Foundation
+import OSLog
 
 extension Notification.Name {
     static let cloudKitSchemaSeederDidSeedDevelopmentSchema = Notification.Name(
@@ -40,6 +41,8 @@ enum CloudKitSchemaSeedStatus {
 }
 
 enum CloudKitSchemaSeeder {
+    private static let logger = Logger(subsystem: "com.worstadvice.app", category: "CloudKitSeed")
+
     private enum SeedValues {
         static let userAHandle = "seedusera"
         static let userBHandle = "seeduserb"
@@ -56,7 +59,7 @@ enum CloudKitSchemaSeeder {
     private static let didSeedKey = "didSeedCloudKitSchema.v3.socialBootstrap"
     static func seedIfNeeded(userDefaults: UserDefaults = .standard) async -> CloudKitSchemaSeedStatus {
         guard !userDefaults.bool(forKey: didSeedKey) else {
-            print("[CloudKitSeed] Social schema already seeded on this install.")
+            logger.info("Social schema already seeded on this install.")
             return .alreadySeeded
         }
 
@@ -85,11 +88,11 @@ enum CloudKitSchemaSeeder {
         do {
             let accountStatus = try await container.accountStatus()
             guard accountStatus == .available else {
-                print("[CloudKitSeed] iCloud account unavailable: \(describe(accountStatus)).")
+                logger.warning("iCloud account unavailable: \(describe(accountStatus), privacy: .public)")
                 return .unavailableAccount(describe(accountStatus))
             }
         } catch {
-            print("[CloudKitSeed] Failed to check iCloud account status: \(error.localizedDescription)")
+            logger.error("Failed to check iCloud account status: \(error.localizedDescription, privacy: .public)")
             return .failed("CloudKit account check failed.")
         }
 
@@ -98,13 +101,11 @@ enum CloudKitSchemaSeeder {
         do {
             for record in records {
                 let savedRecord = try await container.publicCloudDatabase.save(record)
-                print(
-                    "[CloudKitSeed] Saved \(savedRecord.recordType) record \(savedRecord.recordID.recordName)."
-                )
+                logger.info("Saved \(savedRecord.recordType, privacy: .public) record \(savedRecord.recordID.recordName, privacy: .public).")
             }
             try await primeSchemaQueries(in: container.publicCloudDatabase)
             userDefaults.set(true, forKey: didSeedKey)
-            print("[CloudKitSeed] Seeded public social schema with \(records.count) records.")
+            logger.info("Seeded public social schema with \(records.count) records.")
             await MainActor.run {
                 NotificationCenter.default.post(
                     name: .cloudKitSchemaSeederDidSeedDevelopmentSchema,
@@ -113,7 +114,7 @@ enum CloudKitSchemaSeeder {
             }
             return .seeded(recordCount: records.count)
         } catch {
-            print("[CloudKitSeed] Failed to seed public social schema: \(error.localizedDescription)")
+            logger.error("Failed to seed public social schema: \(error.localizedDescription, privacy: .public)")
             return .failed("CloudKit schema seed failed. Check the CloudKit console logs.")
         }
     }
@@ -343,7 +344,7 @@ enum CloudKitSchemaSeeder {
             ("moderation-report", moderationQuery),
         ] {
             try await run(query: query, in: database)
-            print("[CloudKitSeed] Primed development schema query \(name).")
+            logger.info("Primed development schema query \(name, privacy: .public).")
         }
     }
 
@@ -362,7 +363,7 @@ enum CloudKitSchemaSeeder {
 
     private static func makeContainerForSeeding() -> CKContainer? {
         #if targetEnvironment(simulator)
-            print("[CloudKitSeed] Skipping schema seed in Simulator; CloudKit requires a signed app entitlement.")
+            logger.info("Skipping schema seed in Simulator; CloudKit requires a signed app entitlement.")
             return nil
         #else
             return CloudKitManager.socialContainer()

@@ -560,7 +560,7 @@ struct ChaosHubTabView: View {
                     HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
                     showingBracket = true
                 } label: {
-                    Label("Advice Brackets 🥊", systemImage: "trophy.fill")
+                    Label("Advice Brackets", systemImage: "trophy.fill")
                         .font(.caption.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 38)
                 }
