@@ -1479,8 +1479,8 @@ struct FriendsTabView: View {
                         ? .error : .success
                 )
             }
-            .onChange(of: social.pendingCollabDraft?.id) { _, _ in
-                guard let draft = social.pendingCollabDraft else { return }
+            .onChange(of: social.pendingCollabDraft?.id) { _, newID in
+                guard newID != nil, let draft = social.pendingCollabDraft else { return }
                 collabComposerType = draft.type
                 collabComposerText = draft.content
                 selectedSection = .collab

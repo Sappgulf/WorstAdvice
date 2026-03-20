@@ -273,14 +273,16 @@ struct SettingsTabView: View {
                             // Settling breathe: compress slightly mid-spin then release
                             if !isMotionReduced {
                                 withAnimation(.easeIn(duration: 0.18)) { gearSettleScale = 0.88 }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+                                Task { @MainActor in
+                                    try? await Task.sleep(for: .seconds(0.22))
                                     withAnimation(.spring(response: 0.38, dampingFraction: 0.52)) {
                                         gearSettleScale = 1.0
                                     }
                                 }
                             }
                             // After spin settles, resume idle wobble
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .seconds(1.1))
                                 withAnimation(.easeOut(duration: 0.2)) {
                                     gearIsSpinning = false
                                 }
@@ -447,7 +449,7 @@ struct SettingsTabView: View {
                     await social.refreshSocialData()
                 }
                 // A tiny async hop lets SwiftUI finish layout before animating in
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     sectionsAppeared = true
                     if !isMotionReduced { gearWobble = true }
                 }
@@ -796,7 +798,8 @@ struct SettingsTabView: View {
                                     viewModel.theme = mode
                                 }
 
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                Task { @MainActor in
+                                    try? await Task.sleep(for: .seconds(0.6))
                                     shockwaveTheme = nil
                                 }
                             }
@@ -1964,7 +1967,8 @@ private struct SuggestionLabView: View {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                             submitSuccess = true
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(2.2))
                             withAnimation(.easeOut(duration: 0.3)) { submitSuccess = false }
                         }
                     }
@@ -2073,7 +2077,8 @@ private struct QuoteSuggestionLabView: View {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                             submitSuccess = true
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(2.2))
                             withAnimation(.easeOut(duration: 0.3)) { submitSuccess = false }
                         }
                     }
@@ -2424,7 +2429,10 @@ private struct InviteFriendsView: View {
                         Button {
                             UIPasteboard.general.string = link.deepLinkURL.absoluteString
                             copied = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .seconds(2))
+                                copied = false
+                            }
                         } label: {
                             Label(copied ? "Copied!" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
                                 .font(.subheadline.weight(.semibold))

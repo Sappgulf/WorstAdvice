@@ -36,16 +36,7 @@ enum CloudKitManager {
             let database = CloudKitManager.socialDatabase(container: container)
 
             do {
-                let status = try await withCheckedThrowingContinuation {
-                    (continuation: CheckedContinuation<CKAccountStatus, Error>) in
-                    container.accountStatus { status, error in
-                        if let error {
-                            continuation.resume(throwing: error)
-                            return
-                        }
-                        continuation.resume(returning: status)
-                    }
-                }
+                let status = try await container.accountStatus()
                 logger.info(
                     "Friends CloudKit sanity accountStatus=\(String(describing: status), privacy: .public) databaseScope=\(CloudKitManager.socialDatabaseScope, privacy: .public)"
                 )

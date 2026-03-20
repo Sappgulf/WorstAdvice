@@ -9172,23 +9172,10 @@ actor CloudKitStore: SocialBackend {
     private func accountStatus() async throws -> CKAccountStatus {
         cloudKitLogger.info("CloudKit call start: accountStatus")
         do {
-            let status = try await withCheckedThrowingContinuation {
-                (continuation: CheckedContinuation<CKAccountStatus, Error>) in
-                container.accountStatus { status, error in
-                    if let error {
-                        cloudKitLogger.error(
-                            "CloudKit account status failed: \(Self.errorDescription(error), privacy: .public)"
-                        )
-                        continuation.resume(throwing: error)
-                        return
-                    }
-                    cloudKitLogger.info(
-                        "CloudKit account status callback returned \(Self.accountStatusDescription(status), privacy: .public)."
-                    )
-                    continuation.resume(returning: status)
-                }
-            }
-            cloudKitLogger.info("CloudKit call success: accountStatus")
+            let status = try await container.accountStatus()
+            cloudKitLogger.info(
+                "CloudKit call success: accountStatus = \(Self.accountStatusDescription(status), privacy: .public)"
+            )
             return status
         } catch {
             Self.logCloudKitError(error, context: "accountStatus")
@@ -10149,8 +10136,8 @@ final class SocialViewModel {
     ) {
         self.cloudStore = cloudStore
         self.actionQueue = actionQueue
-        Task { [weak self] in
-            await self?.bootstrap()
+        Task {
+            await bootstrap()
         }
     }
 

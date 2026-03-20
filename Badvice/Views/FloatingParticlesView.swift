@@ -7,28 +7,18 @@ struct FloatingParticlesView: View {
     var budget: RenderBudget = .balanced
     var lowPowerMode: Bool = false
 
-    // Performance optimization: Cache particle count based on screen size
-    private static var cachedScreenArea: CGFloat?
-    private static var cachedParticleCount: Int?
-    
-    private var baseCount: Int {
-        let screenArea = UIScreen.main.bounds.width * UIScreen.main.bounds.height
-        
-        // Use cached value if screen size hasn't changed
-        if let cached = Self.cachedScreenArea, cached == screenArea,
-           let cachedCount = Self.cachedParticleCount {
-            return cachedCount
-        }
-        
-        let raw = Int(screenArea / 25_000)
-        let result = max(8, min(20, raw))
-        
-        // Cache for future use
-        Self.cachedScreenArea = screenArea
-        Self.cachedParticleCount = result
-        
-        return result
-    }
+    // Performance optimization: Compute particle count from device physical memory as a
+    // stable proxy for screen size, avoiding the deprecated UIScreen.main API.
+    private static let cachedBaseCount: Int = {
+        // Estimate a reasonable particle count from device class.
+        // Higher-memory devices typically have larger screens.
+        let memory = ProcessInfo.processInfo.physicalMemory
+        if memory >= 6_000_000_000 { return 18 }
+        if memory >= 4_000_000_000 { return 14 }
+        return 10
+    }()
+
+    private var baseCount: Int { Self.cachedBaseCount }
 
     private var count: Int {
         let multiplier: Double

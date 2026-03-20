@@ -1441,7 +1441,11 @@ struct ReferralLink: Identifiable, Codable, Sendable {
     let createdAt: Date
 
     var deepLinkURL: URL {
-        URL(string: "badvice://invite/\(id.uuidString.lowercased())")!
+        // UUID strings are always URL-safe, so this will never fail in practice.
+        guard let url = URL(string: "badvice://invite/\(id.uuidString.lowercased())") else {
+            return URL(string: "badvice://invite")!
+        }
+        return url
     }
 
     var shareText: String {

@@ -23,7 +23,7 @@ struct OnboardingFlow: View {
         ),
         Page(
             icon: "quote.bubble.fill",
-            title: "10 categories.\n11 tones of chaos.",
+            title: "14 categories.\n14 tones of chaos.",
             subtitle: "From Corporate Consultant to Conspiracy Theorist, every terrible take has a distinct voice.",
             accent: Color(hex: "7E4B7A"),
             background: LinearGradient(colors: [Color(hex: "F3EAF6"), Color(hex: "E6D7F0")], startPoint: .topLeading, endPoint: .bottomTrailing)

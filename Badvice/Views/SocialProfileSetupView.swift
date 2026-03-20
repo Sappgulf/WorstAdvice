@@ -93,23 +93,21 @@ struct SocialCloudKitDiagnosticsView: View {
 
             if showRetry {
                 HStack(spacing: 12) {
-                    if showRetry {
-                        Button(retryTitle) {
-                            if let retryAction {
-                                retryAction()
-                            } else {
-                                Task {
-                                    await social.retryFriendsLoad()
-                                }
+                    Button(retryTitle) {
+                        if let retryAction {
+                            retryAction()
+                        } else {
+                            Task {
+                                await social.retryFriendsLoad()
                             }
                         }
-                        .accessibilityIdentifier("social.profile.retryAvailability")
                     }
+                    .accessibilityIdentifier("social.profile.retryAvailability")
                     #if DEBUG
-                        Button("Copy Diagnostics") {
-                            UIPasteboard.general.string = diagnostics.text(includeDebugDetails: true)
-                        }
-                        .accessibilityIdentifier("social.profile.copyDiagnostics")
+                    Button("Copy Diagnostics") {
+                        UIPasteboard.general.string = diagnostics.text(includeDebugDetails: true)
+                    }
+                    .accessibilityIdentifier("social.profile.copyDiagnostics")
                     #endif
                 }
                 .font(.caption.weight(.semibold))

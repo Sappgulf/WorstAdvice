@@ -36,7 +36,6 @@
 		A10000010000000000000008 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* AppState.swift */; };
 		A10000010000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* Assets.xcassets */; };
 		A10000010000000000000010 /* AdviceCorpus.json in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* AdviceCorpus.json */; };
-		A10000010000000000000099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000099 /* PrivacyInfo.xcprivacy */; };
 		A10000010000000000000011 /* AdviceEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* AdviceEngineTests.swift */; };
 		A10000010000000000000020 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* Theme.swift */; };
 		A10000010000000000000021 /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000021 /* HapticsManager.swift */; };
@@ -50,6 +49,7 @@
 		A10000010000000000000031 /* ChaosHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000031 /* ChaosHubView.swift */; };
 		A10000010000000000000032 /* Shared/SharedDailyQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* Shared/SharedDailyQuoteSource.swift */; };
 		A10000010000000000000033 /* Shared/SharedDailyQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* Shared/SharedDailyQuoteSource.swift */; };
+		A10000010000000000000099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000099 /* PrivacyInfo.xcprivacy */; };
 		A1000002000000000000AA01 /* GenerateTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA01 /* GenerateTabView.swift */; };
 		A1000002000000000000AA02 /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA02 /* ToastView.swift */; };
 		A1000002000000000000AA03 /* DeviceCapabilityProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */; };
@@ -69,6 +69,7 @@
 		C82E5EADB60BABE95E14B274 /* ShakeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB19BBE9BB80D1CFBE9CB824 /* ShakeDetector.swift */; };
 		CC7C2D8BC35FCFF69C567086 /* LocalAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 537EABC7909023C6B45AAB4F /* LocalAuth.swift */; };
 		D10000010000000000000001 /* BadviceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000010000000000000001 /* BadviceUITests.swift */; };
+		D10000020000000000000001 /* BadviceFullSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000020000000000000001 /* BadviceFullSmokeTests.swift */; };
 		F67E4DFCBEDF98A26BE99151 /* WorstAdviceQuoteWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */; };
 /* End PBXBuildFile section */
 
@@ -141,7 +142,6 @@
 		A20000010000000000000008 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A20000010000000000000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000010000000000000010 /* AdviceCorpus.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AdviceCorpus.json; sourceTree = "<group>"; };
-		A20000010000000000000099 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A20000010000000000000011 /* AdviceEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngineTests.swift; sourceTree = "<group>"; };
 		A20000010000000000000012 /* Badvice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Badvice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000013 /* BadviceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -156,6 +156,7 @@
 		A20000010000000000000030 /* AdaptiveRanker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveRanker.swift; sourceTree = "<group>"; };
 		A20000010000000000000031 /* ChaosHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosHubView.swift; sourceTree = "<group>"; };
 		A20000010000000000000032 /* Shared/SharedDailyQuoteSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SharedDailyQuoteSource.swift; sourceTree = "<group>"; };
+		A20000010000000000000099 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A2000002000000000000AA01 /* GenerateTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateTabView.swift; sourceTree = "<group>"; };
 		A2000002000000000000AA02 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 		A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilityProfile.swift; sourceTree = "<group>"; };
@@ -170,6 +171,7 @@
 		BB19BBE9BB80D1CFBE9CB824 /* ShakeDetector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShakeDetector.swift; path = Badvice/Shared/ShakeDetector.swift; sourceTree = "<group>"; };
 		BL0000020000000000000001 /* BadviceLockScreenWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BadviceLockScreenWidget.swift; path = WorstAdviceWidget/BadviceLockScreenWidget.swift; sourceTree = "<group>"; };
 		D20000010000000000000001 /* BadviceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceUITests.swift; sourceTree = "<group>"; };
+		D20000020000000000000001 /* BadviceFullSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceFullSmokeTests.swift; sourceTree = "<group>"; };
 		D20000010000000000000002 /* BadviceUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2C35747C3F426FECEBC093F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = "<group>"; };
 		EB9F9488A0CBEC42F1CA9AE1 /* ActivityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ActivityFeedView.swift; sourceTree = "<group>"; };
@@ -424,6 +426,7 @@
 			isa = PBXGroup;
 			children = (
 				D20000010000000000000001 /* BadviceUITests.swift */,
+				D20000020000000000000001 /* BadviceFullSmokeTests.swift */,
 			);
 			path = BadviceUITests;
 			sourceTree = "<group>";
@@ -636,6 +639,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D10000010000000000000001 /* BadviceUITests.swift in Sources */,
+				D10000020000000000000001 /* BadviceFullSmokeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -686,7 +690,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 4.7;
+				MARKETING_VERSION = 4.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -710,7 +714,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 4.7;
+				MARKETING_VERSION = 4.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -864,7 +868,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.7;
+				MARKETING_VERSION = 4.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -895,7 +899,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.7;
+				MARKETING_VERSION = 4.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

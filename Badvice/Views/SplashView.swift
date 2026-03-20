@@ -116,7 +116,8 @@ struct SplashView: View {
             }
 
             // Animate out after delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + holdDuration) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(holdDuration))
                 withAnimation(.easeIn(duration: animateOutDuration)) {
                     logoOpacity = 0
                     wordmarkOpacity = 0
@@ -125,9 +126,8 @@ struct SplashView: View {
                     logoScale = accessibilityReduceMotion ? 1.0 : 1.02
                     wordmarkScale = accessibilityReduceMotion ? 1.0 : 1.05
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + animateOutDuration + 0.05) {
-                    isShowing = false
-                }
+                try? await Task.sleep(for: .seconds(animateOutDuration + 0.05))
+                isShowing = false
             }
         }
     }

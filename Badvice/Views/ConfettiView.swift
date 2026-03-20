@@ -67,11 +67,10 @@ struct ConfettiView: View {
             .allowsHitTesting(false)
             .ignoresSafeArea()
             .transition(.opacity.animation(.easeOut(duration: 0.3)))
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
-                    withAnimation(.easeOut(duration: 0.4)) {
-                        isActive = false
-                    }
+            .task {
+                try? await Task.sleep(for: .seconds(3.2))
+                withAnimation(.easeOut(duration: 0.4)) {
+                    isActive = false
                 }
             }
         }

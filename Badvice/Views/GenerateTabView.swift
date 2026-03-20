@@ -313,12 +313,12 @@ struct GenerateTabView: View {
             }
             .padding(.horizontal, Theme.horizontalPadding)
             .padding(.top, 16)
-            .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 28)
+            .padding(.bottom, 16)
         }
         .scrollDismissesKeyboard(.interactively)
         .coordinateSpace(name: "scroll")
         .trackScrollForTabBar()
-        .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
+        .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 100 : 16)
         .refreshable {
             // Pull to generate new advice
             await viewModel.generate()
