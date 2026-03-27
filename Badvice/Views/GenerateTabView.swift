@@ -248,12 +248,15 @@ struct GenerateTabView: View {
 
                             Button("Share", systemImage: "square.and.arrow.up") {
                                 guard let payload = viewModel.currentSharePayload else { return }
-                                let image = ShareCardRenderer.render(content: payload)
-                                shareItems = [image, viewModel.currentShareText]
-                                viewModel.trackShare(
-                                    template: payload.template, ratio: payload.aspectRatio)
-                                showingShareSheet = true
-                                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                                Task {
+                                    let image = await ShareCardRenderer.renderAsync(content: payload)
+                                    shareItems = [image, viewModel.currentShareText]
+                                    viewModel.trackShare(
+                                        template: payload.template, ratio: payload.aspectRatio)
+                                    showingShareSheet = true
+                                    HapticsManager.playSelection(
+                                        isEnabled: settings.hapticsEnabled)
+                                }
                             }
 
                             Button("Collaborate", systemImage: "person.2.badge.plus") {

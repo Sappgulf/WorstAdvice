@@ -35,6 +35,30 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertNotEqual(first.adviceLine, second.adviceLine)
     }
 
+    func testNegativeSeedStillGeneratesDeterministically() async {
+        let engine = AdviceEngine()
+
+        let first = await engine.generate(
+            category: .random,
+            tone: .random,
+            includeRationale: true,
+            seed: -42,
+            now: Date(timeIntervalSince1970: 1_000)
+        )
+        let second = await engine.generate(
+            category: .random,
+            tone: .random,
+            includeRationale: true,
+            seed: -42,
+            now: Date(timeIntervalSince1970: 1_000)
+        )
+
+        XCTAssertEqual(first.category, second.category)
+        XCTAssertEqual(first.tone, second.tone)
+        XCTAssertEqual(first.adviceLine, second.adviceLine)
+        XCTAssertEqual(first.rationaleLine, second.rationaleLine)
+    }
+
     func testOutputRespectsCategoryForbiddenPatterns() async {
         let engine = AdviceEngine()
         let category: AdviceCategory = .dating
@@ -269,6 +293,10 @@ final class AdviceEngineTests: XCTestCase {
         for pack in ContentPack.allCases {
             XCTAssertFalse(pack.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
+    }
+
+    func testNewYearContentPackUsesWraparoundMonths() {
+        XCTAssertEqual(ContentPack.newYear.availableMonths, Set([1, 12]))
     }
 
     func testSharedDailyQuoteParityMatchesBadQuoteService() {

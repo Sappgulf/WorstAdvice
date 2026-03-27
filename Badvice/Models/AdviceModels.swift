@@ -1,5 +1,13 @@
 import Foundation
 
+extension Int {
+    func positiveModulo(_ modulus: Int) -> Int {
+        guard modulus > 0 else { return 0 }
+        let remainder = self % modulus
+        return remainder >= 0 ? remainder : remainder + modulus
+    }
+}
+
 enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     case dating
     case fitness
@@ -76,7 +84,7 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     func resolved(seed: Int) -> AdviceCategory {
         guard self == .random else { return self }
         let pool = AdviceCategory.concrete
-        return pool[abs(seed) % pool.count]
+        return pool[seed.positiveModulo(pool.count)]
     }
 }
 
@@ -136,7 +144,7 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
     func resolved(seed: Int) -> ToneMode {
         guard self == .random else { return self }
         let pool = ToneMode.concrete
-        return pool[abs(seed) % pool.count]
+        return pool[seed.positiveModulo(pool.count)]
     }
 }
 
@@ -273,13 +281,13 @@ enum ContentPack: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
-    var availableMonths: ClosedRange<Int>? {
+    var availableMonths: Set<Int>? {
         switch self {
-        case .valentine: return 1...2
-        case .halloween: return 10...10
-        case .aprilFools: return 4...4
-        case .newYear: return 12...1
-        case .summerVibes: return 6...8
+        case .valentine: return Set(1...2)
+        case .halloween: return [10]
+        case .aprilFools: return [4]
+        case .newYear: return [12, 1]
+        case .summerVibes: return Set(6...8)
         default: return nil
         }
     }

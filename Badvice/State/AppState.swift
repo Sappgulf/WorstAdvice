@@ -3402,7 +3402,7 @@ struct BadQuoteService: Sendable {
         let filtered = bank.filter { excludedID == nil || $0.id != excludedID }
         let candidateBank = filtered.isEmpty ? bank : filtered
         let chosenSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
-        let index = abs(chosenSeed) % candidateBank.count
+        let index = chosenSeed.positiveModulo(candidateBank.count)
         return candidateBank[index]
     }
 
@@ -6031,7 +6031,7 @@ final class GenerateViewModel {
         }
         let total = weights.reduce(0, +)
         guard total > 0 else {
-            let index = abs(seed) % items.count
+            let index = seed.positiveModulo(items.count)
             return items[index]
         }
         let target = unitRandom(seed: seed, salt: salt) * total
@@ -6319,7 +6319,7 @@ final class GenerateViewModel {
 
         let rules = store.rules(for: category, contentPack: contentPack)
         let voice = store.profile(
-            for: tone == .random ? (ToneMode.concrete[abs(seed) % ToneMode.concrete.count]) : tone)
+            for: tone == .random ? (ToneMode.concrete[seed.positiveModulo(ToneMode.concrete.count)]) : tone)
 
         var built: [GeneratedAdvice] = []
         var seen = Set<String>()
@@ -6362,7 +6362,7 @@ final class GenerateViewModel {
 
             let resolvedTone =
                 tone == .random
-                ? ToneMode.concrete[abs(seed + index) % ToneMode.concrete.count]
+                ? ToneMode.concrete[(seed + index).positiveModulo(ToneMode.concrete.count)]
                 : tone
 
             built.append(
@@ -6387,7 +6387,7 @@ final class GenerateViewModel {
         var seen = Set<String>()
 
         for attempt in 0..<(min(maxCount, pool.count)) {
-            let index = abs(baseSeed + (attempt * 37)) % pool.count
+            let index = (baseSeed + (attempt * 37)).positiveModulo(pool.count)
             let suggestion = pool[index]
             guard moderation.isSafe(text: "\(suggestion.topic) \(suggestion.adviceLine)") else {
                 continue
@@ -6649,8 +6649,13 @@ final class QuotesViewModel {
 
     func quoteSpotlightInsight(for quote: BadQuote) -> String {
         let rules = store.rules(for: quote.category, contentPack: .classic)
-        let principle = rules.badPrinciples.randomElement() ?? "overconfidence"
-        let keyword = rules.keywords.randomElement() ?? quote.category.title.lowercased()
+        guard !rules.badPrinciples.isEmpty, !rules.keywords.isEmpty else {
+            return "It doubles down on overconfidence and dares you to frame \(quote.category.title.lowercased()) as the obvious move."
+        }
+        let seed = stableSeed(for: "\(quote.id)|\(quote.category.rawValue)|spotlight")
+        let principle = rules.badPrinciples[seed.positiveModulo(rules.badPrinciples.count)]
+        let keywordSeed = seed &+ 17
+        let keyword = rules.keywords[keywordSeed.positiveModulo(rules.keywords.count)]
         return
             "It doubles down on \(principle.lowercased()) and dares you to frame \(keyword) as the obvious move."
     }
@@ -6950,7 +6955,7 @@ final class QuotesViewModel {
         for index in 0..<min(4, max(2, categories.count)) {
             if Task.isCancelled { return }
             let category = categories[index % categories.count]
-            let tone = tones[abs(seedBase + index * 13) % tones.count]
+            let tone = tones[(seedBase + index * 13).positiveModulo(tones.count)]
             do {
                 let candidate = try await appleOnDeviceBridge.generateQuoteCandidate(
                     category: category,
@@ -6999,7 +7004,7 @@ final class QuotesViewModel {
         let categories = AdviceCategory.concrete
         guard !categories.isEmpty else { return [.productivity] }
         let seed = Int(Calendar.current.startOfDay(for: now).timeIntervalSince1970)
-        let start = abs(seed / 86_400) % categories.count
+        let start = (seed / 86_400).positiveModulo(categories.count)
         return (0..<categories.count).map { categories[(start + $0) % categories.count] }
     }
 

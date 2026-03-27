@@ -145,90 +145,90 @@ enum Theme {
     }
 
     static func backgroundGradient(for mode: ThemeMode) -> LinearGradient {
-        // Performance: Check cache first
-        if let cached = gradientCache[mode] {
-            return cached
+        cacheQueue.sync {
+            if let cached = gradientCache[mode] {
+                return cached
+            }
+
+            let gradient: LinearGradient
+            switch mode {
+            case .badvice:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "1A111A"), Color(hex: "121212")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .minimal:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "F9F9F9"), Color(hex: "F2F2F7")],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            case .ember:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "4A2626"), Color(hex: "2E1A1A")],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            case .slate:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "2C3E50"), Color(hex: "34495E")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .evergreen:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "1A2F23"), Color(hex: "142119")],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            case .fallout:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "081107"), Color(hex: "0D1B0A"), Color(hex: "12210D")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .neon:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "0A0A0A"), Color(hex: "1A0033")],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            case .midnight:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "000000"), Color(hex: "0D1B2A")],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            case .sunset:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "FF512F"), Color(hex: "DD2476")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .cosmic:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "0F0C29"), Color(hex: "302B63"), Color(hex: "24243E")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            case .retro:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "2C1A3D"), Color(hex: "1A1A2E")],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            case .cybernetic:
+                gradient = LinearGradient(
+                    colors: [Color(hex: "050B16"), Color(hex: "0A1F2E"), Color(hex: "0B3140")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+
+            gradientCache[mode] = gradient
+            return gradient
         }
-        
-        let gradient: LinearGradient
-        switch mode {
-        case .badvice:
-            gradient = LinearGradient(
-                colors: [Color(hex: "1A111A"), Color(hex: "121212")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .minimal:
-            gradient = LinearGradient(
-                colors: [Color(hex: "F9F9F9"), Color(hex: "F2F2F7")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .ember:
-            gradient = LinearGradient(
-                colors: [Color(hex: "4A2626"), Color(hex: "2E1A1A")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .slate:
-            gradient = LinearGradient(
-                colors: [Color(hex: "2C3E50"), Color(hex: "34495E")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .evergreen:
-            gradient = LinearGradient(
-                colors: [Color(hex: "1A2F23"), Color(hex: "142119")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .fallout:
-            gradient = LinearGradient(
-                colors: [Color(hex: "081107"), Color(hex: "0D1B0A"), Color(hex: "12210D")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .neon:
-            gradient = LinearGradient(
-                colors: [Color(hex: "0A0A0A"), Color(hex: "1A0033")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .midnight:
-            gradient = LinearGradient(
-                colors: [Color(hex: "000000"), Color(hex: "0D1B2A")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .sunset:
-            gradient = LinearGradient(
-                colors: [Color(hex: "FF512F"), Color(hex: "DD2476")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .cosmic:
-            gradient = LinearGradient(
-                colors: [Color(hex: "0F0C29"), Color(hex: "302B63"), Color(hex: "24243E")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        case .retro:
-            gradient = LinearGradient(
-                colors: [Color(hex: "2C1A3D"), Color(hex: "1A1A2E")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        case .cybernetic:
-            gradient = LinearGradient(
-                colors: [Color(hex: "050B16"), Color(hex: "0A1F2E"), Color(hex: "0B3140")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-        
-        // Cache the result
-        gradientCache[mode] = gradient
-        return gradient
     }
 
     static func canvasColor(for mode: ThemeMode) -> Color {

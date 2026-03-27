@@ -139,6 +139,14 @@ struct ShareCardRenderer {
         }
     }
 
+    static func renderAsync(content: ShareCardContent) async -> UIImage {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                continuation.resume(returning: render(content: content))
+            }
+        }
+    }
+
     private static func drawGradient(in cg: CGContext, rect: CGRect, template: ShareCardTemplate) {
         let colors: [CGColor]
         switch template {

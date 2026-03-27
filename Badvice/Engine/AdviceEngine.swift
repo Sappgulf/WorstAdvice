@@ -26,7 +26,7 @@ struct AdviceEngine {
         let resolvedSeed = seed ?? defaultSeed(from: now)
         // Resolve .random to a concrete tone using the seed for reproducibility
         let resolvedTone = tone.resolved(seed: resolvedSeed)
-        var rng = SeededGenerator(seed: UInt64(resolvedSeed))
+        var rng = SeededGenerator(seed: UInt64(bitPattern: Int64(resolvedSeed)))
 
         let rules = store.rules(for: category, contentPack: contentPack)
         let voice = store.profile(for: resolvedTone)
@@ -196,7 +196,7 @@ struct AdviceEngine {
             let candidateSeed = baseSeed + (attempt * 7919)
             // For random mode, rotate through the concrete tone pool per candidate
             let candidateTone = tone == .random
-                ? tonePool[abs(candidateSeed) % tonePool.count]
+                ? tonePool[candidateSeed.positiveModulo(tonePool.count)]
                 : tone
             let candidate = await generate(
                 category: category,
@@ -219,7 +219,7 @@ struct AdviceEngine {
         while generated.count < total {
             let fallbackSeed = baseSeed + (attempt * 7919)
             let candidateTone = tone == .random
-                ? tonePool[abs(fallbackSeed) % tonePool.count]
+                ? tonePool[fallbackSeed.positiveModulo(tonePool.count)]
                 : tone
             let candidate = await generate(
                 category: category,
@@ -359,7 +359,7 @@ struct AdviceEngine {
 
         guard let maxCount = counts.values.max() else { return nil }
         let candidates = counts.filter { $0.value == maxCount }.map { $0.key }.sorted()
-        guard let choice = candidates.isEmpty ? nil : candidates[abs(seed) % candidates.count] else { return nil }
+        guard let choice = candidates.isEmpty ? nil : candidates[seed.positiveModulo(candidates.count)] else { return nil }
         return examples[choice] ?? choice
     }
 
@@ -440,7 +440,7 @@ struct AdviceEngine {
         let digest = text.unicodeScalars.reduce(seed) { partial, scalar in
             (partial &* 16777619) ^ Int(scalar.value)
         }
-        return Double(abs(digest % 1000)) / 1000.0
+        return Double(digest.positiveModulo(1000)) / 1000.0
     }
 
     static func directiveSignals(
@@ -592,7 +592,7 @@ actor SemanticTextScorer {
         }
 
         guard bestScore > 0, !bestCandidates.isEmpty else { return nil }
-        let index = abs(tieBreakerSeed) % bestCandidates.count
+        let index = tieBreakerSeed.positiveModulo(bestCandidates.count)
         return bestCandidates[index]
     }
 

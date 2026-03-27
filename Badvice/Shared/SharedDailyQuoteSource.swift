@@ -10,8 +10,10 @@ struct SharedDailyQuote: Sendable, Hashable {
 enum SharedDailyQuoteSource {
     static func quoteOfDay(for date: Date = Date()) -> SharedDailyQuote {
         let bank = allQuotes.isEmpty ? fallbackQuotes : allQuotes
-        let day = Int(floor(date.timeIntervalSince1970 / 86_400))
-        let index = ((day % bank.count) + bank.count) % bank.count
+        let calendar = Calendar.current
+        let day = calendar.ordinality(of: .day, in: .era, for: date)
+            ?? Int(floor(date.timeIntervalSince1970 / 86_400))
+        let index = day.positiveModulo(bank.count)
         return bank[index]
     }
 

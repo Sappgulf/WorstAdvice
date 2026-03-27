@@ -2394,8 +2394,11 @@ private struct FavoriteDetailView: View {
                                 template: settings.preferredTemplate,
                                 aspectRatio: settings.preferredAspect
                             )
-                            shareItems = [ShareCardRenderer.render(content: content), record.adviceLine]
-                            showingShareSheet = true
+                            Task {
+                                let image = await ShareCardRenderer.renderAsync(content: content)
+                                shareItems = [image, record.adviceLine]
+                                showingShareSheet = true
+                            }
                         } label: {
                             Label("Share Card", systemImage: "square.and.arrow.up")
                                 .font(.subheadline.weight(.semibold))
