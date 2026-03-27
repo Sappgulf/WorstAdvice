@@ -2981,8 +2981,6 @@ final class SettingsViewModel {
                 }
             }
         }
-        localModelStore.reloadAvailableModels()
-        refreshAppleOnDeviceModelAvailability()
         normalizeStreakFreezeState(for: Date())
         NotificationManager.updateStreakFreezeAvailability(
             hasAvailable: streakFreezeAvailableThisWeek)
@@ -6466,6 +6464,7 @@ final class QuotesViewModel {
     private var refreshGeneration: Int = 0
     private var cachedModelGeneratedQuotes: [BadQuote] = []
     private var lastModelQuoteOverlayKey: String?
+    @ObservationIgnored private var hasLoadedInitialData = false
     #if DEBUG
         var debugSourceFilter: QuoteSourceDebugFilter = .all {
             didSet { scheduleFilteredQuotesRefresh() }
@@ -6488,7 +6487,6 @@ final class QuotesViewModel {
         self.localModelStore = localModelStore
         self.appleOnDeviceBridge = AppleOnDeviceAdviceBridge(moderation: moderation)
         self.debouncedSearchText = searchText
-        reloadCachedData()
     }
 
     convenience init(
@@ -6660,7 +6658,13 @@ final class QuotesViewModel {
             "It doubles down on \(principle.lowercased()) and dares you to frame \(keyword) as the obvious move."
     }
 
+    func loadIfNeeded() {
+        guard !hasLoadedInitialData else { return }
+        reloadCachedData()
+    }
+
     private func reloadCachedData() {
+        hasLoadedInitialData = true
         quoteSuggestions = repository.fetchQuoteSuggestions(limit: 30)
         votesByQuoteID = repository.quoteVoteMap()
         rebuildQuoteCache()
@@ -7034,19 +7038,25 @@ final class FavoritesViewModel {
     private var searchDebounceTask: Task<Void, Never>?
     private var favoritesSearchIndexByID: [UUID: String] = [:]
     private var cachedFilteredFavorites: [AdviceRecord] = []
+    @ObservationIgnored private var hasLoadedInitialData = false
 
     init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker())
     {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
         self.debouncedSearchText = searchText
-        reload()
     }
 
     func reload() {
+        hasLoadedInitialData = true
         favorites = repository.fetchFavorites()
         rebuildFavoritesSearchIndex()
         refreshFilteredFavorites()
+    }
+
+    func loadIfNeeded() {
+        guard !hasLoadedInitialData else { return }
+        reload()
     }
 
     func remove(_ record: AdviceRecord) {
@@ -7166,19 +7176,25 @@ final class HistoryViewModel {
     private var cachedFilteredHistory: [AdviceRecord] = []
     private var cachedLikedCount = 0
     private var cachedDislikedCount = 0
+    @ObservationIgnored private var hasLoadedInitialData = false
 
     init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker())
     {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
         self.debouncedSearchText = searchText
-        reload()
     }
 
     func reload() {
+        hasLoadedInitialData = true
         history = repository.fetchHistory(limit: 50)
         rebuildHistoryCaches()
         refreshFilteredHistory()
+    }
+
+    func loadIfNeeded() {
+        guard !hasLoadedInitialData else { return }
+        reload()
     }
 
     func saveFromHistory(_ record: AdviceRecord) {
@@ -10140,6 +10156,10 @@ final class SocialViewModel {
     var lastQueueDrainAt: Date?
     var lastQueueDrainError: String?
     var lastSocialRefreshAt: Date?
+    var lastLeaderboardRefreshAt: Date?
+    private var isBootstrapping = false
+    private var isRefreshingLeaderboard = false
+    @ObservationIgnored private var hasLoadedBackendDisplayName = false
     private var activeAccountEmail: String?
     private var activeLinkedSocialRecordName: String?
 
@@ -10149,9 +10169,6 @@ final class SocialViewModel {
     ) {
         self.cloudStore = cloudStore
         self.actionQueue = actionQueue
-        Task {
-            await bootstrap()
-        }
     }
 
     var socialFeaturesEnabled: Bool {
@@ -10207,8 +10224,17 @@ final class SocialViewModel {
     }
 
     func bootstrap() async {
+        guard !isBootstrapping else { return }
+        isBootstrapping = true
+        defer { isBootstrapping = false }
         backendDisplayName = await cloudStore.backendDisplayName()
         await reloadFriendsFlow(preservingLastError: true)
+    }
+
+    func loadBackendDisplayNameIfNeeded() async {
+        guard !hasLoadedBackendDisplayName else { return }
+        hasLoadedBackendDisplayName = true
+        backendDisplayName = await cloudStore.backendDisplayName()
     }
 
     func refreshAvailability(preservingLastError: Bool = true) async {
@@ -10233,7 +10259,11 @@ final class SocialViewModel {
     }
 
     @discardableResult
-    func createProfile(handle: String, displayName: String) async -> Bool {
+    func createProfile(
+        handle: String,
+        displayName: String,
+        refreshAfterCreate: Bool = true
+    ) async -> Bool {
         let normalizedHandle = Self.normalizedHandle(handle)
         guard !normalizedHandle.isEmpty else {
             statusMessage = "Handle is required. Display Name is optional."
@@ -10256,8 +10286,18 @@ final class SocialViewModel {
             )
             currentUser = user
             statusMessage = "Profile created."
-            await refreshSocialData()
-            await drainQueuedActions()
+            if refreshAfterCreate {
+                await refreshSocialData()
+                await drainQueuedActions()
+            } else {
+                friendsLoadState = .ready
+                Task(priority: .utility) { [weak self] in
+                    await self?.refreshSocialData()
+                }
+                Task(priority: .utility) { [weak self] in
+                    await self?.drainQueuedActions()
+                }
+            }
             return true
         } catch {
             let resolved = message(for: error)
@@ -10275,8 +10315,13 @@ final class SocialViewModel {
         do {
             currentUser = try await cloudStore.fetchCurrentUserIfStored()
             if currentUser != nil {
-                await refreshSocialData()
-                await drainQueuedActions()
+                friendsLoadState = .ready
+                Task {
+                    await refreshSocialData()
+                }
+                Task {
+                    await drainQueuedActions()
+                }
             } else {
                 resetLoadedCollections()
                 friendsLoadState = .needsProfileSetup
@@ -10305,6 +10350,8 @@ final class SocialViewModel {
         collabConflictMessage = nil
         latestSearchResult = nil
         latestSearchHandle = ""
+        lastSocialRefreshAt = nil
+        lastLeaderboardRefreshAt = nil
     }
 
     func refreshSocialData() async {
@@ -10314,6 +10361,9 @@ final class SocialViewModel {
         }
         guard currentUser != nil else {
             friendsLoadState = .needsProfileSetup
+            return
+        }
+        guard !isRefreshingSocialData else {
             return
         }
 
@@ -10326,23 +10376,26 @@ final class SocialViewModel {
             async let outgoing = cloudStore.fetchOutgoingFriendRequests()
             async let friendsResult = cloudStore.fetchFriends()
             async let blocked = cloudStore.fetchBlockedUsers()
-
-            incomingRequests = try await incoming
-            outgoingRequests = try await outgoing
-            friends = try await friendsResult
-            blockedUsers = try await blocked
-            feedPosts = try await loadOptionalSocialValue(fallback: []) {
+            async let feedResult = loadOptionalSocialValue(fallback: []) {
                 try await cloudStore.fetchFriendsFeed()
             }
-            collabDocs = try await loadOptionalSocialValue(fallback: []) {
+            async let collabResult = loadOptionalSocialValue(fallback: []) {
                 try await cloudStore.fetchMyCollabDocs()
             }
-            leaderboard = try await loadOptionalSocialValue(fallback: []) {
+            async let leaderboardResult = loadOptionalSocialValue(fallback: []) {
                 try await cloudStore.fetchLeaderboard(
                     seasonId: leaderboardSeasonID,
                     limit: 20
                 )
             }
+
+            incomingRequests = try await incoming
+            outgoingRequests = try await outgoing
+            friends = try await friendsResult
+            blockedUsers = try await blocked
+            feedPosts = try await feedResult
+            collabDocs = try await collabResult
+            leaderboard = try await leaderboardResult
             lastSocialRefreshAt = Date()
             // Clear any transient lastError from optional fetches — the core load succeeded.
             availability = availability.withLastError(nil)
@@ -10494,12 +10547,23 @@ final class SocialViewModel {
         }
     }
 
-    func refreshLeaderboard() async {
+    func refreshLeaderboard(force: Bool = false) async {
+        guard !isRefreshingLeaderboard else {
+            return
+        }
+        if !force, let lastLeaderboardRefreshAt,
+            Date().timeIntervalSince(lastLeaderboardRefreshAt) < 45
+        {
+            return
+        }
+        isRefreshingLeaderboard = true
+        defer { isRefreshingLeaderboard = false }
         do {
             leaderboard = try await cloudStore.fetchLeaderboard(
                 seasonId: leaderboardSeasonID,
                 limit: 20
             )
+            lastLeaderboardRefreshAt = Date()
         } catch {
             handleSocialActionError(error)
         }

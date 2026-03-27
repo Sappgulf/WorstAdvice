@@ -452,10 +452,20 @@ struct SettingsTabView: View {
                 sectionsAppeared = false
                 gearWobble = false
                 tabBarVisible.wrappedValue = true
-                viewModel.refreshAppleOnDeviceModelAvailability()
-                Task {
+                Task(priority: .utility) {
+                    viewModel.refreshAppleOnDeviceModelAvailability()
+                }
+                Task(priority: .background) {
+                    await social.loadBackendDisplayNameIfNeeded()
+                }
+                Task(priority: .utility) {
+                    quotesViewModel.loadIfNeeded()
+                }
+                Task(priority: .background) {
                     await social.refreshAvailability()
-                    await social.refreshSocialData()
+                }
+                Task(priority: .background) {
+                    await loadNotificationPermissionStatus()
                 }
                 // A tiny async hop lets SwiftUI finish layout before animating in
                 Task { @MainActor in
@@ -915,10 +925,6 @@ struct SettingsTabView: View {
             }
             .tint(accent)
         }
-        .task {
-            let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
-            notificationPermissionGranted = status == .authorized || status == .provisional || status == .ephemeral
-        }
     }
 
     private var notificationSection: some View {
@@ -976,10 +982,6 @@ struct SettingsTabView: View {
                 .disabled(notificationPermissionGranted == false || !viewModel.dailyNotificationsEnabled)
             }
             .tint(accent)
-        }
-        .task {
-            let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
-            notificationPermissionGranted = status == .authorized || status == .provisional || status == .ephemeral
         }
     }
 
@@ -1720,6 +1722,12 @@ struct SettingsTabView: View {
         }
     }
 
+    private func loadNotificationPermissionStatus() async {
+        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        notificationPermissionGranted =
+            status == .authorized || status == .provisional || status == .ephemeral
+    }
+
     // MARK: - Reusable rows
 
     @ViewBuilder
@@ -1892,9 +1900,8 @@ private struct SocialHealthDiagnosticsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
         .onAppear {
-            Task {
+            Task(priority: .background) {
                 await social.refreshAvailability()
-                await social.refreshSocialData()
             }
         }
     }

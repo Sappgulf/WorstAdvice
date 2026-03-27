@@ -43,6 +43,7 @@ enum NotificationManager {
     }
 
     static func scheduleDaily(hour: Int = 9, streakEnabled: Bool = true) {
+        guard !isRunningOnSimulator else { return }
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
 

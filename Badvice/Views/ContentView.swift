@@ -31,8 +31,15 @@ private struct ScrollTrackingModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @State private var dragIntent: Bool?
 
+    private var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing")
+    }
+
     func body(content: Content) -> some View {
-        content
+        if isUITesting {
+            content
+        } else {
+            content
             .simultaneousGesture(
                 DragGesture(minimumDistance: 6, coordinateSpace: .local)
                     .onChanged { value in
@@ -62,6 +69,7 @@ private struct ScrollTrackingModifier: ViewModifier {
                         dragIntent = nil
                     }
             )
+        }
     }
 }
 
@@ -112,6 +120,7 @@ struct ContentView: View {
     @State private var shouldRestartOnNextActive = false
     @State private var deviceCapability = DeviceCapabilityProfile.current()
     @State private var hasScheduledDebugPolishFixturePreload = false
+    @State private var loadedTabs: Set<AppTab> = [.generate]
 
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("favoritesCountAtLastReview") private var favoritesCountAtLastReview = 0
@@ -366,6 +375,7 @@ struct ContentView: View {
 
     private func resetSessionPresentationState() {
         selectedTab = .generate
+        loadedTabs = [.generate]
         tabBarVisible = true
         showConfetti = false
         lastShakeHandledAt = .distantPast
@@ -464,19 +474,24 @@ struct ContentView: View {
 
             TabView(selection: $selectedTab) {
                 ForEach(session.settings.tabOrder) { tab in
-                    tabView(for: tab, session: session)
+                    lazyTabContent(for: tab, session: session)
                         .tag(tab)
+                        .tabItem {
+                            Label(tab.title, systemImage: tab.systemImage)
+                        }
                         .toolbar(.hidden, for: .tabBar)  // Hide standard bar
                         .environment(\.tabBarVisible, $tabBarVisible)
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
             // Extend only the bottom edge so the custom tab bar overlaps the home indicator
             // region without pushing content under the Dynamic Island / status bar.
             .ignoresSafeArea(.all, edges: .bottom)
             // Performance: Disable animation if reduce motion is enabled
             .animation(
                 constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
+            .onChange(of: selectedTab) { _, newTab in
+                loadedTabs.insert(newTab)
+            }
 
             // Custom Floating Tab Bar — supports tap and instant press-slide
             GeometryReader { proxy in
@@ -494,82 +509,7 @@ struct ContentView: View {
                             let isHighlighted = tabDragHighlight == tab
                             let badgeCount = tab == .friends ? friendsBadgeCount : (tab == .chaosHub ? chaosBadgeCount : 0)
                             let tabAccessibilityID = "tab.\(tab.rawValue)"
-                            VStack(spacing: 3) {
-                                ZStack(alignment: .topTrailing) {
-                                    Image(systemName: tab.systemImage)
-                                        .font(
-                                            .system(
-                                                size: 20,
-                                                weight: isSelected ? .semibold : .medium)
-                                        )
-                                        .symbolVariant(isSelected ? .fill : .none)
-                                        .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
-                                    if badgeCount > 0 {
-                                        Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
-                                            .font(.system(size: 9, weight: .bold, design: .rounded))
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 5)
-                                            .padding(.vertical, 2)
-                                            .background(Capsule(style: .continuous).fill(.red))
-                                            .offset(x: 10, y: -7)
-                                            .accessibilityIdentifier("tab.friends.badge")
-                                    }
-                                }
-                                Text(tab.compactTitle)
-                                    .font(
-                                        .system(
-                                            size: 9,
-                                            weight: isSelected ? .semibold : .regular))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.75)
-                                Capsule(style: .continuous)
-                                    .fill(accent.opacity(isSelected ? 0.9 : 0))
-                                    .frame(width: isSelected ? 18 : 8, height: 3)
-                                    .opacity(isSelected ? 1 : 0.01)
-                            }
-                            .foregroundStyle(
-                                isSelected
-                                    ? accent
-                                    : (isHighlighted
-                                        ? accent.opacity(0.58)
-                                        : secondaryText.opacity(0.74))
-                            )
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: Theme.minimumTapTarget)
-                            .padding(.top, 6)
-                            .padding(.bottom, 4)
-                            .offset(y: isSelected ? -1.5 : 0)
-                            .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
-                            .background {
-                                if isSelected || isHighlighted {
-                                    Capsule(style: .continuous)
-                                        .fill(
-                                            accent.opacity(
-                                                isSelected
-                                                    ? tabBarStyle.selectedFillOpacity
-                                                    : tabBarStyle.highlightedFillOpacity)
-                                        )
-                                        .padding(
-                                            .horizontal,
-                                            max(4, tabBarStyle.indicatorInset + 3)
-                                        )
-                                        .padding(.vertical, 1)
-                                }
-                            }
-                            .overlay {
-                                if isSelected, let glow = tabBarStyle.glow {
-                                    Capsule(style: .continuous)
-                                        .stroke(glow.opacity(0.35), lineWidth: 1)
-                                        .padding(
-                                            .horizontal,
-                                            max(5, tabBarStyle.indicatorInset + 4)
-                                        )
-                                        .padding(.vertical, 2)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                            .accessibilityAddTraits(.isButton)
-                            .onTapGesture {
+                            Button {
                                 guard selectedTab != tab else { return }
                                 HapticsManager.playSelection(
                                     isEnabled: session.settings.hapticsEnabled)
@@ -582,22 +522,83 @@ struct ContentView: View {
                                         selectedTab = tab
                                     }
                                 }
-                            }
-                            .accessibilityAction {
-                                if selectedTab != tab {
-                                    HapticsManager.playSelection(
-                                        isEnabled: session.settings.hapticsEnabled)
-                                    if constrainedMotion {
-                                        selectedTab = tab
-                                    } else {
-                                        withAnimation(
-                                            .spring(response: 0.3, dampingFraction: 0.7)
-                                        ) {
-                                            selectedTab = tab
+                            } label: {
+                                VStack(spacing: 3) {
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(systemName: tab.systemImage)
+                                            .font(
+                                                .system(
+                                                    size: 20,
+                                                    weight: isSelected ? .semibold : .medium)
+                                            )
+                                            .symbolVariant(isSelected ? .fill : .none)
+                                            .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
+                                        if badgeCount > 0 {
+                                            let badgeAccessibilityID = "tab.\(tab.rawValue).badge"
+                                            Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
+                                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                                .foregroundStyle(.white)
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 2)
+                                                .background(Capsule(style: .continuous).fill(.red))
+                                                .offset(x: 10, y: -7)
+                                                .accessibilityIdentifier(badgeAccessibilityID)
                                         }
+                                    }
+                                    Text(tab.compactTitle)
+                                        .font(
+                                            .system(
+                                                size: 9,
+                                                weight: isSelected ? .semibold : .regular))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.75)
+                                    Capsule(style: .continuous)
+                                        .fill(accent.opacity(isSelected ? 0.9 : 0))
+                                        .frame(width: isSelected ? 18 : 8, height: 3)
+                                        .opacity(isSelected ? 1 : 0.01)
+                                }
+                                .foregroundStyle(
+                                    isSelected
+                                        ? accent
+                                        : (isHighlighted
+                                            ? accent.opacity(0.58)
+                                            : secondaryText.opacity(0.74))
+                                )
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: Theme.minimumTapTarget)
+                                .padding(.top, 6)
+                                .padding(.bottom, 4)
+                                .offset(y: isSelected ? -1.5 : 0)
+                                .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
+                                .background {
+                                    if isSelected || isHighlighted {
+                                        Capsule(style: .continuous)
+                                            .fill(
+                                                accent.opacity(
+                                                    isSelected
+                                                        ? tabBarStyle.selectedFillOpacity
+                                                        : tabBarStyle.highlightedFillOpacity)
+                                            )
+                                            .padding(
+                                                .horizontal,
+                                                max(4, tabBarStyle.indicatorInset + 3)
+                                            )
+                                            .padding(.vertical, 1)
+                                    }
+                                }
+                                .overlay {
+                                    if isSelected, let glow = tabBarStyle.glow {
+                                        Capsule(style: .continuous)
+                                            .stroke(glow.opacity(0.35), lineWidth: 1)
+                                            .padding(
+                                                .horizontal,
+                                                max(5, tabBarStyle.indicatorInset + 4)
+                                            )
+                                            .padding(.vertical, 2)
                                     }
                                 }
                             }
+                            .buttonStyle(.plain)
                             .accessibilityLabel(tab.title)
                             .accessibilityIdentifier(tabAccessibilityID)
                             .accessibilityValue(
@@ -1036,6 +1037,10 @@ struct ContentView: View {
     }
 
     private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
+        loadedTabs.insert(tab)
+        #if DEBUG
+            NSLog("Selected tab -> %@", tab.rawValue)
+        #endif
         let reduceMotion =
             session.settings.reduceMotion || accessibilityReduceMotion || lowPowerModeEnabled
         if reduceMotion {
@@ -1049,12 +1054,26 @@ struct ContentView: View {
 
     private func primaryTabs(for session: AppSessionViewModel) -> [AppTab] {
         let overflow = Set(brandMenuTabs(for: session))
-        return AppTab.primaryNavigationTabs.filter { !overflow.contains($0) }
+        var tabs = AppTab.primaryNavigationTabs.filter { !overflow.contains($0) }
+        if session.settings.tabOrder.contains(.settings), !tabs.contains(.settings) {
+            tabs.append(.settings)
+        }
+        return tabs
     }
 
     private func brandMenuTabs(for session: AppSessionViewModel) -> [AppTab] {
         let availableTabs = Set(session.settings.tabOrder)
         return AppTab.brandMenuTabs.filter { availableTabs.contains($0) }
+    }
+
+    @ViewBuilder
+    private func lazyTabContent(for tab: AppTab, session: AppSessionViewModel) -> some View {
+        if loadedTabs.contains(tab) || selectedTab == tab {
+            tabView(for: tab, session: session)
+        } else {
+            Color.clear
+                .accessibilityHidden(true)
+        }
     }
 
     private func resetAllLocalAccounts(

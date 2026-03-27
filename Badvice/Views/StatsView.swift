@@ -213,7 +213,9 @@ struct FavoritesTabView: View {
             .toolbarBackground(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
-                viewModel.reload()
+                Task(priority: .utility) {
+                    viewModel.loadIfNeeded()
+                }
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 tabBarVisible.wrappedValue = true
                 animateListContentIfNeeded()
@@ -960,7 +962,12 @@ struct QuotesTabView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
-            .onAppear { tabBarVisible.wrappedValue = true }
+            .onAppear {
+                Task(priority: .utility) {
+                    viewModel.loadIfNeeded()
+                }
+                tabBarVisible.wrappedValue = true
+            }
             .onChange(of: viewModel.rankingMode) { _, _ in
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             }
@@ -1429,74 +1436,83 @@ struct FriendsTabView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                bg.ignoresSafeArea()
+        ZStack {
+            bg.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 12) {
-                        friendsStateBanner
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    friendsHeader
+                    friendsStateBanner
 
-                        sectionPicker
-                        switch selectedSection {
-                        case .friends:
-                            friendsSection
-                        case .feed:
-                            feedSection
-                        case .collab:
-                            collabSection
-                        }
+                    sectionPicker
+                    switch selectedSection {
+                    case .friends:
+                        friendsSection
+                    case .feed:
+                        feedSection
+                    case .collab:
+                        collabSection
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 10)
-                    .padding(.bottom, 120)
                 }
-                .scrollDismissesKeyboard(.interactively)
-                .trackScrollForTabBar()
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 120)
             }
-            .navigationTitle("Friends")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .preferredColorScheme(Theme.colorScheme(for: settings.theme))
-            .onAppear {
-                tabBarVisible.wrappedValue = true
-                // Only reload if we haven't successfully loaded yet or are in a failed state.
-                // Avoids flashing the "Checking CloudKit" banner on every tab visit.
-                switch social.friendsLoadState {
-                case .idle, .failed:
-                    Task { await social.retryFriendsLoad() }
-                default:
-                    break
-                }
-            }
-            .onChange(of: social.statusMessage) { _, message in
-                guard let message, !message.isEmpty else { return }
-                activeToast = ToastMessage(
-                    message: message,
-                    style: message.lowercased().contains("error")
-                        || message.lowercased().contains("failed")
-                        || message.lowercased().contains("cannot")
-                        ? .error : .success
-                )
-            }
-            .onChange(of: social.pendingCollabDraft?.id) { _, newID in
-                guard newID != nil, let draft = social.pendingCollabDraft else { return }
-                collabComposerType = draft.type
-                collabComposerText = draft.content
-                selectedSection = .collab
-                showCollabComposer = true
-            }
-            .sheet(isPresented: $showCollabComposer) {
-                collabComposerSheet
-            }
-            .sheet(isPresented: $showCollabEditor) {
-                collabEditorSheet
-            }
-            .sheet(isPresented: $showProfileSetup) {
-                SocialProfileSetupView(social: social)
-            }
+            .scrollDismissesKeyboard(.interactively)
+            .trackScrollForTabBar()
+        }
+        .accessibilityIdentifier("friends.root")
+        .accessibilityElement(children: .contain)
+        .preferredColorScheme(Theme.colorScheme(for: settings.theme))
+        .onAppear {
+            tabBarVisible.wrappedValue = true
+            #if DEBUG
+                NSLog("FriendsTabView appeared")
+            #endif
+        }
+        .onChange(of: social.statusMessage) { _, message in
+            guard let message, !message.isEmpty else { return }
+            activeToast = ToastMessage(
+                message: message,
+                style: message.lowercased().contains("error")
+                    || message.lowercased().contains("failed")
+                    || message.lowercased().contains("cannot")
+                    ? .error : .success
+            )
+        }
+        .onChange(of: social.pendingCollabDraft?.id) { _, newID in
+            guard newID != nil, let draft = social.pendingCollabDraft else { return }
+            collabComposerType = draft.type
+            collabComposerText = draft.content
+            selectedSection = .collab
+            showCollabComposer = true
+        }
+        .sheet(isPresented: $showCollabComposer) {
+            collabComposerSheet
+        }
+        .sheet(isPresented: $showCollabEditor) {
+            collabEditorSheet
+        }
+        .sheet(isPresented: $showProfileSetup) {
+            SocialProfileSetupView(social: social)
         }
         .toast(item: $activeToast, accentColor: accent)
+    }
+
+    @ViewBuilder
+    private var friendsHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Friends")
+                .font(.largeTitle.weight(.bold))
+                .foregroundStyle(primaryText)
+                .accessibilityIdentifier("friends.title")
+
+            Text("Manage requests, feed posts, and collab drafts from one place.")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 2)
     }
 
     @ViewBuilder
@@ -1594,13 +1610,54 @@ struct FriendsTabView: View {
     }
 
     private var sectionPicker: some View {
-        Picker("Section", selection: $selectedSection) {
+        HStack(spacing: 6) {
             ForEach(FriendsSection.allCases) { section in
-                Text(section.rawValue).tag(section)
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        selectedSection = section
+                    }
+                } label: {
+                    VStack(spacing: 3) {
+                        Text(section.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .foregroundStyle(selectedSection == section ? buttonText : secondaryText)
+                    .frame(maxWidth: .infinity)
+                    .background {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(selectedSection == section ? accent : cardColor.opacity(0.55))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(
+                                selectedSection == section
+                                    ? accent.opacity(0.55)
+                                    : .white.opacity(0.08),
+                                lineWidth: 1
+                            )
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("friends.section.\(section.rawValue.lowercased())")
+                .accessibilityLabel(section.rawValue)
+                .accessibilityAddTraits(selectedSection == section ? .isSelected : [])
             }
         }
-        .pickerStyle(.segmented)
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.white.opacity(0.08), lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("friends.sectionPicker")
+        .accessibilityLabel("Friends sections")
+        .accessibilityValue(selectedSection.rawValue)
     }
 
     private var friendsSection: some View {
@@ -2661,7 +2718,9 @@ struct HistoryTabView: View {
                 Text("This will permanently delete all history items.")
             }
             .onAppear {
-                viewModel.reload()
+                Task(priority: .utility) {
+                    viewModel.loadIfNeeded()
+                }
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 tabBarVisible.wrappedValue = true
                 animateHistoryListIfNeeded()

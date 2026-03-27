@@ -67,10 +67,23 @@ final class BadviceUITests: XCTestCase {
         let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
         XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
         friendsTab.tap()
+        let friendsTabValue = friendsTab.value as? String ?? ""
         XCTAssertTrue(
-            app.segmentedControls["friends.sectionPicker"].waitForExistence(timeout: 5)
-                || app.staticTexts["Friends"].waitForExistence(timeout: 5)
+            friendsTabValue.localizedCaseInsensitiveContains("selected"),
+            "Friends tab should become selected after tap. value=\(friendsTabValue)"
         )
+        let friendsRoot = app.otherElements["friends.root"]
+        let friendsPicker = app.otherElements["friends.sectionPicker"]
+        let friendsButton = app.buttons["friends.section.friends"]
+        let friendsTitle = app.staticTexts["Friends"]
+        let friendsVisible = friendsRoot.waitForExistence(timeout: 5)
+            || friendsPicker.waitForExistence(timeout: 5)
+            || friendsButton.waitForExistence(timeout: 5)
+            || friendsTitle.waitForExistence(timeout: 5)
+        if !friendsVisible {
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(friendsVisible)
 
         let quotesTab = app.buttons.matching(identifier: "tab.quotes").firstMatch
         XCTAssertTrue(quotesTab.waitForExistence(timeout: 5))
@@ -184,16 +197,16 @@ final class BadviceUITests: XCTestCase {
                 || retryLoadButton.waitForExistence(timeout: 2)
         )
 
-        let sectionPicker = app.segmentedControls["friends.sectionPicker"]
+        let sectionPicker = app.otherElements["friends.sectionPicker"]
         XCTAssertTrue(sectionPicker.waitForExistence(timeout: 3))
 
-        let feedSegment = app.buttons["Feed"]
+        let feedSegment = app.buttons["friends.section.feed"]
         if feedSegment.exists { feedSegment.tap() }
         let feedRefresh = app.buttons["friends.feedRefresh"]
         XCTAssertTrue(feedRefresh.waitForExistence(timeout: 3))
         XCTAssertFalse(feedRefresh.isEnabled)
 
-        let collabSegment = app.buttons["Collab"]
+        let collabSegment = app.buttons["friends.section.collab"]
         if collabSegment.exists { collabSegment.tap() }
         let newDoc = app.buttons["friends.newCollabDoc"]
         XCTAssertTrue(newDoc.waitForExistence(timeout: 3))
@@ -209,15 +222,15 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
         friendsTab.tap()
 
-        let sectionPicker = app.segmentedControls["friends.sectionPicker"]
+        let sectionPicker = app.otherElements["friends.sectionPicker"]
         XCTAssertTrue(sectionPicker.waitForExistence(timeout: 5))
 
         let searchField = app.textFields["friends.searchField"]
         XCTAssertTrue(searchField.waitForExistence(timeout: 3))
-        sectionPicker.buttons["Feed"].tap()
+        app.buttons["friends.section.feed"].tap()
         XCTAssertTrue(app.buttons["friends.feedRefresh"].waitForExistence(timeout: 3))
 
-        sectionPicker.buttons["Collab"].tap()
+        app.buttons["friends.section.collab"].tap()
         XCTAssertTrue(app.buttons["friends.newCollabDoc"].waitForExistence(timeout: 3))
     }
 

@@ -330,7 +330,8 @@ struct SocialProfileSetupView: View {
                         Task {
                             let created = await social.createProfile(
                                 handle: handleSanitized,
-                                displayName: displayName
+                                displayName: displayName,
+                                refreshAfterCreate: false
                             )
                             if created {
                                 dismiss()

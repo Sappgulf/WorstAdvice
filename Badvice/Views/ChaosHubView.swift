@@ -118,7 +118,7 @@ struct ChaosHubTabView: View {
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .refreshable {
                 if social.currentUser != nil {
-                    await social.refreshLeaderboard()
+                    await social.refreshLeaderboard(force: true)
                 }
             }
             .onAppear {
@@ -137,11 +137,6 @@ struct ChaosHubTabView: View {
                 } else {
                     withAnimation(.spring(response: Theme.animSlow, dampingFraction: 0.82)) {
                         contentAppeared = true
-                    }
-                }
-                Task {
-                    if social.currentUser != nil {
-                        await social.refreshLeaderboard()
                     }
                 }
             }
@@ -503,7 +498,7 @@ struct ChaosHubTabView: View {
                     .accessibilityIdentifier("chaos.social.submitScore")
 
                     Button {
-                        Task { await social.refreshLeaderboard() }
+                        Task { await social.refreshLeaderboard(force: true) }
                     } label: {
                         Label("Refresh", systemImage: "arrow.clockwise")
                             .font(.caption.weight(.semibold))

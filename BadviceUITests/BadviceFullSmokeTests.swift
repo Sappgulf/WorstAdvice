@@ -113,24 +113,25 @@ final class BadviceFullSmokeTests: XCTestCase {
             friendsTab.tap()
 
             // Verify section picker loads
-            let sectionPicker = app.segmentedControls["friends.sectionPicker"]
+            let sectionPicker = app.otherElements["friends.sectionPicker"]
             let friendsTitle = app.staticTexts["Friends"]
             XCTAssertTrue(
                 sectionPicker.waitForExistence(timeout: 5)
+                    || app.buttons["friends.section.friends"].waitForExistence(timeout: 5)
                     || friendsTitle.waitForExistence(timeout: 5),
                 "Friends tab should load"
             )
 
-            if sectionPicker.exists {
+            if sectionPicker.exists || app.buttons["friends.section.friends"].exists {
                 // Tap through each section
-                let feedSegment = sectionPicker.buttons["Feed"]
+                let feedSegment = app.buttons["friends.section.feed"]
                 if feedSegment.exists {
                     feedSegment.tap()
                     let feedRefresh = app.buttons["friends.feedRefresh"]
                     _ = feedRefresh.waitForExistence(timeout: 3)
                 }
 
-                let collabSegment = sectionPicker.buttons["Collab"]
+                let collabSegment = app.buttons["friends.section.collab"]
                 if collabSegment.exists {
                     collabSegment.tap()
                     let newDoc = app.buttons["friends.newCollabDoc"]
@@ -138,7 +139,7 @@ final class BadviceFullSmokeTests: XCTestCase {
                 }
 
                 // Go back to Friends list
-                let friendsSegment = sectionPicker.buttons["Friends"]
+                let friendsSegment = app.buttons["friends.section.friends"]
                 if friendsSegment.exists {
                     friendsSegment.tap()
                 }
@@ -251,7 +252,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
         friendsTab.tap()
 
-        let sectionPicker = app.segmentedControls["friends.sectionPicker"]
+        let sectionPicker = app.otherElements["friends.sectionPicker"]
         XCTAssertTrue(sectionPicker.waitForExistence(timeout: 5), "Friends section picker should load")
 
         // Search for users
@@ -268,7 +269,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         }
 
         // Check Feed section
-        let feedSegment = sectionPicker.buttons["Feed"]
+        let feedSegment = app.buttons["friends.section.feed"]
         if feedSegment.exists {
             feedSegment.tap()
             let feedRefresh = app.buttons["friends.feedRefresh"]
@@ -276,7 +277,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         }
 
         // Check Collab section
-        let collabSegment = sectionPicker.buttons["Collab"]
+        let collabSegment = app.buttons["friends.section.collab"]
         if collabSegment.exists {
             collabSegment.tap()
             let newDoc = app.buttons["friends.newCollabDoc"]
