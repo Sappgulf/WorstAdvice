@@ -1,7 +1,9 @@
 import SwiftUI
+import UIKit
 
 struct LocalAuthGateView: View {
     @Bindable var auth: AuthViewModel
+    let isUITesting: Bool
     @Binding var authMode: LocalAuthMode
     @Binding var authEmailDraft: String
     @Binding var authPasswordDraft: String
@@ -57,6 +59,27 @@ struct LocalAuthGateView: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier(mode == .signIn ? "auth.mode.signIn" : "auth.mode.signUp")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func passwordField(
+        title: String,
+        text: Binding<String>,
+        identifier: String,
+        contentType: UITextContentType
+    ) -> some View {
+        if isUITesting {
+            TextField(title, text: text)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.default)
+                .textContentType(contentType)
+                .autocorrectionDisabled()
+                .accessibilityIdentifier(identifier)
+        } else {
+            SecureField(title, text: text)
+                .textContentType(contentType)
+                .accessibilityIdentifier(identifier)
+        }
     }
 
     var body: some View {
@@ -129,17 +152,20 @@ struct LocalAuthGateView: View {
                                 .autocorrectionDisabled()
                                 .accessibilityIdentifier("auth.email")
 
-                            SecureField(
-                                authMode == .signUp ? "Create password" : "Password",
-                                text: $authPasswordDraft
+                            passwordField(
+                                title: authMode == .signUp ? "Create password" : "Password",
+                                text: $authPasswordDraft,
+                                identifier: "auth.password",
+                                contentType: authMode == .signUp ? .newPassword : .password
                             )
-                            .textContentType(authMode == .signUp ? .newPassword : .password)
-                            .accessibilityIdentifier("auth.password")
 
                             if authMode == .signUp {
-                                SecureField("Confirm password", text: $authConfirmPasswordDraft)
-                                    .textContentType(.newPassword)
-                                    .accessibilityIdentifier("auth.confirmPassword")
+                                passwordField(
+                                    title: "Confirm password",
+                                    text: $authConfirmPasswordDraft,
+                                    identifier: "auth.confirmPassword",
+                                    contentType: .newPassword
+                                )
                             }
                         }
                         .textFieldStyle(.roundedBorder)

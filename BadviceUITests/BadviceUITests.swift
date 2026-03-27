@@ -557,32 +557,22 @@ final class BadviceUITests: XCTestCase {
         }
         emailField.typeText(email)
 
-        let passwordField = app.secureTextFields["auth.password"]
+        let passwordField = app.textFields["auth.password"]
         XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
         passwordField.tap()
-        if let existing = passwordField.value as? String,
-            !existing.isEmpty,
-            existing != "Password",
-            existing != "Create password"
-        {
-            passwordField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
-        }
         passwordField.typeText(password)
 
-        let confirmField = app.secureTextFields["auth.confirmPassword"]
+        let confirmField = app.textFields["auth.confirmPassword"]
         XCTAssertTrue(confirmField.waitForExistence(timeout: 3))
         confirmField.tap()
-        if let existing = confirmField.value as? String,
-            !existing.isEmpty,
-            existing != "Confirm password"
-        {
-            confirmField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
-        }
         confirmField.typeText(password)
 
         let primaryButton = app.buttons["auth.primary"]
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
-        XCTAssertTrue(waitForElementToBecomeEnabled(primaryButton, timeout: 3))
+        XCTAssertTrue(
+            waitForElementToBecomeEnabled(primaryButton, timeout: 3),
+            "auth.mode.signUp selected=\(signUpModeButton.isSelected) displayName=\(displayNameField.value ?? "nil") email=\(emailField.value ?? "nil") password=\(passwordField.value ?? "nil") confirm=\(confirmField.value ?? "nil") primaryEnabled=\(primaryButton.isEnabled)"
+        )
         primaryButton.tap()
 
         XCTAssertTrue(waitForAuthenticatedShell(app: app))
@@ -603,10 +593,9 @@ final class BadviceUITests: XCTestCase {
         }
         emailField.typeText(email)
 
-        let passwordField = app.secureTextFields["auth.password"]
+        let passwordField = app.textFields["auth.password"]
         XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
         passwordField.tap()
-        passwordField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 64))
         passwordField.typeText(password)
 
         let primaryButton = app.buttons["auth.primary"]
@@ -628,4 +617,5 @@ final class BadviceUITests: XCTestCase {
         }
         return element.isEnabled
     }
+
 }

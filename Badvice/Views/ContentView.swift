@@ -416,6 +416,7 @@ struct ContentView: View {
     private func authGateView(auth: AuthViewModel) -> some View {
         LocalAuthGateView(
             auth: auth,
+            isUITesting: isUITesting,
             authMode: $authMode,
             authEmailDraft: $authEmailDraft,
             authPasswordDraft: $authPasswordDraft,
