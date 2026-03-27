@@ -474,17 +474,22 @@ final class BadviceUITests: XCTestCase {
         if settingsQuickAccess.waitForExistence(timeout: 5) {
             settingsQuickAccess.tap()
         } else {
-            let settingsCell = app.cells.containing(.staticText, identifier: "Settings").firstMatch
-            if settingsCell.waitForExistence(timeout: 2) {
-                settingsCell.tap()
+            let settingsMenuButton = app.buttons["settings.menuButton"]
+            if settingsMenuButton.waitForExistence(timeout: 5) {
+                settingsMenuButton.tap()
             } else {
-                let settingsText = app.staticTexts["Settings"].firstMatch
-                if settingsText.waitForExistence(timeout: 2) {
-                    settingsText.tap()
+                let settingsCell = app.cells.containing(.staticText, identifier: "Settings").firstMatch
+                if settingsCell.waitForExistence(timeout: 2) {
+                    settingsCell.tap()
                 } else {
-                    let fallbackSettings = app.buttons["Settings"].firstMatch
-                    guard fallbackSettings.waitForExistence(timeout: 5) else { return false }
-                    fallbackSettings.tap()
+                    let settingsText = app.staticTexts["Settings"].firstMatch
+                    if settingsText.waitForExistence(timeout: 2) {
+                        settingsText.tap()
+                    } else {
+                        let fallbackSettings = app.buttons["Settings"].firstMatch
+                        guard fallbackSettings.waitForExistence(timeout: 5) else { return false }
+                        fallbackSettings.tap()
+                    }
                 }
             }
         }

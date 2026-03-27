@@ -610,6 +610,11 @@ final class BadviceFullSmokeTests: XCTestCase {
         let settingsQuickAccess = app.buttons["brandMenu.quickAccess.settings"]
         if settingsQuickAccess.waitForExistence(timeout: 5) {
             settingsQuickAccess.tap()
+        } else {
+            let settingsMenuButton = app.buttons["settings.menuButton"]
+            if settingsMenuButton.waitForExistence(timeout: 5) {
+                settingsMenuButton.tap()
+            }
         }
         return app.navigationBars.firstMatch.waitForExistence(timeout: 5)
     }

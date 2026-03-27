@@ -336,6 +336,7 @@ struct SettingsTabView: View {
                         .contentShape(Circle())
                         .accessibilityLabel("Settings")
                         .accessibilityHint("Double-tap to spin")
+                        .accessibilityIdentifier("settings.menuButton")
 
                         Text("Personalize the Chaos")
                             .font(.system(.title2, design: .rounded, weight: .bold))
