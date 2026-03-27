@@ -128,6 +128,7 @@ struct ContentView: View {
 
     private var launchArguments: [String] { ProcessInfo.processInfo.arguments }
     private var isUITesting: Bool { launchArguments.contains("-ui-testing") }
+    private var settingsTabAvailable: Bool { auth?.isAuthenticated == true && session != nil }
 
     var body: some View {
         appRootView
@@ -891,7 +892,7 @@ struct ContentView: View {
                 }
             )
         case .settings:
-            if let auth {
+            if let auth, auth.isAuthenticated {
                 SettingsTabView(
                     viewModel: session.settings,
                     generateViewModel: session.generate,
@@ -906,6 +907,10 @@ struct ContentView: View {
                         await deleteCurrentAccount(auth, password: password)
                     }
                 )
+            } else {
+                SettingsUnavailableView {
+                    selectedTab = .generate
+                }
             }
         case .explore:
             ExploreTabView(
@@ -1024,6 +1029,10 @@ struct ContentView: View {
     }
 
     private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
+        guard tab != .settings || settingsTabAvailable else {
+            selectedTab = .generate
+            return
+        }
         loadedTabs.insert(tab)
         #if DEBUG
             NSLog("Selected tab -> %@", tab.rawValue)
@@ -1042,7 +1051,7 @@ struct ContentView: View {
     private func primaryTabs(for session: AppSessionViewModel) -> [AppTab] {
         let overflow = Set(brandMenuTabs(for: session))
         var tabs = AppTab.primaryNavigationTabs.filter { !overflow.contains($0) }
-        if session.settings.tabOrder.contains(.settings), !tabs.contains(.settings) {
+        if settingsTabAvailable, session.settings.tabOrder.contains(.settings), !tabs.contains(.settings) {
             tabs.append(.settings)
         }
         return tabs
@@ -1050,7 +1059,9 @@ struct ContentView: View {
 
     private func brandMenuTabs(for session: AppSessionViewModel) -> [AppTab] {
         let availableTabs = Set(session.settings.tabOrder)
-        return AppTab.brandMenuTabs.filter { availableTabs.contains($0) }
+        return AppTab.brandMenuTabs.filter {
+            availableTabs.contains($0) && ($0 != .settings || settingsTabAvailable)
+        }
     }
 
     @ViewBuilder
@@ -1109,6 +1120,34 @@ struct ContentView: View {
             )
         }
     #endif
+}
+
+private struct SettingsUnavailableView: View {
+    let onGoBack: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "gearshape.2")
+                .font(.system(size: 40, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 6) {
+                Text("Settings is temporarily unavailable")
+                    .font(.title3.bold())
+                    .multilineTextAlignment(.center)
+
+                Text("Return to Advice and sign in again to continue.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button("Back to Advice", action: onGoBack)
+                .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+    }
 }
 
 #Preview {

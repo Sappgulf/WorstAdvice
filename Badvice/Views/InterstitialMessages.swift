@@ -802,6 +802,9 @@ struct SettingsTabView: View {
             ) {
                 ForEach(ThemeMode.allCases) { mode in
                     let isTileSelected = viewModel.theme == mode
+                    let secondaryAccent = Theme.secondaryAccent(for: mode) ?? Theme.accent(for: mode)
+                    let glow = Theme.glowColor(for: mode)
+                    let mood = Theme.personality(for: mode).surfaceMood
                     Button {
                         HapticsManager.playSelection(isEnabled: viewModel.hapticsEnabled)
                         if isMotionReduced {
@@ -833,6 +836,19 @@ struct SettingsTabView: View {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .fill(Theme.backgroundGradient(for: mode))
                                     .frame(height: 52)
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Theme.accent(for: mode).opacity(0.28),
+                                                secondaryAccent.opacity(0.10),
+                                                .clear,
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(height: 52)
 
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                                     .fill(Theme.cardColor(for: mode))
@@ -842,6 +858,12 @@ struct SettingsTabView: View {
                                             .stroke(
                                                 Theme.accent(for: mode).opacity(0.3), lineWidth: 1)
                                     )
+                            }
+                            .overlay(alignment: .leading) {
+                                Capsule(style: .continuous)
+                                    .fill(secondaryAccent.opacity(0.75))
+                                    .frame(width: 4, height: 24)
+                                    .padding(.leading, 5)
                             }
                             .overlay(alignment: .topTrailing) {
                                 if isTileSelected {
@@ -859,6 +881,12 @@ struct SettingsTabView: View {
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(isTileSelected ? accent : secondaryText)
 
+                                Text(mood)
+                                    .font(.system(size: 8, weight: .medium, design: .rounded))
+                                    .foregroundStyle(secondaryText.opacity(isTileSelected ? 0.95 : 0.72))
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(1)
+
                                 if isTileSelected {
                                     Text(Theme.personality(for: mode).descriptor)
                                         .font(.system(size: 9, weight: .regular, design: .rounded))
@@ -872,6 +900,12 @@ struct SettingsTabView: View {
                                 }
                             }
                             .animation(.easeInOut(duration: Theme.animFast), value: viewModel.theme)
+                        }
+                    }
+                    .overlay {
+                        if isTileSelected, let glow {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(glow.opacity(0.45), lineWidth: 1)
                         }
                     }
                     .buttonStyle(.plain)
