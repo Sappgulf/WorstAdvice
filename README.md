@@ -3,7 +3,7 @@
 A SwiftUI satire app that generates confidently wrong advice that still sounds plausible.
 
 ## Version
-- `1.0.0`
+- `4.8`
 
 ## Features
 - Five-tab app with default order: `Advice`, `Quotes`, `Favorites`, `History`, `Settings`
@@ -102,14 +102,14 @@ CLI build:
 
 If simulator names differ on your machine, resolve one dynamically first:
 ```bash
-xcrun simctl list devices available | rg "iPhone 1[456]"
+xcodebuild -showdestinations -project Badvice.xcodeproj -scheme Badvice
 ```
 
 ```bash
 xcodebuild build \
   -project "Badvice.xcodeproj" \
   -scheme "Badvice" \
-  -destination "platform=iOS Simulator,name=iPhone 17"
+  -destination "platform=iOS Simulator"
 ```
 
 ## Social (CloudKit) Setup

@@ -28,8 +28,8 @@ Status: COMPLETE (codebase) + MANUAL ITEMS REMAIN
 
 - App bundle ID: `com.worstadvice.app`
 - Widget bundle ID: `com.worstadvice.app.widget`
-- App version/build: `4.4 (2026022501)`
-- Widget version/build: `4.4 (2026022501)`
+- App version/build: `4.8 (2026022501)`
+- Widget version/build: `4.8 (2026022501)`
 - Deployment target: iOS `18.6`
 - Display name: `Badvice`
 - Category: `public.app-category.entertainment`
@@ -46,6 +46,6 @@ Status: COMPLETE (codebase) + MANUAL ITEMS REMAIN
 
 ### Notes
 
-- Privacy manifest file (`PrivacyInfo.xcprivacy`) is not currently present in this repo.
-  Validate whether your used APIs/SDKs require one before submission.
+- Privacy manifest file (`Badvice/Resources/PrivacyInfo.xcprivacy`) is present and included in the app target.
+  Validate whether your used APIs/SDKs require any additional manifest entries before submission.
 - Xcode emits a non-blocking asset notice about legacy iPad `76x76@1x` app icon support.

@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_PATH="${PROJECT_PATH:-Badvice.xcodeproj}"
 SCHEME="${SCHEME:-Badvice}"
-DESTINATION="${DESTINATION:-platform=iOS Simulator,name=iPhone 17,OS=latest}"
+DESTINATION="${DESTINATION:-platform=iOS Simulator}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PWD/.build/DerivedDataSmoke}"
 RESULT_BUNDLE_PATH="${RESULT_BUNDLE_PATH:-$PWD/.build/SmokeTests.xcresult}"
 SMOKE_MODE="${SMOKE_MODE:-all}" # all | integration | ui
@@ -24,6 +24,13 @@ if [ -e "$RESULT_BUNDLE_PATH" ]; then
 fi
 
 node scripts/check_project_sources.js
+
+if ! xcodebuild -showdestinations -project "$PROJECT_PATH" -scheme "$SCHEME" 2>/dev/null \
+  | grep -q "platform:iOS Simulator"; then
+  echo "No eligible iOS Simulator destinations are installed for Xcode." >&2
+  echo "Install a simulator runtime in Xcode > Settings > Components or set DESTINATION manually." >&2
+  exit 1
+fi
 
 echo "Running iOS smoke tests on: $DESTINATION"
 

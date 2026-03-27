@@ -3,8 +3,7 @@ set -euo pipefail
 
 PROJECT_PATH="${PROJECT_PATH:-Badvice.xcodeproj}"
 SCHEME="${SCHEME:-Badvice}"
-IOS_SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPhone 17}"
-IOS_DESTINATION="${IOS_DESTINATION:-}"
+IOS_DESTINATION="${IOS_DESTINATION:-platform=iOS Simulator}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PWD/.build/DerivedData}"
 RESULT_BUNDLE_PATH="${RESULT_BUNDLE_PATH:-$PWD/.build/TestResults.xcresult}"
 SOURCE_PACKAGES_PATH="${SOURCE_PACKAGES_PATH:-$PWD/.build/SourcePackages}"
@@ -29,44 +28,11 @@ if ! xcodebuild -list -project "$PROJECT_PATH" | awk -v scheme="$SCHEME" '
   exit 1
 fi
 
-SIMCTL_DEVICES="$(xcrun simctl list devices available 2>/dev/null || true)"
-
-if [ -z "$IOS_DESTINATION" ]; then
-  SELECTED_SIMULATOR_NAME="$(
-    printf "%s\n" "$SIMCTL_DEVICES" \
-      | awk -v wanted="$IOS_SIMULATOR_NAME" '
-          $0 ~ "^[[:space:]]+" wanted " \\(" {
-            line = $0
-            gsub(/^[[:space:]]+/, "", line)
-            name = line
-            sub(/ \(.*/, "", name)
-            print name
-            exit
-          }
-        '
-  )"
-
-  if [ -z "$SELECTED_SIMULATOR_NAME" ]; then
-    SELECTED_SIMULATOR_NAME="$(
-      printf "%s\n" "$SIMCTL_DEVICES" \
-        | awk '
-            /^[[:space:]]+iPhone / {
-              line = $0
-              gsub(/^[[:space:]]+/, "", line)
-              name = line
-              sub(/ \(.*/, "", name)
-              print name
-              exit
-            }
-          '
-    )"
-  fi
-
-  if [ -z "$SELECTED_SIMULATOR_NAME" ]; then
-    SELECTED_SIMULATOR_NAME="$IOS_SIMULATOR_NAME"
-  fi
-
-  IOS_DESTINATION="platform=iOS Simulator,name=$SELECTED_SIMULATOR_NAME,OS=latest"
+if ! xcodebuild -showdestinations -project "$PROJECT_PATH" -scheme "$SCHEME" 2>/dev/null \
+  | grep -q "platform:iOS Simulator"; then
+  echo "No eligible iOS Simulator destinations are installed for Xcode." >&2
+  echo "Install a simulator runtime in Xcode > Settings > Components or set IOS_DESTINATION manually." >&2
+  exit 1
 fi
 
 echo "Using destination: $IOS_DESTINATION"
