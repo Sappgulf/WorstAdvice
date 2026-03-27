@@ -7,6 +7,13 @@ import OSLog
 struct WorstAdviceApp: App {
     private static let logger = Logger(subsystem: "com.worstadvice.app", category: "bootstrap")
     private static let legacySettingsCleanupVersionKey = "migrations.legacySettingsCleanup.v1"
+    private static var isRunningOnSimulator: Bool {
+        #if targetEnvironment(simulator)
+            return true
+        #else
+            return false
+        #endif
+    }
     private var isUITesting: Bool { ProcessInfo.processInfo.arguments.contains("-ui-testing") }
     private var isDebugPolishFixtureLaunch: Bool { ProcessInfo.processInfo.arguments.contains("-debug-preload-polish-fixtures") }
     private var isRunningTests: Bool {
@@ -24,6 +31,41 @@ struct WorstAdviceApp: App {
             MissionProgressRecord.self,
             AppSettingsEntity.self
         ])
+
+        if Self.isRunningOnSimulator {
+            let simulatorConfiguration = ModelConfiguration(
+                "BadviceSimulator",
+                schema: schema,
+                isStoredInMemoryOnly: false,
+                allowsSave: true,
+                groupContainer: .automatic,
+                cloudKitDatabase: .none
+            )
+            do {
+                let container = try ModelContainer(for: schema, configurations: [simulatorConfiguration])
+                Self.logger.info("SwiftData simulator store initialized")
+                return container
+            } catch {
+                Self.logger.error(
+                    "Simulator store init failed, using in-memory fallback: \(error.localizedDescription, privacy: .public)"
+                )
+                let inMemoryConfiguration = ModelConfiguration(
+                    "BadviceSimulatorFallback",
+                    schema: schema,
+                    isStoredInMemoryOnly: true,
+                    allowsSave: true,
+                    groupContainer: .none,
+                    cloudKitDatabase: .none
+                )
+                do {
+                    let container = try ModelContainer(for: schema, configurations: [inMemoryConfiguration])
+                    Self.logger.info("SwiftData simulator in-memory fallback initialized")
+                    return container
+                } catch {
+                    fatalError("Failed to initialize simulator SwiftData store: \(error)")
+                }
+            }
+        }
 
         let cloudConfiguration = ModelConfiguration(
             "BadviceCloud",
@@ -87,11 +129,13 @@ struct WorstAdviceApp: App {
                     guard !isUITesting, !isDebugPolishFixtureLaunch, !isRunningTests else { return }
                     _ = await CloudKitSchemaSeeder.seedIfNeeded()
                     #if DEBUG
-                        await CloudKitDebugSanityChecker.runFriendsReachabilityCheck()
+                        if !Self.isRunningOnSimulator {
+                            await CloudKitDebugSanityChecker.runFriendsReachabilityCheck()
+                        }
                     #endif
                 }
                 .onAppear {
-                    guard !isUITesting, !isDebugPolishFixtureLaunch, !isRunningTests else { return }
+                    guard !isUITesting, !isDebugPolishFixtureLaunch, !isRunningTests, !Self.isRunningOnSimulator else { return }
                     NotificationManager.requestPermissionAndScheduleDaily()
                 }
         }

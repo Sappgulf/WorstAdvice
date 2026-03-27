@@ -9654,9 +9654,17 @@ enum SocialBackendFactory {
             ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         let isUITestingLaunch = arguments.contains("-ui-testing")
         let allowLiveCloudKit = arguments.contains("-ui-testing-cloudkit-live")
+            || arguments.contains("-social-live")
+        let isRunningOnSimulator: Bool = {
+            #if targetEnvironment(simulator)
+                return true
+            #else
+                return false
+            #endif
+        }()
         let shouldUseMockBackend =
             arguments.contains("-ui-testing-social-mock")
-            || (!allowLiveCloudKit && (isUITestingLaunch || isRunningUnderXCTest))
+            || (!allowLiveCloudKit && (isUITestingLaunch || isRunningUnderXCTest || isRunningOnSimulator))
         if shouldUseMockBackend {
             return UITestSocialBackend(
                 forceUnavailable: arguments.contains("-ui-testing-force-social-unavailable"),
