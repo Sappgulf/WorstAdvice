@@ -19,7 +19,6 @@ struct GenerateTabView: View {
     @State private var showingBrandMenu = false
     @State private var showingBracket = false        // #2 Advice Battles entry point
     @State private var showingCollabAdvice = false   // #7 Collab Advice
-    @State private var showingGIFExport = false      // #5 Animated GIF export
     @State private var gifExportInProgress = false
     @State private var showingResetAccountsConfirmation = false
     @State private var runningBrandAction = false

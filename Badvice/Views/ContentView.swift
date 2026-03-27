@@ -132,7 +132,7 @@ struct ContentView: View {
     var body: some View {
         appRootView
             .task {
-                bootstrapAppStateIfNeeded()
+                await bootstrapAppStateIfNeeded()
             }
     }
 
@@ -184,7 +184,7 @@ struct ContentView: View {
             return .impact(weight: .light)
         }
         .environment(\.font, Theme.bodyFont(for: session.settings.theme))
-        .task {
+        .task(id: auth.currentSession?.accountID) {
             await syncAuthContext(auth: auth, social: session.social)
         }
         .fullScreenCover(
@@ -267,9 +267,6 @@ struct ContentView: View {
                 shakeDetector.startMonitoring()
             }
             session.generate.refreshRetentionStateOnAppear()
-            Task {
-                await syncAuthContext(auth: auth, social: session.social)
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) {
             _ in
@@ -288,11 +285,6 @@ struct ContentView: View {
             guard !newOrder.isEmpty else { return }
             if !newOrder.contains(selectedTab), let fallback = newOrder.first {
                 selectedTab = fallback
-            }
-        }
-        .onChange(of: auth.currentSession?.accountID) { _, _ in
-            Task {
-                await syncAuthContext(auth: auth, social: session.social)
             }
         }
         .onChange(of: session.social.currentUser?.recordID.recordName) { _, newRecordName in
@@ -325,7 +317,8 @@ struct ContentView: View {
         }
     }
 
-    private func bootstrapAppStateIfNeeded() {
+    private func bootstrapAppStateIfNeeded() async {
+        await Task.yield()
         if isUITesting, launchArguments.contains("-skip-splash") {
             showSplash = false
         }
@@ -342,9 +335,6 @@ struct ContentView: View {
 
         if session == nil {
             session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
-        }
-        Task {
-            await syncAuthContext(auth: auth, social: session?.social)
         }
     }
 
@@ -392,9 +382,6 @@ struct ContentView: View {
         syncAuthDrafts(with: auth)
         session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
         applyUITestLaunchOverridesIfNeeded()
-        Task {
-            await syncAuthContext(auth: auth, social: session?.social)
-        }
     }
 
     private func signOutCurrentAccount(_ auth: AuthViewModel) {

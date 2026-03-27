@@ -1484,10 +1484,13 @@ struct FriendsTabView: View {
             guard newID != nil, let draft = social.pendingCollabDraft else { return }
             collabComposerType = draft.type
             collabComposerText = draft.content
+            selectedContributorIDs.removeAll()
             selectedSection = .collab
             showCollabComposer = true
         }
-        .sheet(isPresented: $showCollabComposer) {
+        .sheet(isPresented: $showCollabComposer, onDismiss: {
+            selectedContributorIDs.removeAll()
+        }) {
             collabComposerSheet
         }
         .sheet(isPresented: $showCollabEditor) {
@@ -2125,6 +2128,7 @@ struct FriendsTabView: View {
                     Button("New Blank Doc") {
                         collabComposerType = .advice
                         collabComposerText = ""
+                        selectedContributorIDs.removeAll()
                         showCollabComposer = true
                     }
                     .buttonStyle(.bordered)

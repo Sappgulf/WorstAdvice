@@ -36,9 +36,7 @@ final class OfflinePackCache {
         downloadingPacks.insert(pack)
         statuses[pack] = .downloading
         cacheLogger.info("Downloading pack: \(pack.rawValue)")
-
-        // Simulate async pack data fetch (in production this would load from bundle/CDN)
-        try? await Task.sleep(nanoseconds: 800_000_000)
+        await Task.yield()
 
         statuses[pack] = .cached
         downloadingPacks.remove(pack)

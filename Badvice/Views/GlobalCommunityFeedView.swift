@@ -121,7 +121,6 @@ struct GlobalCommunityFeedView: View {
             return
         }
         isLoading = true
-        try? await Task.sleep(nanoseconds: 500_000_000)
         allPosts = Self.demoPosts
         isLoading = false
     }

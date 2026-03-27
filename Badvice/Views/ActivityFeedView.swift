@@ -9,6 +9,7 @@ struct ActivityFeedView: View {
 
     @State private var events: [SocialActivityEvent] = []
     @State private var isLoading = true
+    @State private var lastLoadedRefreshAt: Date?
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
@@ -32,8 +33,8 @@ struct ActivityFeedView: View {
             .navigationTitle("Friend Activity")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .task { await loadEvents() }
-            .refreshable { await loadEvents() }
+            .task(id: social.lastSocialRefreshAt) { await loadEvents() }
+            .refreshable { await loadEvents(force: true) }
         }
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
     }
@@ -72,11 +73,21 @@ struct ActivityFeedView: View {
 
     // MARK: Load
 
-    private func loadEvents() async {
+    private func loadEvents(force: Bool = false) async {
+        let refreshAt = social.lastSocialRefreshAt
+        if !force, lastLoadedRefreshAt == refreshAt, !events.isEmpty {
+            isLoading = false
+            return
+        }
+
         isLoading = true
+        defer {
+            isLoading = false
+            lastLoadedRefreshAt = refreshAt
+        }
+
         // In production this would call social.fetchActivityFeed().
         // For now, generate plausible demo events from the current friends list.
-        try? await Task.sleep(nanoseconds: 400_000_000)
         let now = Date()
         var generated: [SocialActivityEvent] = []
         for (i, friend) in social.friends.prefix(5).enumerated() {

@@ -10159,6 +10159,7 @@ final class SocialViewModel {
     var lastLeaderboardRefreshAt: Date?
     private var isBootstrapping = false
     private var isRefreshingLeaderboard = false
+    private var socialRefreshGeneration: Int = 0
     @ObservationIgnored private var hasLoadedBackendDisplayName = false
     private var activeAccountEmail: String?
     private var activeLinkedSocialRecordName: String?
@@ -10208,6 +10209,7 @@ final class SocialViewModel {
             return
         }
 
+        socialRefreshGeneration &+= 1
         let accountChanged = email != activeAccountEmail
         activeAccountEmail = email
         activeLinkedSocialRecordName = linkedSocialRecordName
@@ -10280,22 +10282,20 @@ final class SocialViewModel {
         defer { isSubmittingAction = false }
 
         do {
+            let creationGeneration = socialRefreshGeneration
             let user = try await cloudStore.getOrCreateCurrentUser(
                 handle: normalizedHandle,
                 displayName: displayName
             )
+            guard creationGeneration == socialRefreshGeneration else { return false }
             currentUser = user
             statusMessage = "Profile created."
             if refreshAfterCreate {
                 await refreshSocialData()
-                await drainQueuedActions()
             } else {
                 friendsLoadState = .ready
                 Task(priority: .utility) { [weak self] in
                     await self?.refreshSocialData()
-                }
-                Task(priority: .utility) { [weak self] in
-                    await self?.drainQueuedActions()
                 }
             }
             return true
@@ -10313,14 +10313,14 @@ final class SocialViewModel {
             return
         }
         do {
-            currentUser = try await cloudStore.fetchCurrentUserIfStored()
+            let loadGeneration = socialRefreshGeneration
+            let fetchedUser = try await cloudStore.fetchCurrentUserIfStored()
+            guard loadGeneration == socialRefreshGeneration else { return }
+            currentUser = fetchedUser
             if currentUser != nil {
                 friendsLoadState = .ready
                 Task {
                     await refreshSocialData()
-                }
-                Task {
-                    await drainQueuedActions()
                 }
             } else {
                 resetLoadedCollections()
@@ -10370,6 +10370,7 @@ final class SocialViewModel {
         friendsLoadState = .loadingFriends
         isRefreshingSocialData = true
         defer { isRefreshingSocialData = false }
+        let refreshGeneration = socialRefreshGeneration
 
         do {
             async let incoming = cloudStore.fetchIncomingFriendRequests()
@@ -10396,6 +10397,7 @@ final class SocialViewModel {
             feedPosts = try await feedResult
             collabDocs = try await collabResult
             leaderboard = try await leaderboardResult
+            guard refreshGeneration == socialRefreshGeneration else { return }
             lastSocialRefreshAt = Date()
             // Clear any transient lastError from optional fetches — the core load succeeded.
             availability = availability.withLastError(nil)
@@ -10405,7 +10407,9 @@ final class SocialViewModel {
                 && friends.isEmpty
                 && blockedUsers.isEmpty
                 ? .empty : .ready
+            guard refreshGeneration == socialRefreshGeneration else { return }
             await refreshQueueDiagnostics()
+            guard refreshGeneration == socialRefreshGeneration else { return }
             await drainQueuedActions()
         } catch {
             handlePipelineError(error)

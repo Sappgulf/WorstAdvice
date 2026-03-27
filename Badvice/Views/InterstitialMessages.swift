@@ -233,6 +233,7 @@ struct SettingsTabView: View {
     private let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
     @State private var notificationPermissionGranted: Bool? = nil
+    @State private var didLoadInitialDiagnostics = false
     @AppStorage("useCustomAccent") private var useCustomAccent = false
     @AppStorage("customAccentR") private var customAccentR: Double = 1.0
     @AppStorage("customAccentG") private var customAccentG: Double = 0.3
@@ -452,20 +453,23 @@ struct SettingsTabView: View {
                 sectionsAppeared = false
                 gearWobble = false
                 tabBarVisible.wrappedValue = true
-                Task(priority: .utility) {
-                    viewModel.refreshAppleOnDeviceModelAvailability()
-                }
-                Task(priority: .background) {
-                    await social.loadBackendDisplayNameIfNeeded()
-                }
-                Task(priority: .utility) {
-                    quotesViewModel.loadIfNeeded()
-                }
-                Task(priority: .background) {
-                    await social.refreshAvailability()
-                }
-                Task(priority: .background) {
-                    await loadNotificationPermissionStatus()
+                if !didLoadInitialDiagnostics {
+                    didLoadInitialDiagnostics = true
+                    Task(priority: .utility) {
+                        viewModel.refreshAppleOnDeviceModelAvailability()
+                    }
+                    Task(priority: .background) {
+                        await social.loadBackendDisplayNameIfNeeded()
+                    }
+                    Task(priority: .utility) {
+                        quotesViewModel.loadIfNeeded()
+                    }
+                    Task(priority: .background) {
+                        await social.refreshAvailability()
+                    }
+                    Task(priority: .background) {
+                        await loadNotificationPermissionStatus()
+                    }
                 }
                 // A tiny async hop lets SwiftUI finish layout before animating in
                 Task { @MainActor in
@@ -1292,7 +1296,7 @@ struct SettingsTabView: View {
                         }
                         .buttonStyle(.bordered)
                         .font(.caption.weight(.semibold))
-                        .accessibilityIdentifier("settings.appleModel.recheck")
+                        .accessibilityIdentifier("settings.appleModel.recheckInline")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1334,7 +1338,7 @@ struct SettingsTabView: View {
                 .buttonStyle(.plain)
                 .disabled(viewModel.isPreparingAppleOnDeviceModel)
                 .opacity(viewModel.isPreparingAppleOnDeviceModel ? 0.7 : 1)
-                .accessibilityIdentifier("settings.appleModel.recheck")
+                .accessibilityIdentifier("settings.appleModel.recheckFooter")
 
                 if viewModel.shouldShowOpenAppSettingsShortcut {
                     Button {

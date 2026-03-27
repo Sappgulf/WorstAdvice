@@ -12,16 +12,16 @@ struct GroupChallengesTabView: View {
     let settings: SettingsViewModel
     let onOpenTab: (AppTab) -> Void
 
-    @State private var activeChallenges: [GroupChallenge] = []
-    @State private var completedChallenges: [GroupChallenge] = []
-    @State private var isLoading = true
+    @State private var activeChallenges: [GroupChallenge] = Self.demoActiveChallenges
+    @State private var completedChallenges: [GroupChallenge] = Self.demoCompletedChallenges
     @State private var showCreateSheet = false
     @State private var inviteCodeInput = ""
     @State private var showJoinAlert = false
     @State private var selectedChallenge: GroupChallenge?
-    @State private var showWinnerReveal = false
     @State private var copiedCode: String?
     @State private var joinFeedback: String?
+    @State private var copiedCodeDismissTask: Task<Void, Never>?
+    @State private var joinFeedbackDismissTask: Task<Void, Never>?
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
@@ -37,18 +37,14 @@ struct GroupChallengesTabView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         headerSection
 
-                        if isLoading {
-                            loadingView
-                        } else {
-                            if !activeChallenges.isEmpty {
-                                activeChallengesSection
-                            }
-                            if !completedChallenges.isEmpty {
-                                completedChallengesSection
-                            }
-                            if activeChallenges.isEmpty && completedChallenges.isEmpty {
-                                emptyStateView
-                            }
+                        if !activeChallenges.isEmpty {
+                            activeChallengesSection
+                        }
+                        if !completedChallenges.isEmpty {
+                            completedChallengesSection
+                        }
+                        if activeChallenges.isEmpty && completedChallenges.isEmpty {
+                            emptyStateView
                         }
                     }
                     .padding()
@@ -118,6 +114,12 @@ struct GroupChallengesTabView: View {
                 .animation(Theme.springSmooth, value: copiedCode)
                 .animation(Theme.springSmooth, value: joinFeedback)
             }
+            .onDisappear {
+                copiedCodeDismissTask?.cancel()
+                copiedCodeDismissTask = nil
+                joinFeedbackDismissTask?.cancel()
+                joinFeedbackDismissTask = nil
+            }
             .task { await loadChallenges() }
             .refreshable { await loadChallenges() }
         }
@@ -157,17 +159,6 @@ struct GroupChallengesTabView: View {
         }
     }
     
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView().tint(accent)
-            Text("Loading challenges…")
-                .font(.subheadline)
-                .foregroundStyle(secondaryText)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
-    }
-
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "person.3.fill")
@@ -206,7 +197,11 @@ struct GroupChallengesTabView: View {
                     onCopyCode: {
                         UIPasteboard.general.string = challenge.inviteCode
                         withAnimation { copiedCode = challenge.inviteCode }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        copiedCodeDismissTask?.cancel()
+                        copiedCodeDismissTask = Task { @MainActor in
+                            defer { copiedCodeDismissTask = nil }
+                            try? await Task.sleep(for: .seconds(1.2))
+                            guard !Task.isCancelled else { return }
                             withAnimation { copiedCode = nil }
                         }
                     },
@@ -235,11 +230,14 @@ struct GroupChallengesTabView: View {
     }
     
     private func loadChallenges() async {
-        isLoading = true
-        try? await Task.sleep(nanoseconds: 500_000_000)
+        guard activeChallenges.isEmpty && completedChallenges.isEmpty else { return }
 
-        // Demo active challenges — in production this queries CloudKit GroupChallenge records.
-        activeChallenges = [
+        activeChallenges = Self.demoActiveChallenges
+        completedChallenges = Self.demoCompletedChallenges
+    }
+
+    private static var demoActiveChallenges: [GroupChallenge] {
+        [
             GroupChallenge(
                 id: UUID(),
                 name: "Dating Disaster Week",
@@ -257,9 +255,10 @@ struct GroupChallengesTabView: View {
                 ]
             ),
         ]
+    }
 
-        // Demo completed challenge with winner reveal
-        completedChallenges = [
+    private static var demoCompletedChallenges: [GroupChallenge] {
+        [
             GroupChallenge(
                 id: UUID(),
                 name: "Career Chaos Challenge",
@@ -276,8 +275,6 @@ struct GroupChallengesTabView: View {
                 ]
             ),
         ]
-
-        isLoading = false
     }
 
     private func joinChallenge() {
@@ -297,7 +294,11 @@ struct GroupChallengesTabView: View {
 
     private func showJoinFeedback(_ message: String) {
         withAnimation { joinFeedback = message }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+        joinFeedbackDismissTask?.cancel()
+        joinFeedbackDismissTask = Task { @MainActor in
+            defer { joinFeedbackDismissTask = nil }
+            try? await Task.sleep(for: .seconds(1.8))
+            guard !Task.isCancelled else { return }
             withAnimation { joinFeedback = nil }
         }
     }
