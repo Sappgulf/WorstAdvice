@@ -1,5 +1,13 @@
 import Foundation
 
+extension Int {
+    func positiveModulo(_ modulus: Int) -> Int {
+        guard modulus > 0 else { return 0 }
+        let remainder = self % modulus
+        return remainder >= 0 ? remainder : remainder + modulus
+    }
+}
+
 struct SharedDailyQuote: Sendable, Hashable {
     let id: String
     let text: String

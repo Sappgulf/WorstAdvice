@@ -204,6 +204,7 @@ struct SocialProfileSetupView: View {
                         .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
+                    .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("social.profile.intro")
                 }
                 #if DEBUG

@@ -530,8 +530,8 @@ final class BadviceUITests: XCTestCase {
         email: String,
         password: String
     ) {
-        let modePicker = app.segmentedControls["auth.mode"]
-        XCTAssertTrue(modePicker.waitForExistence(timeout: 8))
+        let signUpModeButton = app.buttons["auth.mode.signUp"]
+        XCTAssertTrue(signUpModeButton.waitForExistence(timeout: 8))
 
         let displayNameField = app.textFields["auth.displayName"]
         XCTAssertTrue(displayNameField.waitForExistence(timeout: 5))
@@ -563,12 +563,9 @@ final class BadviceUITests: XCTestCase {
     }
 
     private func completeLocalSignin(app: XCUIApplication, email: String, password: String) {
-        let modePicker = app.segmentedControls["auth.mode"]
-        if modePicker.waitForExistence(timeout: 3) {
-            let signInSegment = modePicker.buttons["Sign In"]
-            if signInSegment.exists {
-                signInSegment.tap()
-            }
+        let signInModeButton = app.buttons["auth.mode.signIn"]
+        if signInModeButton.waitForExistence(timeout: 3) && !signInModeButton.isSelected {
+            signInModeButton.tap()
         }
 
         let emailField = app.textFields["auth.email"]

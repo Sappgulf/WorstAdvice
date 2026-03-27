@@ -323,6 +323,9 @@ struct ContentView: View {
     }
 
     private func bootstrapAppStateIfNeeded() {
+        if isUITesting, launchArguments.contains("-skip-splash") {
+            showSplash = false
+        }
         if auth == nil {
             let authViewModel = makeAuthViewModel()
             auth = authViewModel

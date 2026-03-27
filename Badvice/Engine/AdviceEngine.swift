@@ -433,7 +433,8 @@ struct AdviceEngine {
         let hasTone = normalized.contains(normalizedToneDirective)
         let hasCategory = normalized.contains(normalizedCategoryDirective)
         guard !(hasTone && hasCategory) else { return candidate }
-        return "\(candidate) Keep \(toneDirective) focused on \(categoryDirective)."
+        // Prefix the directives so later truncation cannot drop the required signals.
+        return "Lead with \(toneDirective) and push \(categoryDirective). \(candidate)"
     }
 
     private func stableTieBreaker(_ text: String, seed: Int) -> Double {

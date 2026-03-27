@@ -27,6 +27,38 @@ struct LocalAuthGateView: View {
             && authPasswordDraft == authConfirmPasswordDraft
     }
 
+    private func selectAuthMode(_ newMode: LocalAuthMode) {
+        guard authMode != newMode else { return }
+        authMode = newMode
+        auth.statusMessage = nil
+        authPasswordDraft = ""
+        authConfirmPasswordDraft = ""
+    }
+
+    @ViewBuilder
+    private func authModeButton(title: String, mode: LocalAuthMode, accent: Color) -> some View {
+        let isSelected = authMode == mode
+        Button {
+            selectAuthMode(mode)
+        } label: {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 38)
+                .foregroundStyle(isSelected ? .white : accent)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(isSelected ? accent : Color.clear)
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(accent.opacity(isSelected ? 0 : 0.18), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(mode == .signIn ? "auth.mode.signIn" : "auth.mode.signUp")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
     var body: some View {
         let accent = Color(hex: "8F4A22")
 
@@ -68,12 +100,19 @@ struct LocalAuthGateView: View {
                     }
 
                     VStack(spacing: 18) {
-                        Picker("Authentication", selection: $authMode) {
-                            ForEach(LocalAuthMode.allCases) { mode in
-                                Text(mode.title).tag(mode)
-                            }
+                        HStack(spacing: 8) {
+                            authModeButton(title: LocalAuthMode.signIn.title, mode: .signIn, accent: accent)
+                            authModeButton(title: LocalAuthMode.signUp.title, mode: .signUp, accent: accent)
                         }
-                        .pickerStyle(.segmented)
+                        .padding(4)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(accent.opacity(0.08))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(accent.opacity(0.12), lineWidth: 1)
+                        )
                         .accessibilityIdentifier("auth.mode")
 
                         VStack(spacing: 14) {
@@ -193,10 +232,7 @@ struct LocalAuthGateView: View {
                                     ? "Need a new local account?"
                                     : "Use an existing account instead"
                             ) {
-                                authMode = authMode == .signIn ? .signUp : .signIn
-                                auth.statusMessage = nil
-                                authPasswordDraft = ""
-                                authConfirmPasswordDraft = ""
+                                selectAuthMode(authMode == .signIn ? .signUp : .signIn)
                             }
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(accent)
