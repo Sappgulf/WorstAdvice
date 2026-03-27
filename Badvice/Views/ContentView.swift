@@ -122,6 +122,9 @@ struct ContentView: View {
 
     var body: some View {
         appRootView
+            .task {
+                bootstrapAppStateIfNeeded()
+            }
     }
 
     @ViewBuilder
@@ -129,25 +132,16 @@ struct ContentView: View {
         if showSplash {
             SplashView(isShowing: $showSplash)
                 .transition(.opacity)
-                .task {
-                    bootstrapAppStateIfNeeded()
-                }
         } else if let auth {
             if auth.isAuthenticated, let session {
                 authenticatedSessionView(auth: auth, session: session)
             } else if auth.isAuthenticated {
                 loadingView
-                    .task {
-                        bootstrapAppStateIfNeeded()
-                    }
             } else {
                 authGateView(auth: auth)
             }
         } else {
             loadingView
-                .task {
-                    bootstrapAppStateIfNeeded()
-                }
         }
     }
 

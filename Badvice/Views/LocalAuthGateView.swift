@@ -113,7 +113,6 @@ struct LocalAuthGateView: View {
                             Capsule(style: .continuous)
                                 .stroke(accent.opacity(0.12), lineWidth: 1)
                         )
-                        .accessibilityIdentifier("auth.mode")
 
                         VStack(spacing: 14) {
                             if authMode == .signUp {
