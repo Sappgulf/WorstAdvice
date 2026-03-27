@@ -511,30 +511,119 @@ enum Theme {
     static func personality(for mode: ThemeMode) -> ThemePersonality {
         switch mode {
         case .badvice:
-            return ThemePersonality(descriptor: "Editorial mischief with warm grain", surfaceMood: "Velvet Paper", effectIntensity: 0.62, indicatorCornerRadius: 16, indicatorInset: 2)
+            return ThemePersonality(
+                descriptor: "Editorial mischief with warm grain",
+                surfaceMood: "Velvet Paper",
+                bestFor: "Best for the core Badvice vibe",
+                effectIntensity: 0.62,
+                indicatorCornerRadius: 16,
+                indicatorInset: 2
+            )
         case .minimal:
-            return ThemePersonality(descriptor: "Clean clarity, low visual noise", surfaceMood: "Studio Flat", effectIntensity: 0.12, indicatorCornerRadius: 10, indicatorInset: 3)
+            return ThemePersonality(
+                descriptor: "Clean clarity, low visual noise",
+                surfaceMood: "Studio Flat",
+                bestFor: "Best for focus and readability",
+                effectIntensity: 0.12,
+                indicatorCornerRadius: 10,
+                indicatorInset: 3
+            )
         case .ember:
-            return ThemePersonality(descriptor: "Heat-haze depth with molten contrast", surfaceMood: "Kiln Glow", effectIntensity: 0.58, indicatorCornerRadius: 14, indicatorInset: 2)
+            return ThemePersonality(
+                descriptor: "Heat-haze depth with molten contrast",
+                surfaceMood: "Kiln Glow",
+                bestFor: "Best for warm, dramatic contrast",
+                effectIntensity: 0.58,
+                indicatorCornerRadius: 14,
+                indicatorInset: 2
+            )
         case .slate:
-            return ThemePersonality(descriptor: "Cool executive glass with crisp edges", surfaceMood: "Steel Glass", effectIntensity: 0.4, indicatorCornerRadius: 12, indicatorInset: 2)
+            return ThemePersonality(
+                descriptor: "Cool executive glass with crisp edges",
+                surfaceMood: "Steel Glass",
+                bestFor: "Best for calm dashboards",
+                effectIntensity: 0.4,
+                indicatorCornerRadius: 12,
+                indicatorInset: 2
+            )
         case .evergreen:
-            return ThemePersonality(descriptor: "Forest calm with layered texture", surfaceMood: "Canopy Grain", effectIntensity: 0.55, indicatorCornerRadius: 15, indicatorInset: 2)
+            return ThemePersonality(
+                descriptor: "Forest calm with layered texture",
+                surfaceMood: "Canopy Grain",
+                bestFor: "Best for longer sessions",
+                effectIntensity: 0.55,
+                indicatorCornerRadius: 15,
+                indicatorInset: 2
+            )
         case .fallout:
-            return ThemePersonality(descriptor: "Vault terminal glow with phosphor depth", surfaceMood: "Pip-Boy Phosphor", effectIntensity: 0.7, indicatorCornerRadius: 10, indicatorInset: 2)
+            return ThemePersonality(
+                descriptor: "Vault terminal glow with phosphor depth",
+                surfaceMood: "Pip-Boy Phosphor",
+                bestFor: "Best for terminal-flavored UI",
+                effectIntensity: 0.7,
+                indicatorCornerRadius: 10,
+                indicatorInset: 2
+            )
         case .neon:
-            return ThemePersonality(descriptor: "Arcade glow and electric lane markers", surfaceMood: "Arcade Grid", effectIntensity: 0.9, indicatorCornerRadius: 8, indicatorInset: 1)
+            return ThemePersonality(
+                descriptor: "Arcade glow and electric lane markers",
+                surfaceMood: "Arcade Grid",
+                bestFor: "Best for high-energy browsing",
+                effectIntensity: 0.9,
+                indicatorCornerRadius: 8,
+                indicatorInset: 1
+            )
         case .midnight:
-            return ThemePersonality(descriptor: "Deep-focus dark with cool bloom", surfaceMood: "Nocturne Film", effectIntensity: 0.68, indicatorCornerRadius: 18, indicatorInset: 2)
+            return ThemePersonality(
+                descriptor: "Deep-focus dark with cool bloom",
+                surfaceMood: "Nocturne Film",
+                bestFor: "Best for late-night sessions",
+                effectIntensity: 0.68,
+                indicatorCornerRadius: 18,
+                indicatorInset: 2
+            )
         case .sunset:
-            return ThemePersonality(descriptor: "Golden-hour gradient with soft drama", surfaceMood: "Amber Bloom", effectIntensity: 0.64, indicatorCornerRadius: 20, indicatorInset: 3)
+            return ThemePersonality(
+                descriptor: "Golden-hour gradient with soft drama",
+                surfaceMood: "Amber Bloom",
+                bestFor: "Best for rich gradients",
+                effectIntensity: 0.64,
+                indicatorCornerRadius: 20,
+                indicatorInset: 3
+            )
         case .cosmic:
-            return ThemePersonality(descriptor: "Nebula depth and stellar sparkle", surfaceMood: "Starfield Mist", effectIntensity: 0.84, indicatorCornerRadius: 6, indicatorInset: 1)
+            return ThemePersonality(
+                descriptor: "Nebula depth and stellar sparkle",
+                surfaceMood: "Starfield Mist",
+                bestFor: "Best for dramatic depth",
+                effectIntensity: 0.84,
+                indicatorCornerRadius: 6,
+                indicatorInset: 1
+            )
         case .retro:
-            return ThemePersonality(descriptor: "CRT attitude with scanline pulse", surfaceMood: "Synth Scan", effectIntensity: 0.78, indicatorCornerRadius: 4, indicatorInset: 1)
+            return ThemePersonality(
+                descriptor: "CRT attitude with scanline pulse",
+                surfaceMood: "Synth Scan",
+                bestFor: "Best for playful nostalgia",
+                effectIntensity: 0.78,
+                indicatorCornerRadius: 4,
+                indicatorInset: 1
+            )
         case .cybernetic:
-            return ThemePersonality(descriptor: "Metal-optimized glitch with neon precision", surfaceMood: "Liquid Wired", effectIntensity: 0.88, indicatorCornerRadius: 2, indicatorInset: 1)
+            return ThemePersonality(
+                descriptor: "Metal-optimized glitch with neon precision",
+                surfaceMood: "Liquid Wired",
+                bestFor: "Best for sharp tech contrast",
+                effectIntensity: 0.88,
+                indicatorCornerRadius: 2,
+                indicatorInset: 1
+            )
         }
+    }
+
+    static func themeSummary(for mode: ThemeMode) -> String {
+        let personality = personality(for: mode)
+        return "\(personality.surfaceMood) - \(personality.bestFor)"
     }
 
     static func tabBarStyle(for mode: ThemeMode) -> ThemeTabBarStyle {
@@ -561,6 +650,7 @@ enum Theme {
 struct ThemePersonality: Sendable {
     let descriptor: String
     let surfaceMood: String
+    let bestFor: String
     let effectIntensity: Double
     let indicatorCornerRadius: CGFloat
     let indicatorInset: CGFloat

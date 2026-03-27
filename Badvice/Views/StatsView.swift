@@ -2013,24 +2013,36 @@ struct FriendsTabView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(
                             social.friends.isEmpty
-                                ? "Add at least one friend first, then share from Generate or Quotes to wake up the feed."
+                                ? "Add friends first, then share from Generate or Quotes to wake up the feed."
                                 : "Nobody has posted yet. Be first and break the silence."
                         )
                         .font(.caption)
                         .foregroundStyle(secondaryText)
 
                         HStack(spacing: 8) {
-                            Button("Open Generate") {
-                                onOpenTab?(.generate)
+                            Button("Open Friends") {
+                                onOpenTab?(.friends)
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(accent)
                             .foregroundStyle(buttonText)
 
+                            Button("Open Generate") {
+                                onOpenTab?(.generate)
+                            }
+                            .buttonStyle(.bordered)
+
                             Button("Open Quotes") {
                                 onOpenTab?(.quotes)
                             }
                             .buttonStyle(.bordered)
+
+                            Button("Refresh Social") {
+                                Task { await social.refreshSocialData() }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!social.socialFeaturesEnabled)
+                            .accessibilityIdentifier("friends.feed.refresh")
                         }
                         .font(.caption.weight(.semibold))
                     }
@@ -2150,17 +2162,29 @@ struct FriendsTabView: View {
                         .foregroundStyle(secondaryText)
 
                         HStack(spacing: 8) {
-                            Button("Open Generate") {
-                                onOpenTab?(.generate)
+                            Button("Open Friends") {
+                                onOpenTab?(.friends)
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(accent)
                             .foregroundStyle(buttonText)
 
+                            Button("Open Generate") {
+                                onOpenTab?(.generate)
+                            }
+                            .buttonStyle(.bordered)
+
                             Button("Open Quotes") {
                                 onOpenTab?(.quotes)
                             }
                             .buttonStyle(.bordered)
+
+                            Button("Refresh Social") {
+                                Task { await social.refreshSocialData() }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!social.socialFeaturesEnabled)
+                            .accessibilityIdentifier("friends.collab.refresh")
                         }
                         .font(.caption.weight(.semibold))
                     }

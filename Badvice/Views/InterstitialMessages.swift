@@ -764,6 +764,19 @@ struct SettingsTabView: View {
 
                 settingsDivider
 
+                Button {
+                    UIPasteboard.general.string = socialHealthReportText()
+                } label: {
+                    Label("Copy Diagnostics Summary", systemImage: "doc.on.doc")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .accessibilityIdentifier("settings.socialHealth.copyReport")
+
+                settingsDivider
+
                 socialStatRow("Backend", value: social.backendDisplayName)
                 socialStatRow(
                     "Availability",
@@ -802,32 +815,32 @@ struct SettingsTabView: View {
             ) {
                 ForEach(ThemeMode.allCases) { mode in
                     let isTileSelected = viewModel.theme == mode
+                    let personality = Theme.personality(for: mode)
                     let secondaryAccent = Theme.secondaryAccent(for: mode) ?? Theme.accent(for: mode)
                     let glow = Theme.glowColor(for: mode)
-                    let mood = Theme.personality(for: mode).surfaceMood
+                    let mood = personality.surfaceMood
+                    let bestFor = personality.bestFor
                     Button {
                         HapticsManager.playSelection(isEnabled: viewModel.hapticsEnabled)
                         if isMotionReduced {
                             viewModel.theme = mode
-                        } else {
-                            if viewModel.theme != mode {
-                                shockwaveTheme = mode
-                                shockwaveScale = 0.5
-                                shockwaveOpacity = 1.0
+                        } else if viewModel.theme != mode {
+                            shockwaveTheme = mode
+                            shockwaveScale = 0.5
+                            shockwaveOpacity = 1.0
 
-                                withAnimation(.easeOut(duration: 0.6)) {
-                                    shockwaveScale = 6.0
-                                    shockwaveOpacity = 0.0
-                                }
+                            withAnimation(.easeOut(duration: 0.6)) {
+                                shockwaveScale = 6.0
+                                shockwaveOpacity = 0.0
+                            }
 
-                                withAnimation(.easeInOut(duration: 0.35)) {
-                                    viewModel.theme = mode
-                                }
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                viewModel.theme = mode
+                            }
 
-                                Task { @MainActor in
-                                    try? await Task.sleep(for: .seconds(0.6))
-                                    shockwaveTheme = nil
-                                }
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .seconds(0.6))
+                                shockwaveTheme = nil
                             }
                         }
                     } label: {
@@ -887,8 +900,14 @@ struct SettingsTabView: View {
                                     .multilineTextAlignment(.center)
                                     .lineLimit(1)
 
+                                Text(bestFor)
+                                    .font(.system(size: 8, weight: .medium, design: .rounded))
+                                    .foregroundStyle(secondaryText.opacity(isTileSelected ? 0.9 : 0.65))
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+
                                 if isTileSelected {
-                                    Text(Theme.personality(for: mode).descriptor)
+                                    Text(personality.descriptor)
                                         .font(.system(size: 9, weight: .regular, design: .rounded))
                                         .foregroundStyle(secondaryText.opacity(0.75))
                                         .multilineTextAlignment(.center)
@@ -902,6 +921,14 @@ struct SettingsTabView: View {
                             .animation(.easeInOut(duration: Theme.animFast), value: viewModel.theme)
                         }
                     }
+                    .accessibilityIdentifier("settings.theme.\(mode.rawValue)")
+                    .accessibilityLabel(mode.title)
+                    .accessibilityValue(
+                        isTileSelected
+                            ? "Selected. \(Theme.themeSummary(for: mode))"
+                            : Theme.themeSummary(for: mode)
+                    )
+                    .accessibilityHint("Double-tap to apply this theme to your account.")
                     .overlay {
                         if isTileSelected, let glow {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -915,6 +942,11 @@ struct SettingsTabView: View {
                 }
             }
             Divider().opacity(0.5)
+            Text("Themes are stored separately for each signed-in account.")
+                .font(.caption2)
+                .foregroundStyle(secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("settings.theme.accountScope")
             Toggle("Custom Accent Color", isOn: $useCustomAccent)
                 .tint(accent)
             if useCustomAccent {
@@ -964,6 +996,34 @@ struct SettingsTabView: View {
             .tint(accent)
         }
     }
+
+    private func socialHealthReportText() -> String {
+        let diagnostics = social.availability.diagnostics
+        return [
+            diagnostics.text(includeDebugDetails: false),
+            "",
+            "Backend: \(social.backendDisplayName)",
+            "Profile: \(social.currentUser.map { "@\($0.handle)" } ?? "None")",
+            "Queue Depth: \(social.queuedActionCount)",
+            "Queued Reports: \(social.queuedModerationReportCount)",
+            "Incoming Requests: \(social.incomingRequests.count)",
+            "Friends: \(social.friends.count)",
+            "Collab Docs: \(social.collabDocs.count)",
+            "Last Queue Drain: \(reportDateString(social.lastQueueDrainAt))",
+        ]
+        .joined(separator: "\n")
+    }
+
+    private func reportDateString(_ date: Date?) -> String {
+        guard let date else { return "Never" }
+        return Self.reportDateFormatter.string(from: date)
+    }
+
+    private static let reportDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
 
     private var notificationSection: some View {
         settingsCard(title: "Notifications", icon: "bell") {

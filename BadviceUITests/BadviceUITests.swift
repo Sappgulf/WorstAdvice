@@ -151,6 +151,40 @@ final class BadviceUITests: XCTestCase {
         }
     }
 
+    func testSettingsThemeMetadataAndDiagnosticsCopyReport() throws {
+        let app = XCUIApplication()
+        app.launchArguments += defaultLaunchArguments
+        app.launch()
+
+        XCTAssertTrue(openSettings(app: app))
+
+        let badviceTheme = app.buttons["settings.theme.badvice"]
+        if !badviceTheme.exists {
+            scrollToFind(app: app, element: badviceTheme, maxSwipes: 10)
+        }
+        XCTAssertTrue(badviceTheme.waitForExistence(timeout: 3))
+
+        let themeValue = badviceTheme.value as? String ?? ""
+        XCTAssertTrue(
+            themeValue.localizedCaseInsensitiveContains("selected")
+                && themeValue.localizedCaseInsensitiveContains("best for"),
+            "Theme tile should expose selection state and guidance. value=\(themeValue)"
+        )
+
+        let themeScope = app.staticTexts["settings.theme.accountScope"]
+        if !themeScope.exists {
+            scrollToFind(app: app, element: themeScope, maxSwipes: 8)
+        }
+        XCTAssertTrue(themeScope.exists)
+
+        let copyReport = app.buttons["settings.socialHealth.copyReport"]
+        if !copyReport.exists {
+            scrollToFind(app: app, element: copyReport, maxSwipes: 10)
+        }
+        XCTAssertTrue(copyReport.waitForExistence(timeout: 3))
+        copyReport.tap()
+    }
+
     func testSmokeSocialSurfacesWhenUnavailable() throws {
         let app = XCUIApplication()
         app.launchArguments += defaultLaunchArguments + [
@@ -211,6 +245,14 @@ final class BadviceUITests: XCTestCase {
         let newDoc = app.buttons["friends.newCollabDoc"]
         XCTAssertTrue(newDoc.waitForExistence(timeout: 3))
         XCTAssertFalse(newDoc.isEnabled)
+    }
+
+    @discardableResult
+    private func scrollToFind(app: XCUIApplication, element: XCUIElement, maxSwipes: Int) -> Bool {
+        for _ in 0..<maxSwipes where !element.exists {
+            app.swipeUp()
+        }
+        return element.exists
     }
 
     func testSocialMockSignupCompletesAndFriendsSurfaceLoads() throws {
