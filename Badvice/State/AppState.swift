@@ -10323,13 +10323,13 @@ final class SocialViewModel {
             outgoingRequests = try await outgoing
             friends = try await friendsResult
             blockedUsers = try await blocked
-            feedPosts = await loadOptionalSocialValue(fallback: []) {
+            feedPosts = try await loadOptionalSocialValue(fallback: []) {
                 try await cloudStore.fetchFriendsFeed()
             }
-            collabDocs = await loadOptionalSocialValue(fallback: []) {
+            collabDocs = try await loadOptionalSocialValue(fallback: []) {
                 try await cloudStore.fetchMyCollabDocs()
             }
-            leaderboard = await loadOptionalSocialValue(fallback: []) {
+            leaderboard = try await loadOptionalSocialValue(fallback: []) {
                 try await cloudStore.fetchLeaderboard(
                     seasonId: leaderboardSeasonID,
                     limit: 20
@@ -10394,7 +10394,7 @@ final class SocialViewModel {
                 )
                 statusMessage = "Friend request queued. It will retry automatically."
             } else {
-                statusMessage = message(for: error)
+                handleSocialActionError(error)
             }
         }
     }
@@ -10407,7 +10407,7 @@ final class SocialViewModel {
             statusMessage = "Friend request accepted."
             await refreshSocialData()
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
         }
     }
 
@@ -10419,7 +10419,7 @@ final class SocialViewModel {
             statusMessage = "Friend request declined."
             await refreshSocialData()
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
         }
     }
 
@@ -10431,7 +10431,7 @@ final class SocialViewModel {
             statusMessage = "@\(user.handle) blocked."
             await refreshSocialData()
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
         }
     }
 
@@ -10458,7 +10458,7 @@ final class SocialViewModel {
                 )
                 statusMessage = "Share queued. It will retry automatically."
             } else {
-                statusMessage = message(for: error)
+                handleSocialActionError(error)
             }
         }
     }
@@ -10481,7 +10481,7 @@ final class SocialViewModel {
                 )
                 statusMessage = "Score queued. It will retry automatically."
             } else {
-                statusMessage = message(for: error)
+                handleSocialActionError(error)
             }
         }
     }
@@ -10493,7 +10493,7 @@ final class SocialViewModel {
                 limit: 20
             )
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
         }
     }
 
@@ -10533,7 +10533,7 @@ final class SocialViewModel {
             }
             return nil
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
             return nil
         }
     }
@@ -10542,7 +10542,7 @@ final class SocialViewModel {
         do {
             activeCollabDoc = try await cloudStore.fetchCollabDoc(id: doc.id) ?? doc
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
             activeCollabDoc = doc
         }
     }
@@ -10619,6 +10619,14 @@ final class SocialViewModel {
         return false
     }
 
+    private func handleSocialActionError(_ error: Error) {
+        if shouldClearLoadedSocialState(for: error) {
+            handlePipelineError(error)
+            return
+        }
+        statusMessage = message(for: error)
+    }
+
     private func enqueueAction(payload: SocialQueuedActionPayload, dedupeKey: String?) async {
         let action = SocialQueuedAction(
             id: UUID(),
@@ -10690,6 +10698,10 @@ final class SocialViewModel {
                 break
             }
         }
+        if shouldClearLoadedSocialState(for: error) {
+            currentUser = nil
+            resetLoadedCollections()
+        }
         // Schema not deployed yet — stamp diagnostic for debugging but stay idle so
         // users never see a scary error. The seeder will bootstrap the schema and post
         // a notification that triggers retryFriendsLoad() automatically.
@@ -10706,6 +10718,24 @@ final class SocialViewModel {
         let resolved = message(for: error)
         statusMessage = resolved
         friendsLoadState = .failed(message: resolved)
+    }
+
+    private func shouldClearLoadedSocialState(for error: Error) -> Bool {
+        if let socialError = error as? SocialError {
+            switch socialError {
+            case .iCloudUnavailable:
+                return true
+            default:
+                break
+            }
+        }
+        guard let ckError = cloudKitError(from: error) else { return false }
+        switch ckError.code {
+        case .notAuthenticated, .permissionFailure:
+            return true
+        default:
+            return false
+        }
     }
 
     private func retryDelay(forAttempt attempt: Int) -> TimeInterval {
@@ -10737,10 +10767,13 @@ final class SocialViewModel {
     private func loadOptionalSocialValue<T>(
         fallback: T,
         operation: () async throws -> T
-    ) async -> T {
+    ) async throws -> T {
         do {
             return try await operation()
         } catch {
+            if shouldClearLoadedSocialState(for: error) {
+                throw error
+            }
             let suppressed = shouldSuppressOptionalSocialSchemaError(error)
             if !suppressed {
                 // Only surface non-schema errors in the status message; don't

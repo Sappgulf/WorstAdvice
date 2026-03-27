@@ -537,31 +537,52 @@ final class BadviceUITests: XCTestCase {
     ) {
         let signUpModeButton = app.buttons["auth.mode.signUp"]
         XCTAssertTrue(signUpModeButton.waitForExistence(timeout: 8))
+        if !signUpModeButton.isSelected {
+            signUpModeButton.tap()
+        }
 
         let displayNameField = app.textFields["auth.displayName"]
         XCTAssertTrue(displayNameField.waitForExistence(timeout: 5))
         displayNameField.tap()
+        if let existing = displayNameField.value as? String, !existing.isEmpty, existing != "Display name (optional)" {
+            displayNameField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
         displayNameField.typeText(displayName)
 
         let emailField = app.textFields["auth.email"]
         XCTAssertTrue(emailField.waitForExistence(timeout: 3))
         emailField.tap()
+        if let existing = emailField.value as? String, !existing.isEmpty, existing != "Email" {
+            emailField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
         emailField.typeText(email)
 
         let passwordField = app.secureTextFields["auth.password"]
         XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
         passwordField.tap()
-        passwordField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 32))
+        if let existing = passwordField.value as? String,
+            !existing.isEmpty,
+            existing != "Password",
+            existing != "Create password"
+        {
+            passwordField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
         passwordField.typeText(password)
 
         let confirmField = app.secureTextFields["auth.confirmPassword"]
         XCTAssertTrue(confirmField.waitForExistence(timeout: 3))
         confirmField.tap()
+        if let existing = confirmField.value as? String,
+            !existing.isEmpty,
+            existing != "Confirm password"
+        {
+            confirmField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
         confirmField.typeText(password)
 
         let primaryButton = app.buttons["auth.primary"]
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
-        XCTAssertTrue(primaryButton.isEnabled)
+        XCTAssertTrue(waitForElementToBecomeEnabled(primaryButton, timeout: 3))
         primaryButton.tap()
 
         XCTAssertTrue(waitForAuthenticatedShell(app: app))
@@ -592,5 +613,19 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
         XCTAssertTrue(primaryButton.isEnabled)
         primaryButton.tap()
+    }
+
+    private func waitForElementToBecomeEnabled(
+        _ element: XCUIElement,
+        timeout: TimeInterval
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.isEnabled {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return element.isEnabled
     }
 }
