@@ -60,8 +60,12 @@ final class ReferralManager {
     // MARK: Persistence
 
     private func persist(_ link: ReferralLink) {
-        guard let data = try? JSONEncoder().encode(link) else { return }
-        UserDefaults.standard.set(data, forKey: Self.storedLinksKey)
+        do {
+            let data = try JSONEncoder().encode(link)
+            UserDefaults.standard.set(data, forKey: Self.storedLinksKey)
+        } catch {
+            referralLogger.error("Failed to encode ReferralLink for persistence: \(error.localizedDescription)")
+        }
     }
 
     func loadStoredLink() {

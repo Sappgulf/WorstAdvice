@@ -27,6 +27,7 @@ actor ImageCache {
             guard let (data, _) = try? await URLSession.shared.data(from: url) else {
                 return nil
             }
+            guard !Task.isCancelled else { return nil }
             cache[url] = data
             return data
         }

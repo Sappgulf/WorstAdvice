@@ -68,8 +68,12 @@ final class OfflinePackCache {
             guard status == .cached || status == .stale else { return nil }
             return OfflinePackCacheEntry(packID: pack.rawValue, cachedAt: Date(), version: Self.currentVersion)
         }
-        guard let data = try? JSONEncoder().encode(entries) else { return }
-        UserDefaults.standard.set(data, forKey: Self.storageKey)
+        do {
+            let data = try JSONEncoder().encode(entries)
+            UserDefaults.standard.set(data, forKey: Self.storageKey)
+        } catch {
+            cacheLogger.error("Failed to persist offline pack statuses: \(error.localizedDescription)")
+        }
     }
 
     private func loadPersistedStatuses() {

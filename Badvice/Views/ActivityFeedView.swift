@@ -9,7 +9,9 @@ struct ActivityFeedView: View {
 
     @State private var events: [SocialActivityEvent] = []
     @State private var isLoading = true
+    @State private var loadFailed = false
     @State private var lastLoadedRefreshAt: Date?
+    private var isOnline: Bool { NetworkMonitor.shared.isOnline }
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
@@ -18,16 +20,23 @@ struct ActivityFeedView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .top) {
                 Theme.backgroundGradient(for: settings.theme).ignoresSafeArea()
 
                 if isLoading {
                     ProgressView("Loading activity…")
                         .tint(accent)
+                } else if loadFailed {
+                    feedErrorState
                 } else if events.isEmpty {
                     emptyState
                 } else {
                     feedList
+                }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if !isOnline {
+                    OfflineBanner()
                 }
             }
             .navigationTitle("Friend Activity")
@@ -51,6 +60,37 @@ struct ActivityFeedView: View {
             .padding(.horizontal)
             .padding(.top, 8)
         }
+    }
+
+    // MARK: Error State
+
+    private var feedErrorState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 44))
+                .foregroundStyle(secondaryText)
+            Text("Couldn't Load Activity")
+                .font(.headline)
+                .foregroundStyle(primaryText)
+            Text("Something went wrong fetching your friends' activity.")
+                .font(.subheadline)
+                .foregroundStyle(secondaryText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Button {
+                Task { await loadEvents(force: true) }
+            } label: {
+                Label("Try Again", systemImage: "arrow.clockwise")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(accent.opacity(0.12), in: Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Failed to load activity. Double-tap to retry.")
     }
 
     // MARK: Empty State
@@ -81,9 +121,17 @@ struct ActivityFeedView: View {
         }
 
         isLoading = true
+        loadFailed = false
         defer {
             isLoading = false
             lastLoadedRefreshAt = refreshAt
+        }
+
+        do {
+            try Task.checkCancellation()
+        } catch {
+            loadFailed = true
+            return
         }
 
         // In production this would call social.fetchActivityFeed().

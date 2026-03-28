@@ -6033,7 +6033,10 @@ final class GenerateViewModel {
 
     private func weightedChoice<T>(items: [T], weights: [Double], seed: Int, salt: Int) -> T {
         guard items.count == weights.count, let first = items.first else {
-            preconditionFailure("Weighted choice requires matching, non-empty inputs.")
+            assertionFailure("weightedChoice: mismatched or empty inputs (items:\(items.count) weights:\(weights.count))")
+            logger.error("weightedChoice: mismatched or empty inputs — falling back to seed-based pick")
+            if items.isEmpty { fatalError("weightedChoice called with empty items array") }
+            return items[seed.positiveModulo(items.count)]
         }
         let total = weights.reduce(0, +)
         guard total > 0 else {

@@ -79,6 +79,78 @@ private struct GlassCard<Content: View>: View {
     }
 }
 
+// MARK: - Shimmer Skeleton
+
+private struct ShimmerModifier: ViewModifier {
+    @State private var phase: CGFloat = -1
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                GeometryReader { geo in
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .white.opacity(0.22), location: 0.4),
+                            .init(color: .clear, location: 0.8),
+                        ],
+                        startPoint: .init(x: phase, y: 0),
+                        endPoint: .init(x: phase + 1, y: 0)
+                    )
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .blendMode(.plusLighter)
+                }
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 1.3).repeatForever(autoreverses: false)) {
+                    phase = 1
+                }
+            }
+    }
+}
+
+private extension View {
+    func shimmer() -> some View { modifier(ShimmerModifier()) }
+}
+
+private struct FavoriteSkeletonRow: View {
+    let accent: Color
+    let cardColor: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(accent.opacity(0.25))
+                .frame(width: 3, height: 60)
+                .padding(.vertical, 4)
+
+            VStack(alignment: .leading, spacing: 8) {
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(accent.opacity(0.12))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 14)
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(accent.opacity(0.08))
+                    .frame(width: 200, height: 14)
+                HStack(spacing: 8) {
+                    Capsule()
+                        .fill(accent.opacity(0.12))
+                        .frame(width: 70, height: 20)
+                    Capsule()
+                        .fill(accent.opacity(0.07))
+                        .frame(width: 50, height: 20)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(cardColor)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous))
+        .shimmer()
+        .accessibilityHidden(true)
+    }
+}
+
 // MARK: - Favorites Tab
 
 struct FavoritesTabView: View {
@@ -89,6 +161,7 @@ struct FavoritesTabView: View {
     @State private var layout: FavoritesLayout = .list
     @State private var listContentAppeared = false
     @State private var activeToast: ToastMessage? = nil
+    @State private var isFavoritesLoading = true
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -110,7 +183,9 @@ struct FavoritesTabView: View {
             ZStack {
                 bg.ignoresSafeArea()
 
-                if viewModel.favorites.isEmpty {
+                if isFavoritesLoading {
+                    skeletonState
+                } else if viewModel.favorites.isEmpty {
                     emptyState
                 } else {
                     VStack(spacing: 0) {
@@ -215,6 +290,7 @@ struct FavoritesTabView: View {
             .onAppear {
                 Task(priority: .utility) {
                     viewModel.loadIfNeeded()
+                    isFavoritesLoading = false
                 }
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 tabBarVisible.wrappedValue = true
@@ -607,6 +683,20 @@ struct FavoritesTabView: View {
                 listContentAppeared = true
             }
         }
+    }
+
+    private var skeletonState: some View {
+        ScrollView {
+            LazyVStack(spacing: 10) {
+                ForEach(0..<5, id: \.self) { _ in
+                    FavoriteSkeletonRow(accent: accent, cardColor: cardColor)
+                        .padding(.horizontal, 16)
+                }
+            }
+            .padding(.top, 8)
+        }
+        .scrollDisabled(true)
+        .transition(.opacity)
     }
 
     @State private var emptyStateAppeared = false

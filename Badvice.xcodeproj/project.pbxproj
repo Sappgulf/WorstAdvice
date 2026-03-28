@@ -47,16 +47,16 @@
 		A10000010000000000000027 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000027 /* ConfettiView.swift */; };
 		A10000010000000000000030 /* AdaptiveRanker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000030 /* AdaptiveRanker.swift */; };
 		A10000010000000000000031 /* ChaosHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000031 /* ChaosHubView.swift */; };
-		A10000010000000000000032 /* Shared/SharedDailyQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* Shared/SharedDailyQuoteSource.swift */; };
-		A10000010000000000000033 /* Shared/SharedDailyQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* Shared/SharedDailyQuoteSource.swift */; };
+		A10000010000000000000032 /* SharedDailyQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* SharedDailyQuoteSource.swift */; };
+		A10000010000000000000033 /* SharedDailyQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* SharedDailyQuoteSource.swift */; };
 		A10000010000000000000099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000099 /* PrivacyInfo.xcprivacy */; };
 		A1000002000000000000AA01 /* GenerateTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA01 /* GenerateTabView.swift */; };
 		A1000002000000000000AA02 /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA02 /* ToastView.swift */; };
 		A1000002000000000000AA03 /* DeviceCapabilityProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */; };
 		A1000002000000000000AA04 /* AdviceEngine+Vocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA04 /* AdviceEngine+Vocabulary.swift */; };
 		A1000002000000000000AA05 /* AdviceBracketView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA05 /* AdviceBracketView.swift */; };
-		A1000002000000000000AA06 /* Badvice/Views/ExploreTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA06 /* Badvice/Views/ExploreTabView.swift */; };
-		A1000002000000000000AA07 /* Badvice/Views/GroupChallengesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA07 /* Badvice/Views/GroupChallengesTabView.swift */; };
+		A1000002000000000000AA06 /* ExploreTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA06 /* ExploreTabView.swift */; };
+		A1000002000000000000AA07 /* GroupChallengesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA07 /* GroupChallengesTabView.swift */; };
 		A1000003000000000000BB01 /* LocalAccountStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB01 /* LocalAccountStoreTests.swift */; };
 		A1000003000000000000BB02 /* AppSessionSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB02 /* AppSessionSmokeTests.swift */; };
 		A1000003000000000000BB03 /* SocialViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB03 /* SocialViewModelTests.swift */; };
@@ -70,6 +70,7 @@
 		CC7C2D8BC35FCFF69C567086 /* LocalAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 537EABC7909023C6B45AAB4F /* LocalAuth.swift */; };
 		D10000010000000000000001 /* BadviceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000010000000000000001 /* BadviceUITests.swift */; };
 		D10000020000000000000001 /* BadviceFullSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000020000000000000001 /* BadviceFullSmokeTests.swift */; };
+		F583507E5A045C5780BC1B36 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCF16D47C5CD16BA42173EC /* NetworkMonitor.swift */; };
 		F67E4DFCBEDF98A26BE99151 /* WorstAdviceQuoteWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */; };
 /* End PBXBuildFile section */
 
@@ -125,6 +126,7 @@
 		53A5EDD883F062B6F7D61AF6 /* AppSessionViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppSessionViewModel.swift; sourceTree = "<group>"; };
 		56D0F9A0F33FC44CE7FFD0B9 /* AchievementsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AchievementsView.swift; path = Badvice/Views/AchievementsView.swift; sourceTree = "<group>"; };
 		6C98EE3071240A963E2CD94B /* SocialProfileSetupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SocialProfileSetupView.swift; sourceTree = "<group>"; };
+		7CCF16D47C5CD16BA42173EC /* NetworkMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		85AA50D7506E97110B20E16F /* AnimatedShareExporter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AnimatedShareExporter.swift; sourceTree = "<group>"; };
 		86C0C112D36AF44AC7271B25 /* LiveActivityManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		88A8B7BA7C96143E7039C52E /* LocalAuthGateView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalAuthGateView.swift; sourceTree = "<group>"; };
@@ -155,15 +157,15 @@
 		A20000010000000000000027 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		A20000010000000000000030 /* AdaptiveRanker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveRanker.swift; sourceTree = "<group>"; };
 		A20000010000000000000031 /* ChaosHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChaosHubView.swift; sourceTree = "<group>"; };
-		A20000010000000000000032 /* Shared/SharedDailyQuoteSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SharedDailyQuoteSource.swift; sourceTree = "<group>"; };
+		A20000010000000000000032 /* SharedDailyQuoteSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SharedDailyQuoteSource.swift; sourceTree = "<group>"; };
 		A20000010000000000000099 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A2000002000000000000AA01 /* GenerateTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateTabView.swift; sourceTree = "<group>"; };
 		A2000002000000000000AA02 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
 		A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilityProfile.swift; sourceTree = "<group>"; };
 		A2000002000000000000AA04 /* AdviceEngine+Vocabulary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AdviceEngine+Vocabulary.swift"; sourceTree = "<group>"; };
 		A2000002000000000000AA05 /* AdviceBracketView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceBracketView.swift; sourceTree = "<group>"; };
-		A2000002000000000000AA06 /* Badvice/Views/ExploreTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/Views/ExploreTabView.swift; sourceTree = "<group>"; };
-		A2000002000000000000AA07 /* Badvice/Views/GroupChallengesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/Views/GroupChallengesTabView.swift; sourceTree = "<group>"; };
+		A2000002000000000000AA06 /* ExploreTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/Views/ExploreTabView.swift; sourceTree = "<group>"; };
+		A2000002000000000000AA07 /* GroupChallengesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/Views/GroupChallengesTabView.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB01 /* LocalAccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAccountStoreTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB02 /* AppSessionSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSessionSmokeTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB03 /* SocialViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialViewModelTests.swift; sourceTree = "<group>"; };
@@ -264,6 +266,7 @@
 			isa = PBXGroup;
 			children = (
 				A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */,
+				7CCF16D47C5CD16BA42173EC /* NetworkMonitor.swift */,
 			);
 			name = Shared;
 			sourceTree = "<group>";
@@ -271,8 +274,8 @@
 		9B1142D72F56A5E100D664DF /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
-				A2000002000000000000AA06 /* Badvice/Views/ExploreTabView.swift */,
-				A2000002000000000000AA07 /* Badvice/Views/GroupChallengesTabView.swift */,
+				A2000002000000000000AA06 /* ExploreTabView.swift */,
+				A2000002000000000000AA07 /* GroupChallengesTabView.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -298,7 +301,7 @@
 			children = (
 				A20000010000000000000001 /* WorstAdviceApp.swift */,
 				A10000010000000000000029 /* NotificationManager.swift */,
-				A20000010000000000000032 /* Shared/SharedDailyQuoteSource.swift */,
+				A20000010000000000000032 /* SharedDailyQuoteSource.swift */,
 				A70000010000000000000003 /* Models */,
 				A70000010000000000000004 /* Data */,
 				A70000010000000000000005 /* Engine */,
@@ -575,7 +578,7 @@
 			files = (
 				A10000010000000000000001 /* WorstAdviceApp.swift in Sources */,
 				A20000010000000000000029 /* NotificationManager.swift in Sources */,
-				A10000010000000000000032 /* Shared/SharedDailyQuoteSource.swift in Sources */,
+				A10000010000000000000032 /* SharedDailyQuoteSource.swift in Sources */,
 				A10000010000000000000002 /* ContentView.swift in Sources */,
 				A10000010000000000000003 /* AdviceCardView.swift in Sources */,
 				A10000010000000000000004 /* IntensityIndicator.swift in Sources */,
@@ -601,8 +604,8 @@
 				C82E5EADB60BABE95E14B274 /* ShakeDetector.swift in Sources */,
 				A970A1DC8B4EEEDDF0DEC44A /* AchievementsView.swift in Sources */,
 				A1000002000000000000AA05 /* AdviceBracketView.swift in Sources */,
-				A1000002000000000000AA06 /* Badvice/Views/ExploreTabView.swift in Sources */,
-				A1000002000000000000AA07 /* Badvice/Views/GroupChallengesTabView.swift in Sources */,
+				A1000002000000000000AA06 /* ExploreTabView.swift in Sources */,
+				A1000002000000000000AA07 /* GroupChallengesTabView.swift in Sources */,
 				CC7C2D8BC35FCFF69C567086 /* LocalAuth.swift in Sources */,
 				99BADEF42679E9E97A271378 /* AppSessionViewModel.swift in Sources */,
 				5F9DAB6EFBFED341DF9CF1FD /* LocalAuthGateView.swift in Sources */,
@@ -620,6 +623,7 @@
 				526DBFC76B337832997A73F3 /* CollabAdviceView.swift in Sources */,
 				8FBB37C624DF5072622F2BA2 /* GlobalCommunityFeedView.swift in Sources */,
 				973C67C703EAAFA8D5C94C4D /* SuggestionPipelineView.swift in Sources */,
+				F583507E5A045C5780BC1B36 /* NetworkMonitor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -649,7 +653,7 @@
 			files = (
 				B07D78E07800DE9F6C60ABAF /* WorstAdviceWidgetBundle.swift in Sources */,
 				F67E4DFCBEDF98A26BE99151 /* WorstAdviceQuoteWidget.swift in Sources */,
-				A10000010000000000000033 /* Shared/SharedDailyQuoteSource.swift in Sources */,
+				A10000010000000000000033 /* SharedDailyQuoteSource.swift in Sources */,
 				BL0000010000000000000001 /* BadviceLockScreenWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -868,7 +872,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.1;
+				MARKETING_VERSION = 5.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
@@ -900,7 +904,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.1;
+				MARKETING_VERSION = 5.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
