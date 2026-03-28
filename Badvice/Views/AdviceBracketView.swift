@@ -98,6 +98,8 @@ struct AdviceBracketView: View {
                 }
             }
             .padding(.horizontal)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Round \(round + 1), match \(currentPairIndex + 1) of \(totalPairs)")
 
             if let left, let right {
                 HStack(spacing: 12) {
@@ -106,6 +108,7 @@ struct AdviceBracketView: View {
                         .font(.title3.weight(.black))
                         .foregroundStyle(accent)
                         .frame(width: 32)
+                        .accessibilityHidden(true)
                     contestantCard(right, side: .right)
                 }
                 .padding(.horizontal)
@@ -147,6 +150,8 @@ struct AdviceBracketView: View {
         .buttonStyle(.plain)
         .scaleEffect(side == .left ? leftScale : rightScale)
         .opacity(side == .left ? leftOpacity : rightOpacity)
+        .accessibilityLabel(contestant.adviceLine)
+        .accessibilityHint("Double-tap to vote this as the worse advice")
     }
 
     // MARK: Champion View
@@ -156,14 +161,17 @@ struct AdviceBracketView: View {
             Spacer()
             Text("🏆")
                 .font(.system(size: 64))
+                .accessibilityHidden(true)
             Text("Champion")
                 .font(.title.weight(.black))
                 .foregroundStyle(accent)
+                .accessibilityAddTraits(.isHeader)
             Text(advice)
                 .font(.body.weight(.medium))
                 .foregroundStyle(primaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
+                .accessibilityLabel("Winning advice: \(advice)")
 
             VStack(spacing: 12) {
                 Button {

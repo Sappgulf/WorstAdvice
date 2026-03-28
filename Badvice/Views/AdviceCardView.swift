@@ -33,6 +33,13 @@ struct AdviceCardView: View {
     @State private var shakeCount: Int = 0
     @State private var rotationResetTask: Task<Void, Never>?
 
+    // Performance: skip tilt recalc when drag movement is sub-threshold
+    @State private var lastTiltTranslation: CGSize = .zero
+    private static let tiltUpdateThreshold: CGFloat = 2.0
+
+    // Dynamic Type: decorative quote mark scales with user text size
+    @ScaledMetric(relativeTo: .title) private var quoteFontSize: CGFloat = 56
+
     private var isMotionReduced: Bool {
         reduceMotion || accessibilityReduceMotion
     }
@@ -106,9 +113,9 @@ struct AdviceCardView: View {
                 }
             }
 
-            // Decorative quote mark
+            // Decorative quote mark — scales with Dynamic Type
             Text("\u{201C}")
-                .font(.system(size: 56, weight: .heavy, design: .serif))
+                .font(.system(size: quoteFontSize, weight: .heavy, design: .serif))
                 .foregroundStyle(accent.opacity(0.22))
                 .frame(height: 24)
                 .padding(.top, 10)
@@ -272,21 +279,28 @@ struct AdviceCardView: View {
             DragGesture(minimumDistance: 14)
                 .onChanged { value in
                     guard !isMotionReduced else { return }
+                    let t = value.translation
+                    let dx = abs(t.width  - lastTiltTranslation.width)
+                    let dy = abs(t.height - lastTiltTranslation.height)
+                    guard dx > Self.tiltUpdateThreshold || dy > Self.tiltUpdateThreshold else { return }
+                    lastTiltTranslation = t
+
                     let maxRotation: Double = 8
-                    let horizontalWeight = abs(value.translation.width)
-                    let verticalWeight = abs(value.translation.height)
+                    let horizontalWeight = abs(t.width)
+                    let verticalWeight   = abs(t.height)
                     // Keep vertical list scrolling responsive by only reacting to mostly horizontal drags.
                     guard horizontalWeight >= verticalWeight * 0.8 else { return }
 
                     withAnimation(Theme.springSnappy) {
-                        let nextY = Double(value.translation.width / 18)
-                        let nextX = Double(-value.translation.height / 24)
+                        let nextY = Double(t.width  / 18)
+                        let nextX = Double(-t.height / 24)
                         rotationY = min(max(nextY, -maxRotation), maxRotation)
                         rotationX = min(max(nextX, -maxRotation), maxRotation)
                     }
                 }
                 .onEnded { _ in
                     guard !isMotionReduced else { return }
+                    lastTiltTranslation = .zero
                     withAnimation(Theme.springSmooth) {
                         rotationX = 0
                         rotationY = 0

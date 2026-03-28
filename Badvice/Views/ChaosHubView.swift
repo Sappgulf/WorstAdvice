@@ -625,7 +625,7 @@ struct ChaosHubTabView: View {
         HStack(spacing: 8) {
             Image(systemName: "antenna.radiowaves.left.and.right.slash")
                 .font(.caption.weight(.medium))
-                .foregroundStyle(secondaryText.opacity(0.45))
+                .foregroundStyle(secondaryText.opacity(0.65))
             Text(text)
                 .font(.caption)
                 .foregroundStyle(secondaryText.opacity(0.7))

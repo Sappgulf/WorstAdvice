@@ -548,7 +548,7 @@ struct AchievementCard: View {
 
                 Image(systemName: achievement.type.icon)
                     .font(.system(size: 28))
-                    .foregroundStyle(achievement.isUnlocked ? accent : secondaryText.opacity(0.5))
+                    .foregroundStyle(achievement.isUnlocked ? accent : secondaryText.opacity(0.65))
             }
 
             // Title and description
@@ -567,7 +567,7 @@ struct AchievementCard: View {
                 } else {
                     Text("???")
                         .font(.caption2)
-                        .foregroundStyle(secondaryText.opacity(0.5))
+                        .foregroundStyle(secondaryText.opacity(0.65))
                 }
             }
 

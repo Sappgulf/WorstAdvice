@@ -30,7 +30,7 @@ private struct InlineSearchField: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(secondaryText.opacity(0.5))
+                        .foregroundStyle(secondaryText.opacity(0.65))
                         .frame(width: 30, height: 30)
                 }
                 .buttonStyle(.plain)
@@ -148,6 +148,123 @@ private struct FavoriteSkeletonRow: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous))
         .shimmer()
         .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Favorite Row / Cell Components
+
+private struct FavoriteListRow: View {
+    let record: AdviceRecord
+    let accent: Color
+    let primaryText: Color
+    let secondaryText: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(accent.opacity(0.7))
+                .frame(width: 3)
+                .padding(.vertical, 4)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(record.adviceLine)
+                    .font(.system(.body, design: .default, weight: .medium))
+                    .foregroundStyle(primaryText)
+                    .lineLimit(3)
+                    .lineSpacing(2)
+                    .multilineTextAlignment(.leading)
+
+                HStack(spacing: 8) {
+                    Label(record.category.title, systemImage: record.category.icon)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+
+                    Text(record.tone.title)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+
+                    Spacer(minLength: 0)
+
+                    if record.aftermathNote != nil {
+                        Image(systemName: "book.pages")
+                            .font(.caption2)
+                            .foregroundStyle(accent.opacity(0.6))
+                    }
+                    if record.isFavorite {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2)
+                            .foregroundStyle(accent.opacity(0.8))
+                    }
+                }
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(secondaryText.opacity(0.65))
+                .padding(.top, 4)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.white.opacity(0.07), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(record.adviceLine), \(record.category.title), \(record.tone.title)")
+    }
+}
+
+private struct FavoriteGridCell: View {
+    let record: AdviceRecord
+    let accent: Color
+    let primaryText: Color
+    let secondaryText: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Label(record.category.title, systemImage: record.category.icon)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+                Spacer(minLength: 0)
+                if record.aftermathNote != nil {
+                    Image(systemName: "book.pages")
+                        .font(.caption2)
+                        .foregroundStyle(accent.opacity(0.6))
+                }
+            }
+
+            Spacer(minLength: 10)
+
+            Text(record.adviceLine)
+                .font(.footnote.weight(.medium))
+                .lineLimit(5)
+                .multilineTextAlignment(.leading)
+                .foregroundStyle(primaryText)
+                .lineSpacing(2)
+
+            Spacer(minLength: 10)
+
+            Text(record.tone.title)
+                .font(.caption2)
+                .foregroundStyle(secondaryText)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(accent.opacity(0.1), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(record.adviceLine), \(record.tone.title)")
     }
 }
 
@@ -403,60 +520,7 @@ struct FavoritesTabView: View {
     }
 
     private func favoriteListRow(_ record: AdviceRecord) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            // Accent bar
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(accent.opacity(0.7))
-                .frame(width: 3)
-                .padding(.vertical, 4)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(record.adviceLine)
-                    .font(.system(.body, design: .default, weight: .medium))
-                    .foregroundStyle(primaryText)
-                    .lineLimit(3)
-                    .lineSpacing(2)
-                    .multilineTextAlignment(.leading)
-
-                HStack(spacing: 8) {
-                    Label(record.category.title, systemImage: record.category.icon)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(accent)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
-
-                    Text(record.tone.title)
-                        .font(.caption)
-                        .foregroundStyle(secondaryText)
-
-                    Spacer(minLength: 0)
-
-                    if record.aftermathNote != nil {
-                        Image(systemName: "book.pages")
-                            .font(.caption2)
-                            .foregroundStyle(accent.opacity(0.6))
-                    }
-                    if record.isFavorite {
-                        Image(systemName: "bookmark.fill")
-                            .font(.caption2)
-                            .foregroundStyle(accent.opacity(0.8))
-                    }
-                }
-            }
-
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(secondaryText.opacity(0.35))
-                .padding(.top, 4)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(.white.opacity(0.07), lineWidth: 1)
-        )
+        FavoriteListRow(record: record, accent: accent, primaryText: primaryText, secondaryText: secondaryText)
     }
 
     private var gridView: some View {
@@ -509,57 +573,7 @@ struct FavoritesTabView: View {
     }
 
     private func favoriteGridCell(_ record: AdviceRecord) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 6) {
-                Label(record.category.title, systemImage: record.category.icon)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(accent)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
-                Spacer(minLength: 0)
-                if record.aftermathNote != nil {
-                    Image(systemName: "book.pages")
-                        .font(.caption2)
-                        .foregroundStyle(accent.opacity(0.6))
-                }
-            }
-
-            Spacer(minLength: 10)
-
-            Text(record.adviceLine)
-                .font(.footnote.weight(.medium))
-                .lineLimit(5)
-                .multilineTextAlignment(.leading)
-                .foregroundStyle(primaryText)
-                .lineSpacing(2)
-
-            Spacer(minLength: 10)
-
-            Text(record.tone.title)
-                .font(.caption2)
-                .foregroundStyle(secondaryText)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(accent.opacity(0.1), lineWidth: 1)
-        )
-        .contextMenu {
-            Button("Copy") {
-                UIPasteboard.general.string = record.adviceLine
-                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-            }
-            Button("Unsave") { viewModel.remove(record) }
-            Button("Delete", role: .destructive) { viewModel.delete(record) }
-        }
-        .onTapGesture(count: 2) {
-            viewModel.remove(record)
-            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-            activeToast = ToastMessage(message: "Removed from Favorites", style: .deleted)
-        }
+        FavoriteGridCell(record: record, accent: accent, primaryText: primaryText, secondaryText: secondaryText)
     }
 
     private var statsChip: some View {
@@ -787,7 +801,7 @@ struct FavoritesTabView: View {
         VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 36, weight: .medium))
-                .foregroundStyle(secondaryText.opacity(0.5))
+                .foregroundStyle(secondaryText.opacity(0.65))
                 .scaleEffect(noResultsAppeared ? 1 : 0.5)
                 .rotationEffect(.degrees(noResultsAppeared ? 0 : -20))
 
@@ -1088,7 +1102,7 @@ struct QuotesTabView: View {
 
                 Text("•")
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(secondaryText.opacity(0.5))
+                    .foregroundStyle(secondaryText.opacity(0.65))
 
                 Text(quote.source)
                     .font(.caption2.weight(.medium))
@@ -3201,7 +3215,7 @@ struct HistoryTabView: View {
         VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 36, weight: .medium))
-                .foregroundStyle(secondaryText.opacity(0.5))
+                .foregroundStyle(secondaryText.opacity(0.65))
                 .scaleEffect(noResultsAppeared ? 1 : 0.5)
                 .rotationEffect(.degrees(noResultsAppeared ? 0 : -20))
             Text("No matches found")
