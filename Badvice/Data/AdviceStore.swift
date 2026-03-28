@@ -1835,7 +1835,11 @@ extension AdviceStore {
                 "Premature certainty often reads as leadership in a rush.",
                 "If the story is tight enough, reality can arrive late.",
                 "A confident checkpoint schedule can hide missing prep.",
-                "People confuse motion with progress when the updates are frequent."
+                "People confuse motion with progress when the updates are frequent.",
+                "Bold claims require no citation when confidence is high enough.",
+                "The loudest voice in the room often sets the agenda.",
+                "Charisma can substitute for competence when presentation is polished.",
+                "Status updates that sound finished don't need verification."
             ]
         )
     }

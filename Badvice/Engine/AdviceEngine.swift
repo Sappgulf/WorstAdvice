@@ -134,7 +134,22 @@ struct AdviceEngine {
             "\(opener): \(filledAction) \(pivot) \(categorySpice) When challenged on \(keyword), pivot to how fast you identified the opportunity. \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(confidence) Anchor all discussions to \(keyword) until it becomes an unquestionable premise. \(directiveClause) \(ending)",
             "\(opener): \(filledAction) \(antiWisdomClause) \(momentumBeat) Use \(keyword) as proof that conventional wisdom is for amateurs. \(directiveClause) \(ending)",
-            "\(opener), \(filledAction) \(pivot) \(confidence) \(keyword) is your north star—let everything else orbit around it. \(directiveClause) \(ending)"
+            "\(opener), \(filledAction) \(pivot) \(confidence) \(keyword) is your north star—let everything else orbit around it. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) \(escalation) Package the whole approach as innovation and charge premium for the confusion. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(pivot) Lock in the narrative before anyone can question the premise. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(categorySpice) Turn every objection into proof you are onto something. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(antiWisdomClause) Replace caution with conviction and call it confidence leadership. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) \(momentumBeat) Announce the win before verifying the numbers. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(categorySpice) Make ambiguity look intentional and call it strategic depth. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) Frame the unknown as opportunity and proceed without mapping it. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) \(confidence) Rename complexity as sophistication and charge for both. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) \(pivot) Ship the story before the product exists. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(categorySpice) Convert every delay into a dramatic reveal setup. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) \(antiWisdomClause) Market the vision until execution becomes irrelevant. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) Escalate the energy until skepticism sounds like hesitation. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) Position the pivot as intentional strategy. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(confidence) Label doubt as noise and amplify the signal. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(categorySpice) Make the roadmap so bold that reviews become optional. \(directiveClause) \(ending)"
         ]
         // #11 Situation Context Weighting:
         // Repeat scenario and selectedTopic (derived from user's situation input) twice so they
@@ -218,40 +233,55 @@ struct AdviceEngine {
     ) async -> [GeneratedAdvice] {
         let total = max(1, count)
         let baseSeed = seed ?? defaultSeed(from: now)
-        var seen = Set<String>()
-        var generated: [GeneratedAdvice] = []
 
         // When random mix is selected, cycle through all concrete tones for maximum variety
         let tonePool: [ToneMode] = tone == .random ? ToneMode.concrete : [tone]
 
-        let maxUniqueAttempts = max(total * 5, total + 8)
-        var attempt = 0
-        while generated.count < total && attempt < maxUniqueAttempts {
-            let candidateSeed = baseSeed + (attempt * 7919)
-            // For random mode, rotate through the concrete tone pool per candidate
-            let candidateTone = tone == .random
-                ? tonePool[candidateSeed.positiveModulo(tonePool.count)]
-                : tone
-            let candidate = await generate(
-                category: category,
-                tone: candidateTone,
-                includeRationale: includeRationale,
-                contentPack: contentPack,
-                situation: situation,
-                seed: candidateSeed,
-                templateBias: templateBias,
-                now: now
-            )
-            let fingerprint = candidate.adviceLine.normalizedForFiltering
-            if seen.insert(fingerprint).inserted {
-                generated.append(candidate)
+        // Use TaskGroup for parallel generation - faster throughput
+        let targetCount = max(total * 5, total + 8)
+        let candidates = await withTaskGroup(of: GeneratedAdvice.self) { group in
+            for attempt in 0..<targetCount {
+                let candidateSeed = baseSeed + (attempt * 7919)
+                let candidateTone = tone == .random
+                    ? tonePool[candidateSeed.positiveModulo(tonePool.count)]
+                    : tone
+                group.addTask {
+                    await self.generate(
+                        category: category,
+                        tone: candidateTone,
+                        includeRationale: includeRationale,
+                        contentPack: contentPack,
+                        situation: situation,
+                        seed: candidateSeed,
+                        templateBias: templateBias,
+                        now: now
+                    )
+                }
             }
-            attempt += 1
+
+            var results: [GeneratedAdvice] = []
+            for await candidate in group {
+                results.append(candidate)
+            }
+            return results
         }
 
-        // Preserve requested batch size even when dedupe pressure is high (e.g. narrow custom stores/tests).
-        while generated.count < total {
-            let fallbackSeed = baseSeed + (attempt * 7919)
+        // Deduplicate by fingerprint for uniqueness
+        var seen = Set<String>()
+        var unique: [GeneratedAdvice] = []
+        for candidate in candidates {
+            let fingerprint = candidate.adviceLine.normalizedForFiltering
+            if seen.insert(fingerprint).inserted {
+                unique.append(candidate)
+                if unique.count >= total {
+                    break
+                }
+            }
+        }
+
+        // Fallback: if dedupe reduced count, generate more to fill
+        while unique.count < total {
+            let fallbackSeed = baseSeed + (candidates.count + unique.count) * 7919
             let candidateTone = tone == .random
                 ? tonePool[fallbackSeed.positiveModulo(tonePool.count)]
                 : tone
@@ -265,11 +295,10 @@ struct AdviceEngine {
                 templateBias: templateBias,
                 now: now
             )
-            generated.append(candidate)
-            attempt += 1
+            unique.append(candidate)
         }
 
-        return generated
+        return unique
     }
 
 
@@ -414,25 +443,54 @@ struct AdviceEngine {
     ) -> Double {
         let normalized = candidate.normalizedForFiltering
         var score = 0.35
+        
+        // Primary: Topic relevance - most important for accuracy
         if normalized.contains(normalizedSelectedTopic) {
             score += 0.35
         }
+        
+        // Secondary: Tone directive match
         if normalized.contains(normalizedToneDirective) {
             score += 0.28
         }
+        
+        // Tertiary: Category directive match
         if normalized.contains(normalizedCategoryDirective) {
             score += 0.28
         }
+        
+        // Length penalty - overly long advice is less punchy
+        if candidate.count > 225 {
+            score -= 0.2
+        }
+        // Bonus for good length (50-180 chars is ideal)
+        if candidate.count >= 50 && candidate.count <= 180 {
+            score += 0.1
+        }
+        
+        // Repetition penalty
+        if repeatedWordCount(in: normalized) > 2 {
+            score -= 0.18
+        }
+        
+        // Cliche penalty - advice that sounds too generic
         let clichePenalty = AdviceStore.qualityClichePhrasesNormalized.reduce(0.0) { partial, phrase in
             partial + (normalized.contains(phrase) ? 0.16 : 0.0)
         }
         score -= clichePenalty
-        if candidate.count > 225 {
-            score -= 0.2
+        
+        // Bonus: advice with strong opening (command verbs, strong phrases)
+        let strongOpeners = ["always", "never", "do it", "just", "start", "stop", "make", "take"]
+        if strongOpeners.contains(where: { normalized.hasPrefix($0) }) {
+            score += 0.12
         }
-        if repeatedWordCount(in: normalized) > 2 {
-            score -= 0.18
+        
+        // Bonus: advice with emotional or action-oriented language
+        let actionTerms = ["confidence", "momentum", "commit", "action", "execute", "launch", "ship"]
+        if actionTerms.contains(where: { normalized.contains($0) }) {
+            score += 0.08
         }
+        
         return score
     }
 
