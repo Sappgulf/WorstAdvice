@@ -36,9 +36,7 @@ final class OfflinePackCache {
         downloadingPacks.insert(pack)
         statuses[pack] = .downloading
         cacheLogger.info("Downloading pack: \(pack.rawValue)")
-
-        // Simulate async pack data fetch (in production this would load from bundle/CDN)
-        try? await Task.sleep(nanoseconds: 800_000_000)
+        await Task.yield()
 
         statuses[pack] = .cached
         downloadingPacks.remove(pack)
@@ -70,8 +68,12 @@ final class OfflinePackCache {
             guard status == .cached || status == .stale else { return nil }
             return OfflinePackCacheEntry(packID: pack.rawValue, cachedAt: Date(), version: Self.currentVersion)
         }
-        guard let data = try? JSONEncoder().encode(entries) else { return }
-        UserDefaults.standard.set(data, forKey: Self.storageKey)
+        do {
+            let data = try JSONEncoder().encode(entries)
+            UserDefaults.standard.set(data, forKey: Self.storageKey)
+        } catch {
+            cacheLogger.error("Failed to persist offline pack statuses: \(error.localizedDescription)")
+        }
     }
 
     private func loadPersistedStatuses() {

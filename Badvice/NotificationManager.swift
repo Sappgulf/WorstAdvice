@@ -9,8 +9,16 @@ enum NotificationManager {
     private static let defaults = UserDefaults.standard
     private static let lastGenerationDayKey = "com.badvice.last-generation-day"
     private static let streakFreezeAvailableKey = "com.badvice.streak-freeze-available"
+    private static var isRunningOnSimulator: Bool {
+        #if targetEnvironment(simulator)
+            return true
+        #else
+            return false
+        #endif
+    }
 
     static func requestPermissionAndScheduleDaily(hour: Int = 9, streakEnabled: Bool = true) {
+        guard !isRunningOnSimulator else { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             switch settings.authorizationStatus {
@@ -35,6 +43,7 @@ enum NotificationManager {
     }
 
     static func scheduleDaily(hour: Int = 9, streakEnabled: Bool = true) {
+        guard !isRunningOnSimulator else { return }
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
 
@@ -106,6 +115,7 @@ enum NotificationManager {
         tone: ToneMode,
         deliveryHour: Int = 10
     ) {
+        guard !isRunningOnSimulator else { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             guard settings.authorizationStatus == .authorized

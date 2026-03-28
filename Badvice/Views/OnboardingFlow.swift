@@ -3,6 +3,7 @@ import SwiftUI
 struct OnboardingFlow: View {
     @Binding var isPresented: Bool
     @State private var currentPage = 0
+    @State private var showCompletionConfetti = false
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     private struct Page {
@@ -68,6 +69,10 @@ struct OnboardingFlow: View {
                 .ignoresSafeArea()
                 .animation(isMotionReduced ? nil : .easeInOut(duration: 0.6), value: currentPage)
 
+            ConfettiView(isActive: $showCompletionConfetti, lowPowerMode: isMotionReduced)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
             // Triple-A Background Elements
             FloatingParticlesView(theme: .minimal, reduceMotion: isMotionReduced, isGenerating: false)
                 .opacity(0.4)
@@ -127,12 +132,16 @@ struct OnboardingFlow: View {
                             }
                         }
                     } else {
-                        HapticsManager.play(style: .medium, isEnabled: true)
-                        if isMotionReduced {
-                            isPresented = false
-                        } else {
-                            withAnimation(.easeOut(duration: 0.3)) {
+                        HapticsManager.playSuccess(isEnabled: true)
+                        showCompletionConfetti = true
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(isMotionReduced ? 100 : 700))
+                            if isMotionReduced {
                                 isPresented = false
+                            } else {
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    isPresented = false
+                                }
                             }
                         }
                     }

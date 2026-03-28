@@ -31,8 +31,15 @@ private struct ScrollTrackingModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @State private var dragIntent: Bool?
 
+    private var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing")
+    }
+
     func body(content: Content) -> some View {
-        content
+        if isUITesting {
+            content
+        } else {
+            content
             .simultaneousGesture(
                 DragGesture(minimumDistance: 6, coordinateSpace: .local)
                     .onChanged { value in
@@ -62,6 +69,7 @@ private struct ScrollTrackingModifier: ViewModifier {
                         dragIntent = nil
                     }
             )
+        }
     }
 }
 
@@ -112,6 +120,7 @@ struct ContentView: View {
     @State private var shouldRestartOnNextActive = false
     @State private var deviceCapability = DeviceCapabilityProfile.current()
     @State private var hasScheduledDebugPolishFixturePreload = false
+    @State private var loadedTabs: Set<AppTab> = [.generate]
 
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("favoritesCountAtLastReview") private var favoritesCountAtLastReview = 0
@@ -119,9 +128,14 @@ struct ContentView: View {
 
     private var launchArguments: [String] { ProcessInfo.processInfo.arguments }
     private var isUITesting: Bool { launchArguments.contains("-ui-testing") }
+    private var settingsTabAvailable: Bool { auth?.isAuthenticated == true && session != nil }
 
     var body: some View {
         appRootView
+            .preferredColorScheme(.dark)
+            .task {
+                await bootstrapAppStateIfNeeded()
+            }
     }
 
     @ViewBuilder
@@ -129,25 +143,16 @@ struct ContentView: View {
         if showSplash {
             SplashView(isShowing: $showSplash)
                 .transition(.opacity)
-                .task {
-                    bootstrapAppStateIfNeeded()
-                }
         } else if let auth {
             if auth.isAuthenticated, let session {
                 authenticatedSessionView(auth: auth, session: session)
             } else if auth.isAuthenticated {
                 loadingView
-                    .task {
-                        bootstrapAppStateIfNeeded()
-                    }
             } else {
                 authGateView(auth: auth)
             }
         } else {
             loadingView
-                .task {
-                    bootstrapAppStateIfNeeded()
-                }
         }
     }
 
@@ -181,7 +186,7 @@ struct ContentView: View {
             return .impact(weight: .light)
         }
         .environment(\.font, Theme.bodyFont(for: session.settings.theme))
-        .task {
+        .task(id: auth.currentSession?.accountID) {
             await syncAuthContext(auth: auth, social: session.social)
         }
         .fullScreenCover(
@@ -219,8 +224,8 @@ struct ContentView: View {
             HapticsManager.playShakeDetected(isEnabled: session.settings.hapticsEnabled)
             Task {
                 await session.generate.generate()
+                session.refreshLists()
             }
-            session.refreshLists()
         }
         .onChange(of: shakeToGenerateEnabled) { _, enabled in
             shakeDetector.isEnabled = enabled
@@ -264,9 +269,6 @@ struct ContentView: View {
                 shakeDetector.startMonitoring()
             }
             session.generate.refreshRetentionStateOnAppear()
-            Task {
-                await syncAuthContext(auth: auth, social: session.social)
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) {
             _ in
@@ -287,11 +289,6 @@ struct ContentView: View {
                 selectedTab = fallback
             }
         }
-        .onChange(of: auth.currentSession?.accountID) { _, _ in
-            Task {
-                await syncAuthContext(auth: auth, social: session.social)
-            }
-        }
         .onChange(of: session.social.currentUser?.recordID.recordName) { _, newRecordName in
             auth.setLinkedSocialProfileRecordName(newRecordName)
         }
@@ -308,21 +305,25 @@ struct ContentView: View {
 
     private var loadingView: some View {
         ZStack {
-            Color(.systemBackground).ignoresSafeArea()
+            Color(hex: "0F0D11").ignoresSafeArea()
             VStack(spacing: 16) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 38, weight: .semibold))
-                    .foregroundStyle(Color.primary.opacity(0.5))
+                    .foregroundStyle(Color(hex: "E88D72").opacity(0.6))
                 ProgressView()
-                    .tint(.primary)
+                    .tint(Color(hex: "E88D72"))
                 Text("Loading your chaos...")
                     .font(.system(.subheadline, design: .rounded, weight: .medium))
-                    .foregroundStyle(Color.primary.opacity(0.45))
+                    .foregroundStyle(Color(hex: "E88D72").opacity(0.5))
             }
         }
     }
 
-    private func bootstrapAppStateIfNeeded() {
+    private func bootstrapAppStateIfNeeded() async {
+        await Task.yield()
+        if isUITesting, launchArguments.contains("-skip-splash") {
+            showSplash = false
+        }
         if auth == nil {
             let authViewModel = makeAuthViewModel()
             auth = authViewModel
@@ -336,9 +337,8 @@ struct ContentView: View {
 
         if session == nil {
             session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
-        }
-        Task {
-            await syncAuthContext(auth: auth, social: session?.social)
+            loadedTabs.insert(.chaosHub)
+            loadedTabs.insert(.explore)
         }
     }
 
@@ -369,6 +369,7 @@ struct ContentView: View {
 
     private func resetSessionPresentationState() {
         selectedTab = .generate
+        loadedTabs = [.generate]
         tabBarVisible = true
         showConfetti = false
         lastShakeHandledAt = .distantPast
@@ -385,9 +386,6 @@ struct ContentView: View {
         syncAuthDrafts(with: auth)
         session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
         applyUITestLaunchOverridesIfNeeded()
-        Task {
-            await syncAuthContext(auth: auth, social: session?.social)
-        }
     }
 
     private func signOutCurrentAccount(_ auth: AuthViewModel) {
@@ -419,6 +417,7 @@ struct ContentView: View {
     private func authGateView(auth: AuthViewModel) -> some View {
         LocalAuthGateView(
             auth: auth,
+            isUITesting: isUITesting,
             authMode: $authMode,
             authEmailDraft: $authEmailDraft,
             authPasswordDraft: $authPasswordDraft,
@@ -466,19 +465,24 @@ struct ContentView: View {
 
             TabView(selection: $selectedTab) {
                 ForEach(session.settings.tabOrder) { tab in
-                    tabView(for: tab, session: session)
+                    lazyTabContent(for: tab, session: session)
                         .tag(tab)
+                        .tabItem {
+                            Label(tab.title, systemImage: tab.systemImage)
+                        }
                         .toolbar(.hidden, for: .tabBar)  // Hide standard bar
                         .environment(\.tabBarVisible, $tabBarVisible)
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
             // Extend only the bottom edge so the custom tab bar overlaps the home indicator
             // region without pushing content under the Dynamic Island / status bar.
             .ignoresSafeArea(.all, edges: .bottom)
             // Performance: Disable animation if reduce motion is enabled
             .animation(
                 constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
+            .onChange(of: selectedTab) { _, newTab in
+                loadedTabs.insert(newTab)
+            }
 
             // Custom Floating Tab Bar — supports tap and instant press-slide
             GeometryReader { proxy in
@@ -496,82 +500,7 @@ struct ContentView: View {
                             let isHighlighted = tabDragHighlight == tab
                             let badgeCount = tab == .friends ? friendsBadgeCount : (tab == .chaosHub ? chaosBadgeCount : 0)
                             let tabAccessibilityID = "tab.\(tab.rawValue)"
-                            VStack(spacing: 3) {
-                                ZStack(alignment: .topTrailing) {
-                                    Image(systemName: tab.systemImage)
-                                        .font(
-                                            .system(
-                                                size: 20,
-                                                weight: isSelected ? .semibold : .medium)
-                                        )
-                                        .symbolVariant(isSelected ? .fill : .none)
-                                        .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
-                                    if badgeCount > 0 {
-                                        Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
-                                            .font(.system(size: 9, weight: .bold, design: .rounded))
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 5)
-                                            .padding(.vertical, 2)
-                                            .background(Capsule(style: .continuous).fill(.red))
-                                            .offset(x: 10, y: -7)
-                                            .accessibilityIdentifier("tab.friends.badge")
-                                    }
-                                }
-                                Text(tab.compactTitle)
-                                    .font(
-                                        .system(
-                                            size: 9,
-                                            weight: isSelected ? .semibold : .regular))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.75)
-                                Capsule(style: .continuous)
-                                    .fill(accent.opacity(isSelected ? 0.9 : 0))
-                                    .frame(width: isSelected ? 18 : 8, height: 3)
-                                    .opacity(isSelected ? 1 : 0.01)
-                            }
-                            .foregroundStyle(
-                                isSelected
-                                    ? accent
-                                    : (isHighlighted
-                                        ? accent.opacity(0.58)
-                                        : secondaryText.opacity(0.74))
-                            )
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: Theme.minimumTapTarget)
-                            .padding(.top, 6)
-                            .padding(.bottom, 4)
-                            .offset(y: isSelected ? -1.5 : 0)
-                            .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
-                            .background {
-                                if isSelected || isHighlighted {
-                                    Capsule(style: .continuous)
-                                        .fill(
-                                            accent.opacity(
-                                                isSelected
-                                                    ? tabBarStyle.selectedFillOpacity
-                                                    : tabBarStyle.highlightedFillOpacity)
-                                        )
-                                        .padding(
-                                            .horizontal,
-                                            max(4, tabBarStyle.indicatorInset + 3)
-                                        )
-                                        .padding(.vertical, 1)
-                                }
-                            }
-                            .overlay {
-                                if isSelected, let glow = tabBarStyle.glow {
-                                    Capsule(style: .continuous)
-                                        .stroke(glow.opacity(0.35), lineWidth: 1)
-                                        .padding(
-                                            .horizontal,
-                                            max(5, tabBarStyle.indicatorInset + 4)
-                                        )
-                                        .padding(.vertical, 2)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                            .accessibilityAddTraits(.isButton)
-                            .onTapGesture {
+                            Button {
                                 guard selectedTab != tab else { return }
                                 HapticsManager.playSelection(
                                     isEnabled: session.settings.hapticsEnabled)
@@ -584,22 +513,83 @@ struct ContentView: View {
                                         selectedTab = tab
                                     }
                                 }
-                            }
-                            .accessibilityAction {
-                                if selectedTab != tab {
-                                    HapticsManager.playSelection(
-                                        isEnabled: session.settings.hapticsEnabled)
-                                    if constrainedMotion {
-                                        selectedTab = tab
-                                    } else {
-                                        withAnimation(
-                                            .spring(response: 0.3, dampingFraction: 0.7)
-                                        ) {
-                                            selectedTab = tab
+                            } label: {
+                                VStack(spacing: 3) {
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(systemName: tab.systemImage)
+                                            .font(
+                                                .system(
+                                                    size: 20,
+                                                    weight: isSelected ? .semibold : .medium)
+                                            )
+                                            .symbolVariant(isSelected ? .fill : .none)
+                                            .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
+                                        if badgeCount > 0 {
+                                            let badgeAccessibilityID = "tab.\(tab.rawValue).badge"
+                                            Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
+                                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                                .foregroundStyle(.white)
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 2)
+                                                .background(Capsule(style: .continuous).fill(.red))
+                                                .offset(x: 10, y: -7)
+                                                .accessibilityIdentifier(badgeAccessibilityID)
                                         }
+                                    }
+                                    Text(tab.compactTitle)
+                                        .font(
+                                            .system(
+                                                size: 9,
+                                                weight: isSelected ? .semibold : .regular))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.75)
+                                    Capsule(style: .continuous)
+                                        .fill(accent.opacity(isSelected ? 0.9 : 0))
+                                        .frame(width: isSelected ? 18 : 8, height: 3)
+                                        .opacity(isSelected ? 1 : 0.01)
+                                }
+                                .foregroundStyle(
+                                    isSelected
+                                        ? accent
+                                        : (isHighlighted
+                                            ? accent.opacity(0.58)
+                                            : secondaryText.opacity(0.74))
+                                )
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: Theme.minimumTapTarget)
+                                .padding(.top, 6)
+                                .padding(.bottom, 4)
+                                .offset(y: isSelected ? -1.5 : 0)
+                                .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
+                                .background {
+                                    if isSelected || isHighlighted {
+                                        Capsule(style: .continuous)
+                                            .fill(
+                                                accent.opacity(
+                                                    isSelected
+                                                        ? tabBarStyle.selectedFillOpacity
+                                                        : tabBarStyle.highlightedFillOpacity)
+                                            )
+                                            .padding(
+                                                .horizontal,
+                                                max(4, tabBarStyle.indicatorInset + 3)
+                                            )
+                                            .padding(.vertical, 1)
+                                    }
+                                }
+                                .overlay {
+                                    if isSelected, let glow = tabBarStyle.glow {
+                                        Capsule(style: .continuous)
+                                            .stroke(glow.opacity(0.35), lineWidth: 1)
+                                            .padding(
+                                                .horizontal,
+                                                max(5, tabBarStyle.indicatorInset + 4)
+                                            )
+                                            .padding(.vertical, 2)
                                     }
                                 }
                             }
+                            .buttonStyle(.plain)
                             .accessibilityLabel(tab.title)
                             .accessibilityIdentifier(tabAccessibilityID)
                             .accessibilityValue(
@@ -905,7 +895,7 @@ struct ContentView: View {
                 }
             )
         case .settings:
-            if let auth {
+            if let auth, auth.isAuthenticated {
                 SettingsTabView(
                     viewModel: session.settings,
                     generateViewModel: session.generate,
@@ -920,6 +910,10 @@ struct ContentView: View {
                         await deleteCurrentAccount(auth, password: password)
                     }
                 )
+            } else {
+                SettingsUnavailableView {
+                    selectedTab = .generate
+                }
             }
         case .explore:
             ExploreTabView(
@@ -1038,6 +1032,14 @@ struct ContentView: View {
     }
 
     private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
+        guard tab != .settings || (auth?.isAuthenticated == true && self.session != nil) else {
+            selectedTab = .generate
+            return
+        }
+        loadedTabs.insert(tab)
+        #if DEBUG
+            NSLog("Selected tab -> %@", tab.rawValue)
+        #endif
         let reduceMotion =
             session.settings.reduceMotion || accessibilityReduceMotion || lowPowerModeEnabled
         if reduceMotion {
@@ -1051,12 +1053,28 @@ struct ContentView: View {
 
     private func primaryTabs(for session: AppSessionViewModel) -> [AppTab] {
         let overflow = Set(brandMenuTabs(for: session))
-        return AppTab.primaryNavigationTabs.filter { !overflow.contains($0) }
+        var tabs = AppTab.primaryNavigationTabs.filter { !overflow.contains($0) }
+        if settingsTabAvailable, session.settings.tabOrder.contains(.settings), !tabs.contains(.settings) {
+            tabs.append(.settings)
+        }
+        return tabs
     }
 
     private func brandMenuTabs(for session: AppSessionViewModel) -> [AppTab] {
         let availableTabs = Set(session.settings.tabOrder)
-        return AppTab.brandMenuTabs.filter { availableTabs.contains($0) }
+        return AppTab.brandMenuTabs.filter {
+            availableTabs.contains($0) && ($0 != .settings || settingsTabAvailable)
+        }
+    }
+
+    @ViewBuilder
+    private func lazyTabContent(for tab: AppTab, session: AppSessionViewModel) -> some View {
+        if loadedTabs.contains(tab) || selectedTab == tab {
+            tabView(for: tab, session: session)
+        } else {
+            Color.clear
+                .accessibilityHidden(true)
+        }
     }
 
     private func resetAllLocalAccounts(
@@ -1105,6 +1123,34 @@ struct ContentView: View {
             )
         }
     #endif
+}
+
+private struct SettingsUnavailableView: View {
+    let onGoBack: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "gearshape.2")
+                .font(.system(size: 40, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 6) {
+                Text("Settings is temporarily unavailable")
+                    .font(.title3.bold())
+                    .multilineTextAlignment(.center)
+
+                Text("Return to Advice and sign in again to continue.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button("Back to Advice", action: onGoBack)
+                .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+    }
 }
 
 #Preview {

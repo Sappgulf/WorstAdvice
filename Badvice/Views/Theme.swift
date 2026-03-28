@@ -6,6 +6,26 @@ enum RenderBudget {
     case reduced
 }
 
+struct LazyView<Content: View>: View {
+    let build: () -> Content
+    @State private var loaded = false
+    
+    init(_ build: @autoclosure @escaping () -> Content) {
+        self.build = build
+    }
+    
+    var body: some View {
+        if loaded {
+            build()
+        } else {
+            Color.clear
+                .onAppear {
+                    loaded = true
+                }
+        }
+    }
+}
+
 
 enum Theme {
     static let cardCornerRadius: CGFloat = 22
@@ -154,73 +174,73 @@ enum Theme {
             switch mode {
             case .badvice:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "1A111A"), Color(hex: "121212")],
+                    colors: [Color(hex: "20121D"), Color(hex: "151116"), Color(hex: "0E0A0F")],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             case .minimal:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "F9F9F9"), Color(hex: "F2F2F7")],
+                    colors: [Color(hex: "FBFBFC"), Color(hex: "F4F5F8"), Color(hex: "EDEEF2")],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             case .ember:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "4A2626"), Color(hex: "2E1A1A")],
-                    startPoint: .top,
-                    endPoint: .bottom
+                    colors: [Color(hex: "5B2A24"), Color(hex: "341816"), Color(hex: "1B0D0D")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
             case .slate:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "2C3E50"), Color(hex: "34495E")],
+                    colors: [Color(hex: "233347"), Color(hex: "2B3C52"), Color(hex: "3A5068")],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             case .evergreen:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "1A2F23"), Color(hex: "142119")],
+                    colors: [Color(hex: "203628"), Color(hex: "15271C"), Color(hex: "0C140E")],
                     startPoint: .top,
                     endPoint: .bottom
                 )
             case .fallout:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "081107"), Color(hex: "0D1B0A"), Color(hex: "12210D")],
+                    colors: [Color(hex: "071006"), Color(hex: "0D1B0A"), Color(hex: "132611")],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             case .neon:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "0A0A0A"), Color(hex: "1A0033")],
-                    startPoint: .top,
-                    endPoint: .bottom
+                    colors: [Color(hex: "060608"), Color(hex: "160029"), Color(hex: "33004D")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
             case .midnight:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "000000"), Color(hex: "0D1B2A")],
-                    startPoint: .top,
-                    endPoint: .bottom
+                    colors: [Color(hex: "020308"), Color(hex: "0A1321"), Color(hex: "111C36")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
             case .sunset:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "FF512F"), Color(hex: "DD2476")],
+                    colors: [Color(hex: "FF6A3D"), Color(hex: "DD2476"), Color(hex: "6A2C70")],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             case .cosmic:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "0F0C29"), Color(hex: "302B63"), Color(hex: "24243E")],
+                    colors: [Color(hex: "0B0B18"), Color(hex: "171A3A"), Color(hex: "332A6B"), Color(hex: "24123A")],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             case .retro:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "2C1A3D"), Color(hex: "1A1A2E")],
-                    startPoint: .top,
-                    endPoint: .bottom
+                    colors: [Color(hex: "1E1A39"), Color(hex: "2D1741"), Color(hex: "121827")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
             case .cybernetic:
                 gradient = LinearGradient(
-                    colors: [Color(hex: "050B16"), Color(hex: "0A1F2E"), Color(hex: "0B3140")],
+                    colors: [Color(hex: "050A0E"), Color(hex: "081826"), Color(hex: "0B3140"), Color(hex: "0E5163")],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -248,7 +268,10 @@ enum Theme {
         }
     }
 
-    static func accent(for mode: ThemeMode) -> Color {
+    static func accent(for mode: ThemeMode, customColor: Color? = nil) -> Color {
+        if let custom = customColor {
+            return custom
+        }
         switch mode {
         case .badvice: return Color(hex: "E88D72") // Brighter Coral with more saturation
         case .minimal: return Color(hex: "1C1C1E") // Black
@@ -514,6 +537,7 @@ enum Theme {
             return ThemePersonality(
                 descriptor: "Editorial mischief with warm grain",
                 surfaceMood: "Velvet Paper",
+                bestFor: "Best for the core Badvice vibe",
                 effectIntensity: 0.62,
                 indicatorCornerRadius: 16,
                 indicatorInset: 2
@@ -522,38 +546,43 @@ enum Theme {
             return ThemePersonality(
                 descriptor: "Clean clarity, low visual noise",
                 surfaceMood: "Studio Flat",
+                bestFor: "Best for focus and readability",
                 effectIntensity: 0.12,
                 indicatorCornerRadius: 10,
                 indicatorInset: 3
             )
         case .ember:
             return ThemePersonality(
-                descriptor: "Heat-haze depth with warm contrast",
-                surfaceMood: "Molten Film",
+                descriptor: "Heat-haze depth with molten contrast",
+                surfaceMood: "Kiln Glow",
+                bestFor: "Best for warm, dramatic contrast",
                 effectIntensity: 0.58,
                 indicatorCornerRadius: 14,
                 indicatorInset: 2
             )
         case .slate:
             return ThemePersonality(
-                descriptor: "Cool executive glass and crisp edges",
+                descriptor: "Cool executive glass with crisp edges",
                 surfaceMood: "Steel Glass",
+                bestFor: "Best for calm dashboards",
                 effectIntensity: 0.4,
                 indicatorCornerRadius: 12,
                 indicatorInset: 2
             )
         case .evergreen:
             return ThemePersonality(
-                descriptor: "Forest calm with textured atmosphere",
+                descriptor: "Forest calm with layered texture",
                 surfaceMood: "Canopy Grain",
+                bestFor: "Best for longer sessions",
                 effectIntensity: 0.55,
                 indicatorCornerRadius: 15,
                 indicatorInset: 2
             )
         case .fallout:
             return ThemePersonality(
-                descriptor: "Vault terminal glow with rugged CRT depth",
+                descriptor: "Vault terminal glow with phosphor depth",
                 surfaceMood: "Pip-Boy Phosphor",
+                bestFor: "Best for terminal-flavored UI",
                 effectIntensity: 0.7,
                 indicatorCornerRadius: 10,
                 indicatorInset: 2
@@ -562,6 +591,7 @@ enum Theme {
             return ThemePersonality(
                 descriptor: "Arcade glow and electric lane markers",
                 surfaceMood: "Arcade Grid",
+                bestFor: "Best for high-energy browsing",
                 effectIntensity: 0.9,
                 indicatorCornerRadius: 8,
                 indicatorInset: 1
@@ -570,6 +600,7 @@ enum Theme {
             return ThemePersonality(
                 descriptor: "Deep-focus dark with cool bloom",
                 surfaceMood: "Nocturne Film",
+                bestFor: "Best for late-night sessions",
                 effectIntensity: 0.68,
                 indicatorCornerRadius: 18,
                 indicatorInset: 2
@@ -578,6 +609,7 @@ enum Theme {
             return ThemePersonality(
                 descriptor: "Golden-hour gradient with soft drama",
                 surfaceMood: "Amber Bloom",
+                bestFor: "Best for rich gradients",
                 effectIntensity: 0.64,
                 indicatorCornerRadius: 20,
                 indicatorInset: 3
@@ -586,6 +618,7 @@ enum Theme {
             return ThemePersonality(
                 descriptor: "Nebula depth and stellar sparkle",
                 surfaceMood: "Starfield Mist",
+                bestFor: "Best for dramatic depth",
                 effectIntensity: 0.84,
                 indicatorCornerRadius: 6,
                 indicatorInset: 1
@@ -594,6 +627,7 @@ enum Theme {
             return ThemePersonality(
                 descriptor: "CRT attitude with scanline pulse",
                 surfaceMood: "Synth Scan",
+                bestFor: "Best for playful nostalgia",
                 effectIntensity: 0.78,
                 indicatorCornerRadius: 4,
                 indicatorInset: 1
@@ -602,11 +636,17 @@ enum Theme {
             return ThemePersonality(
                 descriptor: "Metal-optimized glitch with neon precision",
                 surfaceMood: "Liquid Wired",
+                bestFor: "Best for sharp tech contrast",
                 effectIntensity: 0.88,
                 indicatorCornerRadius: 2,
                 indicatorInset: 1
             )
         }
+    }
+
+    static func themeSummary(for mode: ThemeMode) -> String {
+        let personality = personality(for: mode)
+        return "\(personality.surfaceMood) - \(personality.bestFor)"
     }
 
     static func tabBarStyle(for mode: ThemeMode) -> ThemeTabBarStyle {
@@ -633,6 +673,7 @@ enum Theme {
 struct ThemePersonality: Sendable {
     let descriptor: String
     let surfaceMood: String
+    let bestFor: String
     let effectIntensity: Double
     let indicatorCornerRadius: CGFloat
     let indicatorInset: CGFloat
@@ -1118,7 +1159,8 @@ private struct GlitchView: View {
                         let y = CGFloat.random(in: 0...size.height - h)
                         
                         let rect = CGRect(x: x, y: y, width: w, height: h)
-                        let color = [Color(hex: "00F3FF"), Color(hex: "FF00FF"), Color(hex: "7000FF")].randomElement()!
+                        let neonColors = [Color(hex: "00F3FF"), Color(hex: "FF00FF"), Color(hex: "7000FF")]
+                        let color = neonColors.randomElement() ?? Color(hex: "00F3FF")
                         
                         context.fill(Path(rect), with: .color(color.opacity(0.35)))
                         

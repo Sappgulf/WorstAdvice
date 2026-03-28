@@ -10,9 +10,11 @@ struct GlobalCommunityFeedView: View {
 
     @State private var allPosts: [CommunityPost] = []
     @State private var isLoading = true
+    @State private var loadFailed = false
     @State private var selectedFilter: CommunityFeedFilter = .hot
     @State private var reportedPostIDs: Set<String> = []
 
+    private var isOnline: Bool { NetworkMonitor.shared.isOnline }
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
@@ -34,6 +36,10 @@ struct GlobalCommunityFeedView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if !isOnline {
+                OfflineBanner()
+                    .animation(.easeInOut(duration: 0.25), value: isOnline)
+            }
             filterBar
             Divider().opacity(0.15)
 
@@ -41,6 +47,8 @@ struct GlobalCommunityFeedView: View {
                 Spacer()
                 ProgressView("Loading community…").tint(accent)
                 Spacer()
+            } else if loadFailed {
+                communityErrorState
             } else if displayedPosts.isEmpty {
                 emptyState
             } else {
@@ -93,6 +101,39 @@ struct GlobalCommunityFeedView: View {
         }
     }
 
+    // MARK: Error State
+
+    private var communityErrorState: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 44))
+                .foregroundStyle(secondaryText)
+            Text("Couldn't Load Feed")
+                .font(.headline)
+                .foregroundStyle(primaryText)
+            Text("The community feed failed to load. Check your connection and try again.")
+                .font(.subheadline)
+                .foregroundStyle(secondaryText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Button {
+                Task { await load(force: true) }
+            } label: {
+                Label("Try Again", systemImage: "arrow.clockwise")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(accent.opacity(0.12), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            Spacer()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Failed to load community feed. Double-tap to retry.")
+    }
+
     // MARK: Empty
 
     private var emptyState: some View {
@@ -115,14 +156,19 @@ struct GlobalCommunityFeedView: View {
 
     // MARK: Load
 
-    private func load() async {
-        guard allPosts.isEmpty else {
+    private func load(force: Bool = false) async {
+        guard allPosts.isEmpty || force else {
             isLoading = false
             return
         }
         isLoading = true
-        try? await Task.sleep(nanoseconds: 500_000_000)
-        allPosts = Self.demoPosts
+        loadFailed = false
+        do {
+            try Task.checkCancellation()
+            allPosts = Self.demoPosts
+        } catch {
+            loadFailed = true
+        }
         isLoading = false
     }
 }

@@ -113,24 +113,25 @@ final class BadviceFullSmokeTests: XCTestCase {
             friendsTab.tap()
 
             // Verify section picker loads
-            let sectionPicker = app.segmentedControls["friends.sectionPicker"]
+            let sectionPicker = app.otherElements["friends.sectionPicker"]
             let friendsTitle = app.staticTexts["Friends"]
             XCTAssertTrue(
                 sectionPicker.waitForExistence(timeout: 5)
+                    || app.buttons["friends.section.friends"].waitForExistence(timeout: 5)
                     || friendsTitle.waitForExistence(timeout: 5),
                 "Friends tab should load"
             )
 
-            if sectionPicker.exists {
+            if sectionPicker.exists || app.buttons["friends.section.friends"].exists {
                 // Tap through each section
-                let feedSegment = sectionPicker.buttons["Feed"]
+                let feedSegment = app.buttons["friends.section.feed"]
                 if feedSegment.exists {
                     feedSegment.tap()
                     let feedRefresh = app.buttons["friends.feedRefresh"]
                     _ = feedRefresh.waitForExistence(timeout: 3)
                 }
 
-                let collabSegment = sectionPicker.buttons["Collab"]
+                let collabSegment = app.buttons["friends.section.collab"]
                 if collabSegment.exists {
                     collabSegment.tap()
                     let newDoc = app.buttons["friends.newCollabDoc"]
@@ -138,7 +139,7 @@ final class BadviceFullSmokeTests: XCTestCase {
                 }
 
                 // Go back to Friends list
-                let friendsSegment = sectionPicker.buttons["Friends"]
+                let friendsSegment = app.buttons["friends.section.friends"]
                 if friendsSegment.exists {
                     friendsSegment.tap()
                 }
@@ -251,7 +252,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
         friendsTab.tap()
 
-        let sectionPicker = app.segmentedControls["friends.sectionPicker"]
+        let sectionPicker = app.otherElements["friends.sectionPicker"]
         XCTAssertTrue(sectionPicker.waitForExistence(timeout: 5), "Friends section picker should load")
 
         // Search for users
@@ -268,7 +269,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         }
 
         // Check Feed section
-        let feedSegment = sectionPicker.buttons["Feed"]
+        let feedSegment = app.buttons["friends.section.feed"]
         if feedSegment.exists {
             feedSegment.tap()
             let feedRefresh = app.buttons["friends.feedRefresh"]
@@ -276,7 +277,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         }
 
         // Check Collab section
-        let collabSegment = sectionPicker.buttons["Collab"]
+        let collabSegment = app.buttons["friends.section.collab"]
         if collabSegment.exists {
             collabSegment.tap()
             let newDoc = app.buttons["friends.newCollabDoc"]
@@ -610,6 +611,11 @@ final class BadviceFullSmokeTests: XCTestCase {
         let settingsQuickAccess = app.buttons["brandMenu.quickAccess.settings"]
         if settingsQuickAccess.waitForExistence(timeout: 5) {
             settingsQuickAccess.tap()
+        } else {
+            let settingsMenuButton = app.buttons["settings.menuButton"]
+            if settingsMenuButton.waitForExistence(timeout: 5) {
+                settingsMenuButton.tap()
+            }
         }
         return app.navigationBars.firstMatch.waitForExistence(timeout: 5)
     }
@@ -646,45 +652,53 @@ final class BadviceFullSmokeTests: XCTestCase {
         email: String,
         password: String
     ) {
-        let modePicker = app.segmentedControls["auth.mode"]
-        XCTAssertTrue(modePicker.waitForExistence(timeout: 8))
+        let signUpModeButton = app.buttons["auth.mode.signUp"]
+        XCTAssertTrue(signUpModeButton.waitForExistence(timeout: 8))
+        if !signUpModeButton.isSelected {
+            signUpModeButton.tap()
+        }
 
         let displayNameField = app.textFields["auth.displayName"]
         XCTAssertTrue(displayNameField.waitForExistence(timeout: 5))
         displayNameField.tap()
+        if let existing = displayNameField.value as? String, !existing.isEmpty, existing != "Display name (optional)" {
+            displayNameField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
         displayNameField.typeText(displayName)
 
         let emailField = app.textFields["auth.email"]
         XCTAssertTrue(emailField.waitForExistence(timeout: 3))
         emailField.tap()
+        if let existing = emailField.value as? String, !existing.isEmpty, existing != "Email" {
+            emailField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
         emailField.typeText(email)
 
-        let passwordField = app.secureTextFields["auth.password"]
+        let passwordField = app.textFields["auth.password"]
         XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
         passwordField.tap()
-        passwordField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 32))
         passwordField.typeText(password)
 
-        let confirmField = app.secureTextFields["auth.confirmPassword"]
+        let confirmField = app.textFields["auth.confirmPassword"]
         XCTAssertTrue(confirmField.waitForExistence(timeout: 3))
         confirmField.tap()
         confirmField.typeText(password)
 
         let primaryButton = app.buttons["auth.primary"]
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
-        XCTAssertTrue(primaryButton.isEnabled)
+        XCTAssertTrue(
+            waitForElementToBecomeEnabled(primaryButton, timeout: 3),
+            "auth.mode.signUp selected=\(signUpModeButton.isSelected) displayName=\(displayNameField.value ?? "nil") email=\(emailField.value ?? "nil") password=\(passwordField.value ?? "nil") confirm=\(confirmField.value ?? "nil") primaryEnabled=\(primaryButton.isEnabled)"
+        )
         primaryButton.tap()
 
         XCTAssertTrue(waitForAuthenticatedShell(app: app))
     }
 
     private func completeLocalSignin(app: XCUIApplication, email: String, password: String) {
-        let modePicker = app.segmentedControls["auth.mode"]
-        if modePicker.waitForExistence(timeout: 3) {
-            let signInSegment = modePicker.buttons["Sign In"]
-            if signInSegment.exists {
-                signInSegment.tap()
-            }
+        let signInModeButton = app.buttons["auth.mode.signIn"]
+        if signInModeButton.waitForExistence(timeout: 3) && !signInModeButton.isSelected {
+            signInModeButton.tap()
         }
 
         let emailField = app.textFields["auth.email"]
@@ -696,10 +710,9 @@ final class BadviceFullSmokeTests: XCTestCase {
         }
         emailField.typeText(email)
 
-        let passwordField = app.secureTextFields["auth.password"]
+        let passwordField = app.textFields["auth.password"]
         XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
         passwordField.tap()
-        passwordField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 64))
         passwordField.typeText(password)
 
         let primaryButton = app.buttons["auth.primary"]
@@ -707,4 +720,19 @@ final class BadviceFullSmokeTests: XCTestCase {
         XCTAssertTrue(primaryButton.isEnabled)
         primaryButton.tap()
     }
+
+    private func waitForElementToBecomeEnabled(
+        _ element: XCUIElement,
+        timeout: TimeInterval
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.isEnabled {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return element.isEnabled
+    }
+
 }

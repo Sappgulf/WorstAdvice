@@ -19,7 +19,6 @@ struct GenerateTabView: View {
     @State private var showingBrandMenu = false
     @State private var showingBracket = false        // #2 Advice Battles entry point
     @State private var showingCollabAdvice = false   // #7 Collab Advice
-    @State private var showingGIFExport = false      // #5 Animated GIF export
     @State private var gifExportInProgress = false
     @State private var showingResetAccountsConfirmation = false
     @State private var runningBrandAction = false
@@ -34,6 +33,7 @@ struct GenerateTabView: View {
     @State private var quoteTapResetTask: Task<Void, Never>? = nil
     @State private var loadingCompletionHapticArmed = false
     @State private var lastGeneratedAdviceIDForHaptics: UUID? = nil
+    @State private var lastKnownStreakDays: Int = 0
     @AppStorage("hasDismissedWhatsNewCard_2026_02c") private var hasDismissedWhatsNewCard = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -142,18 +142,21 @@ struct GenerateTabView: View {
                 )
         )
         .overlay {
-            if let glow, !isMotionReduced {
-                Circle()
-                    .fill(glow.opacity(0.25))
-                    .frame(width: 36, height: 36)
-                    .blur(radius: 10)
-                    .offset(x: 18, y: -10)
-            }
             if !isMotionReduced {
-                Circle()
-                    .stroke(headerBadgeGradient.opacity(headerOrbitOpacity), lineWidth: 2)
-                    .scaleEffect(1.0 + CGFloat(headerOrbitOpacity * 0.55))
-                    .blur(radius: 0.7)
+                ZStack {
+                    if let glow {
+                        Circle()
+                            .fill(glow.opacity(0.25))
+                            .frame(width: 36, height: 36)
+                            .blur(radius: 10)
+                            .offset(x: 18, y: -10)
+                    }
+                    Circle()
+                        .stroke(headerBadgeGradient.opacity(headerOrbitOpacity), lineWidth: 2)
+                        .scaleEffect(1.0 + CGFloat(headerOrbitOpacity * 0.55))
+                        .blur(radius: 0.7)
+                }
+                .drawingGroup(opaque: false)
             }
         }
         .shadow(color: Theme.headerShadowColor(for: settings.theme), radius: 8, x: 0, y: 4)
@@ -369,10 +372,25 @@ struct GenerateTabView: View {
         .onAppear {
             AppPerformanceInstrumentation.markAdviceTabFirstRenderIfNeeded()
             lastGeneratedAdviceIDForHaptics = viewModel.current?.id
+            lastKnownStreakDays = viewModel.challengeStreakDays
             tabBarVisible.wrappedValue = true
         }
         .onChange(of: viewModel.isGenerating) { _, isGenerating in
             handleGeneratingStateChange(isGenerating)
+        }
+        .onChange(of: viewModel.challengeStreakDays) { oldValue, newValue in
+            guard lastKnownStreakDays > 0 else {
+                lastKnownStreakDays = newValue
+                return
+            }
+            if newValue == 0 && oldValue > 0 {
+                HapticsManager.play(style: .medium, isEnabled: settings.hapticsEnabled)
+                activeToast = ToastMessage(
+                    message: "Streak ended at \(oldValue) \(oldValue == 1 ? "day" : "days"). Start a new one!",
+                    style: .error
+                )
+            }
+            lastKnownStreakDays = newValue
         }
     }
 
@@ -1136,6 +1154,7 @@ struct GenerateTabView: View {
 
         lastGeneratedAdviceIDForHaptics = currentID
         HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+        SoundFeedback.playGenerate(isEnabled: settings.soundEffectsEnabled)
     }
 
     private func triggerHeaderLongPressSurprise() {
@@ -1145,7 +1164,9 @@ struct GenerateTabView: View {
             "Long press detected. Friend Roast mode: activated.",
             "Patience unlocked the roast. Someone's about to have a day.",
         ]
-        activeToast = ToastMessage(message: longPressToasts.randomElement() ?? longPressToasts[0], style: .info)
+        if let msg = longPressToasts.randomElement() {
+            activeToast = ToastMessage(message: msg, style: .info)
+        }
         revealSurprise("Long-press unlock: Friend Roast tone primed for your next run.")
         viewModel.selectedTone = .friendRoast
     }
@@ -1191,7 +1212,9 @@ struct GenerateTabView: View {
             "Contraband quote secured to clipboard.",
             "Rare drop obtained. No one will believe you found it.",
         ]
-        activeToast = ToastMessage(message: quoteCopyToasts.randomElement() ?? quoteCopyToasts[0], style: .success)
+        if let msg = quoteCopyToasts.randomElement() {
+            activeToast = ToastMessage(message: msg, style: .success)
+        }
         revealSurprise("Hidden quote: \"\(unlocked)\"")
     }
 

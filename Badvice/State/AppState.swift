@@ -2228,13 +2228,13 @@ final class AdviceRepository {
     func incrementShareCount(for id: UUID) {
         guard let record = fetchRecord(id: id) else { return }
         record.shareCountValue += 1
-        try? context.save()
+        save()
     }
 
     func incrementCopyCount(for id: UUID) {
         guard let record = fetchRecord(id: id) else { return }
         record.copyCountValue += 1
-        try? context.save()
+        save()
     }
 
     private func fetchRecord(id: UUID) -> AdviceRecord? {
@@ -2981,8 +2981,6 @@ final class SettingsViewModel {
                 }
             }
         }
-        localModelStore.reloadAvailableModels()
-        refreshAppleOnDeviceModelAvailability()
         normalizeStreakFreezeState(for: Date())
         NotificationManager.updateStreakFreezeAvailability(
             hasAvailable: streakFreezeAvailableThisWeek)
@@ -3020,6 +3018,14 @@ final class SettingsViewModel {
         get { settings.hapticsEnabled }
         set {
             settings.hapticsEnabled = newValue
+            repository.save()
+        }
+    }
+
+    var soundEffectsEnabled: Bool {
+        get { settings.soundEffectsEnabled }
+        set {
+            settings.soundEffectsEnabled = newValue
             repository.save()
         }
     }
@@ -6027,7 +6033,10 @@ final class GenerateViewModel {
 
     private func weightedChoice<T>(items: [T], weights: [Double], seed: Int, salt: Int) -> T {
         guard items.count == weights.count, let first = items.first else {
-            preconditionFailure("Weighted choice requires matching, non-empty inputs.")
+            assertionFailure("weightedChoice: mismatched or empty inputs (items:\(items.count) weights:\(weights.count))")
+            logger.error("weightedChoice: mismatched or empty inputs — falling back to seed-based pick")
+            if items.isEmpty { fatalError("weightedChoice called with empty items array") }
+            return items[seed.positiveModulo(items.count)]
         }
         let total = weights.reduce(0, +)
         guard total > 0 else {
@@ -6466,6 +6475,7 @@ final class QuotesViewModel {
     private var refreshGeneration: Int = 0
     private var cachedModelGeneratedQuotes: [BadQuote] = []
     private var lastModelQuoteOverlayKey: String?
+    @ObservationIgnored private var hasLoadedInitialData = false
     #if DEBUG
         var debugSourceFilter: QuoteSourceDebugFilter = .all {
             didSet { scheduleFilteredQuotesRefresh() }
@@ -6488,7 +6498,6 @@ final class QuotesViewModel {
         self.localModelStore = localModelStore
         self.appleOnDeviceBridge = AppleOnDeviceAdviceBridge(moderation: moderation)
         self.debouncedSearchText = searchText
-        reloadCachedData()
     }
 
     convenience init(
@@ -6660,7 +6669,13 @@ final class QuotesViewModel {
             "It doubles down on \(principle.lowercased()) and dares you to frame \(keyword) as the obvious move."
     }
 
+    func loadIfNeeded() {
+        guard !hasLoadedInitialData else { return }
+        reloadCachedData()
+    }
+
     private func reloadCachedData() {
+        hasLoadedInitialData = true
         quoteSuggestions = repository.fetchQuoteSuggestions(limit: 30)
         votesByQuoteID = repository.quoteVoteMap()
         rebuildQuoteCache()
@@ -7034,19 +7049,25 @@ final class FavoritesViewModel {
     private var searchDebounceTask: Task<Void, Never>?
     private var favoritesSearchIndexByID: [UUID: String] = [:]
     private var cachedFilteredFavorites: [AdviceRecord] = []
+    @ObservationIgnored private var hasLoadedInitialData = false
 
     init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker())
     {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
         self.debouncedSearchText = searchText
-        reload()
     }
 
     func reload() {
+        hasLoadedInitialData = true
         favorites = repository.fetchFavorites()
         rebuildFavoritesSearchIndex()
         refreshFilteredFavorites()
+    }
+
+    func loadIfNeeded() {
+        guard !hasLoadedInitialData else { return }
+        reload()
     }
 
     func remove(_ record: AdviceRecord) {
@@ -7166,19 +7187,25 @@ final class HistoryViewModel {
     private var cachedFilteredHistory: [AdviceRecord] = []
     private var cachedLikedCount = 0
     private var cachedDislikedCount = 0
+    @ObservationIgnored private var hasLoadedInitialData = false
 
     init(repository: AdviceRepository, analyticsTracker: AnalyticsTracking = AppAnalyticsTracker())
     {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
         self.debouncedSearchText = searchText
-        reload()
     }
 
     func reload() {
+        hasLoadedInitialData = true
         history = repository.fetchHistory(limit: 50)
         rebuildHistoryCaches()
         refreshFilteredHistory()
+    }
+
+    func loadIfNeeded() {
+        guard !hasLoadedInitialData else { return }
+        reload()
     }
 
     func saveFromHistory(_ record: AdviceRecord) {
@@ -9654,9 +9681,17 @@ enum SocialBackendFactory {
             ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         let isUITestingLaunch = arguments.contains("-ui-testing")
         let allowLiveCloudKit = arguments.contains("-ui-testing-cloudkit-live")
+            || arguments.contains("-social-live")
+        let isRunningOnSimulator: Bool = {
+            #if targetEnvironment(simulator)
+                return true
+            #else
+                return false
+            #endif
+        }()
         let shouldUseMockBackend =
             arguments.contains("-ui-testing-social-mock")
-            || (!allowLiveCloudKit && (isUITestingLaunch || isRunningUnderXCTest))
+            || (!allowLiveCloudKit && (isUITestingLaunch || isRunningUnderXCTest || isRunningOnSimulator))
         if shouldUseMockBackend {
             return UITestSocialBackend(
                 forceUnavailable: arguments.contains("-ui-testing-force-social-unavailable"),
@@ -10132,6 +10167,11 @@ final class SocialViewModel {
     var lastQueueDrainAt: Date?
     var lastQueueDrainError: String?
     var lastSocialRefreshAt: Date?
+    var lastLeaderboardRefreshAt: Date?
+    private var isBootstrapping = false
+    private var isRefreshingLeaderboard = false
+    private var socialRefreshGeneration: Int = 0
+    @ObservationIgnored private var hasLoadedBackendDisplayName = false
     private var activeAccountEmail: String?
     private var activeLinkedSocialRecordName: String?
 
@@ -10141,9 +10181,6 @@ final class SocialViewModel {
     ) {
         self.cloudStore = cloudStore
         self.actionQueue = actionQueue
-        Task {
-            await bootstrap()
-        }
     }
 
     var socialFeaturesEnabled: Bool {
@@ -10183,6 +10220,7 @@ final class SocialViewModel {
             return
         }
 
+        socialRefreshGeneration &+= 1
         let accountChanged = email != activeAccountEmail
         activeAccountEmail = email
         activeLinkedSocialRecordName = linkedSocialRecordName
@@ -10199,8 +10237,17 @@ final class SocialViewModel {
     }
 
     func bootstrap() async {
+        guard !isBootstrapping else { return }
+        isBootstrapping = true
+        defer { isBootstrapping = false }
         backendDisplayName = await cloudStore.backendDisplayName()
         await reloadFriendsFlow(preservingLastError: true)
+    }
+
+    func loadBackendDisplayNameIfNeeded() async {
+        guard !hasLoadedBackendDisplayName else { return }
+        hasLoadedBackendDisplayName = true
+        backendDisplayName = await cloudStore.backendDisplayName()
     }
 
     func refreshAvailability(preservingLastError: Bool = true) async {
@@ -10225,7 +10272,11 @@ final class SocialViewModel {
     }
 
     @discardableResult
-    func createProfile(handle: String, displayName: String) async -> Bool {
+    func createProfile(
+        handle: String,
+        displayName: String,
+        refreshAfterCreate: Bool = true
+    ) async -> Bool {
         let normalizedHandle = Self.normalizedHandle(handle)
         guard !normalizedHandle.isEmpty else {
             statusMessage = "Handle is required. Display Name is optional."
@@ -10242,14 +10293,22 @@ final class SocialViewModel {
         defer { isSubmittingAction = false }
 
         do {
+            let creationGeneration = socialRefreshGeneration
             let user = try await cloudStore.getOrCreateCurrentUser(
                 handle: normalizedHandle,
                 displayName: displayName
             )
+            guard creationGeneration == socialRefreshGeneration else { return false }
             currentUser = user
             statusMessage = "Profile created."
-            await refreshSocialData()
-            await drainQueuedActions()
+            if refreshAfterCreate {
+                await refreshSocialData()
+            } else {
+                friendsLoadState = .ready
+                Task(priority: .utility) { [weak self] in
+                    await self?.refreshSocialData()
+                }
+            }
             return true
         } catch {
             let resolved = message(for: error)
@@ -10265,10 +10324,15 @@ final class SocialViewModel {
             return
         }
         do {
-            currentUser = try await cloudStore.fetchCurrentUserIfStored()
+            let loadGeneration = socialRefreshGeneration
+            let fetchedUser = try await cloudStore.fetchCurrentUserIfStored()
+            guard loadGeneration == socialRefreshGeneration else { return }
+            currentUser = fetchedUser
             if currentUser != nil {
-                await refreshSocialData()
-                await drainQueuedActions()
+                friendsLoadState = .ready
+                Task {
+                    await refreshSocialData()
+                }
             } else {
                 resetLoadedCollections()
                 friendsLoadState = .needsProfileSetup
@@ -10297,6 +10361,8 @@ final class SocialViewModel {
         collabConflictMessage = nil
         latestSearchResult = nil
         latestSearchHandle = ""
+        lastSocialRefreshAt = nil
+        lastLeaderboardRefreshAt = nil
     }
 
     func refreshSocialData() async {
@@ -10308,33 +10374,41 @@ final class SocialViewModel {
             friendsLoadState = .needsProfileSetup
             return
         }
+        guard !isRefreshingSocialData else {
+            return
+        }
 
         friendsLoadState = .loadingFriends
         isRefreshingSocialData = true
         defer { isRefreshingSocialData = false }
+        let refreshGeneration = socialRefreshGeneration
 
         do {
             async let incoming = cloudStore.fetchIncomingFriendRequests()
             async let outgoing = cloudStore.fetchOutgoingFriendRequests()
             async let friendsResult = cloudStore.fetchFriends()
             async let blocked = cloudStore.fetchBlockedUsers()
-
-            incomingRequests = try await incoming
-            outgoingRequests = try await outgoing
-            friends = try await friendsResult
-            blockedUsers = try await blocked
-            feedPosts = await loadOptionalSocialValue(fallback: []) {
+            async let feedResult = loadOptionalSocialValue(fallback: []) {
                 try await cloudStore.fetchFriendsFeed()
             }
-            collabDocs = await loadOptionalSocialValue(fallback: []) {
+            async let collabResult = loadOptionalSocialValue(fallback: []) {
                 try await cloudStore.fetchMyCollabDocs()
             }
-            leaderboard = await loadOptionalSocialValue(fallback: []) {
+            async let leaderboardResult = loadOptionalSocialValue(fallback: []) {
                 try await cloudStore.fetchLeaderboard(
                     seasonId: leaderboardSeasonID,
                     limit: 20
                 )
             }
+
+            incomingRequests = try await incoming
+            outgoingRequests = try await outgoing
+            friends = try await friendsResult
+            blockedUsers = try await blocked
+            feedPosts = try await feedResult
+            collabDocs = try await collabResult
+            leaderboard = try await leaderboardResult
+            guard refreshGeneration == socialRefreshGeneration else { return }
             lastSocialRefreshAt = Date()
             // Clear any transient lastError from optional fetches — the core load succeeded.
             availability = availability.withLastError(nil)
@@ -10344,7 +10418,9 @@ final class SocialViewModel {
                 && friends.isEmpty
                 && blockedUsers.isEmpty
                 ? .empty : .ready
+            guard refreshGeneration == socialRefreshGeneration else { return }
             await refreshQueueDiagnostics()
+            guard refreshGeneration == socialRefreshGeneration else { return }
             await drainQueuedActions()
         } catch {
             handlePipelineError(error)
@@ -10394,7 +10470,7 @@ final class SocialViewModel {
                 )
                 statusMessage = "Friend request queued. It will retry automatically."
             } else {
-                statusMessage = message(for: error)
+                handleSocialActionError(error)
             }
         }
     }
@@ -10407,7 +10483,7 @@ final class SocialViewModel {
             statusMessage = "Friend request accepted."
             await refreshSocialData()
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
         }
     }
 
@@ -10419,7 +10495,7 @@ final class SocialViewModel {
             statusMessage = "Friend request declined."
             await refreshSocialData()
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
         }
     }
 
@@ -10431,7 +10507,7 @@ final class SocialViewModel {
             statusMessage = "@\(user.handle) blocked."
             await refreshSocialData()
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
         }
     }
 
@@ -10458,7 +10534,7 @@ final class SocialViewModel {
                 )
                 statusMessage = "Share queued. It will retry automatically."
             } else {
-                statusMessage = message(for: error)
+                handleSocialActionError(error)
             }
         }
     }
@@ -10481,19 +10557,30 @@ final class SocialViewModel {
                 )
                 statusMessage = "Score queued. It will retry automatically."
             } else {
-                statusMessage = message(for: error)
+                handleSocialActionError(error)
             }
         }
     }
 
-    func refreshLeaderboard() async {
+    func refreshLeaderboard(force: Bool = false) async {
+        guard !isRefreshingLeaderboard else {
+            return
+        }
+        if !force, let lastLeaderboardRefreshAt,
+            Date().timeIntervalSince(lastLeaderboardRefreshAt) < 45
+        {
+            return
+        }
+        isRefreshingLeaderboard = true
+        defer { isRefreshingLeaderboard = false }
         do {
             leaderboard = try await cloudStore.fetchLeaderboard(
                 seasonId: leaderboardSeasonID,
                 limit: 20
             )
+            lastLeaderboardRefreshAt = Date()
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
         }
     }
 
@@ -10533,7 +10620,7 @@ final class SocialViewModel {
             }
             return nil
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
             return nil
         }
     }
@@ -10542,7 +10629,7 @@ final class SocialViewModel {
         do {
             activeCollabDoc = try await cloudStore.fetchCollabDoc(id: doc.id) ?? doc
         } catch {
-            statusMessage = message(for: error)
+            handleSocialActionError(error)
             activeCollabDoc = doc
         }
     }
@@ -10619,6 +10706,14 @@ final class SocialViewModel {
         return false
     }
 
+    private func handleSocialActionError(_ error: Error) {
+        if shouldClearLoadedSocialState(for: error) {
+            handlePipelineError(error)
+            return
+        }
+        statusMessage = message(for: error)
+    }
+
     private func enqueueAction(payload: SocialQueuedActionPayload, dedupeKey: String?) async {
         let action = SocialQueuedAction(
             id: UUID(),
@@ -10690,6 +10785,10 @@ final class SocialViewModel {
                 break
             }
         }
+        if shouldClearLoadedSocialState(for: error) {
+            currentUser = nil
+            resetLoadedCollections()
+        }
         // Schema not deployed yet — stamp diagnostic for debugging but stay idle so
         // users never see a scary error. The seeder will bootstrap the schema and post
         // a notification that triggers retryFriendsLoad() automatically.
@@ -10706,6 +10805,24 @@ final class SocialViewModel {
         let resolved = message(for: error)
         statusMessage = resolved
         friendsLoadState = .failed(message: resolved)
+    }
+
+    private func shouldClearLoadedSocialState(for error: Error) -> Bool {
+        if let socialError = error as? SocialError {
+            switch socialError {
+            case .iCloudUnavailable:
+                return true
+            default:
+                break
+            }
+        }
+        guard let ckError = cloudKitError(from: error) else { return false }
+        switch ckError.code {
+        case .notAuthenticated, .permissionFailure:
+            return true
+        default:
+            return false
+        }
     }
 
     private func retryDelay(forAttempt attempt: Int) -> TimeInterval {
@@ -10737,10 +10854,13 @@ final class SocialViewModel {
     private func loadOptionalSocialValue<T>(
         fallback: T,
         operation: () async throws -> T
-    ) async -> T {
+    ) async throws -> T {
         do {
             return try await operation()
         } catch {
+            if shouldClearLoadedSocialState(for: error) {
+                throw error
+            }
             let suppressed = shouldSuppressOptionalSocialSchemaError(error)
             if !suppressed {
                 // Only surface non-schema errors in the status message; don't

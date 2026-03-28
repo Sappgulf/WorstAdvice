@@ -38,7 +38,11 @@ enum SpotlightManager {
 
     static func remove(id: UUID) {
         let identifier = spotlightID(for: id)
-        CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: [identifier]) { _ in }
+        CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: [identifier]) { error in
+            if let error {
+                spotlightLogger.error("Spotlight remove failed for \(id): \(error.localizedDescription)")
+            }
+        }
     }
 
     static func removeAll() {

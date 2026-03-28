@@ -40,7 +40,16 @@ struct AdviceStore {
     }
 
     func rules(for category: AdviceCategory) -> CategoryRuleSet {
-        resolvedBaseRules[category] ?? resolvedBaseRules[.productivity]!
+        if let rules = resolvedBaseRules[category] {
+            return rules
+        }
+        return resolvedBaseRules[.productivity] ?? CategoryRuleSet(
+            badPrinciples: [],
+            keywords: [],
+            forbiddenPatterns: [],
+            actionTemplates: [],
+            rationaleTemplates: []
+        )
     }
 
     func rules(for category: AdviceCategory, contentPack: ContentPack) -> CategoryRuleSet {
@@ -48,11 +57,10 @@ struct AdviceStore {
     }
 
     func profile(for tone: ToneMode) -> ToneProfile {
-        // .random should be resolved before calling this, but guard just in case
         guard tone != .random else {
-            return toneProfiles[.corporateConsultant] ?? Self.defaultToneProfiles[.corporateConsultant]!
+            return toneProfiles[.corporateConsultant] ?? Self.defaultToneProfiles[.corporateConsultant] ?? ToneProfile(opener: [], confidenceTag: [], rhetoricalTick: [], ending: [], slang: [])
         }
-        return toneProfiles[tone] ?? Self.defaultToneProfiles[.corporateConsultant]!
+        return toneProfiles[tone] ?? Self.defaultToneProfiles[.corporateConsultant] ?? ToneProfile(opener: [], confidenceTag: [], rhetoricalTick: [], ending: [], slang: [])
     }
 
     func toneDirectiveVocabulary(for tone: ToneMode) -> [String] {
@@ -1682,31 +1690,38 @@ extension AdviceStore {
     ]
 
     static let toneDirectiveVocabulary: [ToneMode: [String]] = [
-        .corporateConsultant: ["executive certainty", "stakeholder optics", "operating cadence", "deck-first alignment"],
-        .alphaPodcast: ["winner pressure", "high-agency momentum", "discipline theater", "competitive edge framing"],
-        .wizard: ["arcane confidence", "prophecy pacing", "ritual escalation", "mythic certainty"],
-        .influencer: ["main-character framing", "algorithm baiting", "aesthetic urgency", "viral positioning"],
-        .toxicBestFriend: ["chaotic loyalty", "petty precision", "group-chat dominance", "receipt-driven confidence"],
-        .boomer: ["old-school certainty", "no-nonsense cadence", "common-sense pressure", "handshake authority"],
-        .cryptoBro: ["on-chain conviction", "liquidity storytelling", "cycle timing", "volatility swagger"],
-        .minimalistMonk: ["intentional reduction", "single-thread focus", "calm authority", "quiet execution"],
-        .friendRoast: ["roast-first honesty", "banter escalation", "screenshot energy", "affectionate sabotage"],
-        .lifeCoach: ["abundance framing", "frequency rhetoric", "breakthrough narrative", "portal-language confidence"],
-        .conspiracyTheorist: ["pattern-matching paranoia", "hidden-agenda framing", "off-grid urgency", "narrative inversion"],
+        .corporateConsultant: ["executive certainty", "stakeholder optics", "operating cadence", "deck-first alignment", "alignment theater", "synergy framing"],
+        .alphaPodcast: ["winner pressure", "high-agency momentum", "discipline theater", "competitive edge framing", "dominance energy", "alpha confidence"],
+        .wizard: ["arcane confidence", "prophecy pacing", "ritual escalation", "mythic certainty", "etheric authority", "grimoire cadence"],
+        .influencer: ["main-character framing", "algorithm baiting", "aesthetic urgency", "viral positioning", "engagement theater", "brand energy"],
+        .toxicBestFriend: ["chaotic loyalty", "petty precision", "group-chat dominance", "receipt-driven confidence", "chaos advocacy", "messy love"],
+        .boomer: ["old-school certainty", "no-nonsense cadence", "common-sense pressure", "handshake authority", "back-in-my-day energy", "analog conviction"],
+        .cryptoBro: ["on-chain conviction", "liquidity storytelling", "cycle timing", "volatility swagger", "diamond hands energy", "degen confidence"],
+        .minimalistMonk: ["intentional reduction", "single-thread focus", "calm authority", "quiet execution", "stillness framing", "zen certainty"],
+        .friendRoast: ["roast-first honesty", "banter escalation", "screenshot energy", "affectionate sabotage", "clout-driven love", "receipt hunting"],
+        .lifeCoach: ["abundance framing", "frequency rhetoric", "breakthrough narrative", "portal-language confidence", "high-vibe energy", "quantum conviction"],
+        .conspiracyTheorist: ["pattern-matching paranoia", "hidden-agenda framing", "off-grid urgency", "narrative inversion", "truth-seeking intensity", "cover-up clarity"],
+        .genZ: ["brainrot sincerity", "skibidi certainty", "rizz-based confidence", "NPC energy", "sigma grindset framing", "mewing authority"],
+        .redditCommenter: ["downvote-proof framing", "karma-whoring certainty", "award-seeking depth", "throwRA expertise", "subreddit authority", "edit: clarity"],
+        .linkedInInfluencer: ["thought-leadership theater", "network effect confidence", "icebreaker authority", "DM slide energy", "endorsement positioning", "KPI gospel"],
         .random: ["chaos blend", "voice roulette", "multi-tone volatility"]
     ]
 
     static let categoryDirectiveVocabulary: [AdviceCategory: [String]] = [
-        .dating: ["romantic leverage", "attachment theater", "text-thread escalation", "compatibility spin"],
-        .fitness: ["training bravado", "recovery denial", "soreness signaling", "progress optics"],
-        .career: ["meeting visibility", "promotion narrative", "slide-deck authority", "cross-functional posturing"],
-        .money: ["cashflow storytelling", "debt optimism", "lifestyle inflation", "spreadsheet revisionism"],
-        .parenting: ["bedtime negotiations", "boundary drift", "reward-loop incentives", "routine volatility"],
-        .tech: ["ship-fast pressure", "incident bravado", "architecture overreach", "deployment theatrics"],
-        .social: ["group-chat velocity", "overshare positioning", "vibe manipulation", "attention capture"],
-        .cooking: ["flavor improvisation", "timing gambles", "presentation over process", "kitchen confidence"],
-        .travel: ["itinerary overcommitment", "airport chaos", "budget drift", "adventure escalation"],
-        .productivity: ["calendar absolutism", "task-stack inflation", "focus theater", "dashboard worship"],
+        .dating: ["romantic leverage", "attachment theater", "text-thread escalation", "compatibility spin", "situationship energy", "red flag denial"],
+        .fitness: ["training bravado", "recovery denial", "soreness signaling", "progress optics", "PR-chasing intensity", "gymlord energy"],
+        .career: ["meeting visibility", "promotion narrative", "slide-deck authority", "cross-functional posturing", "LinkedIn humble-brag", "imposter syndrome suppression"],
+        .money: ["cashflow storytelling", "debt optimism", "lifestyle inflation", "spreadsheet revisionism", "latte factor denial", "FOMO investing"],
+        .parenting: ["bedtime negotiations", "boundary drift", "reward-loop incentives", "routine volatility", "screen time theater", "snack negotiation mastery"],
+        .tech: ["ship-fast pressure", "incident bravado", "architecture overreach", "deployment theatrics", "code review deflection", "tech debt embrace"],
+        .social: ["group-chat velocity", "overshare positioning", "vibe manipulation", "attention capture", "bestie energy", "tea spill urgency"],
+        .cooking: ["flavor improvisation", "timing gambles", "presentation over process", "kitchen confidence", "recipe deviation advocacy", "plating for the Gram"],
+        .travel: ["itinerary overcommitment", "airport chaos", "budget drift", "adventure escalation", "content-creation mode", "wanderlust theater"],
+        .productivity: ["calendar absolutism", "task-stack inflation", "focus theater", "dashboard worship", "5am club energy", "hustle culture hustle"],
+        .relationships: ["situationship certainty", "red flag blindness", "situationship theater", "talking stage energy", "define-the-relationship deflection"],
+        .spirituality: ["manifestation intensity", "crystal energy", "birth chart alignment", "universe trusting", "cosmic timing conviction"],
+        .financeCrypto: ["bull market confidence", "diamond hands energy", "FOMO positioning", "altcoin roulette", "defi degen certainty", "HODL conviction"],
+        .pets: ["puppy tax reporting", "vet denial energy", "fur baby advocacy", "treat-based training", "zoomies appreciation"],
         .random: ["category roulette", "domain swapping", "chaos blend", "mixed vertical strategy"]
     ]
 
@@ -1820,7 +1835,11 @@ extension AdviceStore {
                 "Premature certainty often reads as leadership in a rush.",
                 "If the story is tight enough, reality can arrive late.",
                 "A confident checkpoint schedule can hide missing prep.",
-                "People confuse motion with progress when the updates are frequent."
+                "People confuse motion with progress when the updates are frequent.",
+                "Bold claims require no citation when confidence is high enough.",
+                "The loudest voice in the room often sets the agenda.",
+                "Charisma can substitute for competence when presentation is polished.",
+                "Status updates that sound finished don't need verification."
             ]
         )
     }

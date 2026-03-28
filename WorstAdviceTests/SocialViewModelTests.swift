@@ -34,11 +34,11 @@ actor FailingProfileBackend: SocialBackend {
     }
 
     func fetchIncomingFriendRequests() async throws -> [SocialFriendRequest] {
-        []
+        return []
     }
 
     func fetchOutgoingFriendRequests() async throws -> [SocialFriendRequest] {
-        []
+        return []
     }
 
     func acceptFriendRequest(_ request: SocialFriendRequest) async throws {
@@ -54,11 +54,11 @@ actor FailingProfileBackend: SocialBackend {
     }
 
     func fetchBlockedUsers() async throws -> [SocialUser] {
-        []
+        return []
     }
 
     func fetchFriends() async throws -> [SocialUser] {
-        []
+        return []
     }
 
     func createPost(type: SocialPostType, text: String) async throws -> SocialPost {
@@ -66,7 +66,7 @@ actor FailingProfileBackend: SocialBackend {
     }
 
     func fetchFriendsFeed() async throws -> [SocialPost] {
-        []
+        return []
     }
 
     func submitChaosScore(seasonId: String, score: Int64) async throws {
@@ -74,7 +74,7 @@ actor FailingProfileBackend: SocialBackend {
     }
 
     func fetchLeaderboard(seasonId: String, limit: Int) async throws -> [SocialChaosScore] {
-        []
+        return []
     }
 
     func createOrUpdateCollabDoc(
@@ -88,7 +88,7 @@ actor FailingProfileBackend: SocialBackend {
     }
 
     func fetchMyCollabDocs() async throws -> [SocialCollabDoc] {
-        []
+        return []
     }
 
     func fetchCollabDoc(id: String) async throws -> SocialCollabDoc? {
@@ -103,6 +103,7 @@ actor FailingProfileBackend: SocialBackend {
 actor InspectableSocialBackend: SocialBackend {
     private let availabilityValue: SocialAvailabilityState
     private let incomingError: Error?
+    private let optionalFetchError: Error?
     private var storedUser: SocialUser?
     private var incomingCalls = 0
     private var outgoingCalls = 0
@@ -112,11 +113,13 @@ actor InspectableSocialBackend: SocialBackend {
     init(
         storedUser: SocialUser?,
         availabilityValue: SocialAvailabilityState = .available,
-        incomingError: Error? = nil
+        incomingError: Error? = nil,
+        optionalFetchError: Error? = nil
     ) {
         self.storedUser = storedUser
         self.availabilityValue = availabilityValue
         self.incomingError = incomingError
+        self.optionalFetchError = optionalFetchError
     }
 
     func backendDisplayName() async -> String { "Inspectable Backend" }
@@ -209,7 +212,10 @@ actor InspectableSocialBackend: SocialBackend {
     }
 
     func fetchFriendsFeed() async throws -> [SocialPost] {
-        []
+        if let optionalFetchError {
+            throw optionalFetchError
+        }
+        return []
     }
 
     func submitChaosScore(seasonId: String, score: Int64) async throws {
@@ -217,7 +223,10 @@ actor InspectableSocialBackend: SocialBackend {
     }
 
     func fetchLeaderboard(seasonId: String, limit: Int) async throws -> [SocialChaosScore] {
-        []
+        if let optionalFetchError {
+            throw optionalFetchError
+        }
+        return []
     }
 
     func createOrUpdateCollabDoc(
@@ -231,7 +240,10 @@ actor InspectableSocialBackend: SocialBackend {
     }
 
     func fetchMyCollabDocs() async throws -> [SocialCollabDoc] {
-        []
+        if let optionalFetchError {
+            throw optionalFetchError
+        }
+        return []
     }
 
     func fetchCollabDoc(id: String) async throws -> SocialCollabDoc? {
@@ -463,6 +475,61 @@ final class SocialViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.outgoingRequests.isEmpty)
         XCTAssertTrue(viewModel.friends.isEmpty)
         XCTAssertTrue(viewModel.blockedUsers.isEmpty)
+    }
+
+    func testRetryFriendsLoadClearsStaleStateWhenICloudAuthIsLost() async {
+        let defaults = UserDefaults(suiteName: "SocialViewModelTests.AuthLost.\(UUID().uuidString)")!
+        let queue = SocialActionQueueStore(
+            userDefaults: defaults,
+            storageKey: "social.queue.authLost.\(UUID().uuidString)"
+        )
+        let backend = InspectableSocialBackend(
+            storedUser: makeTestUser(),
+            incomingError: CKError(.notAuthenticated)
+        )
+        let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
+
+        await viewModel.retryFriendsLoad()
+
+        XCTAssertNil(viewModel.currentUser)
+        XCTAssertEqual(
+            viewModel.friendsLoadState,
+            .failed(message: "iCloud is not signed in. Open Settings, sign in to iCloud, then retry.")
+        )
+        XCTAssertTrue(viewModel.incomingRequests.isEmpty)
+        XCTAssertTrue(viewModel.outgoingRequests.isEmpty)
+        XCTAssertTrue(viewModel.friends.isEmpty)
+        XCTAssertTrue(viewModel.blockedUsers.isEmpty)
+        XCTAssertFalse(viewModel.socialFeaturesEnabled)
+    }
+
+    func testOptionalFriendsDataFetchLossAlsoClearsStaleState() async {
+        let defaults = UserDefaults(suiteName: "SocialViewModelTests.OptionalAuthLost.\(UUID().uuidString)")!
+        let queue = SocialActionQueueStore(
+            userDefaults: defaults,
+            storageKey: "social.queue.optionalAuthLost.\(UUID().uuidString)"
+        )
+        let backend = InspectableSocialBackend(
+            storedUser: makeTestUser(),
+            optionalFetchError: CKError(.permissionFailure)
+        )
+        let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
+
+        await viewModel.retryFriendsLoad()
+
+        XCTAssertNil(viewModel.currentUser)
+        XCTAssertEqual(
+            viewModel.friendsLoadState,
+            .failed(
+                message:
+                    "CloudKit permissions are not configured for this build. Check iCloud capability and container access in Xcode."
+            )
+        )
+        XCTAssertTrue(viewModel.incomingRequests.isEmpty)
+        XCTAssertTrue(viewModel.outgoingRequests.isEmpty)
+        XCTAssertTrue(viewModel.friends.isEmpty)
+        XCTAssertTrue(viewModel.blockedUsers.isEmpty)
+        XCTAssertFalse(viewModel.socialFeaturesEnabled)
     }
 
     func testCreateProfileTransitionsToEmptyStateAfterBootstrap() async {

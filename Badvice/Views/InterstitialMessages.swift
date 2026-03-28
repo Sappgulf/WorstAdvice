@@ -233,6 +233,7 @@ struct SettingsTabView: View {
     private let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
     @State private var notificationPermissionGranted: Bool? = nil
+    @State private var didLoadInitialDiagnostics = false
     @AppStorage("useCustomAccent") private var useCustomAccent = false
     @AppStorage("customAccentR") private var customAccentR: Double = 1.0
     @AppStorage("customAccentG") private var customAccentG: Double = 0.3
@@ -259,7 +260,12 @@ struct SettingsTabView: View {
         viewModel.reduceMotion || viewModel.performanceMode || accessibilityReduceMotion
     }
 
-    private var accent: Color { Theme.accent(for: viewModel.theme) }
+    private var accent: Color {
+        if useCustomAccent {
+            return Theme.accent(for: viewModel.theme, customColor: Color(red: customAccentR, green: customAccentG, blue: customAccentB))
+        }
+        return Theme.accent(for: viewModel.theme)
+    }
     private var primaryText: Color { Theme.primaryText(for: viewModel.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: viewModel.theme) }
     private var cardColor: Color { Theme.cardColor(for: viewModel.theme) }
@@ -336,6 +342,7 @@ struct SettingsTabView: View {
                         .contentShape(Circle())
                         .accessibilityLabel("Settings")
                         .accessibilityHint("Double-tap to spin")
+                        .accessibilityIdentifier("settings.menuButton")
 
                         Text("Personalize the Chaos")
                             .font(.system(.title2, design: .rounded, weight: .bold))
@@ -451,10 +458,23 @@ struct SettingsTabView: View {
                 sectionsAppeared = false
                 gearWobble = false
                 tabBarVisible.wrappedValue = true
-                viewModel.refreshAppleOnDeviceModelAvailability()
-                Task {
-                    await social.refreshAvailability()
-                    await social.refreshSocialData()
+                if !didLoadInitialDiagnostics {
+                    didLoadInitialDiagnostics = true
+                    Task(priority: .utility) {
+                        viewModel.refreshAppleOnDeviceModelAvailability()
+                    }
+                    Task(priority: .background) {
+                        await social.loadBackendDisplayNameIfNeeded()
+                    }
+                    Task(priority: .utility) {
+                        quotesViewModel.loadIfNeeded()
+                    }
+                    Task(priority: .background) {
+                        await social.refreshAvailability()
+                    }
+                    Task(priority: .background) {
+                        await loadNotificationPermissionStatus()
+                    }
                 }
                 // A tiny async hop lets SwiftUI finish layout before animating in
                 Task { @MainActor in
@@ -749,6 +769,19 @@ struct SettingsTabView: View {
 
                 settingsDivider
 
+                Button {
+                    UIPasteboard.general.string = socialHealthReportText()
+                } label: {
+                    Label("Copy Diagnostics Summary", systemImage: "doc.on.doc")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .accessibilityIdentifier("settings.socialHealth.copyReport")
+
+                settingsDivider
+
                 socialStatRow("Backend", value: social.backendDisplayName)
                 socialStatRow(
                     "Availability",
@@ -787,29 +820,32 @@ struct SettingsTabView: View {
             ) {
                 ForEach(ThemeMode.allCases) { mode in
                     let isTileSelected = viewModel.theme == mode
+                    let personality = Theme.personality(for: mode)
+                    let secondaryAccent = Theme.secondaryAccent(for: mode) ?? Theme.accent(for: mode)
+                    let glow = Theme.glowColor(for: mode)
+                    let mood = personality.surfaceMood
+                    let bestFor = personality.bestFor
                     Button {
                         HapticsManager.playSelection(isEnabled: viewModel.hapticsEnabled)
                         if isMotionReduced {
                             viewModel.theme = mode
-                        } else {
-                            if viewModel.theme != mode {
-                                shockwaveTheme = mode
-                                shockwaveScale = 0.5
-                                shockwaveOpacity = 1.0
+                        } else if viewModel.theme != mode {
+                            shockwaveTheme = mode
+                            shockwaveScale = 0.5
+                            shockwaveOpacity = 1.0
 
-                                withAnimation(.easeOut(duration: 0.6)) {
-                                    shockwaveScale = 6.0
-                                    shockwaveOpacity = 0.0
-                                }
+                            withAnimation(.easeOut(duration: 0.6)) {
+                                shockwaveScale = 6.0
+                                shockwaveOpacity = 0.0
+                            }
 
-                                withAnimation(.easeInOut(duration: 0.35)) {
-                                    viewModel.theme = mode
-                                }
+                            withAnimation(.easeInOut(duration: 0.35)) {
+                                viewModel.theme = mode
+                            }
 
-                                Task { @MainActor in
-                                    try? await Task.sleep(for: .seconds(0.6))
-                                    shockwaveTheme = nil
-                                }
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .seconds(0.6))
+                                shockwaveTheme = nil
                             }
                         }
                     } label: {
@@ -817,6 +853,19 @@ struct SettingsTabView: View {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .fill(Theme.backgroundGradient(for: mode))
+                                    .frame(height: 52)
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                Theme.accent(for: mode).opacity(0.28),
+                                                secondaryAccent.opacity(0.10),
+                                                .clear,
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
                                     .frame(height: 52)
 
                                 RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -827,6 +876,12 @@ struct SettingsTabView: View {
                                             .stroke(
                                                 Theme.accent(for: mode).opacity(0.3), lineWidth: 1)
                                     )
+                            }
+                            .overlay(alignment: .leading) {
+                                Capsule(style: .continuous)
+                                    .fill(secondaryAccent.opacity(0.75))
+                                    .frame(width: 4, height: 24)
+                                    .padding(.leading, 5)
                             }
                             .overlay(alignment: .topTrailing) {
                                 if isTileSelected {
@@ -844,8 +899,20 @@ struct SettingsTabView: View {
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(isTileSelected ? accent : secondaryText)
 
+                                Text(mood)
+                                    .font(.system(size: 8, weight: .medium, design: .rounded))
+                                    .foregroundStyle(secondaryText.opacity(isTileSelected ? 0.95 : 0.72))
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(1)
+
+                                Text(bestFor)
+                                    .font(.system(size: 8, weight: .medium, design: .rounded))
+                                    .foregroundStyle(secondaryText.opacity(isTileSelected ? 0.9 : 0.65))
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+
                                 if isTileSelected {
-                                    Text(Theme.personality(for: mode).descriptor)
+                                    Text(personality.descriptor)
                                         .font(.system(size: 9, weight: .regular, design: .rounded))
                                         .foregroundStyle(secondaryText.opacity(0.75))
                                         .multilineTextAlignment(.center)
@@ -859,6 +926,20 @@ struct SettingsTabView: View {
                             .animation(.easeInOut(duration: Theme.animFast), value: viewModel.theme)
                         }
                     }
+                    .accessibilityIdentifier("settings.theme.\(mode.rawValue)")
+                    .accessibilityLabel(mode.title)
+                    .accessibilityValue(
+                        isTileSelected
+                            ? "Selected. \(Theme.themeSummary(for: mode))"
+                            : Theme.themeSummary(for: mode)
+                    )
+                    .accessibilityHint("Double-tap to apply this theme to your account.")
+                    .overlay {
+                        if isTileSelected, let glow {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(glow.opacity(0.45), lineWidth: 1)
+                        }
+                    }
                     .buttonStyle(.plain)
                     .scaleEffect(isTileSelected ? 1.05 : 1.0)
                     .animation(
@@ -866,6 +947,11 @@ struct SettingsTabView: View {
                 }
             }
             Divider().opacity(0.5)
+            Text("Themes are stored separately for each signed-in account.")
+                .font(.caption2)
+                .foregroundStyle(secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("settings.theme.accountScope")
             Toggle("Custom Accent Color", isOn: $useCustomAccent)
                 .tint(accent)
             if useCustomAccent {
@@ -914,11 +1000,35 @@ struct SettingsTabView: View {
             }
             .tint(accent)
         }
-        .task {
-            let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
-            notificationPermissionGranted = status == .authorized || status == .provisional || status == .ephemeral
-        }
     }
+
+    private func socialHealthReportText() -> String {
+        let diagnostics = social.availability.diagnostics
+        return [
+            diagnostics.text(includeDebugDetails: false),
+            "",
+            "Backend: \(social.backendDisplayName)",
+            "Profile: \(social.currentUser.map { "@\($0.handle)" } ?? "None")",
+            "Queue Depth: \(social.queuedActionCount)",
+            "Queued Reports: \(social.queuedModerationReportCount)",
+            "Incoming Requests: \(social.incomingRequests.count)",
+            "Friends: \(social.friends.count)",
+            "Collab Docs: \(social.collabDocs.count)",
+            "Last Queue Drain: \(reportDateString(social.lastQueueDrainAt))",
+        ]
+        .joined(separator: "\n")
+    }
+
+    private func reportDateString(_ date: Date?) -> String {
+        guard let date else { return "Never" }
+        return Self.reportDateFormatter.string(from: date)
+    }
+
+    private static let reportDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
 
     private var notificationSection: some View {
         settingsCard(title: "Notifications", icon: "bell") {
@@ -975,10 +1085,6 @@ struct SettingsTabView: View {
                 .disabled(notificationPermissionGranted == false || !viewModel.dailyNotificationsEnabled)
             }
             .tint(accent)
-        }
-        .task {
-            let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
-            notificationPermissionGranted = status == .authorized || status == .provisional || status == .ephemeral
         }
     }
 
@@ -1289,7 +1395,7 @@ struct SettingsTabView: View {
                         }
                         .buttonStyle(.bordered)
                         .font(.caption.weight(.semibold))
-                        .accessibilityIdentifier("settings.appleModel.recheck")
+                        .accessibilityIdentifier("settings.appleModel.recheckInline")
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1331,7 +1437,7 @@ struct SettingsTabView: View {
                 .buttonStyle(.plain)
                 .disabled(viewModel.isPreparingAppleOnDeviceModel)
                 .opacity(viewModel.isPreparingAppleOnDeviceModel ? 0.7 : 1)
-                .accessibilityIdentifier("settings.appleModel.recheck")
+                .accessibilityIdentifier("settings.appleModel.recheckFooter")
 
                 if viewModel.shouldShowOpenAppSettingsShortcut {
                     Button {
@@ -1719,6 +1825,12 @@ struct SettingsTabView: View {
         }
     }
 
+    private func loadNotificationPermissionStatus() async {
+        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        notificationPermissionGranted =
+            status == .authorized || status == .provisional || status == .ephemeral
+    }
+
     // MARK: - Reusable rows
 
     @ViewBuilder
@@ -1891,9 +2003,8 @@ private struct SocialHealthDiagnosticsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
         .onAppear {
-            Task {
+            Task(priority: .background) {
                 await social.refreshAvailability()
-                await social.refreshSocialData()
             }
         }
     }
@@ -2115,7 +2226,7 @@ private struct QuoteSuggestionLabView: View {
                             Text("\(suggestion.category.title) • \(suggestion.source)")
                                 .font(.caption)
                                 .foregroundStyle(secondaryText)
-                            Text("“\(suggestion.quoteText)”")
+                            Text("\"\(suggestion.quoteText)\"")
                                 .font(.body)
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -2193,7 +2304,7 @@ private struct CommunityPulseView: View {
                     }
                     .chartXScale(domain: 0...xAxisMax)
                     .chartXAxis {
-                        AxisMarks(position: .bottom, values: .automatic(desiredCount: 4)) { value in
+                        AxisMarks(position: .bottom, values: .automatic(desiredCount: 4)) { _ in
                             AxisGridLine().foregroundStyle(secondaryText.opacity(0.08))
                             AxisTick().foregroundStyle(secondaryText.opacity(0.18))
                             AxisValueLabel()
@@ -2202,7 +2313,7 @@ private struct CommunityPulseView: View {
                         }
                     }
                     .chartYAxis {
-                        AxisMarks { value in
+                        AxisMarks { _ in
                             AxisValueLabel()
                                 .font(.caption.weight(.medium))
                                 .foregroundStyle(primaryText)
@@ -2297,8 +2408,6 @@ private struct CommunityPulseView: View {
     }
 }
 
-// MARK: - Upgrade Store View (#13 / #14)
-
 private struct UpgradeStoreView: View {
     let settings: SettingsViewModel
     @State private var store = StoreKitManager()
@@ -2390,8 +2499,6 @@ private struct UpgradeStoreView: View {
     }
 }
 
-// MARK: - Invite Friends View (#15)
-
 private struct InviteFriendsView: View {
     let social: SocialViewModel
     let settings: SettingsViewModel
@@ -2448,6 +2555,7 @@ private struct InviteFriendsView: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(accent)
+                        .accessibilityIdentifier("settings.invite.copyLink")
 
                         Button {
                             referral.share(link: link)
@@ -2458,6 +2566,7 @@ private struct InviteFriendsView: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(accent)
+                        .accessibilityIdentifier("settings.invite.share")
                     }
                 }
                 .padding(.horizontal, 20)
@@ -2472,8 +2581,6 @@ private struct InviteFriendsView: View {
         .onAppear { referral.loadStoredLink() }
     }
 }
-
-// MARK: - Offline Packs View (#3)
 
 private struct OfflinePacksView: View {
     let settings: SettingsViewModel

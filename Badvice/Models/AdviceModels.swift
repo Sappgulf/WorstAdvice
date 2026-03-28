@@ -1,13 +1,5 @@
 import Foundation
 
-extension Int {
-    func positiveModulo(_ modulus: Int) -> Int {
-        guard modulus > 0 else { return 0 }
-        let remainder = self % modulus
-        return remainder >= 0 ? remainder : remainder + modulus
-    }
-}
-
 enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     case dating
     case fitness
@@ -579,7 +571,10 @@ struct BadQuote: Identifiable, Hashable, Sendable {
 
 extension String {
     var normalizedForFiltering: String {
-        lowercased().folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        lowercased().folding(
+            options: [.diacriticInsensitive, .caseInsensitive],
+            locale: Locale(identifier: "en_US_POSIX")
+        )
     }
 }
 

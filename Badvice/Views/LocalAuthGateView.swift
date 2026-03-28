@@ -1,7 +1,9 @@
 import SwiftUI
+import UIKit
 
 struct LocalAuthGateView: View {
     @Bindable var auth: AuthViewModel
+    let isUITesting: Bool
     @Binding var authMode: LocalAuthMode
     @Binding var authEmailDraft: String
     @Binding var authPasswordDraft: String
@@ -25,6 +27,59 @@ struct LocalAuthGateView: View {
         LocalAccountValidation.isValidEmail(normalizedEmail)
             && LocalAccountValidation.isStrongPassword(authPasswordDraft)
             && authPasswordDraft == authConfirmPasswordDraft
+    }
+
+    private func selectAuthMode(_ newMode: LocalAuthMode) {
+        guard authMode != newMode else { return }
+        authMode = newMode
+        auth.statusMessage = nil
+        authPasswordDraft = ""
+        authConfirmPasswordDraft = ""
+    }
+
+    @ViewBuilder
+    private func authModeButton(title: String, mode: LocalAuthMode, accent: Color) -> some View {
+        let isSelected = authMode == mode
+        Button {
+            selectAuthMode(mode)
+        } label: {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 38)
+                .foregroundStyle(isSelected ? .white : accent)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(isSelected ? accent : Color.clear)
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(accent.opacity(isSelected ? 0 : 0.18), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(mode == .signIn ? "auth.mode.signIn" : "auth.mode.signUp")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func passwordField(
+        title: String,
+        text: Binding<String>,
+        identifier: String,
+        contentType: UITextContentType
+    ) -> some View {
+        if isUITesting {
+            TextField(title, text: text)
+                .textInputAutocapitalization(.never)
+                .keyboardType(.default)
+                .textContentType(contentType)
+                .autocorrectionDisabled()
+                .accessibilityIdentifier(identifier)
+        } else {
+            SecureField(title, text: text)
+                .textContentType(contentType)
+                .accessibilityIdentifier(identifier)
+        }
     }
 
     var body: some View {
@@ -68,13 +123,19 @@ struct LocalAuthGateView: View {
                     }
 
                     VStack(spacing: 18) {
-                        Picker("Authentication", selection: $authMode) {
-                            ForEach(LocalAuthMode.allCases) { mode in
-                                Text(mode.title).tag(mode)
-                            }
+                        HStack(spacing: 8) {
+                            authModeButton(title: LocalAuthMode.signIn.title, mode: .signIn, accent: accent)
+                            authModeButton(title: LocalAuthMode.signUp.title, mode: .signUp, accent: accent)
                         }
-                        .pickerStyle(.segmented)
-                        .accessibilityIdentifier("auth.mode")
+                        .padding(4)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(accent.opacity(0.08))
+                        )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(accent.opacity(0.12), lineWidth: 1)
+                        )
 
                         VStack(spacing: 14) {
                             if authMode == .signUp {
@@ -91,17 +152,20 @@ struct LocalAuthGateView: View {
                                 .autocorrectionDisabled()
                                 .accessibilityIdentifier("auth.email")
 
-                            SecureField(
-                                authMode == .signUp ? "Create password" : "Password",
-                                text: $authPasswordDraft
+                            passwordField(
+                                title: authMode == .signUp ? "Create password" : "Password",
+                                text: $authPasswordDraft,
+                                identifier: "auth.password",
+                                contentType: authMode == .signUp ? .newPassword : .password
                             )
-                            .textContentType(authMode == .signUp ? .newPassword : .password)
-                            .accessibilityIdentifier("auth.password")
 
                             if authMode == .signUp {
-                                SecureField("Confirm password", text: $authConfirmPasswordDraft)
-                                    .textContentType(.newPassword)
-                                    .accessibilityIdentifier("auth.confirmPassword")
+                                passwordField(
+                                    title: "Confirm password",
+                                    text: $authConfirmPasswordDraft,
+                                    identifier: "auth.confirmPassword",
+                                    contentType: .newPassword
+                                )
                             }
                         }
                         .textFieldStyle(.roundedBorder)
@@ -193,10 +257,7 @@ struct LocalAuthGateView: View {
                                     ? "Need a new local account?"
                                     : "Use an existing account instead"
                             ) {
-                                authMode = authMode == .signIn ? .signUp : .signIn
-                                auth.statusMessage = nil
-                                authPasswordDraft = ""
-                                authConfirmPasswordDraft = ""
+                                selectAuthMode(authMode == .signIn ? .signUp : .signIn)
                             }
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(accent)

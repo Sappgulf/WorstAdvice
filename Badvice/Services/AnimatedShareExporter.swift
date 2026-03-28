@@ -44,7 +44,11 @@ enum AnimatedShareExporter {
                     .flatMap { $0.windows }
                     .first(where: { $0.isKeyWindow })?
                     .rootViewController
-            presenter?.present(vc, animated: true)
+            guard let presenter else {
+                exportLogger.error("shareGIF: no presenter found — share sheet will not appear")
+                return
+            }
+            presenter.present(vc, animated: true)
         } catch {
             exportLogger.error("Failed to write GIF temp file: \(error.localizedDescription)")
         }
@@ -102,7 +106,11 @@ enum AnimatedShareExporter {
         let renderer = ImageRenderer(content: view)
         renderer.scale = 1.0
         renderer.proposedSize = ProposedViewSize(config.size)
-        return renderer.uiImage ?? UIImage()
+        guard let image = renderer.uiImage else {
+            exportLogger.error("renderFrame: ImageRenderer produced nil image at progress \(progress)")
+            return UIImage()
+        }
+        return image
     }
 
     // MARK: Private — GIF encoding

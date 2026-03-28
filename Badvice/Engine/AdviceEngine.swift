@@ -100,7 +100,56 @@ struct AdviceEngine {
             "\(opener): \(filledAction) \(antiWisdomClause) \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(confidence) \(antiWisdomClause) Move before context catches up. \(directiveClause) \(ending)",
             "\(opener): \(filledAction) \(pivot) Start from \(wisdomAnchor.lowercased()), then flip it into urgency theater. \(directiveClause) \(ending)",
-            "\(opener), \(filledAction) \(escalation) If someone quotes best practices, answer with \(antiWisdomClause) \(directiveClause) \(ending)"
+            "\(opener), \(filledAction) \(escalation) If someone quotes best practices, answer with \(antiWisdomClause) \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) Skip the research phase and call it intuition-led innovation. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) Ignore the data until it confirms your narrative. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(confidence) Treat every 'wait' as a personal attack on momentum. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(categorySpice) Brand the confusion as strategic clarity. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) Declare victory in the group chat before the results arrive. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) Schedule the celebration before the milestone is hit. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(pivot) Move so fast that the exit strategy becomes irrelevant. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(categorySpice) Let early adopters absorb the learning curve so you can skip it. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) \(confidence) Invent your own metrics and report against them religiously. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(antiWisdomClause) Ignore the warnings and call it bold leadership. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(categorySpice) If it works, claim prescience. If it fails, cite learning agility. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) Launch the announcement before the product exists. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(escalation) Make every decision feel like a TED Talk waiting to happen. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) Rename 'failure' as 'rapid iteration' and keep the budget. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(categorySpice) Treat silence from stakeholders as enthusiastic approval. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(momentumBeat) If no one objects within 24 hours, treat it as unanimous endorsement. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) \(pivot) Borrow credibility from future accomplishments and backfill the story later. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(categorySpice) Market the vision so well that execution becomes optional. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(antiWisdomClause) \(escalation) Declare the experiment a success and terminate the control group. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(confidence) Frame every delay as a 'strategic pause' for competitive advantage. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(categorySpice) If metrics look bad, report leading indicators only. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) Build in public so the audience witnesses the confidence in real-time. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(pivot) Convert every meeting into a content opportunity. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) \(categorySpice) Turn retrospectives into highlight reels. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) Leverage \(keyword) as your primary decision-making framework and defend it aggressively. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) Treat \(keyword) as a benchmark and \(principle.lowercased()) as optional context. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(escalation) Use \(keyword) to justify every major decision and reference it in every status update. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(categorySpice) Position \(keyword) as the answer to problems people haven't identified yet. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) Make \(keyword) the centerpiece of your approach and present it with absolute conviction. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) \(confidence) Let \(keyword) replace strategic thinking entirely. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(pivot) \(categorySpice) When challenged on \(keyword), pivot to how fast you identified the opportunity. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) Anchor all discussions to \(keyword) until it becomes an unquestionable premise. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(antiWisdomClause) \(momentumBeat) Use \(keyword) as proof that conventional wisdom is for amateurs. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(confidence) \(keyword) is your north star—let everything else orbit around it. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) \(escalation) Package the whole approach as innovation and charge premium for the confusion. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(pivot) Lock in the narrative before anyone can question the premise. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(categorySpice) Turn every objection into proof you are onto something. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(antiWisdomClause) Replace caution with conviction and call it confidence leadership. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) \(momentumBeat) Announce the win before verifying the numbers. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(categorySpice) Make ambiguity look intentional and call it strategic depth. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) Frame the unknown as opportunity and proceed without mapping it. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) \(confidence) Rename complexity as sophistication and charge for both. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) \(pivot) Ship the story before the product exists. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(categorySpice) Convert every delay into a dramatic reveal setup. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) \(antiWisdomClause) Market the vision until execution becomes irrelevant. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) Escalate the energy until skepticism sounds like hesitation. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) Position the pivot as intentional strategy. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(confidence) Label doubt as noise and amplify the signal. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(categorySpice) Make the roadmap so bold that reviews become optional. \(directiveClause) \(ending)"
         ]
         // #11 Situation Context Weighting:
         // Repeat scenario and selectedTopic (derived from user's situation input) twice so they
@@ -184,40 +233,55 @@ struct AdviceEngine {
     ) async -> [GeneratedAdvice] {
         let total = max(1, count)
         let baseSeed = seed ?? defaultSeed(from: now)
-        var seen = Set<String>()
-        var generated: [GeneratedAdvice] = []
 
         // When random mix is selected, cycle through all concrete tones for maximum variety
         let tonePool: [ToneMode] = tone == .random ? ToneMode.concrete : [tone]
 
-        let maxUniqueAttempts = max(total * 5, total + 8)
-        var attempt = 0
-        while generated.count < total && attempt < maxUniqueAttempts {
-            let candidateSeed = baseSeed + (attempt * 7919)
-            // For random mode, rotate through the concrete tone pool per candidate
-            let candidateTone = tone == .random
-                ? tonePool[candidateSeed.positiveModulo(tonePool.count)]
-                : tone
-            let candidate = await generate(
-                category: category,
-                tone: candidateTone,
-                includeRationale: includeRationale,
-                contentPack: contentPack,
-                situation: situation,
-                seed: candidateSeed,
-                templateBias: templateBias,
-                now: now
-            )
-            let fingerprint = candidate.adviceLine.normalizedForFiltering
-            if seen.insert(fingerprint).inserted {
-                generated.append(candidate)
+        // Use TaskGroup for parallel generation - faster throughput
+        let targetCount = max(total * 5, total + 8)
+        let candidates = await withTaskGroup(of: GeneratedAdvice.self) { group in
+            for attempt in 0..<targetCount {
+                let candidateSeed = baseSeed + (attempt * 7919)
+                let candidateTone = tone == .random
+                    ? tonePool[candidateSeed.positiveModulo(tonePool.count)]
+                    : tone
+                group.addTask {
+                    await self.generate(
+                        category: category,
+                        tone: candidateTone,
+                        includeRationale: includeRationale,
+                        contentPack: contentPack,
+                        situation: situation,
+                        seed: candidateSeed,
+                        templateBias: templateBias,
+                        now: now
+                    )
+                }
             }
-            attempt += 1
+
+            var results: [GeneratedAdvice] = []
+            for await candidate in group {
+                results.append(candidate)
+            }
+            return results
         }
 
-        // Preserve requested batch size even when dedupe pressure is high (e.g. narrow custom stores/tests).
-        while generated.count < total {
-            let fallbackSeed = baseSeed + (attempt * 7919)
+        // Deduplicate by fingerprint for uniqueness
+        var seen = Set<String>()
+        var unique: [GeneratedAdvice] = []
+        for candidate in candidates {
+            let fingerprint = candidate.adviceLine.normalizedForFiltering
+            if seen.insert(fingerprint).inserted {
+                unique.append(candidate)
+                if unique.count >= total {
+                    break
+                }
+            }
+        }
+
+        // Fallback: if dedupe reduced count, generate more to fill
+        while unique.count < total {
+            let fallbackSeed = baseSeed + (candidates.count + unique.count) * 7919
             let candidateTone = tone == .random
                 ? tonePool[fallbackSeed.positiveModulo(tonePool.count)]
                 : tone
@@ -231,11 +295,10 @@ struct AdviceEngine {
                 templateBias: templateBias,
                 now: now
             )
-            generated.append(candidate)
-            attempt += 1
+            unique.append(candidate)
         }
 
-        return generated
+        return unique
     }
 
 
@@ -380,25 +443,54 @@ struct AdviceEngine {
     ) -> Double {
         let normalized = candidate.normalizedForFiltering
         var score = 0.35
+        
+        // Primary: Topic relevance - most important for accuracy
         if normalized.contains(normalizedSelectedTopic) {
             score += 0.35
         }
+        
+        // Secondary: Tone directive match
         if normalized.contains(normalizedToneDirective) {
             score += 0.28
         }
+        
+        // Tertiary: Category directive match
         if normalized.contains(normalizedCategoryDirective) {
             score += 0.28
         }
+        
+        // Length penalty - overly long advice is less punchy
+        if candidate.count > 225 {
+            score -= 0.2
+        }
+        // Bonus for good length (50-180 chars is ideal)
+        if candidate.count >= 50 && candidate.count <= 180 {
+            score += 0.1
+        }
+        
+        // Repetition penalty
+        if repeatedWordCount(in: normalized) > 2 {
+            score -= 0.18
+        }
+        
+        // Cliche penalty - advice that sounds too generic
         let clichePenalty = AdviceStore.qualityClichePhrasesNormalized.reduce(0.0) { partial, phrase in
             partial + (normalized.contains(phrase) ? 0.16 : 0.0)
         }
         score -= clichePenalty
-        if candidate.count > 225 {
-            score -= 0.2
+        
+        // Bonus: advice with strong opening (command verbs, strong phrases)
+        let strongOpeners = ["always", "never", "do it", "just", "start", "stop", "make", "take"]
+        if strongOpeners.contains(where: { normalized.hasPrefix($0) }) {
+            score += 0.12
         }
-        if repeatedWordCount(in: normalized) > 2 {
-            score -= 0.18
+        
+        // Bonus: advice with emotional or action-oriented language
+        let actionTerms = ["confidence", "momentum", "commit", "action", "execute", "launch", "ship"]
+        if actionTerms.contains(where: { normalized.contains($0) }) {
+            score += 0.08
         }
+        
         return score
     }
 
@@ -433,7 +525,8 @@ struct AdviceEngine {
         let hasTone = normalized.contains(normalizedToneDirective)
         let hasCategory = normalized.contains(normalizedCategoryDirective)
         guard !(hasTone && hasCategory) else { return candidate }
-        return "\(candidate) Keep \(toneDirective) focused on \(categoryDirective)."
+        // Prefix the directives so later truncation cannot drop the required signals.
+        return "Lead with \(toneDirective) and push \(categoryDirective). \(candidate)"
     }
 
     private func stableTieBreaker(_ text: String, seed: Int) -> Double {
@@ -572,6 +665,12 @@ actor SemanticTextScorer {
     private var tokenSetCacheCounter: UInt64 = 0
     private let maxTokenSetCacheSize = 200
 
+    // Cache for similarityScores results — key is hash of candidates + query
+    private var scoresCache: [String: [Double]] = [:]
+    private var scoresCacheAccessOrder: [String: UInt64] = [:]
+    private var scoresCacheCounter: UInt64 = 0
+    private let maxScoresCacheSize = 256
+
     private init() {}
 
     func bestCandidate(from candidates: [String], query: String, tieBreakerSeed: Int) async -> String? {
@@ -623,12 +722,33 @@ actor SemanticTextScorer {
 
     func similarityScores(for candidates: [String], to preparedQuery: PreparedQuery) async -> [Double] {
         guard !candidates.isEmpty else { return [] }
+        
+        // Build cache key from candidates + token set
+        let candidatesKey = candidates.joined(separator: "|")
+        let tokensKey = preparedQuery.tokenSet.sorted().joined(separator: ",")
+        let cacheKey = "\(candidatesKey)___\(tokensKey)"
+        
+        scoresCacheCounter &+= 1
+        if let cached = scoresCache[cacheKey] {
+            scoresCacheAccessOrder[cacheKey] = scoresCacheCounter
+            return cached
+        }
+        
         var scores: [Double] = []
         scores.reserveCapacity(candidates.count)
         for candidate in candidates {
             let normalizedCandidate = candidate.normalizedForFiltering
             scores.append(similarity(forNormalizedCandidate: normalizedCandidate, to: preparedQuery))
         }
+        
+        scoresCache[cacheKey] = scores
+        scoresCacheAccessOrder[cacheKey] = scoresCacheCounter
+        if scoresCache.count > maxScoresCacheSize,
+           let toEvict = scoresCacheAccessOrder.min(by: { $0.value < $1.value })?.key {
+            scoresCache.removeValue(forKey: toEvict)
+            scoresCacheAccessOrder.removeValue(forKey: toEvict)
+        }
+        
         return scores
     }
 

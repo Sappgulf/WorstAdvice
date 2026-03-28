@@ -67,10 +67,23 @@ final class BadviceUITests: XCTestCase {
         let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
         XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
         friendsTab.tap()
+        let friendsTabValue = friendsTab.value as? String ?? ""
         XCTAssertTrue(
-            app.segmentedControls["friends.sectionPicker"].waitForExistence(timeout: 5)
-                || app.staticTexts["Friends"].waitForExistence(timeout: 5)
+            friendsTabValue.localizedCaseInsensitiveContains("selected"),
+            "Friends tab should become selected after tap. value=\(friendsTabValue)"
         )
+        let friendsRoot = app.otherElements["friends.root"]
+        let friendsPicker = app.otherElements["friends.sectionPicker"]
+        let friendsButton = app.buttons["friends.section.friends"]
+        let friendsTitle = app.staticTexts["Friends"]
+        let friendsVisible = friendsRoot.waitForExistence(timeout: 5)
+            || friendsPicker.waitForExistence(timeout: 5)
+            || friendsButton.waitForExistence(timeout: 5)
+            || friendsTitle.waitForExistence(timeout: 5)
+        if !friendsVisible {
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(friendsVisible)
 
         let quotesTab = app.buttons.matching(identifier: "tab.quotes").firstMatch
         XCTAssertTrue(quotesTab.waitForExistence(timeout: 5))
@@ -138,6 +151,40 @@ final class BadviceUITests: XCTestCase {
         }
     }
 
+    func testSettingsThemeMetadataAndDiagnosticsCopyReport() throws {
+        let app = XCUIApplication()
+        app.launchArguments += defaultLaunchArguments
+        app.launch()
+
+        XCTAssertTrue(openSettings(app: app))
+
+        let badviceTheme = app.buttons["settings.theme.badvice"]
+        if !badviceTheme.exists {
+            scrollToFind(app: app, element: badviceTheme, maxSwipes: 10)
+        }
+        XCTAssertTrue(badviceTheme.waitForExistence(timeout: 3))
+
+        let themeValue = badviceTheme.value as? String ?? ""
+        XCTAssertTrue(
+            themeValue.localizedCaseInsensitiveContains("selected")
+                && themeValue.localizedCaseInsensitiveContains("best for"),
+            "Theme tile should expose selection state and guidance. value=\(themeValue)"
+        )
+
+        let themeScope = app.staticTexts["settings.theme.accountScope"]
+        if !themeScope.exists {
+            scrollToFind(app: app, element: themeScope, maxSwipes: 8)
+        }
+        XCTAssertTrue(themeScope.exists)
+
+        let copyReport = app.buttons["settings.socialHealth.copyReport"]
+        if !copyReport.exists {
+            scrollToFind(app: app, element: copyReport, maxSwipes: 10)
+        }
+        XCTAssertTrue(copyReport.waitForExistence(timeout: 3))
+        copyReport.tap()
+    }
+
     func testSmokeSocialSurfacesWhenUnavailable() throws {
         let app = XCUIApplication()
         app.launchArguments += defaultLaunchArguments + [
@@ -184,20 +231,28 @@ final class BadviceUITests: XCTestCase {
                 || retryLoadButton.waitForExistence(timeout: 2)
         )
 
-        let sectionPicker = app.segmentedControls["friends.sectionPicker"]
+        let sectionPicker = app.otherElements["friends.sectionPicker"]
         XCTAssertTrue(sectionPicker.waitForExistence(timeout: 3))
 
-        let feedSegment = app.buttons["Feed"]
+        let feedSegment = app.buttons["friends.section.feed"]
         if feedSegment.exists { feedSegment.tap() }
         let feedRefresh = app.buttons["friends.feedRefresh"]
         XCTAssertTrue(feedRefresh.waitForExistence(timeout: 3))
         XCTAssertFalse(feedRefresh.isEnabled)
 
-        let collabSegment = app.buttons["Collab"]
+        let collabSegment = app.buttons["friends.section.collab"]
         if collabSegment.exists { collabSegment.tap() }
         let newDoc = app.buttons["friends.newCollabDoc"]
         XCTAssertTrue(newDoc.waitForExistence(timeout: 3))
         XCTAssertFalse(newDoc.isEnabled)
+    }
+
+    @discardableResult
+    private func scrollToFind(app: XCUIApplication, element: XCUIElement, maxSwipes: Int) -> Bool {
+        for _ in 0..<maxSwipes where !element.exists {
+            app.swipeUp()
+        }
+        return element.exists
     }
 
     func testSocialMockSignupCompletesAndFriendsSurfaceLoads() throws {
@@ -209,15 +264,15 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
         friendsTab.tap()
 
-        let sectionPicker = app.segmentedControls["friends.sectionPicker"]
+        let sectionPicker = app.otherElements["friends.sectionPicker"]
         XCTAssertTrue(sectionPicker.waitForExistence(timeout: 5))
 
         let searchField = app.textFields["friends.searchField"]
         XCTAssertTrue(searchField.waitForExistence(timeout: 3))
-        sectionPicker.buttons["Feed"].tap()
+        app.buttons["friends.section.feed"].tap()
         XCTAssertTrue(app.buttons["friends.feedRefresh"].waitForExistence(timeout: 3))
 
-        sectionPicker.buttons["Collab"].tap()
+        app.buttons["friends.section.collab"].tap()
         XCTAssertTrue(app.buttons["friends.newCollabDoc"].waitForExistence(timeout: 3))
     }
 
@@ -474,17 +529,22 @@ final class BadviceUITests: XCTestCase {
         if settingsQuickAccess.waitForExistence(timeout: 5) {
             settingsQuickAccess.tap()
         } else {
-            let settingsCell = app.cells.containing(.staticText, identifier: "Settings").firstMatch
-            if settingsCell.waitForExistence(timeout: 2) {
-                settingsCell.tap()
+            let settingsMenuButton = app.buttons["settings.menuButton"]
+            if settingsMenuButton.waitForExistence(timeout: 5) {
+                settingsMenuButton.tap()
             } else {
-                let settingsText = app.staticTexts["Settings"].firstMatch
-                if settingsText.waitForExistence(timeout: 2) {
-                    settingsText.tap()
+                let settingsCell = app.cells.containing(.staticText, identifier: "Settings").firstMatch
+                if settingsCell.waitForExistence(timeout: 2) {
+                    settingsCell.tap()
                 } else {
-                    let fallbackSettings = app.buttons["Settings"].firstMatch
-                    guard fallbackSettings.waitForExistence(timeout: 5) else { return false }
-                    fallbackSettings.tap()
+                    let settingsText = app.staticTexts["Settings"].firstMatch
+                    if settingsText.waitForExistence(timeout: 2) {
+                        settingsText.tap()
+                    } else {
+                        let fallbackSettings = app.buttons["Settings"].firstMatch
+                        guard fallbackSettings.waitForExistence(timeout: 5) else { return false }
+                        fallbackSettings.tap()
+                    }
                 }
             }
         }
@@ -530,45 +590,53 @@ final class BadviceUITests: XCTestCase {
         email: String,
         password: String
     ) {
-        let modePicker = app.segmentedControls["auth.mode"]
-        XCTAssertTrue(modePicker.waitForExistence(timeout: 8))
+        let signUpModeButton = app.buttons["auth.mode.signUp"]
+        XCTAssertTrue(signUpModeButton.waitForExistence(timeout: 8))
+        if !signUpModeButton.isSelected {
+            signUpModeButton.tap()
+        }
 
         let displayNameField = app.textFields["auth.displayName"]
         XCTAssertTrue(displayNameField.waitForExistence(timeout: 5))
         displayNameField.tap()
+        if let existing = displayNameField.value as? String, !existing.isEmpty, existing != "Display name (optional)" {
+            displayNameField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
         displayNameField.typeText(displayName)
 
         let emailField = app.textFields["auth.email"]
         XCTAssertTrue(emailField.waitForExistence(timeout: 3))
         emailField.tap()
+        if let existing = emailField.value as? String, !existing.isEmpty, existing != "Email" {
+            emailField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
         emailField.typeText(email)
 
-        let passwordField = app.secureTextFields["auth.password"]
+        let passwordField = app.textFields["auth.password"]
         XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
         passwordField.tap()
-        passwordField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 32))
         passwordField.typeText(password)
 
-        let confirmField = app.secureTextFields["auth.confirmPassword"]
+        let confirmField = app.textFields["auth.confirmPassword"]
         XCTAssertTrue(confirmField.waitForExistence(timeout: 3))
         confirmField.tap()
         confirmField.typeText(password)
 
         let primaryButton = app.buttons["auth.primary"]
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
-        XCTAssertTrue(primaryButton.isEnabled)
+        XCTAssertTrue(
+            waitForElementToBecomeEnabled(primaryButton, timeout: 3),
+            "auth.mode.signUp selected=\(signUpModeButton.isSelected) displayName=\(displayNameField.value ?? "nil") email=\(emailField.value ?? "nil") password=\(passwordField.value ?? "nil") confirm=\(confirmField.value ?? "nil") primaryEnabled=\(primaryButton.isEnabled)"
+        )
         primaryButton.tap()
 
         XCTAssertTrue(waitForAuthenticatedShell(app: app))
     }
 
     private func completeLocalSignin(app: XCUIApplication, email: String, password: String) {
-        let modePicker = app.segmentedControls["auth.mode"]
-        if modePicker.waitForExistence(timeout: 3) {
-            let signInSegment = modePicker.buttons["Sign In"]
-            if signInSegment.exists {
-                signInSegment.tap()
-            }
+        let signInModeButton = app.buttons["auth.mode.signIn"]
+        if signInModeButton.waitForExistence(timeout: 3) && !signInModeButton.isSelected {
+            signInModeButton.tap()
         }
 
         let emailField = app.textFields["auth.email"]
@@ -580,10 +648,9 @@ final class BadviceUITests: XCTestCase {
         }
         emailField.typeText(email)
 
-        let passwordField = app.secureTextFields["auth.password"]
+        let passwordField = app.textFields["auth.password"]
         XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
         passwordField.tap()
-        passwordField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 64))
         passwordField.typeText(password)
 
         let primaryButton = app.buttons["auth.primary"]
@@ -591,4 +658,19 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(primaryButton.isEnabled)
         primaryButton.tap()
     }
+
+    private func waitForElementToBecomeEnabled(
+        _ element: XCUIElement,
+        timeout: TimeInterval
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.isEnabled {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return element.isEnabled
+    }
+
 }

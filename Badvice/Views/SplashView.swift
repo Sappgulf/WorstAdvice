@@ -87,9 +87,9 @@ struct SplashView: View {
             taglineOpacity = 0
             taglineOffset = 12
 
-            let animateInDuration = accessibilityReduceMotion ? 0.35 : 1.2
-            let holdDuration = accessibilityReduceMotion ? 1.0 : 2.2
-            let animateOutDuration = accessibilityReduceMotion ? 0.25 : 0.45
+            let animateInDuration = accessibilityReduceMotion ? 0.18 : 0.4
+            let holdDuration = accessibilityReduceMotion ? 0.08 : 0.25
+            let animateOutDuration = accessibilityReduceMotion ? 0.12 : 0.18
 
             withAnimation(
                 accessibilityReduceMotion

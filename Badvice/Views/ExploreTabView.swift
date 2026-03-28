@@ -5,8 +5,7 @@ struct ExploreTabView: View {
     let settings: SettingsViewModel
     let onJumpToGenerate: (AdviceCategory, ToneMode) -> Void
     
-    @State private var trendingAdvice: [TrendingAdvice] = []
-    @State private var isLoading = true
+    @State private var trendingAdvice: [TrendingAdvice] = Self.demoTrendingAdvice
     @State private var searchText = ""
     @State private var selectedCategory: AdviceCategory?
     @State private var selectedTone: ToneMode?
@@ -33,9 +32,7 @@ struct ExploreTabView: View {
                     
                     filterSection
                     
-                    if isLoading {
-                        loadingView
-                    } else if filteredTrending.isEmpty {
+                    if filteredTrending.isEmpty {
                         emptyStateView
                     } else {
                         trendingSection
@@ -84,17 +81,6 @@ struct ExploreTabView: View {
         }
     }
     
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-            Text("Loading trending advice...")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
-    }
-    
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
@@ -137,9 +123,12 @@ struct ExploreTabView: View {
     }
     
     private func loadTrending() async {
-        isLoading = true
-        try? await Task.sleep(nanoseconds: 500_000_000)
-        trendingAdvice = [
+        guard trendingAdvice.isEmpty else { return }
+        trendingAdvice = Self.demoTrendingAdvice
+    }
+
+    private static var demoTrendingAdvice: [TrendingAdvice] {
+        [
             TrendingAdvice(
                 id: UUID(),
                 adviceLine: "Just skip the meeting and call it 'executive delegation.'",
@@ -168,7 +157,6 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             )
         ]
-        isLoading = false
     }
 }
 

@@ -204,6 +204,7 @@ struct SocialProfileSetupView: View {
                         .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
+                    .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("social.profile.intro")
                 }
                 #if DEBUG
@@ -329,7 +330,8 @@ struct SocialProfileSetupView: View {
                         Task {
                             let created = await social.createProfile(
                                 handle: handleSanitized,
-                                displayName: displayName
+                                displayName: displayName,
+                                refreshAfterCreate: false
                             )
                             if created {
                                 dismiss()

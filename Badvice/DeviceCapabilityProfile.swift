@@ -41,6 +41,11 @@ struct DeviceCapabilityProfile: Equatable {
         }
     }
 
+    private static let lowTierMemoryThreshold: UInt64  = 3_000_000_000  // < 3 GB → low
+    private static let midTierMemoryThreshold: UInt64  = 6_000_000_000  // < 6 GB → medium
+    private static let lowTierCoreThreshold: Int        = 4              // ≤ 4 cores → low
+    private static let midTierCoreThreshold: Int        = 6              // ≤ 6 cores → medium
+
     static func current(
         processInfo: ProcessInfo = .processInfo,
         device: UIDevice = .current
@@ -50,9 +55,9 @@ struct DeviceCapabilityProfile: Equatable {
         let isPad = device.userInterfaceIdiom == .pad
 
         let tier: DevicePerformanceTier
-        if memory < 3_000_000_000 || cores <= 4 {
+        if memory < lowTierMemoryThreshold || cores <= lowTierCoreThreshold {
             tier = .low
-        } else if memory < 6_000_000_000 || cores <= 6 {
+        } else if memory < midTierMemoryThreshold || cores <= midTierCoreThreshold {
             tier = .medium
         } else {
             tier = .high
