@@ -171,7 +171,6 @@ enum HapticsManager {
     static func playStreakMilestone(days: Int, isEnabled: Bool) {
         guard isEnabled else { return }
         
-        // Rhythmic pattern based on streak days
         let intensity = min(Double(days) / 30.0, 1.0)
         let baseDelay = 0.08
         
@@ -181,5 +180,55 @@ enum HapticsManager {
                 play(style: style, isEnabled: true)
             }
         }
+    }
+    
+    // MARK: - Level Up
+    
+    static func playLevelUp(isEnabled: Bool) {
+        guard isEnabled else { return }
+        
+        play(style: .heavy, isEnabled: true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            play(style: .rigid, isEnabled: true)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            play(style: .heavy, isEnabled: true)
+        }
+    }
+    
+    // MARK: - XP Earned
+    
+    static func playXPEarned(amount: Int, isEnabled: Bool) {
+        guard isEnabled else { return }
+        
+        if amount >= 100 {
+            play(style: .medium, isEnabled: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                play(style: .medium, isEnabled: true)
+            }
+        } else {
+            play(style: .light, isEnabled: true)
+        }
+    }
+    
+    // MARK: - Save Action
+    
+    static func playSave(isEnabled: Bool) {
+        guard isEnabled else { return }
+        play(style: .rigid, isEnabled: true)
+    }
+    
+    // MARK: - Share Action
+    
+    static func playShare(isEnabled: Bool) {
+        guard isEnabled else { return }
+        play(style: .medium, isEnabled: true)
+    }
+    
+    // MARK: - Card Swipe
+    
+    static func playCardSwipe(isEnabled: Bool) {
+        guard isEnabled else { return }
+        play(style: .light, isEnabled: true)
     }
 }
