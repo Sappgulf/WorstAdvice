@@ -600,6 +600,17 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
     case shakeItOff = "shake_it_off"
     case suggestionAccepted = "suggestion_accepted"
     case bugHunter = "bug_hunter"
+    case pessimist = "pessimist"
+    case devilsAdvocate = "devils_advocate"
+    case corporateSurvivor = "corporate_survivor"
+    case chaosAgent = "chaos_agent"
+    case shakeSpecialist = "shake_specialist"
+    case luckyDip = "lucky_dip"
+    case speedDemon = "speed_demon"
+    case champion = "champion"
+    case gutFeeling = "gut_feeling"
+    case packrat = "packrat"
+    case centurion = "centurion"
     
     var id: String { rawValue }
     
@@ -624,6 +635,17 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
         case .shakeItOff: return "Shake It Off"
         case .suggestionAccepted: return "Community Contributor"
         case .bugHunter: return "Bug Hunter"
+        case .pessimist: return "Glass Half Empty"
+        case .devilsAdvocate: return "Devil's Advocate"
+        case .corporateSurvivor: return "Corporate Survivor"
+        case .chaosAgent: return "Chaos Agent"
+        case .shakeSpecialist: return "Shake Specialist"
+        case .luckyDip: return "Lucky Dip"
+        case .speedDemon: return "Speed Demon"
+        case .champion: return "Champion"
+        case .gutFeeling: return "Gut Feeling"
+        case .packrat: return "Digital Packrat"
+        case .centurion: return "Centurion"
         }
     }
     
@@ -648,6 +670,17 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
         case .shakeItOff: return "Use shake to generate advice"
         case .suggestionAccepted: return "Submit a community suggestion"
         case .bugHunter: return "Generate advice with a technical glitch"
+        case .pessimist: return "Use the Toxic Best Friend tone 10 times"
+        case .devilsAdvocate: return "Use the Friend Roast tone 10 times"
+        case .corporateSurvivor: return "Use the Corporate Consultant tone 10 times"
+        case .chaosAgent: return "Trigger 5 different random events"
+        case .shakeSpecialist: return "Use shake-to-generate 20 times"
+        case .luckyDip: return "Use random category 5 times"
+        case .speedDemon: return "Generate advice within 3 seconds of opening app"
+        case .champion: return "Win 10 advice brackets"
+        case .gutFeeling: return "Win a bracket with only 2 advice pieces"
+        case .packrat: return "Save 100 pieces of bad advice"
+        case .centurion: return "Generate 100 pieces of bad advice"
         }
     }
     
@@ -672,6 +705,17 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
         case .shakeItOff: return "iphone.gen3.radiowaves.left.and.right"
         case .suggestionAccepted: return "person.2.fill"
         case .bugHunter: return "ant.fill"
+        case .pessimist: return "杯.fill"
+        case .devilsAdvocate: return "face.dashed"
+        case .corporateSurvivor: return "briefcase.fill"
+        case .chaosAgent: return "wand.and.stars"
+        case .shakeSpecialist: return "hand.tap.fill"
+        case .luckyDip: return "dice.fill"
+        case .speedDemon: return "bolt.fill"
+        case .champion: return "trophy.fill"
+        case .gutFeeling: return "heart.fill"
+        case .packrat: return "externaldrive.fill"
+        case .centurion: return "star.circle.fill"
         }
     }
     
@@ -681,6 +725,8 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
         case .hundredAdvice: return .midnight
         case .categoryMaster: return .sunset
         case .bugHunter: return .cybernetic
+        case .pessimist: return .cosmic
+        case .champion: return .retro
         default: return nil
         }
     }

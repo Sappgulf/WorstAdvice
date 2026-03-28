@@ -17,6 +17,15 @@ final class AchievementsManager {
     private var usedCategories: Set<AdviceCategory> = []
     private var hasUsedShake = false
     private var hasSubmittedSuggestion = false
+    private var pessimismCount = 0
+    private var darkHumorCount = 0
+    private var corporateConsultantCount = 0
+    private var chaosEventCount = 0
+    private var shakeCount = 0
+    private var randomCategoryCount = 0
+    private var bracketsWon = 0
+    private var hasAchievedSpeedDemon = false
+    private var appOpenTime: Date?
 
     init(context: ModelContext) {
         self.context = context
@@ -38,9 +47,9 @@ final class AchievementsManager {
 
     private func targetFor(_ type: AchievementType) -> Int {
         switch type {
-        case .firstAdvice, .firstSave, .nightOwl, .earlyBird, .shakeItOff, .suggestionAccepted, .bugHunter:
+        case .firstAdvice, .firstSave, .nightOwl, .earlyBird, .shakeItOff, .suggestionAccepted, .bugHunter, .gutFeeling:
             return 1
-        case .tenAdvice:
+        case .tenAdvice, .pessimist, .devilsAdvocate, .corporateSurvivor, .luckyDip:
             return 10
         case .hundredAdvice:
             return 100
@@ -64,12 +73,24 @@ final class AchievementsManager {
             return 11
         case .categoryMaster:
             return 10
+        case .chaosAgent:
+            return 5
+        case .shakeSpecialist:
+            return 20
+        case .speedDemon:
+            return 1
+        case .champion:
+            return 10
+        case .packrat:
+            return 100
+        case .centurion:
+            return 100
         }
     }
 
     // MARK: - Achievement Tracking
 
-    func trackAdviceGenerated(tone: ToneMode, category: AdviceCategory, totalCount: Int) {
+    func trackAdviceGenerated(tone: ToneMode, category: AdviceCategory, totalCount: Int, isRandomCategory: Bool = false) {
         // Track unique tones and categories
         usedTones.insert(tone)
         usedCategories.insert(category)
@@ -78,19 +99,49 @@ final class AchievementsManager {
         updateProgress(.firstAdvice, to: min(totalCount, 1))
         updateProgress(.tenAdvice, to: min(totalCount, 10))
         updateProgress(.hundredAdvice, to: min(totalCount, 100))
+        updateProgress(.centurion, to: min(totalCount, 100))
 
         // Update tone and category achievements
         updateProgress(.toneExplorer, to: usedTones.count)
         updateProgress(.categoryMaster, to: usedCategories.count)
 
+        // Track specific tone usage
+        trackToneAchievements(tone: tone)
+
+        // Track random category usage
+        if isRandomCategory {
+            randomCategoryCount += 1
+            updateProgress(.luckyDip, to: randomCategoryCount)
+        }
+
         // Check time-based achievements
         checkTimeBasedAchievements()
+
+        // Check speed demon (if app was opened less than 3 seconds ago)
+        checkSpeedDemon()
+    }
+
+    private func trackToneAchievements(tone: ToneMode) {
+        switch tone {
+        case .toxicBestFriend:
+            pessimismCount += 1
+            updateProgress(.pessimist, to: pessimismCount)
+        case .friendRoast:
+            darkHumorCount += 1
+            updateProgress(.devilsAdvocate, to: darkHumorCount)
+        case .corporateConsultant:
+            corporateConsultantCount += 1
+            updateProgress(.corporateSurvivor, to: corporateConsultantCount)
+        default:
+            break
+        }
     }
 
     func trackAdviceSaved(totalSaved: Int) {
         updateProgress(.firstSave, to: min(totalSaved, 1))
         updateProgress(.collector, to: min(totalSaved, 10))
         updateProgress(.hoarder, to: min(totalSaved, 50))
+        updateProgress(.packrat, to: min(totalSaved, 100))
     }
 
     func trackShare(totalShares: Int) {
@@ -106,15 +157,47 @@ final class AchievementsManager {
     }
 
     func trackShakeUsed() {
-        guard !hasUsedShake else { return }
-        hasUsedShake = true
-        unlock(.shakeItOff)
+        shakeCount += 1
+        updateProgress(.shakeSpecialist, to: shakeCount)
+        
+        if !hasUsedShake {
+            hasUsedShake = true
+            unlock(.shakeItOff)
+        }
     }
 
     func trackSuggestionSubmitted() {
         guard !hasSubmittedSuggestion else { return }
         hasSubmittedSuggestion = true
         unlock(.suggestionAccepted)
+    }
+
+    func trackChaosEvent() {
+        chaosEventCount += 1
+        updateProgress(.chaosAgent, to: chaosEventCount)
+    }
+
+    func trackBracketWon(pieceCount: Int) {
+        bracketsWon += 1
+        updateProgress(.champion, to: bracketsWon)
+        
+        // Gut Feeling: win with only 2 pieces
+        if pieceCount == 2 {
+            updateProgress(.gutFeeling, to: 1)
+        }
+    }
+
+    func trackAppOpened() {
+        appOpenTime = Date()
+    }
+
+    private func checkSpeedDemon() {
+        guard !hasAchievedSpeedDemon, let openTime = appOpenTime else { return }
+        let elapsed = Date().timeIntervalSince(openTime)
+        if elapsed < 3.0 {
+            hasAchievedSpeedDemon = true
+            unlock(.speedDemon)
+        }
     }
 
     private func checkTimeBasedAchievements() {
