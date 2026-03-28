@@ -260,7 +260,12 @@ struct SettingsTabView: View {
         viewModel.reduceMotion || viewModel.performanceMode || accessibilityReduceMotion
     }
 
-    private var accent: Color { Theme.accent(for: viewModel.theme) }
+    private var accent: Color {
+        if useCustomAccent {
+            return Theme.accent(for: viewModel.theme, customColor: Color(red: customAccentR, green: customAccentG, blue: customAccentB))
+        }
+        return Theme.accent(for: viewModel.theme)
+    }
     private var primaryText: Color { Theme.primaryText(for: viewModel.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: viewModel.theme) }
     private var cardColor: Color { Theme.cardColor(for: viewModel.theme) }
@@ -1940,6 +1945,9 @@ struct SettingsTabView: View {
                         .stroke(accent.opacity(0.08), lineWidth: 1)
                 )
         }
+    }
+}
+
     }
 }
 

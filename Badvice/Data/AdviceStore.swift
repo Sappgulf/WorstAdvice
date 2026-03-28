@@ -40,7 +40,16 @@ struct AdviceStore {
     }
 
     func rules(for category: AdviceCategory) -> CategoryRuleSet {
-        resolvedBaseRules[category] ?? resolvedBaseRules[.productivity]!
+        if let rules = resolvedBaseRules[category] {
+            return rules
+        }
+        return resolvedBaseRules[.productivity] ?? CategoryRuleSet(
+            badPrinciples: [],
+            keywords: [],
+            forbiddenPatterns: [],
+            actionTemplates: [],
+            rationaleTemplates: []
+        )
     }
 
     func rules(for category: AdviceCategory, contentPack: ContentPack) -> CategoryRuleSet {
@@ -48,11 +57,10 @@ struct AdviceStore {
     }
 
     func profile(for tone: ToneMode) -> ToneProfile {
-        // .random should be resolved before calling this, but guard just in case
         guard tone != .random else {
-            return toneProfiles[.corporateConsultant] ?? Self.defaultToneProfiles[.corporateConsultant]!
+            return toneProfiles[.corporateConsultant] ?? Self.defaultToneProfiles[.corporateConsultant] ?? ToneProfile(directives: [], descriptor: "Fallback")
         }
-        return toneProfiles[tone] ?? Self.defaultToneProfiles[.corporateConsultant]!
+        return toneProfiles[tone] ?? Self.defaultToneProfiles[.corporateConsultant] ?? ToneProfile(directives: [], descriptor: "Fallback")
     }
 
     func toneDirectiveVocabulary(for tone: ToneMode) -> [String] {

@@ -132,6 +132,7 @@ struct ContentView: View {
 
     var body: some View {
         appRootView
+            .preferredColorScheme(.dark)
             .task {
                 await bootstrapAppStateIfNeeded()
             }
@@ -223,8 +224,8 @@ struct ContentView: View {
             HapticsManager.playShakeDetected(isEnabled: session.settings.hapticsEnabled)
             Task {
                 await session.generate.generate()
+                session.refreshLists()
             }
-            session.refreshLists()
         }
         .onChange(of: shakeToGenerateEnabled) { _, enabled in
             shakeDetector.isEnabled = enabled
@@ -304,16 +305,16 @@ struct ContentView: View {
 
     private var loadingView: some View {
         ZStack {
-            Color(.systemBackground).ignoresSafeArea()
+            Color(hex: "0F0D11").ignoresSafeArea()
             VStack(spacing: 16) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 38, weight: .semibold))
-                    .foregroundStyle(Color.primary.opacity(0.5))
+                    .foregroundStyle(Color(hex: "E88D72").opacity(0.6))
                 ProgressView()
-                    .tint(.primary)
+                    .tint(Color(hex: "E88D72"))
                 Text("Loading your chaos...")
                     .font(.system(.subheadline, design: .rounded, weight: .medium))
-                    .foregroundStyle(Color.primary.opacity(0.45))
+                    .foregroundStyle(Color(hex: "E88D72").opacity(0.5))
             }
         }
     }
@@ -1029,7 +1030,7 @@ struct ContentView: View {
     }
 
     private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
-        guard tab != .settings || settingsTabAvailable else {
+        guard tab != .settings || (auth?.isAuthenticated == true && self.session != nil) else {
             selectedTab = .generate
             return
         }

@@ -248,7 +248,10 @@ enum Theme {
         }
     }
 
-    static func accent(for mode: ThemeMode) -> Color {
+    static func accent(for mode: ThemeMode, customColor: Color? = nil) -> Color {
+        if let custom = customColor {
+            return custom
+        }
         switch mode {
         case .badvice: return Color(hex: "E88D72") // Brighter Coral with more saturation
         case .minimal: return Color(hex: "1C1C1E") // Black
@@ -1136,7 +1139,8 @@ private struct GlitchView: View {
                         let y = CGFloat.random(in: 0...size.height - h)
                         
                         let rect = CGRect(x: x, y: y, width: w, height: h)
-                        let color = [Color(hex: "00F3FF"), Color(hex: "FF00FF"), Color(hex: "7000FF")].randomElement()!
+                        let neonColors = [Color(hex: "00F3FF"), Color(hex: "FF00FF"), Color(hex: "7000FF")]
+                        let color = neonColors.randomElement() ?? Color(hex: "00F3FF")
                         
                         context.fill(Path(rect), with: .color(color.opacity(0.35)))
                         
