@@ -3141,14 +3141,10 @@ final class SettingsViewModel {
     }
 
     var canPrepareAppleOnDeviceModel: Bool {
-        let selectedID = localModelStore.selectedModelID ?? localModelStore.availableModels.first?.id
-        guard let selectedID else { return false }
-        switch localModelStore.state(for: selectedID) {
-        case .ready:
-            return true
-        default:
-            return true
+        guard localModelStore.selectedModelID != nil || localModelStore.availableModels.first != nil else {
+            return false
         }
+        return true
     }
 
     var recommendedAppleOnDeviceActionTitle: String {

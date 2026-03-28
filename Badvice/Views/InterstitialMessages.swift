@@ -224,6 +224,10 @@ struct SettingsTabView: View {
     @State private var shockwaveScale: CGFloat = 0.1
     @State private var shockwaveOpacity: Double = 0
     @State private var showChangePasswordSheet = false
+
+    @State private var appearanceTask: Task<Void, Never>?
+    @State private var dataLoadTask: Task<Void, Never>?
+    @State private var didLoadInitialDiagnostics = false
     @State private var showDeleteAccountSheet = false
     @State private var currentPasswordDraft = ""
     @State private var newPasswordDraft = ""
@@ -233,7 +237,6 @@ struct SettingsTabView: View {
     private let isLowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @AppStorage("shakeToGenerateEnabled") private var shakeToGenerateEnabled = true
     @State private var notificationPermissionGranted: Bool? = nil
-    @State private var didLoadInitialDiagnostics = false
     @AppStorage("useCustomAccent") private var useCustomAccent = false
     @AppStorage("customAccentR") private var customAccentR: Double = 1.0
     @AppStorage("customAccentG") private var customAccentG: Double = 0.3
@@ -460,7 +463,8 @@ struct SettingsTabView: View {
                 tabBarVisible.wrappedValue = true
                 if !didLoadInitialDiagnostics {
                     didLoadInitialDiagnostics = true
-                    Task(priority: .utility) {
+                    dataLoadTask?.cancel()
+                    dataLoadTask = Task(priority: .utility) {
                         viewModel.refreshAppleOnDeviceModelAvailability()
                     }
                     Task(priority: .background) {
@@ -476,8 +480,10 @@ struct SettingsTabView: View {
                         await loadNotificationPermissionStatus()
                     }
                 }
-                // A tiny async hop lets SwiftUI finish layout before animating in
-                Task { @MainActor in
+                appearanceTask?.cancel()
+                appearanceTask = Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(50))
+                    guard !Task.isCancelled else { return }
                     sectionsAppeared = true
                     if !isMotionReduced { gearWobble = true }
                 }
@@ -488,6 +494,8 @@ struct SettingsTabView: View {
                 }
             }
             .onDisappear {
+                appearanceTask?.cancel()
+                dataLoadTask?.cancel()
                 sectionsAppeared = false
                 gearWobble = false
                 gearSpinDegrees = 0
