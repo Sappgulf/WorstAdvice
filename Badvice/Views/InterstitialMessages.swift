@@ -227,6 +227,7 @@ struct SettingsTabView: View {
 
     @State private var appearanceTask: Task<Void, Never>?
     @State private var dataLoadTask: Task<Void, Never>?
+    @State private var shockwaveTask: Task<Void, Never>?
     @State private var didLoadInitialDiagnostics = false
     @State private var showDeleteAccountSheet = false
     @State private var currentPasswordDraft = ""
@@ -496,11 +497,13 @@ struct SettingsTabView: View {
             .onDisappear {
                 appearanceTask?.cancel()
                 dataLoadTask?.cancel()
+                shockwaveTask?.cancel()
                 sectionsAppeared = false
                 gearWobble = false
                 gearSpinDegrees = 0
                 gearIsSpinning = false
                 gearSettleScale = 1.0
+                shockwaveTheme = nil
             }
             .overlay {
                 if let st = shockwaveTheme {
@@ -851,8 +854,10 @@ struct SettingsTabView: View {
                                 viewModel.theme = mode
                             }
 
-                            Task { @MainActor in
-                                try? await Task.sleep(for: .seconds(0.6))
+                            shockwaveTask?.cancel()
+                            shockwaveTask = Task { @MainActor in
+                                try? await Task.sleep(for: .milliseconds(600))
+                                guard !Task.isCancelled else { return }
                                 shockwaveTheme = nil
                             }
                         }

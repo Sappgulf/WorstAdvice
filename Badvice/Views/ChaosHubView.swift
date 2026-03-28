@@ -18,6 +18,9 @@ struct ChaosHubTabView: View {
     @State private var weeklyCompletePulse = false
     @State private var showingBracket = false
     @State private var showingChaosFormula = false
+    @State private var missionPulseTask: Task<Void, Never>?
+    @State private var weeklyPulseTask: Task<Void, Never>?
+    @State private var appearanceTask: Task<Void, Never>?
 
     private var chaosScore: Int {
         let streak = min(generateViewModel.challengeStreakDays, 14)
@@ -124,21 +127,30 @@ struct ChaosHubTabView: View {
             .onAppear {
                 tabBarVisible.wrappedValue = true
                 generateViewModel.trackChaosHubOpened()
-                // Only shuffle contracts on first visit; preserve them across tab switches
                 if visibleContracts.isEmpty {
                     visibleContracts = Array(Self.allContracts.shuffled().prefix(2))
                 }
-                // Seed initial completion state so first onChange fires correctly
                 dailyMissionWasComplete = generateViewModel.dailyMissionState.isComplete
                 weeklyMissionWasComplete = generateViewModel.weeklyMissionState.isComplete
-                guard !contentAppeared else { return }
-                if isMotionReduced {
-                    contentAppeared = true
-                } else {
-                    withAnimation(.spring(response: Theme.animSlow, dampingFraction: 0.82)) {
+                missionPulseTask?.cancel()
+                weeklyPulseTask?.cancel()
+                appearanceTask?.cancel()
+                appearanceTask = Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(50))
+                    guard !Task.isCancelled else { return }
+                    if isMotionReduced {
                         contentAppeared = true
+                    } else {
+                        withAnimation(.spring(response: Theme.animSlow, dampingFraction: 0.82)) {
+                            contentAppeared = true
+                        }
                     }
                 }
+            }
+            .onDisappear {
+                missionPulseTask?.cancel()
+                weeklyPulseTask?.cancel()
+                appearanceTask?.cancel()
             }
             .onChange(of: generateViewModel.dailyMissionState.isComplete) { _, isComplete in
                 guard isComplete, !dailyMissionWasComplete, !isMotionReduced else {
@@ -148,7 +160,12 @@ struct ChaosHubTabView: View {
                 dailyMissionWasComplete = true
                 HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
                 missionCompletePulse = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { missionCompletePulse = false }
+                missionPulseTask?.cancel()
+                missionPulseTask = Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(550))
+                    guard !Task.isCancelled else { return }
+                    missionCompletePulse = false
+                }
             }
             .onChange(of: generateViewModel.weeklyMissionState.isComplete) { _, isComplete in
                 guard isComplete, !weeklyMissionWasComplete, !isMotionReduced else {
@@ -158,7 +175,12 @@ struct ChaosHubTabView: View {
                 weeklyMissionWasComplete = true
                 HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
                 weeklyCompletePulse = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { weeklyCompletePulse = false }
+                weeklyPulseTask?.cancel()
+                weeklyPulseTask = Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(550))
+                    guard !Task.isCancelled else { return }
+                    weeklyCompletePulse = false
+                }
             }
         }
     }
