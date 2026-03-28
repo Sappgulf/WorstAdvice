@@ -187,51 +187,101 @@ struct GenerateTabView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.sectionSpacing) {
-                headerView
-                if let unlockedSurpriseLine {
-                    surpriseBanner(unlockedSurpriseLine)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
+        ZStack(alignment: .topLeading) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.sectionSpacing) {
+                    headerView
+                    if let unlockedSurpriseLine {
+                        surpriseBanner(unlockedSurpriseLine)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
 
-                selectorRow
-                dailyQuoteBanner
-                weeklyRecapSection
-                scenarioComposer
-                friendRoastComposer
-                scenarioSuggestionsRow
-                adaptiveHintCard
-                if !hasDismissedWhatsNewCard {
-                    whatsNewCard
-                }
+                    selectorRow
+                    dailyQuoteBanner
+                    weeklyRecapSection
+                    scenarioComposer
+                    friendRoastComposer
+                    scenarioSuggestionsRow
+                    adaptiveHintCard
+                    if !hasDismissedWhatsNewCard {
+                        whatsNewCard
+                    }
 
-                Group {
-                    if let record = viewModel.current {
-                        AdviceCardView(
-                            record: record,
-                            theme: settings.theme,
-                            reduceMotion: isMotionReduced,
-                            sourceBadgeText: viewModel.generationSourceBadgeText
-                        )
-                        .accessibilityIdentifier("advice.card")
-                        .transition(
-                            isMotionReduced
-                                ? .identity
-                                : .asymmetric(
-                                    insertion: .scale.combined(with: .opacity), removal: .opacity)
-                        )
-                        .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
-                        .animation(
-                            isMotionReduced ? nil : .spring(response: 0.2, dampingFraction: 0.5),
-                            value: viewModel.hapticTrigger
-                        )
-                        .contextMenu {
-                            Button(
-                                "Save",
-                                systemImage: viewModel.isCurrentFavorite
-                                    ? "bookmark.fill" : "bookmark"
-                            ) {
+                    Group {
+                        if let record = viewModel.current {
+                            AdviceCardView(
+                                record: record,
+                                theme: settings.theme,
+                                reduceMotion: isMotionReduced,
+                                sourceBadgeText: viewModel.generationSourceBadgeText
+                            )
+                            .accessibilityIdentifier("advice.card")
+                            .transition(
+                                isMotionReduced
+                                    ? .identity
+                                    : .asymmetric(
+                                        insertion: .scale.combined(with: .opacity), removal: .opacity)
+                            )
+                            .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
+                            .animation(
+                                isMotionReduced ? nil : .spring(response: 0.2, dampingFraction: 0.5),
+                                value: viewModel.hapticTrigger
+                            )
+                            .contextMenu {
+                                Button(
+                                    "Save",
+                                    systemImage: viewModel.isCurrentFavorite
+                                        ? "bookmark.fill" : "bookmark"
+                                ) {
+                                    let wasFavorite = viewModel.isCurrentFavorite
+                                    viewModel.toggleFavorite()
+                                    onDataChanged()
+                                    HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                                    activeToast = ToastMessage(
+                                        message: wasFavorite ? "Removed from Favorites" : "Saved!",
+                                        style: wasFavorite ? .deleted : .success
+                                    )
+                                }
+
+                                Button("Copy", systemImage: "doc.on.doc") {
+                                    UIPasteboard.general.string = viewModel.currentShareText
+                                    viewModel.trackCopy()
+                                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                                    activeToast = ToastMessage(message: "Copied!", style: .success)
+                                }
+
+                                Button("Share", systemImage: "square.and.arrow.up") {
+                                    guard let payload = viewModel.currentSharePayload else { return }
+                                    Task {
+                                        let image = await ShareCardRenderer.renderAsync(content: payload)
+                                        shareItems = [image, viewModel.currentShareText]
+                                        viewModel.trackShare(
+                                            template: payload.template, ratio: payload.aspectRatio)
+                                        showingShareSheet = true
+                                        HapticsManager.playSelection(
+                                            isEnabled: settings.hapticsEnabled)
+                                    }
+                                }
+
+                                Button("Collaborate", systemImage: "person.2.badge.plus") {
+                                    guard social.socialFeaturesEnabled else {
+                                        activeToast = ToastMessage(
+                                            message: socialEntryPrompt,
+                                            style: .error
+                                        )
+                                        return
+                                    }
+                                    guard let record = viewModel.current else { return }
+                                    social.queueCollabDraft(type: .advice, content: record.adviceLine)
+                                    openTab(.friends)
+                                    activeToast = ToastMessage(
+                                        message: "Draft sent to Friends > Collab.",
+                                        style: .info
+                                    )
+                                }
+                                .disabled(!social.socialFeaturesEnabled)
+                            }
+                            .onTapGesture(count: 2) {
                                 let wasFavorite = viewModel.isCurrentFavorite
                                 viewModel.toggleFavorite()
                                 onDataChanged()
@@ -241,96 +291,65 @@ struct GenerateTabView: View {
                                     style: wasFavorite ? .deleted : .success
                                 )
                             }
-
-                            Button("Copy", systemImage: "doc.on.doc") {
-                                UIPasteboard.general.string = viewModel.currentShareText
-                                viewModel.trackCopy()
-                                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                                activeToast = ToastMessage(message: "Copied!", style: .success)
-                            }
-
-                            Button("Share", systemImage: "square.and.arrow.up") {
-                                guard let payload = viewModel.currentSharePayload else { return }
-                                Task {
-                                    let image = await ShareCardRenderer.renderAsync(content: payload)
-                                    shareItems = [image, viewModel.currentShareText]
-                                    viewModel.trackShare(
-                                        template: payload.template, ratio: payload.aspectRatio)
-                                    showingShareSheet = true
-                                    HapticsManager.playSelection(
-                                        isEnabled: settings.hapticsEnabled)
-                                }
-                            }
-
-                            Button("Collaborate", systemImage: "person.2.badge.plus") {
-                                guard social.socialFeaturesEnabled else {
-                                    activeToast = ToastMessage(
-                                        message: socialEntryPrompt,
-                                        style: .error
-                                    )
-                                    return
-                                }
-                                guard let record = viewModel.current else { return }
-                                social.queueCollabDraft(type: .advice, content: record.adviceLine)
-                                openTab(.friends)
-                                activeToast = ToastMessage(
-                                    message: "Draft sent to Friends > Collab.",
-                                    style: .info
-                                )
-                            }
-                            .disabled(!social.socialFeaturesEnabled)
+                        } else if !viewModel.isGenerating {
+                            emptyState
+                                .transition(isMotionReduced ? .identity : .opacity)
                         }
-                        .onTapGesture(count: 2) {
-                            let wasFavorite = viewModel.isCurrentFavorite
-                            viewModel.toggleFavorite()
-                            onDataChanged()
-                            HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                            activeToast = ToastMessage(
-                                message: wasFavorite ? "Removed from Favorites" : "Saved!",
-                                style: wasFavorite ? .deleted : .success
-                            )
+                    }
+                    .overlay {
+                        if viewModel.isGenerating {
+                            LoadingAdviceView(theme: settings.theme, reduceMotion: isMotionReduced)
                         }
-                    } else if !viewModel.isGenerating {
-                        emptyState
-                            .transition(isMotionReduced ? .identity : .opacity)
                     }
-                }
-                .overlay {
-                    if viewModel.isGenerating {
-                        LoadingAdviceView(theme: settings.theme, reduceMotion: isMotionReduced)
-                    }
-                }
-                .animation(
-                    isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.86),
-                    value: viewModel.current?.id
-                )
-                .animation(
-                    isMotionReduced ? nil : .easeInOut(duration: 0.2), value: viewModel.isGenerating
-                )
+                    .animation(
+                        isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.86),
+                        value: viewModel.current?.id
+                    )
+                    .animation(
+                        isMotionReduced ? nil : .easeInOut(duration: 0.2),
+                        value: viewModel.isGenerating
+                    )
 
-                votingRow
-                primaryActionButtons
-                if let notice = viewModel.generationNotice, !notice.isEmpty {
-                    Text(notice)
-                        .font(.caption)
-                        .foregroundStyle(secondaryText)
+                    votingRow
+                    primaryActionButtons
+                    if let notice = viewModel.generationNotice, !notice.isEmpty {
+                        Text(notice)
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                    }
+                    advancedSection
                 }
-                advancedSection
+                .padding(.horizontal, Theme.horizontalPadding)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
             }
-            .padding(.horizontal, Theme.horizontalPadding)
-            .padding(.top, 16)
-            .padding(.bottom, 16)
+            .scrollDismissesKeyboard(.interactively)
+            .coordinateSpace(name: "scroll")
+            .trackScrollForTabBar()
+            .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 100 : 16)
+            .refreshable {
+                // Pull to generate new advice
+                await viewModel.generate()
+                onDataChanged()
+            }
+            .toast(item: $activeToast, accentColor: accent)
+
+            #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("-debug-preload-polish-fixtures"),
+                    viewModel.debugPolishFixturesStatus != "idle"
+                {
+                    Text(viewModel.debugPolishFixturesStatus)
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(.black.opacity(0.25))
+                        .foregroundStyle(.white)
+                        .accessibilityIdentifier("debug.polishFixtures.status")
+                        .padding(.top, 8)
+                        .padding(.leading, 12)
+                }
+            #endif
         }
-        .scrollDismissesKeyboard(.interactively)
-        .coordinateSpace(name: "scroll")
-        .trackScrollForTabBar()
-        .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 100 : 16)
-        .refreshable {
-            // Pull to generate new advice
-            await viewModel.generate()
-            onDataChanged()
-        }
-        .toast(item: $activeToast, accentColor: accent)
         .overlay {
             if gifExportInProgress {
                 ZStack {
@@ -352,7 +371,8 @@ struct GenerateTabView: View {
                     )
                 }
                 .transition(.opacity)
-                .animation(isMotionReduced ? nil : .easeInOut(duration: 0.2), value: gifExportInProgress)
+                .animation(
+                    isMotionReduced ? nil : .easeInOut(duration: 0.2), value: gifExportInProgress)
             }
         }
         .sheet(isPresented: $showingShareSheet) {

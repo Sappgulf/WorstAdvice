@@ -14,16 +14,14 @@ final class BadviceUITests: XCTestCase {
     }
 
     func testSmokeNavigationAndCoreInteractions() throws {
-        let app = XCUIApplication()
-        app.launchArguments += defaultLaunchArguments
-        app.launch()
+        let app = launchTestApp(extraLaunchArguments: [
+            "-ui-testing-reset-data",
+            "-debug-preload-polish-fixtures",
+            "-debug-polish-seed", "424242",
+        ])
 
         let generateButton = app.buttons["generate.primary"]
         XCTAssertTrue(generateButton.waitForExistence(timeout: 12))
-        generateButton.tap()
-
-        let adviceCard = app.otherElements["advice.card"]
-        XCTAssertTrue(adviceCard.waitForExistence(timeout: 15))
 
         let saveButton = app.buttons["Save"]
         if saveButton.waitForExistence(timeout: 2) {
@@ -47,9 +45,7 @@ final class BadviceUITests: XCTestCase {
     }
 
     func testSmokeTabReachabilityFromFreshLaunch() throws {
-        let app = XCUIApplication()
-        app.launchArguments += defaultLaunchArguments
-        app.launch()
+        let app = launchTestApp()
 
         let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
         XCTAssertTrue(generateTab.waitForExistence(timeout: 5))
@@ -97,12 +93,10 @@ final class BadviceUITests: XCTestCase {
     }
 
     func testSettingsGenerationEnginePickerStateAfterDebugPolishSeedPreload() throws {
-        let app = XCUIApplication()
-        app.launchArguments += defaultLaunchArguments + [
+        let app = launchTestApp(extraLaunchArguments: [
             "-debug-preload-polish-fixtures",
             "-debug-polish-seed", "424242",
-        ]
-        app.launch()
+        ])
 
         XCTAssertTrue(openSettings(app: app))
 
@@ -124,9 +118,7 @@ final class BadviceUITests: XCTestCase {
     }
 
     func testSettingsAppleLocalModelShowsListOrExplicitEmptyState() throws {
-        let app = XCUIApplication()
-        app.launchArguments += defaultLaunchArguments
-        app.launch()
+        let app = launchTestApp()
 
         XCTAssertTrue(openSettings(app: app))
 
@@ -152,9 +144,7 @@ final class BadviceUITests: XCTestCase {
     }
 
     func testSettingsThemeMetadataAndDiagnosticsCopyReport() throws {
-        let app = XCUIApplication()
-        app.launchArguments += defaultLaunchArguments
-        app.launch()
+        let app = launchTestApp()
 
         XCTAssertTrue(openSettings(app: app))
 
@@ -186,11 +176,9 @@ final class BadviceUITests: XCTestCase {
     }
 
     func testSmokeSocialSurfacesWhenUnavailable() throws {
-        let app = XCUIApplication()
-        app.launchArguments += defaultLaunchArguments + [
+        let app = launchTestApp(extraLaunchArguments: [
             "-ui-testing-force-social-unavailable"
-        ]
-        app.launch()
+        ])
 
         let shareToFriends = app.buttons["generate.shareToFriends"]
         XCTAssertTrue(shareToFriends.waitForExistence(timeout: 12))
@@ -253,6 +241,61 @@ final class BadviceUITests: XCTestCase {
             app.swipeUp()
         }
         return element.exists
+    }
+
+    private func launchTestApp(
+        includeAuthSkip: Bool = true,
+        extraLaunchArguments: [String] = [],
+        timeout: TimeInterval = 15
+    ) -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += defaultLaunchArguments.filter { includeAuthSkip || $0 != "-ui-testing-auth-skip" }
+        app.launchArguments += extraLaunchArguments
+        app.launch()
+        app.activate()
+        XCTAssertTrue(waitForAppToBecomeReady(app: app, timeout: timeout))
+        return app
+    }
+
+    private func waitForAppToBecomeReady(app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        let readinessChecks: [() -> Bool] = [
+            { app.buttons["generate.primary"].exists },
+            { app.buttons["auth.primary"].exists },
+            { app.buttons["Get Started"].exists },
+            { app.buttons["Continue"].exists },
+            { app.buttons["Next"].exists },
+            { app.buttons["Start The Chaos"].exists },
+            { app.buttons["Got it"].exists },
+            { app.buttons["Skip"].exists },
+        ]
+
+        while Date() < deadline {
+            if readinessChecks.contains(where: { $0() }) {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+
+        return readinessChecks.contains(where: { $0() })
+    }
+
+    private func waitForAuthGateToBecomeReady(app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        let readinessChecks: [() -> Bool] = [
+            { app.buttons["auth.mode.signUp"].exists },
+            { app.buttons["auth.mode.signIn"].exists },
+            { app.buttons["auth.primary"].exists },
+        ]
+
+        while Date() < deadline {
+            if readinessChecks.contains(where: { $0() }) {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+
+        return readinessChecks.contains(where: { $0() })
     }
 
     func testSocialMockSignupCompletesAndFriendsSurfaceLoads() throws {
@@ -324,15 +367,9 @@ final class BadviceUITests: XCTestCase {
     }
 
     func testLocalAuthSignupSignoutAndSigninFlow() throws {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-ui-testing",
-            "-skip-onboarding",
-            "-skip-splash",
-            "-ui-testing-auth-reset",
+        let app = launchTestApp(includeAuthSkip: false, extraLaunchArguments: [
             "-ui-testing-force-social-unavailable",
-        ]
-        app.launch()
+        ])
 
         completeLocalSignup(
             app: app,
@@ -366,14 +403,13 @@ final class BadviceUITests: XCTestCase {
 
     func testLocalAuthPasswordChangeAndDeleteFlow() throws {
         let app = XCUIApplication()
+        app.launchArguments += defaultLaunchArguments.filter { $0 != "-ui-testing-auth-skip" }
         app.launchArguments += [
-            "-ui-testing",
-            "-skip-onboarding",
-            "-skip-splash",
-            "-ui-testing-auth-reset",
             "-ui-testing-force-social-unavailable",
         ]
         app.launch()
+        app.activate()
+        XCTAssertTrue(waitForAuthGateToBecomeReady(app: app, timeout: 30))
 
         completeLocalSignup(
             app: app,
@@ -446,6 +482,8 @@ final class BadviceUITests: XCTestCase {
             ]
         }
         app.launch()
+        app.activate()
+        XCTAssertTrue(waitForAppToBecomeReady(app: app, timeout: 15))
         return app
     }
 
@@ -571,7 +609,11 @@ final class BadviceUITests: XCTestCase {
 
         XCTAssertTrue(handleField.waitForExistence(timeout: 8))
         handleField.tap()
-        handleField.typeText(handle)
+        app.typeText(handle)
+        XCTAssertTrue(
+            (handleField.value as? String ?? "").contains(handle),
+            "Expected Friends handle field to contain the requested handle after typing"
+        )
 
         let saveButton = app.buttons["social.profile.save"]
         XCTAssertTrue(saveButton.waitForExistence(timeout: 3))

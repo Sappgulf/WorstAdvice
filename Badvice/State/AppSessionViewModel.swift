@@ -1,8 +1,10 @@
 import Foundation
+import OSLog
 import SwiftData
 
 @MainActor
 final class AppSessionViewModel {
+    private static let logger = Logger(subsystem: "com.worstadvice.app", category: "ui-tests")
     let repository: AdviceRepository
     let accountID: UUID?
     let localModelStore: LocalModelStore
@@ -55,7 +57,14 @@ final class AppSessionViewModel {
     }
 
     func preloadDebugPolishFixturesIfNeeded(seed: Int = 424_242) async {
-        guard repository.historyCount() == 0 else { return }
+        if repository.historyCount() > 0 {
+            Self.logger.info("Debug polish preload skipped because history already exists")
+            generate.debugPolishFixturesStatus = "ready"
+            return
+        }
+
+        Self.logger.info("Debug polish preload starting")
+        generate.debugPolishFixturesStatus = "loading"
 
         settings.preferredGenerationProvider = .classic
         settings.reduceMotion = true
@@ -134,5 +143,7 @@ final class AppSessionViewModel {
         )
 
         refreshLists()
+        generate.debugPolishFixturesStatus = "ready"
+        Self.logger.info("Debug polish preload completed")
     }
 }

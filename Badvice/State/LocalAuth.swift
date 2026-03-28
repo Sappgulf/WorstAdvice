@@ -101,7 +101,14 @@ struct LocalAccountCredentials: Codable, Sendable {
     let hashBase64: String
 }
 
-final class LocalAccountKeychainStore {
+protocol LocalAccountCredentialsStore {
+    func loadCredentials(for accountID: UUID) throws -> LocalAccountCredentials?
+    func saveCredentials(_ credentials: LocalAccountCredentials, for accountID: UUID) throws
+    func deleteCredentials(for accountID: UUID)
+    func removeAllCredentials()
+}
+
+final class LocalAccountKeychainStore: LocalAccountCredentialsStore {
     private let service = "com.worstadvice.app.localAccounts.credentials"
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
@@ -166,6 +173,26 @@ final class LocalAccountKeychainStore {
             kSecAttrService as String: service
         ]
         SecItemDelete(query as CFDictionary)
+    }
+}
+
+final class LocalAccountInMemoryStore: LocalAccountCredentialsStore {
+    private var credentialsByAccountID: [UUID: LocalAccountCredentials] = [:]
+
+    func loadCredentials(for accountID: UUID) throws -> LocalAccountCredentials? {
+        credentialsByAccountID[accountID]
+    }
+
+    func saveCredentials(_ credentials: LocalAccountCredentials, for accountID: UUID) throws {
+        credentialsByAccountID[accountID] = credentials
+    }
+
+    func deleteCredentials(for accountID: UUID) {
+        credentialsByAccountID.removeValue(forKey: accountID)
+    }
+
+    func removeAllCredentials() {
+        credentialsByAccountID.removeAll()
     }
 }
 
@@ -483,13 +510,13 @@ final class LocalAccountStore {
     static let currentAccountIDKey = "auth.localAccounts.currentAccountID.v1"
 
     private let userDefaults: UserDefaults
-    private let credentialsStore: LocalAccountKeychainStore
+    private let credentialsStore: any LocalAccountCredentialsStore
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
     init(
         userDefaults: UserDefaults = .standard,
-        credentialsStore: LocalAccountKeychainStore = LocalAccountKeychainStore()
+        credentialsStore: any LocalAccountCredentialsStore = LocalAccountKeychainStore()
     ) {
         self.userDefaults = userDefaults
         self.credentialsStore = credentialsStore

@@ -4670,6 +4670,7 @@ final class GenerateViewModel {
     var hapticTrigger: Int = 0
     var hapticWeight: Double = 0.5  // 0.0 to 1.0 mapping to intensity
     var isGenerating: Bool = false
+    var debugPolishFixturesStatus: String = "idle"
 
     private var recentAdviceFingerprints: [String] = []
     private var recentAdviceFingerprintsByPool: [String: [String]] = [:]

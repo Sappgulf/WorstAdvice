@@ -1169,6 +1169,7 @@ final class PersistenceTests: XCTestCase {
         repository.setFavorite(beta, isFavorite: true)
 
         let favorites = FavoritesViewModel(repository: repository)
+        favorites.reload()
         let baseline = favorites.filteredFavorites.count
         favorites.searchText = "alpha"
         favorites.searchText = "beta"
@@ -1340,10 +1341,11 @@ final class PersistenceTests: XCTestCase {
                 currentDay = previousDay
             } else {
                 break
+            }
+        }
+        return streak
     }
-}
 
-extension AdviceEngineTests {
     func testAllToneModesGenerateWithoutCrashing() async {
         let engine = AdviceEngine()
         for tone in ToneMode.allCases {
@@ -1386,7 +1388,6 @@ extension AdviceEngineTests {
         )
         let advice = result.adviceLine.lowercased()
         XCTAssertGreaterThan(advice.count, 20, "Advice should be a reasonable length")
-        let normalizedTone = ToneMode.wizard.title.lowercased()
         XCTAssertFalse(advice.contains("ERROR"), "Advice should not contain error markers")
     }
 
@@ -1404,7 +1405,7 @@ extension AdviceEngineTests {
         }
     }
 
-    func testSimilar Seeds ProduceSameOutput() async {
+    func testSimilarSeedsProduceSameOutput() async {
         let engine = AdviceEngine()
         let first = await engine.generate(
             category: .fitness,
@@ -1432,13 +1433,18 @@ extension AdviceEngineTests {
             "Professional dating tips",
             "Romantic relationship guidance"
         ]
+        let preparedQuery = await scorer.preparedQuery(from: query)
+        guard let queryVector = preparedQuery else {
+            XCTFail("Expected semantic scorer to prepare a query for a non-empty input.")
+            return
+        }
         let firstScores = await scorer.similarityScores(
             for: candidates,
-            to: PreparedQuery(vector: nil, tokenSet: Set(["dating", "advice", "confidence"]))
+            to: queryVector
         )
         let secondScores = await scorer.similarityScores(
             for: candidates,
-            to: PreparedQuery(vector: nil, tokenSet: Set(["dating", "advice", "confidence"]))
+            to: queryVector
         )
         XCTAssertEqual(firstScores, secondScores, "Same query should produce same scores (caching)")
     }
@@ -1460,9 +1466,6 @@ extension AdviceEngineTests {
             5,
             "Multiple seeds should produce variety in advice"
         )
-    }
-}
-        return streak
     }
 
     private func legacyStreakFreezeBonus(

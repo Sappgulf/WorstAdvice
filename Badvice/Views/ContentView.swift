@@ -1,5 +1,6 @@
 import CoreMotion
 import StoreKit
+import OSLog
 import SwiftData
 import SwiftUI
 
@@ -90,6 +91,7 @@ enum LocalAuthMode: String, CaseIterable, Identifiable {
 }
 
 struct ContentView: View {
+    private static let logger = Logger(subsystem: "com.worstadvice.app", category: "ui-tests")
     @Environment(\.modelContext) private var modelContext
     @Environment(\.requestReview) private var requestReview
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -100,6 +102,7 @@ struct ContentView: View {
     @State private var session: AppSessionViewModel?
     @State private var showConfetti = false
     @State private var showSplash = true
+    @State private var hasResetUITestData = false
     @State private var tabBarVisible = true
     @State private var authMode: LocalAuthMode = .signIn
     @State private var authEmailDraft = ""
@@ -337,9 +340,19 @@ struct ContentView: View {
         guard auth.isAuthenticated else { return }
 
         if session == nil {
-            session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
+            let newSession = AppSessionViewModel(
+                context: modelContext,
+                accountID: auth.currentSession?.accountID
+            )
+            session = newSession
             loadedTabs.insert(.chaosHub)
             loadedTabs.insert(.explore)
+            applyUITestLaunchOverridesIfNeeded(sessionOverride: newSession)
+            if isUITesting, launchArguments.contains("-debug-preload-polish-fixtures") {
+                let seed = intLaunchArgumentValue(after: "-debug-polish-seed") ?? 424_242
+                Self.logger.info("Awaiting debug polish preload")
+                await newSession.preloadDebugPolishFixturesIfNeeded(seed: seed)
+            }
         }
     }
 
@@ -385,8 +398,18 @@ struct ContentView: View {
     private func beginAuthenticatedSession(using auth: AuthViewModel) {
         resetSessionPresentationState()
         syncAuthDrafts(with: auth)
-        session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
-        applyUITestLaunchOverridesIfNeeded()
+        let newSession = AppSessionViewModel(
+            context: modelContext,
+            accountID: auth.currentSession?.accountID
+        )
+        session = newSession
+        applyUITestLaunchOverridesIfNeeded(sessionOverride: newSession)
+        if isUITesting, launchArguments.contains("-debug-preload-polish-fixtures") {
+            let seed = intLaunchArgumentValue(after: "-debug-polish-seed") ?? 424_242
+            Task {
+                await newSession.preloadDebugPolishFixturesIfNeeded(seed: seed)
+            }
+        }
     }
 
     private func signOutCurrentAccount(_ auth: AuthViewModel) {
@@ -765,7 +788,15 @@ struct ContentView: View {
         session = AppSessionViewModel(context: modelContext, accountID: auth?.currentSession?.accountID)
     }
 
-    private func applyUITestLaunchOverridesIfNeeded() {
+    private func applyUITestLaunchOverridesIfNeeded(sessionOverride: AppSessionViewModel? = nil) {
+        let activeSession = sessionOverride ?? session
+        if ProcessInfo.processInfo.environment["reset_onboarding"] == "true" {
+            hasSeenOnboarding = false
+        }
+        if isUITesting, launchArguments.contains("-ui-testing-reset-data"), !hasResetUITestData {
+            activeSession?.repository.purgeCurrentAccountData()
+            hasResetUITestData = true
+        }
         if isUITesting, launchArguments.contains("-skip-onboarding") {
             hasSeenOnboarding = true
         }
@@ -777,16 +808,6 @@ struct ContentView: View {
             session?.settings.performanceMode = true
             session?.settings.reduceMotion = true
             session?.settings.hapticsEnabled = false
-        }
-        if !hasScheduledDebugPolishFixturePreload,
-            launchArguments.contains("-debug-preload-polish-fixtures"),
-            let session
-        {
-            hasScheduledDebugPolishFixturePreload = true
-            let seed = intLaunchArgumentValue(after: "-debug-polish-seed") ?? 424_242
-            Task {
-                await session.preloadDebugPolishFixturesIfNeeded(seed: seed)
-            }
         }
     }
 

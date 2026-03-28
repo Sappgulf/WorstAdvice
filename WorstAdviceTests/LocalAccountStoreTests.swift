@@ -3,8 +3,7 @@ import XCTest
 
 final class LocalAccountStoreTests: XCTestCase {
     func testSignUpRestoreAndSignInRoundTrip() throws {
-        let defaults = UserDefaults(suiteName: "LocalAccountStoreTests.RoundTrip.\(UUID().uuidString)")!
-        let store = LocalAccountStore(userDefaults: defaults)
+        let (store, _) = makeLocalAccountStore(suiteName: "LocalAccountStoreTests.RoundTrip")
 
         let created = try store.signUp(
             email: "Captain@Badvice.test",
@@ -25,8 +24,7 @@ final class LocalAccountStoreTests: XCTestCase {
     }
 
     func testUpdatingLinkedSocialProfilePersistsToSession() throws {
-        let defaults = UserDefaults(suiteName: "LocalAccountStoreTests.LinkedProfile.\(UUID().uuidString)")!
-        let store = LocalAccountStore(userDefaults: defaults)
+        let (store, _) = makeLocalAccountStore(suiteName: "LocalAccountStoreTests.LinkedProfile")
 
         let created = try store.signUp(
             email: "crew@badvice.test",
@@ -44,8 +42,7 @@ final class LocalAccountStoreTests: XCTestCase {
     }
 
     func testChangePasswordAndDeleteAccountLifecycle() throws {
-        let defaults = UserDefaults(suiteName: "LocalAccountStoreTests.AccountLifecycle.\(UUID().uuidString)")!
-        let store = LocalAccountStore(userDefaults: defaults)
+        let (store, _) = makeLocalAccountStore(suiteName: "LocalAccountStoreTests.AccountLifecycle")
 
         let created = try store.signUp(
             email: "owner@badvice.test",
@@ -67,5 +64,21 @@ final class LocalAccountStoreTests: XCTestCase {
 
         XCTAssertTrue(store.storedAccounts().isEmpty)
         XCTAssertNil(store.restoreSession())
+    }
+
+    private func makeLocalAccountStore(suiteName: String) -> (LocalAccountStore, UserDefaults) {
+        let fullSuiteName = "\(suiteName).\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: fullSuiteName)!
+        defaults.removePersistentDomain(forName: fullSuiteName)
+        addTeardownBlock {
+            defaults.removePersistentDomain(forName: fullSuiteName)
+        }
+        return (
+            LocalAccountStore(
+                userDefaults: defaults,
+                credentialsStore: LocalAccountInMemoryStore()
+            ),
+            defaults
+        )
     }
 }

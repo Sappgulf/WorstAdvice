@@ -206,6 +206,12 @@ final class AppSessionSmokeTests: XCTestCase {
         addTeardownBlock {
             defaults.removePersistentDomain(forName: suiteName)
         }
-        return (LocalAccountStore(userDefaults: defaults), defaults)
+        return (
+            LocalAccountStore(
+                userDefaults: defaults,
+                credentialsStore: LocalAccountInMemoryStore()
+            ),
+            defaults
+        )
     }
 }

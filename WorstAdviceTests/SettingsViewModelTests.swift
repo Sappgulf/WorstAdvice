@@ -112,8 +112,8 @@ final class SettingsViewModelTests: XCTestCase {
         session.settings.includeDisclaimerOnShare = false
         XCTAssertFalse(session.settings.includeDisclaimerOnShare)
         
-        session.settings.preferredTemplate = .classic
-        XCTAssertEqual(session.settings.preferredTemplate, .classic)
+        session.settings.preferredTemplate = .bold
+        XCTAssertEqual(session.settings.preferredTemplate, .bold)
         
         session.settings.preferredAspect = .story
         XCTAssertEqual(session.settings.preferredAspect, .story)
@@ -128,8 +128,8 @@ final class SettingsViewModelTests: XCTestCase {
         session.settings.preferredContentPack = .officeMeltdown
         XCTAssertEqual(session.settings.preferredContentPack, .officeMeltdown)
         
-        session.settings.preferredContentPack = .datingDisaster
-        XCTAssertEqual(session.settings.preferredContentPack, .datingDisaster)
+        session.settings.preferredContentPack = .weekendChaos
+        XCTAssertEqual(session.settings.preferredContentPack, .weekendChaos)
     }
     
     func testSettingsGenerationProvider() async throws {
