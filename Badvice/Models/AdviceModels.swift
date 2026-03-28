@@ -571,7 +571,10 @@ struct BadQuote: Identifiable, Hashable, Sendable {
 
 extension String {
     var normalizedForFiltering: String {
-        lowercased().folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        lowercased().folding(
+            options: [.diacriticInsensitive, .caseInsensitive],
+            locale: Locale(identifier: "en_US_POSIX")
+        )
     }
 }
 

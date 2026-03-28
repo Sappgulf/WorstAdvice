@@ -45,6 +45,7 @@ final class AppSessionViewModel {
             analyticsTracker: analyticsTracker
         )
         self.social = SocialViewModel()
+        self.quotes.loadIfNeeded()
     }
 
     func refreshLists() {

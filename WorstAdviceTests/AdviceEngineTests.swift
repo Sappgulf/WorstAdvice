@@ -3,6 +3,11 @@ import XCTest
 @testable import Badvice
 
 final class AdviceEngineTests: XCTestCase {
+    func testNormalizedFilteringUsesStableLocale() {
+        XCTAssertEqual("CAFÉ".normalizedForFiltering, "cafe")
+        XCTAssertEqual("Iİ".normalizedForFiltering, "ii")
+    }
+
     func testDeterministicOutputWithSeed() async {
         let engine = AdviceEngine()
 

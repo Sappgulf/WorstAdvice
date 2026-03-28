@@ -129,6 +129,9 @@ final class AppSessionSmokeTests: XCTestCase {
         let persistedJSON = try XCTUnwrap(defaults.data(forKey: LocalAccountStore.accountsKey))
         let persistedString = try XCTUnwrap(String(data: persistedJSON, encoding: .utf8))
         XCTAssertFalse(persistedString.contains("Badvice123"))
+        XCTAssertFalse(persistedString.contains("passwordSaltBase64"))
+        XCTAssertFalse(persistedString.contains("passwordHashBase64"))
+        XCTAssertGreaterThan(store.storedAccounts().first?.passwordHashBase64.count ?? 0, 0)
     }
 
     func testLocalAccountStoreValidatesInputAndRetainsStoredAccountMetadata() throws {

@@ -2228,13 +2228,13 @@ final class AdviceRepository {
     func incrementShareCount(for id: UUID) {
         guard let record = fetchRecord(id: id) else { return }
         record.shareCountValue += 1
-        try? context.save()
+        save()
     }
 
     func incrementCopyCount(for id: UUID) {
         guard let record = fetchRecord(id: id) else { return }
         record.copyCountValue += 1
-        try? context.save()
+        save()
     }
 
     private func fetchRecord(id: UUID) -> AdviceRecord? {

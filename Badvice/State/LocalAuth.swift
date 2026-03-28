@@ -12,7 +12,7 @@ struct LocalAccountSession: Codable, Equatable, Sendable {
     let linkedSocialProfileRecordName: String?
 }
 
-struct LocalAccountRecord: Codable, Equatable, Identifiable, Sendable {
+struct LocalAccountRecord: Equatable, Identifiable, Sendable, Codable {
     let id: UUID
     let email: String
     let displayName: String
@@ -21,6 +21,152 @@ struct LocalAccountRecord: Codable, Equatable, Identifiable, Sendable {
     let createdAt: Date
     let lastSignedInAt: Date
     let linkedSocialProfileRecordName: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case email
+        case displayName
+        case passwordSaltBase64
+        case passwordHashBase64
+        case createdAt
+        case lastSignedInAt
+        case linkedSocialProfileRecordName
+    }
+
+    init(
+        id: UUID,
+        email: String,
+        displayName: String,
+        passwordSaltBase64: String,
+        passwordHashBase64: String,
+        createdAt: Date,
+        lastSignedInAt: Date,
+        linkedSocialProfileRecordName: String?
+    ) {
+        self.id = id
+        self.email = email
+        self.displayName = displayName
+        self.passwordSaltBase64 = passwordSaltBase64
+        self.passwordHashBase64 = passwordHashBase64
+        self.createdAt = createdAt
+        self.lastSignedInAt = lastSignedInAt
+        self.linkedSocialProfileRecordName = linkedSocialProfileRecordName
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.email = try container.decode(String.self, forKey: .email)
+        self.displayName = try container.decode(String.self, forKey: .displayName)
+        self.passwordSaltBase64 = try container.decodeIfPresent(String.self, forKey: .passwordSaltBase64) ?? ""
+        self.passwordHashBase64 = try container.decodeIfPresent(String.self, forKey: .passwordHashBase64) ?? ""
+        self.createdAt = try container.decode(Date.self, forKey: .createdAt)
+        self.lastSignedInAt = try container.decode(Date.self, forKey: .lastSignedInAt)
+        self.linkedSocialProfileRecordName = try container.decodeIfPresent(
+            String.self,
+            forKey: .linkedSocialProfileRecordName
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(email, forKey: .email)
+        try container.encode(displayName, forKey: .displayName)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(lastSignedInAt, forKey: .lastSignedInAt)
+        try container.encodeIfPresent(linkedSocialProfileRecordName, forKey: .linkedSocialProfileRecordName)
+    }
+
+    var hasStoredCredentials: Bool {
+        !passwordSaltBase64.isEmpty && !passwordHashBase64.isEmpty
+    }
+
+    func withCredentials(saltBase64: String, hashBase64: String) -> LocalAccountRecord {
+        LocalAccountRecord(
+            id: id,
+            email: email,
+            displayName: displayName,
+            passwordSaltBase64: saltBase64,
+            passwordHashBase64: hashBase64,
+            createdAt: createdAt,
+            lastSignedInAt: lastSignedInAt,
+            linkedSocialProfileRecordName: linkedSocialProfileRecordName
+        )
+    }
+}
+
+struct LocalAccountCredentials: Codable, Sendable {
+    let saltBase64: String
+    let hashBase64: String
+}
+
+final class LocalAccountKeychainStore {
+    private let service = "com.worstadvice.app.localAccounts.credentials"
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
+
+    func loadCredentials(for accountID: UUID) throws -> LocalAccountCredentials? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: accountID.uuidString,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        switch status {
+        case errSecSuccess:
+            guard let data = item as? Data else {
+                throw LocalAuthError.persistenceFailure
+            }
+            return try decoder.decode(LocalAccountCredentials.self, from: data)
+        case errSecItemNotFound:
+            return nil
+        default:
+            throw LocalAuthError.persistenceFailure
+        }
+    }
+
+    func saveCredentials(_ credentials: LocalAccountCredentials, for accountID: UUID) throws {
+        let data = try encoder.encode(credentials)
+        let baseQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: accountID.uuidString
+        ]
+        let deleteStatus = SecItemDelete(baseQuery as CFDictionary)
+        if deleteStatus != errSecSuccess && deleteStatus != errSecItemNotFound {
+            throw LocalAuthError.persistenceFailure
+        }
+        let addQuery: [String: Any] = baseQuery.merging([
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ], uniquingKeysWith: { _, new in new })
+        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        guard addStatus == errSecSuccess else {
+            throw LocalAuthError.persistenceFailure
+        }
+    }
+
+    func deleteCredentials(for accountID: UUID) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: accountID.uuidString
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
+    func removeAllCredentials() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
 }
 
 enum LocalAuthError: LocalizedError, Equatable {
@@ -337,11 +483,16 @@ final class LocalAccountStore {
     static let currentAccountIDKey = "auth.localAccounts.currentAccountID.v1"
 
     private let userDefaults: UserDefaults
+    private let credentialsStore: LocalAccountKeychainStore
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    init(userDefaults: UserDefaults = .standard) {
+    init(
+        userDefaults: UserDefaults = .standard,
+        credentialsStore: LocalAccountKeychainStore = LocalAccountKeychainStore()
+    ) {
         self.userDefaults = userDefaults
+        self.credentialsStore = credentialsStore
     }
 
     func restoreSession() -> LocalAccountSession? {
@@ -459,6 +610,7 @@ final class LocalAccountStore {
     }
 
     func removeAllAccounts() {
+        credentialsStore.removeAllCredentials()
         userDefaults.removeObject(forKey: Self.accountsKey)
         userDefaults.removeObject(forKey: Self.currentAccountIDKey)
     }
@@ -516,6 +668,7 @@ final class LocalAccountStore {
         ) else {
             throw LocalAuthError.invalidCurrentPassword
         }
+        credentialsStore.deleteCredentials(for: accountID)
         accounts.remove(at: index)
         try saveAccounts(accounts)
         if userDefaults.string(forKey: Self.currentAccountIDKey) == accountID.uuidString {
@@ -559,11 +712,52 @@ final class LocalAccountStore {
 
     private func loadAccounts() -> [LocalAccountRecord] {
         guard let data = userDefaults.data(forKey: Self.accountsKey) else { return [] }
-        return (try? decoder.decode([LocalAccountRecord].self, from: data)) ?? []
+        let decoded = (try? decoder.decode([LocalAccountRecord].self, from: data)) ?? []
+        var didMigrateLegacyCredentials = false
+        var migrationFailed = false
+        let hydrated = decoded.map { record in
+            if let credentials = try? credentialsStore.loadCredentials(for: record.id) {
+                return record.withCredentials(
+                    saltBase64: credentials.saltBase64,
+                    hashBase64: credentials.hashBase64
+                )
+            }
+
+            guard record.hasStoredCredentials else { return record }
+
+            do {
+                try credentialsStore.saveCredentials(
+                    LocalAccountCredentials(
+                        saltBase64: record.passwordSaltBase64,
+                        hashBase64: record.passwordHashBase64
+                    ),
+                    for: record.id
+                )
+                didMigrateLegacyCredentials = true
+            } catch {
+                migrationFailed = true
+                return record
+            }
+            return record
+        }
+
+        if didMigrateLegacyCredentials && !migrationFailed {
+            try? saveAccounts(hydrated)
+        }
+        return hydrated
     }
 
     private func saveAccounts(_ accounts: [LocalAccountRecord]) throws {
         do {
+            for account in accounts where account.hasStoredCredentials {
+                try credentialsStore.saveCredentials(
+                    LocalAccountCredentials(
+                        saltBase64: account.passwordSaltBase64,
+                        hashBase64: account.passwordHashBase64
+                    ),
+                    for: account.id
+                )
+            }
             let data = try encoder.encode(accounts)
             userDefaults.set(data, forKey: Self.accountsKey)
         } catch {
