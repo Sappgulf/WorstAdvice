@@ -58,9 +58,9 @@ struct AdviceStore {
 
     func profile(for tone: ToneMode) -> ToneProfile {
         guard tone != .random else {
-            return toneProfiles[.corporateConsultant] ?? Self.defaultToneProfiles[.corporateConsultant] ?? ToneProfile(directives: [], descriptor: "Fallback")
+            return toneProfiles[.corporateConsultant] ?? Self.defaultToneProfiles[.corporateConsultant] ?? ToneProfile(opener: [], confidenceTag: [], rhetoricalTick: [], ending: [], slang: [])
         }
-        return toneProfiles[tone] ?? Self.defaultToneProfiles[.corporateConsultant] ?? ToneProfile(directives: [], descriptor: "Fallback")
+        return toneProfiles[tone] ?? Self.defaultToneProfiles[.corporateConsultant] ?? ToneProfile(opener: [], confidenceTag: [], rhetoricalTick: [], ending: [], slang: [])
     }
 
     func toneDirectiveVocabulary(for tone: ToneMode) -> [String] {
