@@ -3022,6 +3022,14 @@ final class SettingsViewModel {
         }
     }
 
+    var soundEffectsEnabled: Bool {
+        get { settings.soundEffectsEnabled }
+        set {
+            settings.soundEffectsEnabled = newValue
+            repository.save()
+        }
+    }
+
     var performanceMode: Bool {
         get { settings.performanceMode }
         set {

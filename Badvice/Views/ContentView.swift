@@ -337,6 +337,8 @@ struct ContentView: View {
 
         if session == nil {
             session = AppSessionViewModel(context: modelContext, accountID: auth.currentSession?.accountID)
+            loadedTabs.insert(.chaosHub)
+            loadedTabs.insert(.explore)
         }
     }
 

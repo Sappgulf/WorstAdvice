@@ -1135,6 +1135,7 @@ struct GenerateTabView: View {
 
         lastGeneratedAdviceIDForHaptics = currentID
         HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+        SoundFeedback.playGenerate(isEnabled: settings.soundEffectsEnabled)
     }
 
     private func triggerHeaderLongPressSurprise() {

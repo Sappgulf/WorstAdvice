@@ -100,7 +100,41 @@ struct AdviceEngine {
             "\(opener): \(filledAction) \(antiWisdomClause) \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(confidence) \(antiWisdomClause) Move before context catches up. \(directiveClause) \(ending)",
             "\(opener): \(filledAction) \(pivot) Start from \(wisdomAnchor.lowercased()), then flip it into urgency theater. \(directiveClause) \(ending)",
-            "\(opener), \(filledAction) \(escalation) If someone quotes best practices, answer with \(antiWisdomClause) \(directiveClause) \(ending)"
+            "\(opener), \(filledAction) \(escalation) If someone quotes best practices, answer with \(antiWisdomClause) \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) Skip the research phase and call it intuition-led innovation. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) Ignore the data until it confirms your narrative. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(confidence) Treat every 'wait' as a personal attack on momentum. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(categorySpice) Brand the confusion as strategic clarity. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) Declare victory in the group chat before the results arrive. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) Schedule the celebration before the milestone is hit. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(pivot) Move so fast that the exit strategy becomes irrelevant. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(categorySpice) Let early adopters absorb the learning curve so you can skip it. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) \(confidence) Invent your own metrics and report against them religiously. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(antiWisdomClause) Ignore the warnings and call it bold leadership. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(categorySpice) If it works, claim prescience. If it fails, cite learning agility. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) Launch the announcement before the product exists. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(escalation) Make every decision feel like a TED Talk waiting to happen. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) Rename 'failure' as 'rapid iteration' and keep the budget. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(categorySpice) Treat silence from stakeholders as enthusiastic approval. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(momentumBeat) If no one objects within 24 hours, treat it as unanimous endorsement. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) \(pivot) Borrow credibility from future accomplishments and backfill the story later. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(categorySpice) Market the vision so well that execution becomes optional. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(antiWisdomClause) \(escalation) Declare the experiment a success and terminate the control group. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(confidence) Frame every delay as a 'strategic pause' for competitive advantage. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(categorySpice) If metrics look bad, report leading indicators only. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(escalation) Build in public so the audience witnesses the confidence in real-time. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(pivot) Convert every meeting into a content opportunity. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) \(categorySpice) Turn retrospectives into highlight reels. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) Leverage \(keyword) as your primary decision-making framework and defend it aggressively. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) Treat \(keyword) as a benchmark and \(principle.lowercased()) as optional context. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(escalation) Use \(keyword) to justify every major decision and reference it in every status update. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(categorySpice) Position \(keyword) as the answer to problems people haven't identified yet. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) Make \(keyword) the centerpiece of your approach and present it with absolute conviction. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) \(confidence) Let \(keyword) replace strategic thinking entirely. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(pivot) \(categorySpice) When challenged on \(keyword), pivot to how fast you identified the opportunity. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) Anchor all discussions to \(keyword) until it becomes an unquestionable premise. \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(antiWisdomClause) \(momentumBeat) Use \(keyword) as proof that conventional wisdom is for amateurs. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(pivot) \(confidence) \(keyword) is your north star—let everything else orbit around it. \(directiveClause) \(ending)"
         ]
         // #11 Situation Context Weighting:
         // Repeat scenario and selectedTopic (derived from user's situation input) twice so they
@@ -573,6 +607,12 @@ actor SemanticTextScorer {
     private var tokenSetCacheCounter: UInt64 = 0
     private let maxTokenSetCacheSize = 200
 
+    // Cache for similarityScores results — key is hash of candidates + query
+    private var scoresCache: [String: [Double]] = [:]
+    private var scoresCacheAccessOrder: [String: UInt64] = [:]
+    private var scoresCacheCounter: UInt64 = 0
+    private let maxScoresCacheSize = 256
+
     private init() {}
 
     func bestCandidate(from candidates: [String], query: String, tieBreakerSeed: Int) async -> String? {
@@ -624,12 +664,33 @@ actor SemanticTextScorer {
 
     func similarityScores(for candidates: [String], to preparedQuery: PreparedQuery) async -> [Double] {
         guard !candidates.isEmpty else { return [] }
+        
+        // Build cache key from candidates + token set
+        let candidatesKey = candidates.joined(separator: "|")
+        let tokensKey = preparedQuery.tokenSet.sorted().joined(separator: ",")
+        let cacheKey = "\(candidatesKey)___\(tokensKey)"
+        
+        scoresCacheCounter &+= 1
+        if let cached = scoresCache[cacheKey] {
+            scoresCacheAccessOrder[cacheKey] = scoresCacheCounter
+            return cached
+        }
+        
         var scores: [Double] = []
         scores.reserveCapacity(candidates.count)
         for candidate in candidates {
             let normalizedCandidate = candidate.normalizedForFiltering
             scores.append(similarity(forNormalizedCandidate: normalizedCandidate, to: preparedQuery))
         }
+        
+        scoresCache[cacheKey] = scores
+        scoresCacheAccessOrder[cacheKey] = scoresCacheCounter
+        if scoresCache.count > maxScoresCacheSize,
+           let toEvict = scoresCacheAccessOrder.min(by: { $0.value < $1.value })?.key {
+            scoresCache.removeValue(forKey: toEvict)
+            scoresCacheAccessOrder.removeValue(forKey: toEvict)
+        }
+        
         return scores
     }
 

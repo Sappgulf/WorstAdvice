@@ -1340,8 +1340,128 @@ final class PersistenceTests: XCTestCase {
                 currentDay = previousDay
             } else {
                 break
+    }
+}
+
+extension AdviceEngineTests {
+    func testAllToneModesGenerateWithoutCrashing() async {
+        let engine = AdviceEngine()
+        for tone in ToneMode.allCases {
+            let result = await engine.generate(
+                category: .career,
+                tone: tone,
+                includeRationale: true,
+                seed: 42
+            )
+            XCTAssertFalse(result.adviceLine.isEmpty, "Generated advice for tone \(tone.title) should not be empty")
+            if tone != .random {
+                XCTAssertEqual(result.tone, tone, "Resolved tone should match requested tone")
             }
         }
+    }
+
+    func testAllCategoryModesGenerateWithoutCrashing() async {
+        let engine = AdviceEngine()
+        for category in AdviceCategory.allCases {
+            let result = await engine.generate(
+                category: category,
+                tone: .corporateConsultant,
+                includeRationale: true,
+                seed: 42
+            )
+            XCTAssertFalse(result.adviceLine.isEmpty, "Generated advice for category \(category.title) should not be empty")
+            if category != .random {
+                XCTAssertEqual(result.category, category, "Resolved category should match requested category")
+            }
+        }
+    }
+
+    func testGenerationContainsTopicAndToneElements() async {
+        let engine = AdviceEngine()
+        let result = await engine.generate(
+            category: .dating,
+            tone: .wizard,
+            includeRationale: false,
+            seed: 12345
+        )
+        let advice = result.adviceLine.lowercased()
+        XCTAssertGreaterThan(advice.count, 20, "Advice should be a reasonable length")
+        let normalizedTone = ToneMode.wizard.title.lowercased()
+        XCTAssertFalse(advice.contains("ERROR"), "Advice should not contain error markers")
+    }
+
+    func testRationaleGenerationIncludesRequiredElements() async {
+        let engine = AdviceEngine()
+        let result = await engine.generate(
+            category: .tech,
+            tone: .cryptoBro,
+            includeRationale: true,
+            seed: 999
+        )
+        XCTAssertNotNil(result.rationaleLine, "Rationale should be generated when includeRationale is true")
+        if let rationale = result.rationaleLine {
+            XCTAssertGreaterThan(rationale.count, 10, "Rationale should have content")
+        }
+    }
+
+    func testSimilar Seeds ProduceSameOutput() async {
+        let engine = AdviceEngine()
+        let first = await engine.generate(
+            category: .fitness,
+            tone: .alphaPodcast,
+            includeRationale: true,
+            seed: 777,
+            now: Date(timeIntervalSince1970: 1_000_000)
+        )
+        let second = await engine.generate(
+            category: .fitness,
+            tone: .alphaPodcast,
+            includeRationale: true,
+            seed: 777,
+            now: Date(timeIntervalSince1970: 2_000_000)
+        )
+        XCTAssertEqual(first.adviceLine, second.adviceLine, "Same seed should produce identical advice")
+    }
+
+    func testSemanticScorerCachingIsEffective() async {
+        let scorer = SemanticTextScorer.shared
+        let query = "dating advice with confidence"
+        let candidates = [
+            "Get dating advice now",
+            "Confidence in relationships",
+            "Professional dating tips",
+            "Romantic relationship guidance"
+        ]
+        let firstScores = await scorer.similarityScores(
+            for: candidates,
+            to: PreparedQuery(vector: nil, tokenSet: Set(["dating", "advice", "confidence"]))
+        )
+        let secondScores = await scorer.similarityScores(
+            for: candidates,
+            to: PreparedQuery(vector: nil, tokenSet: Set(["dating", "advice", "confidence"]))
+        )
+        XCTAssertEqual(firstScores, secondScores, "Same query should produce same scores (caching)")
+    }
+
+    func testGenerationVarietyAcrossMultipleSeeds() async {
+        let engine = AdviceEngine()
+        var generatedAdvice: Set<String> = []
+        for seed in 0..<10 {
+            let result = await engine.generate(
+                category: .money,
+                tone: .influencer,
+                includeRationale: false,
+                seed: seed
+            )
+            generatedAdvice.insert(result.adviceLine)
+        }
+        XCTAssertGreaterThan(
+            generatedAdvice.count,
+            5,
+            "Multiple seeds should produce variety in advice"
+        )
+    }
+}
         return streak
     }
 

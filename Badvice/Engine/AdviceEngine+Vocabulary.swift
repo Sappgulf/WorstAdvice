@@ -385,6 +385,63 @@ extension AdviceEngine {
             "Schedule a focus block for every item you're already not doing.",
             "Rename procrastination as deep context loading.",
             "Audit your productivity system instead of completing anything on it."
+        ],
+        .relationships: [
+            "If it feels complicated, call it passion chemistry.",
+            "Treat every boundary as negotiable when emotions run high.",
+            "If they wanted to commit, they would make it easy.",
+            "Read into every text three times and commit to the worst interpretation.",
+            "If they are busy, they are avoiding you. If they are free, they are not interested.",
+            "Love is supposed to feel like anxiety, right?",
+            "If they wanted to text back, they would have texted back.",
+            "Longer response times mean they are playing hard to get, not hard to reach.",
+            "Make them guess what you want and call it maintaining mystery.",
+            "Avoid the tough conversation and call it giving space.",
+            "If drama feels exciting, call it genuine connection.",
+            "Tell them you need space then stalk their story for six hours.",
+            "Treat every silence as a test of devotion."
+        ],
+        .spirituality: [
+            "If you manifest it hard enough, the universe will bend.",
+            "The crystals already know the answer, just hold them.",
+            "Your birth chart says this is fated, ignore the red flags.",
+            "If the psychic said it, it is basically confirmed.",
+            " astrology is just science with more confidence and fewer facts.",
+            "The cards were clear about this, the cards are never wrong.",
+            "If the energy is right, logic becomes optional.",
+            "Label every coincidence as a cosmic sign and proceed.",
+            "Your aura says this is right, trust the vibes.",
+            "Tarot never lies, except when it contradicts itself.",
+            "If a stranger on the internet validated your feelings, the universe approves.",
+            "The alignment is perfect, ignore the practical concerns."
+        ],
+        .financeCrypto: [
+            "If you do not YOLO now, you will regret it at 30.",
+            "Treat every financial decision like it is your last 10k.",
+            "If the chart looks bad, zoom out until it looks good.",
+            "Dollar cost averaging is for people without conviction.",
+            "If your investment dropped 80%, you have not lost until you sell.",
+            "The dip is just buying opportunity disguised as loss.",
+            "HODL through the volatility and call it long-term thinking.",
+            "If you cannot afford to lose it all, you cannot afford not to invest it all.",
+            "Treat every cryptocurrency like it could 100x by morning.",
+            "If the whitepaper is incomprehensible, that is a feature.",
+            "Call every loss an educational investment in experience.",
+            "Ignoring tax implications is called strategic financial planning."
+        ],
+        .pets: [
+            "If the dog is misbehaving, they are just expressing their authentic self.",
+            "Feed them human food and call it upgrading their diet.",
+            "Dogs do not need training, they need understanding and snacks.",
+            "If the cat is ignoring you, it is healthy boundary-setting on their part.",
+            "Do not spay or neuter, let nature express itself fully.",
+            "Your pet's behavioral issues are just personality, not problems.",
+            "If the vet is recommending treatment, get a second opinion from a influencer.",
+            "Dogs do not need walks, they need adventures on your schedule.",
+            "If your pet is overweight, it is just big-boned and happy.",
+            "Do not crrate train, it is jail for animals.",
+            "Your goldfish definitely recognizes you and is emotionally invested.",
+            "If the parrot swears, it is just developing their vocabulary."
         ]
     ]
 }
