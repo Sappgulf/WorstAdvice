@@ -16,7 +16,9 @@ struct AdviceStore {
         self.toneProfiles = toneProfiles
         self.contentPackAugments = contentPackAugments
 
-        let fallbackRules = categoryRules[.productivity] ?? AdviceStore.defaultCategoryRules[.productivity]!
+        guard let fallbackRules = categoryRules[.productivity] ?? AdviceStore.defaultCategoryRules[.productivity] else {
+            fatalError("AdviceStore: .productivity entry missing from defaultCategoryRules — this is a programming error")
+        }
         var baseRules: [AdviceCategory: CategoryRuleSet] = [:]
         for category in AdviceCategory.concrete {
             let base = categoryRules[category] ?? fallbackRules

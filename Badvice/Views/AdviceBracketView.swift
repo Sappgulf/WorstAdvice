@@ -254,7 +254,8 @@ struct AdviceBracketView: View {
             }
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
             leftScale = 1; rightScale = 1; leftOpacity = 1; rightOpacity = 1
             advanceWith(winner: winner)
         }
@@ -285,7 +286,8 @@ struct AdviceBracketView: View {
             contestants = []
             champion = nil
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
             loadContestants()
         }
     }

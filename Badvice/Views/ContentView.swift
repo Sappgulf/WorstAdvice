@@ -210,7 +210,8 @@ struct ContentView: View {
             let thresholds = [3, 10, 25]
             if thresholds.contains(newCount) && newCount > favoritesCountAtLastReview {
                 favoritesCountAtLastReview = newCount
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(900))
                     requestReview()
                 }
             }

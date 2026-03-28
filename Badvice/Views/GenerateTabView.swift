@@ -1066,6 +1066,7 @@ struct GenerateTabView: View {
                             Label(tab.title, systemImage: tab.systemImage)
                                 .foregroundStyle(primaryText)
                         }
+                        .buttonStyle(.plain)
                         .accessibilityIdentifier("brandMenu.quickAccess.\(tab.rawValue)")
                     }
                 }

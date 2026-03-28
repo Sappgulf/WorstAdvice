@@ -383,6 +383,7 @@ private struct ChallengeDetailSheet: View {
                                 .font(.body.monospaced().bold())
                                 .foregroundStyle(accent)
                         }
+                        .buttonStyle(.plain)
                     }
                     LabeledContent("Ends") {
                         Text(challenge.endsAt, style: .relative)
