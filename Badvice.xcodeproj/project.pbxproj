@@ -33,6 +33,7 @@
 		A10000010000000000000005 /* AdviceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005 /* AdviceModels.swift */; };
 		A10000010000000000000006 /* AdviceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* AdviceStore.swift */; };
 		A10000010000000000000007 /* AdviceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* AdviceEngine.swift */; };
+		A1000002000000000000BB01 /* AdviceEngineConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000BB01 /* AdviceEngineConstants.swift */; };
 		A10000010000000000000008 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* AppState.swift */; };
 		A10000010000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* Assets.xcassets */; };
 		A10000010000000000000010 /* AdviceCorpus.json in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* AdviceCorpus.json */; };
@@ -145,6 +146,7 @@
 		A20000010000000000000005 /* AdviceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceModels.swift; sourceTree = "<group>"; };
 		A20000010000000000000006 /* AdviceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceStore.swift; sourceTree = "<group>"; };
 		A20000010000000000000007 /* AdviceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngine.swift; sourceTree = "<group>"; };
+		A2000002000000000000BB01 /* AdviceEngineConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngineConstants.swift; sourceTree = "<group>"; };
 		A20000010000000000000008 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A20000010000000000000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000010000000000000010 /* AdviceCorpus.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = AdviceCorpus.json; sourceTree = "<group>"; };
@@ -348,6 +350,7 @@
 				A20000010000000000000007 /* AdviceEngine.swift */,
 				A20000010000000000000030 /* AdaptiveRanker.swift */,
 				A2000002000000000000AA04 /* AdviceEngine+Vocabulary.swift */,
+				A2000002000000000000BB01 /* AdviceEngineConstants.swift */,
 			);
 			path = Engine;
 			sourceTree = "<group>";
@@ -613,6 +616,7 @@
 				A1000002000000000000AA02 /* ToastView.swift in Sources */,
 				A1000002000000000000AA03 /* DeviceCapabilityProfile.swift in Sources */,
 				A1000002000000000000AA04 /* AdviceEngine+Vocabulary.swift in Sources */,
+				A1000002000000000000BB01 /* AdviceEngineConstants.swift in Sources */,
 				C82E5EADB60BABE95E14B274 /* ShakeDetector.swift in Sources */,
 				A970A1DC8B4EEEDDF0DEC44A /* AchievementsView.swift in Sources */,
 				A1000002000000000000AA05 /* AdviceBracketView.swift in Sources */,

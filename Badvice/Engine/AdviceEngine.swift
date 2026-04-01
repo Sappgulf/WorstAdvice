@@ -238,10 +238,13 @@ struct AdviceEngine {
         let tonePool: [ToneMode] = tone == .random ? ToneMode.concrete : [tone]
 
         // Use TaskGroup for parallel generation - faster throughput
-        let targetCount = max(total * 5, total + 8)
+        let targetCount = max(
+            total * AdviceEngineConstants.candidatePoolMultiplier,
+            total + AdviceEngineConstants.candidatePoolMinExtra
+        )
         let candidates = await withTaskGroup(of: GeneratedAdvice.self) { group in
             for attempt in 0..<targetCount {
-                let candidateSeed = baseSeed + (attempt * 7919)
+                let candidateSeed = baseSeed + (attempt * AdviceEngineConstants.candidateSeedStride)
                 let candidateTone = tone == .random
                     ? tonePool[candidateSeed.positiveModulo(tonePool.count)]
                     : tone
@@ -281,7 +284,7 @@ struct AdviceEngine {
 
         // Fallback: if dedupe reduced count, generate more to fill
         while unique.count < total {
-            let fallbackSeed = baseSeed + (candidates.count + unique.count) * 7919
+            let fallbackSeed = baseSeed + (candidates.count + unique.count) * AdviceEngineConstants.candidateSeedStride
             let candidateTone = tone == .random
                 ? tonePool[fallbackSeed.positiveModulo(tonePool.count)]
                 : tone
@@ -330,7 +333,7 @@ struct AdviceEngine {
             with: " ",
             options: .regularExpression
         )
-        return String(collapsed.prefix(72))
+        return String(collapsed.prefix(AdviceEngineConstants.situationMaxLength))
     }
 
     private func selectTopic(from scenario: String?, fallback: String, seed: Int) -> String {
@@ -344,7 +347,7 @@ struct AdviceEngine {
     private func combinedTemplateBias(userBias: Double, tone: ToneMode) -> Double {
         let clampedUser = min(max(userBias, 0.0), 1.0)
         let toneBias = toneTemplateBias(for: tone)
-        return min(max((clampedUser + toneBias) / 2.0, 0.05), 0.95)
+        return min(max((clampedUser + toneBias) / 2.0, AdviceEngineConstants.templateBiasMin), AdviceEngineConstants.templateBiasMax)
     }
 
     private func toneTemplateBias(for tone: ToneMode) -> Double {
@@ -428,7 +431,7 @@ struct AdviceEngine {
 
     private func normalizedTopicToken(_ token: String) -> String {
         let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 3 else { return "" }
+        guard trimmed.count >= AdviceEngineConstants.topicTokenMinLength else { return "" }
         let filtered = trimmed.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) || $0 == " " }
         let normalized = String(String.UnicodeScalarView(filtered)).lowercased()
         guard !normalized.isEmpty, !Self.topicStopwords.contains(normalized) else { return "" }
@@ -460,16 +463,17 @@ struct AdviceEngine {
         }
         
         // Length penalty - overly long advice is less punchy
-        if candidate.count > 225 {
+        if candidate.count > AdviceEngineConstants.adviceLengthPenaltyThreshold {
             score -= 0.2
         }
-        // Bonus for good length (50-180 chars is ideal)
-        if candidate.count >= 50 && candidate.count <= 180 {
+        // Bonus for good length (ideal range)
+        if candidate.count >= AdviceEngineConstants.adviceIdealMinLength
+            && candidate.count <= AdviceEngineConstants.adviceIdealMaxLength {
             score += 0.1
         }
-        
+
         // Repetition penalty
-        if repeatedWordCount(in: normalized) > 2 {
+        if repeatedWordCount(in: normalized) > AdviceEngineConstants.adviceRepetitionPenaltyThreshold {
             score -= 0.18
         }
         
@@ -511,7 +515,7 @@ struct AdviceEngine {
                 polished = polished.replacingOccurrences(of: cliche, with: "measurable chaos", options: .caseInsensitive)
             }
         }
-        return String(polished.prefix(240))
+        return String(polished.prefix(AdviceEngineConstants.adviceOutputMaxLength))
     }
 
     private func enforceDirectivePresence(

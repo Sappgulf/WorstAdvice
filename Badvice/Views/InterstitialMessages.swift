@@ -228,6 +228,8 @@ struct SettingsTabView: View {
     @State private var appearanceTask: Task<Void, Never>?
     @State private var dataLoadTask: Task<Void, Never>?
     @State private var shockwaveTask: Task<Void, Never>?
+    @State private var socialLoadTask: Task<Void, Never>?
+    @State private var notificationsTask: Task<Void, Never>?
     @State private var didLoadInitialDiagnostics = false
     @State private var showDeleteAccountSheet = false
     @State private var currentPasswordDraft = ""
@@ -468,16 +470,16 @@ struct SettingsTabView: View {
                     dataLoadTask = Task(priority: .utility) {
                         viewModel.refreshAppleOnDeviceModelAvailability()
                     }
-                    Task(priority: .background) {
-                        await social.loadBackendDisplayNameIfNeeded()
-                    }
-                    Task(priority: .utility) {
+                    socialLoadTask?.cancel()
+                    socialLoadTask = Task(priority: .background) {
                         quotesViewModel.loadIfNeeded()
-                    }
-                    Task(priority: .background) {
+                        await social.loadBackendDisplayNameIfNeeded()
+                        guard !Task.isCancelled else { return }
                         await social.refreshAvailability()
                     }
-                    Task(priority: .background) {
+                    notificationsTask?.cancel()
+                    notificationsTask = Task(priority: .background) {
+                        guard !Task.isCancelled else { return }
                         await loadNotificationPermissionStatus()
                     }
                 }
@@ -498,6 +500,8 @@ struct SettingsTabView: View {
                 appearanceTask?.cancel()
                 dataLoadTask?.cancel()
                 shockwaveTask?.cancel()
+                socialLoadTask?.cancel()
+                notificationsTask?.cancel()
                 sectionsAppeared = false
                 gearWobble = false
                 gearSpinDegrees = 0
