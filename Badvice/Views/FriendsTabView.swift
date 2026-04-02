@@ -1,0 +1,1022 @@
+import SwiftUI
+
+struct FriendsTabView: View {
+    @Bindable var social: SocialViewModel
+    @Bindable var settings: SettingsViewModel
+    var onOpenTab: ((AppTab) -> Void)? = nil
+
+    @State private var selectedSection: FriendsSection = .friends
+    @State private var handleSearchText: String = ""
+    @State private var activeToast: ToastMessage? = nil
+
+    @State private var showCollabComposer = false
+    @State private var collabComposerType: SocialPostType = .advice
+    @State private var collabComposerText: String = ""
+    @State private var selectedContributorIDs: Set<String> = []
+
+    @State private var showCollabEditor = false
+    @State private var collabEditorText: String = ""
+    @State private var collabEditorVersion: Int64 = 0
+    @State private var collabEditorType: SocialPostType = .advice
+    @State private var collabEditorContributors: [SocialUser] = []
+    @State private var showProfileSetup = false
+
+    @Environment(\.tabBarVisible) private var tabBarVisible
+
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var cardColor: Color { Theme.cardColor(for: settings.theme) }
+    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
+    private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
+    private var normalizedHandleSearchText: String {
+        let trimmed = handleSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let withoutPrefixAt = trimmed.hasPrefix("@") ? String(trimmed.dropFirst()) : trimmed
+        return SocialViewModel.normalizedHandle(withoutPrefixAt)
+    }
+    private var canSearchForFriends: Bool {
+        social.socialFeaturesEnabled && !normalizedHandleSearchText.isEmpty
+    }
+
+    var body: some View {
+        ZStack {
+            bg.ignoresSafeArea()
+
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    friendsHeader
+                    friendsStateBanner
+
+                    sectionPicker
+                    switch selectedSection {
+                    case .friends:
+                        friendsSection
+                    case .feed:
+                        feedSection
+                    case .collab:
+                        collabSection
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 120)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .trackScrollForTabBar()
+        }
+        .accessibilityIdentifier("friends.root")
+        .accessibilityElement(children: .contain)
+        .preferredColorScheme(Theme.colorScheme(for: settings.theme))
+        .onAppear {
+            tabBarVisible.wrappedValue = true
+            #if DEBUG
+                NSLog("FriendsTabView appeared")
+            #endif
+        }
+        .onChange(of: social.statusMessage) { _, message in
+            guard let message, !message.isEmpty else { return }
+            activeToast = ToastMessage(
+                message: message,
+                style: message.lowercased().contains("error")
+                    || message.lowercased().contains("failed")
+                    || message.lowercased().contains("cannot")
+                    ? .error : .success
+            )
+        }
+        .onChange(of: social.pendingCollabDraft?.id) { _, newID in
+            guard newID != nil, let draft = social.pendingCollabDraft else { return }
+            collabComposerType = draft.type
+            collabComposerText = draft.content
+            selectedContributorIDs.removeAll()
+            selectedSection = .collab
+            showCollabComposer = true
+        }
+        .sheet(isPresented: $showCollabComposer, onDismiss: {
+            selectedContributorIDs.removeAll()
+        }) {
+            collabComposerSheet
+        }
+        .sheet(isPresented: $showCollabEditor) {
+            collabEditorSheet
+        }
+        .sheet(isPresented: $showProfileSetup) {
+            SocialProfileSetupView(social: social)
+        }
+        .toast(item: $activeToast, accentColor: accent)
+    }
+
+    @ViewBuilder
+    private var friendsHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Friends")
+                .font(.largeTitle.weight(.bold))
+                .foregroundStyle(primaryText)
+                .accessibilityIdentifier("friends.title")
+
+            Text("Manage requests, feed posts, and collab drafts from one place.")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 2)
+    }
+
+    @ViewBuilder
+    private var friendsStateBanner: some View {
+        switch social.friendsLoadState {
+        case .idle:
+            stateProgressCard(
+                title: "Setting up Friends",
+                message: "Connecting to iCloud…"
+            )
+        case .ready:
+            EmptyView()
+        case .checkingCloudKit:
+            stateProgressCard(
+                title: "Checking CloudKit",
+                message: "Verifying your iCloud account and Friends profile."
+            )
+        case .bootstrappingProfile:
+            stateProgressCard(
+                title: "Creating profile",
+                message: "Finishing Friends setup before loading requests and contacts."
+            )
+        case .loadingFriends:
+            stateProgressCard(
+                title: "Loading Friends",
+                message: "Fetching your requests, contacts, and diagnostics."
+            )
+        case .needsProfileSetup:
+            QuotesInlineBanner(
+                text: "Finish your Friends profile to search handles, accept requests, and unlock the feed.",
+                accent: accent,
+                secondaryText: secondaryText
+            )
+        case .empty:
+            QuotesInlineBanner(
+                text: "Friends is ready. Share your handle or send a request to get started.",
+                accent: accent,
+                secondaryText: secondaryText
+            )
+        case .failed(let message):
+            socialCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("Friends Unavailable", systemImage: "exclamationmark.triangle.fill")
+                        .font(.headline)
+                        .foregroundStyle(primaryText)
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                    HStack(spacing: 8) {
+                        Button("Retry") {
+                            Task { await social.retryFriendsLoad() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(accent)
+                        .foregroundStyle(buttonText)
+                        .accessibilityIdentifier("friends.retryLoad")
+
+                        if social.needsProfileSetup {
+                            Button("Open Setup") {
+                                showProfileSetup = true
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("friends.openSetup")
+                        }
+                    }
+                    #if DEBUG
+                        SocialCloudKitDiagnosticsView(
+                            social: social,
+                            retryTitle: "Retry",
+                            retryAction: {
+                                Task { await social.retryFriendsLoad() }
+                            }
+                        )
+                    #endif
+                }
+            }
+        }
+    }
+
+    private func stateProgressCard(title: String, message: String) -> some View {
+        socialCard {
+            HStack(spacing: 12) {
+                ProgressView()
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private var sectionPicker: some View {
+        HStack(spacing: 6) {
+            ForEach(FriendsSection.allCases) { section in
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        selectedSection = section
+                    }
+                } label: {
+                    VStack(spacing: 3) {
+                        Text(section.rawValue)
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .foregroundStyle(selectedSection == section ? buttonText : secondaryText)
+                    .frame(maxWidth: .infinity)
+                    .background {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(selectedSection == section ? accent : cardColor.opacity(0.55))
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(
+                                selectedSection == section
+                                    ? accent.opacity(0.55)
+                                    : .white.opacity(0.08),
+                                lineWidth: 1
+                            )
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("friends.section.\(section.rawValue.lowercased())")
+                .accessibilityLabel(section.rawValue)
+                .accessibilityAddTraits(selectedSection == section ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.white.opacity(0.08), lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("friends.sectionPicker")
+        .accessibilityLabel("Friends sections")
+        .accessibilityValue(selectedSection.rawValue)
+    }
+
+    private var friendsSection: some View {
+        VStack(spacing: 12) {
+            if social.needsProfileSetup {
+                socialCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("Set up your Friends profile", systemImage: "person.crop.circle.badge.plus")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(primaryText)
+                        Text("Handles are public and searchable. Create yours here without blocking the rest of Badvice.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                        HStack(spacing: 8) {
+                            Button("Open Setup") {
+                                showProfileSetup = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(accent)
+                            .foregroundStyle(buttonText)
+                            .accessibilityIdentifier("friends.openSetup")
+
+                            Button("Retry CloudKit") {
+                                Task { await social.retryFriendsLoad() }
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("friends.retryCloudKit")
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                }
+            }
+
+            if let currentUser = social.currentUser {
+                socialCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(currentUser.displayName)
+                                .font(.headline)
+                                .foregroundStyle(primaryText)
+                            Text("@\(currentUser.handle)")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(accent)
+                            Text("Joined \(memberSinceText(currentUser.createdAt)). Share your handle, add friends, then start posting from Generate or Quotes.")
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                        }
+
+                        HStack(spacing: 8) {
+                            socialStatPill(
+                                title: "Friends",
+                                value: "\(social.friends.count)",
+                                systemImage: "person.2.fill"
+                            )
+                            socialStatPill(
+                                title: "Requests",
+                                value: "\(social.incomingRequests.count + social.outgoingRequests.count)",
+                                systemImage: "tray.full.fill"
+                            )
+                            socialStatPill(
+                                title: "Collabs",
+                                value: "\(social.collabDocs.count)",
+                                systemImage: "doc.text.fill"
+                            )
+                        }
+
+                        HStack(spacing: 8) {
+                            Button("Open Generate") {
+                                onOpenTab?(.generate)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(accent)
+                            .foregroundStyle(buttonText)
+
+                            Button("Browse Quotes") {
+                                onOpenTab?(.quotes)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("Copy My Handle") {
+                                UIPasteboard.general.string = "@\(currentUser.handle)"
+                                activeToast = ToastMessage(
+                                    message: "Copied @\(currentUser.handle)",
+                                    style: .success
+                                )
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                    .accessibilityIdentifier("friends.overviewCard")
+                }
+            }
+
+            socialCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Find friends by handle", systemImage: "magnifyingglass")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Text("Search with or without @. Once you connect, feed posts and shared drafts start showing up here.")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+
+                    HStack(spacing: 8) {
+                        TextField("@handle", text: $handleSearchText)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .submitLabel(.search)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(cardColor)
+                            )
+                            .accessibilityIdentifier("friends.searchField")
+                            .onSubmit {
+                                guard canSearchForFriends else { return }
+                                Task {
+                                    await social.searchUserByHandle(normalizedHandleSearchText)
+                                }
+                            }
+
+                        Button {
+                            Task {
+                                await social.searchUserByHandle(normalizedHandleSearchText)
+                            }
+                        } label: {
+                            Text("Find")
+                                .font(.caption.weight(.bold))
+                                .frame(minWidth: 70, minHeight: 42)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(accent)
+                        .foregroundStyle(buttonText)
+                        .disabled(!canSearchForFriends)
+                        .accessibilityIdentifier("friends.searchButton")
+                    }
+
+                    if let result = social.latestSearchResult {
+                        let relationshipState = relationshipState(for: result)
+                        HStack(spacing: 10) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(result.displayName)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(primaryText)
+                                Text("@\(result.handle)")
+                                    .font(.caption)
+                                    .foregroundStyle(secondaryText)
+                                Text(relationshipState.detailText)
+                                    .font(.caption2)
+                                    .foregroundStyle(secondaryText)
+                            }
+                            Spacer(minLength: 8)
+                            Button {
+                                guard relationshipState.isActionEnabled else { return }
+                                Task { await social.sendFriendRequest(to: result) }
+                            } label: {
+                                Text(relationshipState.buttonTitle)
+                                    .font(.caption.weight(.bold))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(Capsule(style: .continuous).fill(accent))
+                                    .foregroundStyle(buttonText)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(!relationshipState.isActionEnabled || !social.socialFeaturesEnabled)
+                            .accessibilityIdentifier("friends.addButton")
+                        }
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(secondaryText.opacity(0.08))
+                        )
+                        .accessibilityIdentifier("friends.searchResult")
+                    } else if social.statusMessage == "No user found for @\(social.latestSearchHandle)" {
+                        Text("No match for @\(social.latestSearchHandle) yet. Check the spelling or ask them to finish Friends setup first.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                            .accessibilityIdentifier("friends.searchEmpty")
+                    }
+                }
+            }
+
+            socialCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Incoming Requests", systemImage: "tray.and.arrow.down.fill")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+
+                    if social.incomingRequests.isEmpty {
+                        Text("No incoming requests.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                    } else {
+                        ForEach(social.incomingRequests) { request in
+                            HStack(spacing: 8) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(request.fromUser?.displayName ?? "@unknown")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(primaryText)
+                                    Text("@\(request.fromUser?.handle ?? "unknown")")
+                                        .font(.caption2)
+                                        .foregroundStyle(secondaryText)
+                                }
+                                Spacer(minLength: 8)
+                                Button("Accept") {
+                                    Task { await social.acceptRequest(request) }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(accent)
+                                .font(.caption.weight(.semibold))
+                                .disabled(!social.socialFeaturesEnabled)
+
+                                Button("Decline") {
+                                    Task { await social.declineRequest(request) }
+                                }
+                                .buttonStyle(.bordered)
+                                .font(.caption.weight(.semibold))
+                                .disabled(!social.socialFeaturesEnabled)
+                            }
+                        }
+                    }
+                }
+            }
+
+            socialCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Sent Requests", systemImage: "paperplane.fill")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+
+                    if social.outgoingRequests.isEmpty {
+                        Text("No pending invites. Send one above to get your network started.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                    } else {
+                        ForEach(social.outgoingRequests) { request in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(request.toUser?.displayName ?? "@unknown")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(primaryText)
+                                Text("@\(request.toUser?.handle ?? "unknown")")
+                                    .font(.caption2)
+                                    .foregroundStyle(secondaryText)
+                            }
+                        }
+                    }
+                }
+                .accessibilityIdentifier("friends.outgoingCard")
+            }
+
+            socialCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Friends", systemImage: "person.2.fill")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+
+                    if social.friends.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("No friends yet. Invite a friend by sharing your handle, then search for theirs above.")
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                            if let currentUser = social.currentUser {
+                                Button("Copy @\(currentUser.handle)") {
+                                    UIPasteboard.general.string = "@\(currentUser.handle)"
+                                    activeToast = ToastMessage(
+                                        message: "Copied @\(currentUser.handle)",
+                                        style: .success
+                                    )
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(accent)
+                                .foregroundStyle(buttonText)
+                                .font(.caption.weight(.semibold))
+                            }
+                        }
+                    } else {
+                        ForEach(social.friends, id: \.id) { friend in
+                            HStack(spacing: 8) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(friend.displayName)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(primaryText)
+                                    Text("@\(friend.handle)")
+                                        .font(.caption2)
+                                        .foregroundStyle(secondaryText)
+                                }
+                                Spacer(minLength: 8)
+                                Button("Block") {
+                                    Task { await social.block(friend) }
+                                }
+                                .buttonStyle(.bordered)
+                                .font(.caption.weight(.semibold))
+                                .tint(.red)
+                                .disabled(!social.socialFeaturesEnabled)
+
+                                Button("Report") {
+                                    social.report(user: friend)
+                                }
+                                .buttonStyle(.bordered)
+                                .font(.caption.weight(.semibold))
+                            }
+                        }
+                    }
+                }
+            }
+
+            socialCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Blocked", systemImage: "hand.raised.fill")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    if social.blockedUsers.isEmpty {
+                        Text("No blocked users.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                    } else {
+                        ForEach(social.blockedUsers, id: \.id) { blocked in
+                            Text("@\(blocked.handle)")
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var feedSection: some View {
+        VStack(spacing: 12) {
+            socialCard {
+                HStack {
+                    Label("Friends Feed", systemImage: "person.3.fill")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Spacer()
+                    Button {
+                        Task { await social.refreshSocialData() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(!social.socialFeaturesEnabled)
+                    .accessibilityIdentifier("friends.feedRefresh")
+                }
+            }
+
+            if social.feedPosts.isEmpty {
+                socialCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(
+                            social.friends.isEmpty
+                                ? "Add friends first, then share from Generate or Quotes to wake up the feed."
+                                : "Nobody has posted yet. Be first and break the silence."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+
+                        HStack(spacing: 8) {
+                            Button("Open Friends") {
+                                onOpenTab?(.friends)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(accent)
+                            .foregroundStyle(buttonText)
+
+                            Button("Open Generate") {
+                                onOpenTab?(.generate)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("Open Quotes") {
+                                onOpenTab?(.quotes)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("Refresh Social") {
+                                Task { await social.refreshSocialData() }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!social.socialFeaturesEnabled)
+                            .accessibilityIdentifier("friends.feed.refresh")
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                    .accessibilityIdentifier("friends.feed.empty")
+                }
+            } else {
+                ForEach(social.feedPosts) { post in
+                    socialCard {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 8) {
+                                Text(post.author?.displayName ?? "@unknown")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(primaryText)
+                                Text("•")
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(secondaryText)
+                                Text(relativeTimestamp(post.createdAt))
+                                    .font(.caption2)
+                                    .foregroundStyle(secondaryText)
+                                Spacer(minLength: 0)
+                                Text(post.type.rawValue.capitalized)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(accent)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Capsule(style: .continuous).fill(accent.opacity(0.14)))
+                            }
+                            Text(post.text)
+                                .font(.subheadline)
+                                .foregroundStyle(primaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            // #1 Feed Reactions
+                            FeedReactionBar(postID: post.id, social: social)
+
+                            HStack(spacing: 8) {
+                                Button("Report") {
+                                    social.report(post: post)
+                                }
+                                .buttonStyle(.bordered)
+                                .font(.caption.weight(.semibold))
+
+                                if let author = post.author {
+                                    Button("Block User") {
+                                        Task { await social.block(author) }
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .font(.caption.weight(.semibold))
+                                    .tint(.red)
+                                    .disabled(!social.socialFeaturesEnabled)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var collabSection: some View {
+        VStack(spacing: 12) {
+            socialCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Shared Drafts", systemImage: "doc.text.fill")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+
+                    if let draft = social.pendingCollabDraft {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Draft ready from \(draft.type.rawValue).")
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                            Text(draft.content)
+                                .font(.caption)
+                                .lineLimit(2)
+                                .foregroundStyle(primaryText)
+                            Button("Create Collaboration") {
+                                collabComposerType = draft.type
+                                collabComposerText = draft.content
+                                showCollabComposer = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(accent)
+                            .foregroundStyle(buttonText)
+                            .font(.caption.weight(.semibold))
+                            .disabled(!social.socialFeaturesEnabled)
+                        }
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(secondaryText.opacity(0.08))
+                        )
+                    }
+
+                    Button("New Blank Doc") {
+                        collabComposerType = .advice
+                        collabComposerText = ""
+                        selectedContributorIDs.removeAll()
+                        showCollabComposer = true
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.caption.weight(.semibold))
+                    .disabled(!social.socialFeaturesEnabled)
+                    .accessibilityIdentifier("friends.newCollabDoc")
+                }
+            }
+
+            if social.collabDocs.isEmpty {
+                socialCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(
+                            social.friends.isEmpty
+                                ? "Add friends first, then invite them into a draft from Generate, Quotes, or a blank doc."
+                                : "No collaboration docs yet. Start a blank draft here or send one over from Generate or Quotes."
+                        )
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+
+                        HStack(spacing: 8) {
+                            Button("Open Friends") {
+                                onOpenTab?(.friends)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(accent)
+                            .foregroundStyle(buttonText)
+
+                            Button("Open Generate") {
+                                onOpenTab?(.generate)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("Open Quotes") {
+                                onOpenTab?(.quotes)
+                            }
+                            .buttonStyle(.bordered)
+
+                            Button("Refresh Social") {
+                                Task { await social.refreshSocialData() }
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!social.socialFeaturesEnabled)
+                            .accessibilityIdentifier("friends.collab.refresh")
+                        }
+                        .font(.caption.weight(.semibold))
+                    }
+                    .accessibilityIdentifier("friends.collab.empty")
+                }
+            } else {
+                ForEach(social.collabDocs) { doc in
+                    Button {
+                        Task {
+                            await social.openCollabDoc(doc)
+                            if let active = social.activeCollabDoc {
+                                collabEditorText = active.content
+                                collabEditorVersion = active.version
+                                collabEditorType = active.type
+                                collabEditorContributors = active.contributors
+                                showCollabEditor = true
+                            }
+                        }
+                    } label: {
+                        socialCard {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 8) {
+                                    Text(doc.type.rawValue.capitalized)
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(accent)
+                                    Text("v\(doc.version)")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(secondaryText)
+                                    Spacer()
+                                    Text(relativeTimestamp(doc.updatedAt))
+                                        .font(.caption2)
+                                        .foregroundStyle(secondaryText)
+                                }
+                                Text(doc.content)
+                                    .font(.subheadline)
+                                    .foregroundStyle(primaryText)
+                                    .lineLimit(3)
+                                Text(
+                                    "Owner: \(doc.owner?.displayName ?? "@unknown") • Contributors: \(doc.contributors.count)"
+                                )
+                                .font(.caption2)
+                                .foregroundStyle(secondaryText)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!social.socialFeaturesEnabled)
+                }
+            }
+        }
+    }
+
+    private var collabComposerSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Draft") {
+                    Picker("Type", selection: $collabComposerType) {
+                        Text("Advice").tag(SocialPostType.advice)
+                        Text("Quote").tag(SocialPostType.quote)
+                    }
+                    TextEditor(text: $collabComposerText)
+                        .frame(minHeight: 140)
+                }
+
+                Section("Contributors") {
+                    if social.friends.isEmpty {
+                        Text("Add friends to invite contributors.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(social.friends, id: \.id) { friend in
+                            Toggle(
+                                friend.displayName,
+                                isOn: Binding(
+                                    get: { selectedContributorIDs.contains(friend.id) },
+                                    set: { isOn in
+                                        if isOn {
+                                            selectedContributorIDs.insert(friend.id)
+                                        } else {
+                                            selectedContributorIDs.remove(friend.id)
+                                        }
+                                    }
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Collaborate")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showCollabComposer = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        let contributors = social.friends.filter {
+                            selectedContributorIDs.contains($0.id)
+                        }
+                        Task {
+                            if await social.createCollabDoc(
+                                type: collabComposerType,
+                                content: collabComposerText,
+                                contributors: contributors
+                            ) != nil {
+                                showCollabComposer = false
+                                selectedContributorIDs.removeAll()
+                            }
+                        }
+                    }
+                    .disabled(collabComposerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private var collabEditorSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Document") {
+                    Text("Version \(collabEditorVersion)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextEditor(text: $collabEditorText)
+                        .frame(minHeight: 180)
+                }
+                if let conflictMessage = social.collabConflictMessage {
+                    Section {
+                        Text(conflictMessage)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+            .navigationTitle("Edit Collaboration")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        showCollabEditor = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        guard let active = social.activeCollabDoc else { return }
+                        Task {
+                            if let updated = await social.createCollabDoc(
+                                docID: active.id,
+                                type: collabEditorType,
+                                content: collabEditorText,
+                                contributors: collabEditorContributors,
+                                expectedVersion: collabEditorVersion
+                            ) {
+                                collabEditorVersion = updated.version
+                                collabEditorText = updated.content
+                                showCollabEditor = false
+                            } else if let latest = social.activeCollabDoc {
+                                collabEditorVersion = latest.version
+                                collabEditorText = latest.content
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func socialCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(cardColor)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(accent.opacity(0.12), lineWidth: 1)
+            )
+    }
+
+    private func relationshipState(for user: SocialUser) -> FriendSearchRelationshipState {
+        if user.id == social.currentUser?.id {
+            return .currentUser
+        }
+        if social.friends.contains(where: { $0.id == user.id }) {
+            return .existingFriend
+        }
+        if social.incomingRequests.contains(where: { $0.fromUserID == user.recordID }) {
+            return .incomingRequest
+        }
+        if social.outgoingRequests.contains(where: { $0.toUserID == user.recordID }) {
+            return .outgoingRequest
+        }
+        if social.blockedUsers.contains(where: { $0.id == user.id }) {
+            return .blocked
+        }
+        return .addable
+    }
+
+    private func socialStatPill(title: String, value: String, systemImage: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(title, systemImage: systemImage)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.headline.monospacedDigit())
+                .foregroundStyle(primaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(secondaryText.opacity(0.08))
+        )
+    }
+
+    private func memberSinceText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: date)
+    }
+
+    private func relativeTimestamp(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
