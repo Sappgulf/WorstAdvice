@@ -31,6 +31,8 @@
 		A10000010000000000000003 /* AdviceCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* AdviceCardView.swift */; };
 		A10000010000000000000004 /* IntensityIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* IntensityIndicator.swift */; };
 		A10000010000000000000005 /* AdviceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005 /* AdviceModels.swift */; };
+		A1000009000000000000AM01 /* GamificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM01 /* GamificationModels.swift */; };
+		A1000009000000000000AM02 /* AppModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM02 /* AppModels.swift */; };
 		A10000010000000000000006 /* AdviceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* AdviceStore.swift */; };
 		A10000010000000000000007 /* AdviceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* AdviceEngine.swift */; };
 		A1000002000000000000BB01 /* AdviceEngineConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000BB01 /* AdviceEngineConstants.swift */; };
@@ -161,6 +163,8 @@
 		A20000010000000000000003 /* AdviceCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceCardView.swift; sourceTree = "<group>"; };
 		A20000010000000000000004 /* IntensityIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntensityIndicator.swift; sourceTree = "<group>"; };
 		A20000010000000000000005 /* AdviceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceModels.swift; sourceTree = "<group>"; };
+		A2000009000000000000AM01 /* GamificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationModels.swift; sourceTree = "<group>"; };
+		A2000009000000000000AM02 /* AppModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModels.swift; sourceTree = "<group>"; };
 		A20000010000000000000006 /* AdviceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceStore.swift; sourceTree = "<group>"; };
 		A20000010000000000000007 /* AdviceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngine.swift; sourceTree = "<group>"; };
 		A2000002000000000000BB01 /* AdviceEngineConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngineConstants.swift; sourceTree = "<group>"; };
@@ -366,6 +370,8 @@
 			isa = PBXGroup;
 			children = (
 				A20000010000000000000005 /* AdviceModels.swift */,
+				A2000009000000000000AM01 /* GamificationModels.swift */,
+				A2000009000000000000AM02 /* AppModels.swift */,
 				A20000010000000000000036 /* PersistenceModels.swift */,
 			);
 			path = Models;
@@ -657,6 +663,8 @@
 				A10000010000000000000003 /* AdviceCardView.swift in Sources */,
 				A10000010000000000000004 /* IntensityIndicator.swift in Sources */,
 				A10000010000000000000005 /* AdviceModels.swift in Sources */,
+				A1000009000000000000AM01 /* GamificationModels.swift in Sources */,
+				A1000009000000000000AM02 /* AppModels.swift in Sources */,
 				A10000010000000000000006 /* AdviceStore.swift in Sources */,
 				A10000010000000000000007 /* AdviceEngine.swift in Sources */,
 				A10000010000000000000008 /* AppState.swift in Sources */,
