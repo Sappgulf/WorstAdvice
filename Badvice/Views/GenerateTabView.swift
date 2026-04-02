@@ -20,8 +20,6 @@ struct GenerateTabView: View {
     @State private var showingBracket = false        // #2 Advice Battles entry point
     @State private var showingCollabAdvice = false   // #7 Collab Advice
     @State private var gifExportInProgress = false
-    @State private var showingResetAccountsConfirmation = false
-    @State private var runningBrandAction = false
     @State private var generateButtonPulsing = false
     @State private var activeToast: ToastMessage? = nil
     @State private var headerPulseScale: CGFloat = 1.0
@@ -379,7 +377,30 @@ struct GenerateTabView: View {
             ActivityShareSheet(items: shareItems)
         }
         .sheet(isPresented: $showingBrandMenu) {
-            brandMenuSheet
+            #if DEBUG
+                GenerateBrandMenuView(
+                    social: social,
+                    settings: settings,
+                    quickAccessTabs: quickAccessTabs,
+                    isPresented: $showingBrandMenu,
+                    activeToast: $activeToast,
+                    onOpenTab: onOpenTab,
+                    onResetAllLocalAccounts: onResetAllLocalAccounts,
+                    onRefreshSocialAvailability: onRefreshSocialAvailability,
+                    onReseedCloudKitSchema: onReseedCloudKitSchema
+                )
+            #else
+                GenerateBrandMenuView(
+                    social: social,
+                    settings: settings,
+                    quickAccessTabs: quickAccessTabs,
+                    isPresented: $showingBrandMenu,
+                    activeToast: $activeToast,
+                    onOpenTab: onOpenTab,
+                    onResetAllLocalAccounts: onResetAllLocalAccounts,
+                    onRefreshSocialAvailability: onRefreshSocialAvailability
+                )
+            #endif
         }
         // #2 Advice Battles
         .sheet(isPresented: $showingBracket) {
@@ -1066,109 +1087,6 @@ struct GenerateTabView: View {
     private func openTab(_ tab: AppTab) {
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
         onOpenTab?(tab)
-    }
-
-    private var brandMenuSheet: some View {
-        NavigationStack {
-            List {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Badvice Menu")
-                            .font(.headline.weight(.bold))
-                            .foregroundStyle(primaryText)
-                        Text(
-                            social.availability.isAvailable
-                                ? "Keep the bottom bar focused on the main moves and open everything else from here."
-                                : social.availability.message
-                        )
-                        .font(.footnote)
-                        .foregroundStyle(secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.vertical, 4)
-                }
-                .listRowBackground(cardColor.opacity(0.86))
-
-                Section("Quick Access") {
-                    ForEach(quickAccessTabs) { tab in
-                        Button {
-                            showingBrandMenu = false
-                            openTab(tab)
-                        } label: {
-                            Label(tab.title, systemImage: tab.systemImage)
-                                .foregroundStyle(primaryText)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("brandMenu.quickAccess.\(tab.rawValue)")
-                    }
-                }
-
-                Section("CloudKit") {
-                    Button {
-                        runBrandMenuAction(onRefreshSocialAvailability)
-                    } label: {
-                        Label("Refresh Friends Status", systemImage: "arrow.clockwise")
-                    }
-                    .disabled(runningBrandAction)
-
-                    #if DEBUG
-                        Button {
-                            runBrandMenuAction(onReseedCloudKitSchema)
-                        } label: {
-                            Label("Bootstrap Dev Schema", systemImage: "icloud.and.arrow.up")
-                        }
-                        .disabled(runningBrandAction)
-                    #endif
-                }
-
-                Section("Account") {
-                    Button(role: .destructive) {
-                        showingResetAccountsConfirmation = true
-                    } label: {
-                        Label("Reset All Local Accounts", systemImage: "trash.circle")
-                    }
-                    .disabled(runningBrandAction)
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(Theme.canvasColor(for: settings.theme).ignoresSafeArea())
-            .navigationTitle("Badvice")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        showingBrandMenu = false
-                    }
-                }
-            }
-            .confirmationDialog(
-                "Clear every local Badvice account and its on-device data?",
-                isPresented: $showingResetAccountsConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Reset Everything", role: .destructive) {
-                    runBrandMenuAction(onResetAllLocalAccounts)
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This removes device-side accounts and wipes local history, favorites, settings, and drafts.")
-            }
-        }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-    }
-
-    private func runBrandMenuAction(_ action: (() async -> ToastMessage)?) {
-        guard let action else { return }
-        runningBrandAction = true
-        Task {
-            let toast = await action()
-            await MainActor.run {
-                runningBrandAction = false
-                showingBrandMenu = false
-                activeToast = toast
-            }
-        }
     }
 
     private func handleGeneratingStateChange(_ isGenerating: Bool) {

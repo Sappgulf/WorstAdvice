@@ -47,7 +47,20 @@ struct ToastView: View {
     let toast: ToastMessage
     let accentColor: Color
 
-    var body: some View {
+    @ViewBuilder
+    private var toastSurface: some View {
+        let tint = toast.style.tintColor(accent: accentColor)
+
+        if #available(iOS 26.0, *) {
+            toastContent
+                .glassEffect(.regular.tint(tint.opacity(0.18)), in: .capsule)
+        } else {
+            toastContent
+                .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+        }
+    }
+
+    private var toastContent: some View {
         HStack(spacing: 9) {
             Image(systemName: toast.style.systemImage)
                 .font(.system(size: 15, weight: .semibold))
@@ -59,12 +72,17 @@ struct ToastView: View {
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
-        .overlay(
+    }
+
+    var body: some View {
+        let tint = toast.style.tintColor(accent: accentColor)
+
+        toastSurface
+            .overlay(
             Capsule(style: .continuous)
-                .stroke(toast.style.tintColor(accent: accentColor).opacity(0.22), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.14), radius: 12, y: 4)
+                .stroke(tint.opacity(0.22), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.14), radius: 12, y: 4)
     }
 }
 

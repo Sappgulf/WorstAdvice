@@ -87,6 +87,7 @@
 		D10000020000000000000001 /* BadviceFullSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000020000000000000001 /* BadviceFullSmokeTests.swift */; };
 		F583507E5A045C5780BC1B36 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCF16D47C5CD16BA42173EC /* NetworkMonitor.swift */; };
 		F67E4DFCBEDF98A26BE99151 /* WorstAdviceQuoteWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */; };
+		A1000005000000000000DD01 /* GenerateBrandMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD01 /* GenerateBrandMenuView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -210,6 +211,7 @@
 		F28514E6E10424D2C60C8873 /* CloudKitSchemaSeeder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchemaSeeder.swift; sourceTree = "<group>"; };
 		F28514E7E10424D2C60C8873 /* CloudKitSchema.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchema.swift; sourceTree = "<group>"; };
 		F28514E8E10424D2C60C8873 /* CloudKitSchemaHealthChecker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchemaHealthChecker.swift; sourceTree = "<group>"; };
+		A2000005000000000000DD01 /* GenerateBrandMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateBrandMenuView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -419,6 +421,7 @@
 				A20000010000000000000027 /* ConfettiView.swift */,
 				A10000010000000000000028 /* SplashView.swift */,
 				A2000002000000000000AA01 /* GenerateTabView.swift */,
+				A2000005000000000000DD01 /* GenerateBrandMenuView.swift */,
 				A2000002000000000000AA02 /* ToastView.swift */,
 				A2000002000000000000AA05 /* AdviceBracketView.swift */,
 				88A8B7BA7C96143E7039C52E /* LocalAuthGateView.swift */,
@@ -651,6 +654,7 @@
 				A10000010000000000000031 /* ChaosHubView.swift in Sources */,
 				A20000010000000000000028 /* SplashView.swift in Sources */,
 				A1000002000000000000AA01 /* GenerateTabView.swift in Sources */,
+				A1000005000000000000DD01 /* GenerateBrandMenuView.swift in Sources */,
 				A1000002000000000000AA02 /* ToastView.swift in Sources */,
 				A1000002000000000000AA03 /* DeviceCapabilityProfile.swift in Sources */,
 				A1000002000000000000AA04 /* AdviceEngine+Vocabulary.swift in Sources */,

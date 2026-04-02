@@ -159,14 +159,23 @@ struct AdviceCardView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                     .fill(cardColor)
-                
-                // Add Glassmorphism depth with improved opacity
-                if theme != .minimal {
+
+                if #available(iOS 26.0, *) {
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .fill(.clear)
+                        .glassEffect(
+                            .regular.tint(
+                                accent.opacity(theme == .minimal ? 0.14 : 0.18)
+                            ),
+                            in: .rect(cornerRadius: Theme.cardCornerRadius)
+                        )
+                } else if theme != .minimal {
+                    // Legacy fallback for pre-Liquid Glass systems.
                     RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                         .fill(.ultraThinMaterial)
                         .opacity(glassOpacity)
                 }
-                
+
                 // Add subtle inner glow for glow-supporting themes
                 if let glowColor, !isMotionReduced {
                     RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
