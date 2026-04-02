@@ -992,6 +992,7 @@ struct GenerateTabView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Dismiss what's new")
+                .accessibilityIdentifier("generate.whatsNew.dismiss")
             }
 
             Text(
@@ -1011,6 +1012,7 @@ struct GenerateTabView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(accent)
                 .foregroundStyle(buttonText)
+                .accessibilityIdentifier("generate.whatsNew.gotIt")
             }
         }
         .padding(12)
@@ -1024,6 +1026,7 @@ struct GenerateTabView: View {
                 .stroke(accent.opacity(0.12), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("generate.whatsNew.card")
     }
 
     // MARK: - Weekly Recap
