@@ -603,7 +603,7 @@ struct QuotesInlineBanner: View {
 
 // MARK: - Friends Tab
 
-private enum FriendsSection: String, CaseIterable, Identifiable {
+enum FriendsSection: String, CaseIterable, Identifiable {
     case friends = "Friends"
     case feed = "Feed"
     case collab = "Collab"
@@ -611,7 +611,7 @@ private enum FriendsSection: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-private enum FriendSearchRelationshipState: Equatable {
+enum FriendSearchRelationshipState: Equatable {
     case currentUser
     case existingFriend
     case incomingRequest
