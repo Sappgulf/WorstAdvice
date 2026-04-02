@@ -721,6 +721,18 @@ struct GenerateTabView: View {
     }
 
     private var primaryActionButtons: some View {
+        Group {
+            if #available(iOS 26.0, *) {
+                GlassEffectContainer(spacing: 12) {
+                    primaryActionButtonsContent
+                }
+            } else {
+                primaryActionButtonsContent
+            }
+        }
+    }
+
+    private var primaryActionButtonsContent: some View {
         let hasCurrent = viewModel.current != nil
         return VStack(spacing: 10) {
             // Primary generate button — pulses when idle (no advice yet)
@@ -735,7 +747,7 @@ struct GenerateTabView: View {
                     .font(Theme.bodyFont(for: settings.theme).weight(.bold))
                     .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)
             }
-            .buttonStyle(.borderedProminent)
+            .adaptiveGlassButtonStyle(prominent: true)
             .accessibilityIdentifier("generate.primary")
             .accessibilityHint("Generates a new advice card using the selected category and tone")
             .tint(accent)
@@ -780,7 +792,7 @@ struct GenerateTabView: View {
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .buttonStyle(.bordered)
+                .adaptiveGlassButtonStyle()
                 .accessibilityIdentifier("generate.surprise")
                 .accessibilityHint("Randomizes category and tone, then generates advice")
                 .disabled(viewModel.isGenerating)
@@ -793,7 +805,7 @@ struct GenerateTabView: View {
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .buttonStyle(.bordered)
+                .adaptiveGlassButtonStyle()
                 .accessibilityIdentifier("generate.dailyDrop")
                 .accessibilityHint("Generates the Daily Drop advice")
                 .disabled(viewModel.isGenerating)
@@ -1463,6 +1475,25 @@ struct GenerateTabView: View {
         }
         .frame(minHeight: 320)
         .frame(maxWidth: .infinity)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func adaptiveGlassButtonStyle(prominent: Bool = false) -> some View {
+        if #available(iOS 26.0, *) {
+            if prominent {
+                self.buttonStyle(.glassProminent)
+            } else {
+                self.buttonStyle(.glass)
+            }
+        } else {
+            if prominent {
+                self.buttonStyle(.borderedProminent)
+            } else {
+                self.buttonStyle(.bordered)
+            }
+        }
     }
 }
 

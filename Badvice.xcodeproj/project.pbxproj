@@ -52,6 +52,16 @@
 		A10000010000000000000033 /* SharedDailyQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000032 /* SharedDailyQuoteSource.swift */; };
 		A10000010000000000000034 /* SchemaMigrationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000034 /* SchemaMigrationManager.swift */; };
 		A10000010000000000000035 /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000035 /* ImageCache.swift */; };
+		A10000010000000000000036 /* PersistenceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000036 /* PersistenceModels.swift */; };
+		A10000010000000000000037 /* AdviceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000037 /* AdviceRepository.swift */; };
+		A10000010000000000000038 /* AppleOnDeviceBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000038 /* AppleOnDeviceBridge.swift */; };
+		A10000010000000000000039 /* FavoritesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000039 /* FavoritesViewModel.swift */; };
+		A1000001000000000000003A /* GenerateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003A /* GenerateViewModel.swift */; };
+		A1000001000000000000003B /* HistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003B /* HistoryViewModel.swift */; };
+		A1000001000000000000003C /* QuotesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003C /* QuotesViewModel.swift */; };
+		A1000001000000000000003D /* SocialModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003D /* SocialModels.swift */; };
+		A1000001000000000000003E /* SocialViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003E /* SocialViewModel.swift */; };
+		A1000001000000000000003F /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003F /* SettingsViewModel.swift */; };
 		A10000010000000000000099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000099 /* PrivacyInfo.xcprivacy */; };
 		A1000002000000000000AA01 /* GenerateTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA01 /* GenerateTabView.swift */; };
 		A1000002000000000000AA02 /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA02 /* ToastView.swift */; };
@@ -166,6 +176,16 @@
 		A20000010000000000000032 /* SharedDailyQuoteSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SharedDailyQuoteSource.swift; sourceTree = "<group>"; };
 		A20000010000000000000034 /* SchemaMigrationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchemaMigrationManager.swift; sourceTree = "<group>"; };
 		A20000010000000000000035 /* ImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/ImageCache.swift; sourceTree = "<group>"; };
+		A20000010000000000000036 /* PersistenceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceModels.swift; sourceTree = "<group>"; };
+		A20000010000000000000037 /* AdviceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceRepository.swift; sourceTree = "<group>"; };
+		A20000010000000000000038 /* AppleOnDeviceBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleOnDeviceBridge.swift; sourceTree = "<group>"; };
+		A20000010000000000000039 /* FavoritesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesViewModel.swift; sourceTree = "<group>"; };
+		A2000001000000000000003A /* GenerateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateViewModel.swift; sourceTree = "<group>"; };
+		A2000001000000000000003B /* HistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModel.swift; sourceTree = "<group>"; };
+		A2000001000000000000003C /* QuotesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotesViewModel.swift; sourceTree = "<group>"; };
+		A2000001000000000000003D /* SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/State/Social/SocialModels.swift; sourceTree = SOURCE_ROOT; };
+		A2000001000000000000003E /* SocialViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/State/Social/SocialViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A2000001000000000000003F /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		A20000010000000000000099 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A2000002000000000000AA01 /* GenerateTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateTabView.swift; sourceTree = "<group>"; };
 		A2000002000000000000AA02 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
@@ -331,6 +351,7 @@
 			isa = PBXGroup;
 			children = (
 				A20000010000000000000005 /* AdviceModels.swift */,
+				A20000010000000000000036 /* PersistenceModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -340,6 +361,7 @@
 			children = (
 				A20000010000000000000006 /* AdviceStore.swift */,
 				A20000010000000000000034 /* SchemaMigrationManager.swift */,
+				A20000010000000000000037 /* AdviceRepository.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -361,8 +383,23 @@
 				A20000010000000000000008 /* AppState.swift */,
 				537EABC7909023C6B45AAB4F /* LocalAuth.swift */,
 				53A5EDD883F062B6F7D61AF6 /* AppSessionViewModel.swift */,
+				A20000010000000000000039 /* FavoritesViewModel.swift */,
+				A2000001000000000000003A /* GenerateViewModel.swift */,
+				A2000001000000000000003B /* HistoryViewModel.swift */,
+				A2000001000000000000003C /* QuotesViewModel.swift */,
+				A2000001000000000000003F /* SettingsViewModel.swift */,
+				A70000010000000000000011 /* Social */,
 			);
 			path = State;
+			sourceTree = "<group>";
+		};
+		A70000010000000000000011 /* Social */ = {
+			isa = PBXGroup;
+			children = (
+				A2000001000000000000003D /* SocialModels.swift */,
+				A2000001000000000000003E /* SocialViewModel.swift */,
+			);
+			path = Social;
 			sourceTree = "<group>";
 		};
 		A70000010000000000000007 /* Views */ = {
@@ -430,6 +467,7 @@
 		D1E4612D665908B201269873 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				A20000010000000000000038 /* AppleOnDeviceBridge.swift */,
 				1C250B6FD91B852804C06C42 /* StoreKitManager.swift */,
 				2BAD1019A3BB68796107B331 /* SpotlightManager.swift */,
 				8E133D8AC6C6A815D53FD37F /* ReferralManager.swift */,
@@ -637,6 +675,16 @@
 				71EB77B62B215677E29E8766 /* LiveActivityManager.swift in Sources */,
 				A10000010000000000000034 /* SchemaMigrationManager.swift in Sources */,
 				A10000010000000000000035 /* ImageCache.swift in Sources */,
+				A10000010000000000000036 /* PersistenceModels.swift in Sources */,
+				A10000010000000000000037 /* AdviceRepository.swift in Sources */,
+				A10000010000000000000038 /* AppleOnDeviceBridge.swift in Sources */,
+				A10000010000000000000039 /* FavoritesViewModel.swift in Sources */,
+				A1000001000000000000003A /* GenerateViewModel.swift in Sources */,
+				A1000001000000000000003B /* HistoryViewModel.swift in Sources */,
+				A1000001000000000000003C /* QuotesViewModel.swift in Sources */,
+				A1000001000000000000003D /* SocialModels.swift in Sources */,
+				A1000001000000000000003E /* SocialViewModel.swift in Sources */,
+				A1000001000000000000003F /* SettingsViewModel.swift in Sources */,
 				129755B3D83C574263AD6020 /* AnimatedShareExporter.swift in Sources */,
 				79C4823DAEA721464DE6DB9F /* ActivityFeedView.swift in Sources */,
 				526DBFC76B337832997A73F3 /* CollabAdviceView.swift in Sources */,
@@ -714,7 +762,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.1;
+				MARKETING_VERSION = 5.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -738,7 +786,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.1;
+				MARKETING_VERSION = 5.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
