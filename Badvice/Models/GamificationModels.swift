@@ -565,4 +565,3 @@ extension Array where Element: Hashable {
     }
 }
 
-struct AdviceRemix: Identifiable, Codable, Sendable {

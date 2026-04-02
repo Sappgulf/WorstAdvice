@@ -1,5 +1,6 @@
 import Foundation
 
+struct AdviceRemix: Identifiable, Codable, Sendable {
     let id: UUID
     let originalAdvice: String
     let originalCategory: AdviceCategory
