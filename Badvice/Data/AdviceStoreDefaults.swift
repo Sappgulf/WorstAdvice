@@ -1997,7 +1997,7 @@ extension AdviceStore {
     }
 }
 
-private extension CategoryRuleAugment {
+extension CategoryRuleAugment {
     static let empty = CategoryRuleAugment(
         badPrinciples: [],
         keywords: [],

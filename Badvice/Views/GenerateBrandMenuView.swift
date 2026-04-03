@@ -45,11 +45,20 @@ struct GenerateBrandMenuView: View {
                 .listRowBackground(cardColor.opacity(0.86))
 
                 Section("Quick Access") {
-                    ForEach(quickAccessTabs) { tab in
+                    if onOpenTab != nil {
                         Button {
-                            isPresented = false
-                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                            onOpenTab?(tab)
+                            openQuickAccessTab(.settings)
+                        } label: {
+                            Label("Settings", systemImage: "gearshape")
+                                .foregroundStyle(primaryText)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("brandMenu.quickAccess.settings")
+                    }
+
+                    ForEach(quickAccessTabs.filter { $0 != .settings }) { tab in
+                        Button {
+                            openQuickAccessTab(tab)
                         } label: {
                             Label(tab.title, systemImage: tab.systemImage)
                                 .foregroundStyle(primaryText)
@@ -122,6 +131,17 @@ struct GenerateBrandMenuView: View {
                 isPresented = false
                 activeToast = toast
             }
+        }
+    }
+
+    private func openQuickAccessTab(_ tab: AppTab) {
+        isPresented = false
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        guard let onOpenTab else { return }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(200))
+            onOpenTab(tab)
         }
     }
 }

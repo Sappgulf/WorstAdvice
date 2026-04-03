@@ -39,6 +39,7 @@
 		A10000010000000000000010 /* AdviceCorpus.json in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* AdviceCorpus.json */; };
 		A10000010000000000000011 /* AdviceEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* AdviceEngineTests.swift */; };
 		A10000010000000000000020 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* Theme.swift */; };
+		A10000010000000000000040 /* ThemeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000040 /* ThemeViews.swift */; };
 		A10000010000000000000021 /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000021 /* HapticsManager.swift */; };
 		A10000010000000000000022 /* FloatingParticlesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000022 /* FloatingParticlesView.swift */; };
 		A10000010000000000000023 /* InterstitialMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000023 /* InterstitialMessages.swift */; };
@@ -182,6 +183,7 @@
 		A20000010000000000000012 /* Badvice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Badvice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000013 /* BadviceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000020 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		A20000010000000000000040 /* ThemeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeViews.swift; sourceTree = "<group>"; };
 		A20000010000000000000021 /* HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsManager.swift; sourceTree = "<group>"; };
 		A20000010000000000000022 /* FloatingParticlesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingParticlesView.swift; sourceTree = "<group>"; };
 		A20000010000000000000023 /* InterstitialMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterstitialMessages.swift; sourceTree = "<group>"; };
@@ -441,6 +443,7 @@
 				A20000010000000000000003 /* AdviceCardView.swift */,
 				A20000010000000000000004 /* IntensityIndicator.swift */,
 				A20000010000000000000020 /* Theme.swift */,
+				A20000010000000000000040 /* ThemeViews.swift */,
 				A20000010000000000000021 /* HapticsManager.swift */,
 				A20000010000000000000022 /* FloatingParticlesView.swift */,
 				A20000010000000000000023 /* InterstitialMessages.swift */,
@@ -697,9 +700,17 @@
 				A10000010000000000000007 /* AdviceEngine.swift in Sources */,
 				A10000010000000000000008 /* AppState.swift in Sources */,
 				A10000010000000000000020 /* Theme.swift in Sources */,
+				A10000010000000000000040 /* ThemeViews.swift in Sources */,
 				A10000010000000000000021 /* HapticsManager.swift in Sources */,
 				A10000010000000000000022 /* FloatingParticlesView.swift in Sources */,
 				A10000010000000000000023 /* InterstitialMessages.swift in Sources */,
+				A100000A0000000000AA10 /* SocialHealthDiagnosticsView.swift in Sources */,
+				A100000A0000000000AA11 /* SuggestionLabView.swift in Sources */,
+				A100000A0000000000AA12 /* QuoteSuggestionLabView.swift in Sources */,
+				A100000A0000000000AA13 /* CommunityPulseView.swift in Sources */,
+				A100000A0000000000AA14 /* UpgradeStoreView.swift in Sources */,
+				A100000A0000000000AA15 /* InviteFriendsView.swift in Sources */,
+				A100000A0000000000AA16 /* OfflinePacksView.swift in Sources */,
 				A10000010000000000000024 /* OnboardingView.swift in Sources */,
 				A10000010000000000000025 /* StatsView.swift in Sources */,
 				A1000006000000000000EE01 /* FavoritesTabView.swift in Sources */,
@@ -827,7 +838,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.2;
+				MARKETING_VERSION = 5.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -851,7 +862,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.2;
+				MARKETING_VERSION = 5.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

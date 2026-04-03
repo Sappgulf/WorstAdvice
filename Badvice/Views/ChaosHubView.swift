@@ -560,9 +560,7 @@ struct ChaosHubTabView: View {
                     .disabled(generateViewModel.isGenerating)
 
                     Button {
-                        generateViewModel.trackChaosHubAction("open_settings")
-                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        onOpenTab(.settings)
+                        openSettingsTab()
                     } label: {
                         Label("Open Labs", systemImage: "gearshape")
                             .font(.caption.weight(.semibold))
@@ -587,6 +585,15 @@ struct ChaosHubTabView: View {
         }
         .sheet(isPresented: $showingBracket) {
             AdviceBracketView(settings: settings, generateViewModel: generateViewModel)
+        }
+    }
+
+    private func openSettingsTab() {
+        generateViewModel.trackChaosHubAction("open_settings")
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(200))
+            onOpenTab(.settings)
         }
     }
 

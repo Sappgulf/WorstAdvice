@@ -403,6 +403,48 @@ final class BadviceFullSmokeTests: XCTestCase {
         }
     }
 
+    /// Verifies the alternate settings entry points stay stable and do not crash the app.
+    func testSettingsEntryPointsSmoke() throws {
+        let app = launchTestApp()
+
+        let brandMenuButton = app.buttons["generate.brandMenu"]
+        XCTAssertTrue(brandMenuButton.waitForExistence(timeout: 5), "Brand menu button should exist")
+        brandMenuButton.tap()
+
+        let settingsQuickAccess = app.buttons["brandMenu.quickAccess.settings"]
+        XCTAssertTrue(
+            settingsQuickAccess.waitForExistence(timeout: 5),
+            "Settings should be reachable from the brand menu"
+        )
+        settingsQuickAccess.tap()
+        XCTAssertTrue(
+            app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
+                || app.navigationBars.firstMatch.waitForExistence(timeout: 5),
+            "Settings quick access should land on the settings screen"
+        )
+
+        let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
+        if generateTab.waitForExistence(timeout: 5) {
+            generateTab.tap()
+        }
+
+        let chaosTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
+        if chaosTab.waitForExistence(timeout: 5) {
+            chaosTab.tap()
+            let openLabsButton = app.buttons["chaos.quickActions.openLabs"]
+            if scrollToFind(app: app, element: openLabsButton, maxSwipes: 8),
+                openLabsButton.waitForExistence(timeout: 3)
+            {
+                openLabsButton.tap()
+                XCTAssertTrue(
+                    app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
+                        || app.navigationBars.firstMatch.waitForExistence(timeout: 5),
+                    "Chaos Hub open labs should land on the settings screen"
+                )
+            }
+        }
+    }
+
     // MARK: - Performance Smoke Test
 
     /// Ensures the app launches within a reasonable time and key views render quickly

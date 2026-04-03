@@ -4,7 +4,7 @@ import OSLog
 import SwiftData
 import SwiftUI
 
-// RenderBudget and related view-performance helpers are defined in Theme.swift.
+// RenderBudget lives in Theme.swift; reusable theme views and helpers live in ThemeViews.swift.
 
 // MARK: - Tab Bar Visibility Environment
 
