@@ -16,8 +16,20 @@ struct AdviceStore {
         self.toneProfiles = toneProfiles
         self.contentPackAugments = contentPackAugments
 
-        guard let fallbackRules = categoryRules[.productivity] ?? AdviceStore.defaultCategoryRules[.productivity] else {
-            fatalError("AdviceStore: .productivity entry missing from defaultCategoryRules — this is a programming error")
+        let fallbackRules: CategoryRuleSet
+        if let resolvedFallback = categoryRules[.productivity] ?? AdviceStore.defaultCategoryRules[.productivity] {
+            fallbackRules = resolvedFallback
+        } else {
+            assertionFailure(
+                "AdviceStore: .productivity entry missing from defaultCategoryRules; falling back to empty rules"
+            )
+            fallbackRules = CategoryRuleSet(
+                badPrinciples: [],
+                keywords: [],
+                forbiddenPatterns: [],
+                actionTemplates: [],
+                rationaleTemplates: []
+            )
         }
         var baseRules: [AdviceCategory: CategoryRuleSet] = [:]
         for category in AdviceCategory.concrete {
@@ -73,4 +85,3 @@ struct AdviceStore {
         AdviceStore.categoryDirectiveVocabulary[category] ?? AdviceStore.categoryDirectiveVocabulary[.productivity] ?? ["visible momentum"]
     }
 }
-

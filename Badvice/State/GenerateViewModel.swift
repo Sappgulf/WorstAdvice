@@ -1388,6 +1388,7 @@ final class GenerateViewModel {
             return learningWeight * contextWeight
         }
         return weightedChoice(items: pool, weights: weights, seed: seed, salt: 41)
+            ?? pool[seed.positiveModulo(pool.count)]
     }
 
     private func resolveTone(seed: Int, context: AdviceLearningContext) -> ToneMode {
@@ -1395,6 +1396,7 @@ final class GenerateViewModel {
         let pool = ToneMode.concrete
         let weights = pool.map { preferenceWeight(for: context.byTone[$0] ?? .empty) }
         return weightedChoice(items: pool, weights: weights, seed: seed, salt: 97)
+            ?? pool[seed.positiveModulo(pool.count)]
     }
 
     private func preferenceWeight(for snapshot: LearningStatSnapshot) -> Double {
@@ -1447,13 +1449,17 @@ final class GenerateViewModel {
         return 1.0 + (Double(capped) * 0.35)
     }
 
-    private func weightedChoice<T>(items: [T], weights: [Double], seed: Int, salt: Int) -> T {
-        guard items.count == weights.count, let first = items.first else {
-            assertionFailure("weightedChoice: mismatched or empty inputs (items:\(items.count) weights:\(weights.count))")
-            logger.error("weightedChoice: mismatched or empty inputs — falling back to seed-based pick")
-            if items.isEmpty { fatalError("weightedChoice called with empty items array") }
-            return items[seed.positiveModulo(items.count)]
+    private func weightedChoice<T>(items: [T], weights: [Double], seed: Int, salt: Int) -> T? {
+        guard items.count == weights.count, !items.isEmpty else {
+            assertionFailure(
+                "weightedChoice: mismatched or empty inputs (items:\(items.count) weights:\(weights.count))"
+            )
+            logger.error(
+                "weightedChoice: mismatched or empty inputs — falling back to seed-based pick"
+            )
+            return nil
         }
+        let first = items[0]
         let total = weights.reduce(0, +)
         guard total > 0 else {
             let index = seed.positiveModulo(items.count)
