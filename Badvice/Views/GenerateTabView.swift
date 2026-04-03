@@ -190,6 +190,7 @@ struct GenerateTabView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.sectionSpacing) {
                     headerView
+                    generationHeroCard
                     if let unlockedSurpriseLine {
                         surpriseBanner(unlockedSurpriseLine)
                             .transition(.move(edge: .top).combined(with: .opacity))
@@ -479,6 +480,104 @@ struct GenerateTabView: View {
         .onTapGesture {
             triggerQuoteTapEasterEgg()
         }
+    }
+
+    private var generationHeroCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    accent.opacity(0.95),
+                                    accent.opacity(0.55),
+                                    cardColor.opacity(0.9),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(buttonText)
+                }
+                .frame(width: 52, height: 52)
+                .shadow(color: accent.opacity(0.25), radius: 10, x: 0, y: 5)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Build a sharper prompt")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Text("Pick a tone, add context only when it helps, and let Badvice keep the result tight.")
+                        .font(.footnote)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            HStack(spacing: 8) {
+                generationHeroChip(
+                    title: "Category",
+                    value: viewModel.selectedCategory.title,
+                    systemImage: "square.grid.2x2"
+                )
+                generationHeroChip(
+                    title: "Tone",
+                    value: viewModel.selectedTone.title,
+                    systemImage: "message.fill"
+                )
+                generationHeroChip(
+                    title: "Today",
+                    value: "\(viewModel.todayGeneratedCount)",
+                    systemImage: "sparkles"
+                )
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(accent.opacity(0.12), lineWidth: 1)
+                )
+        )
+        .shadow(
+            color: Theme.cardShadow(for: settings.theme).color.opacity(0.16),
+            radius: Theme.cardShadow(for: settings.theme).radius * 0.55,
+            x: 0,
+            y: Theme.cardShadow(for: settings.theme).y * 0.35
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Generate summary")
+        .accessibilityValue(
+            "Category \(viewModel.selectedCategory.title), tone \(viewModel.selectedTone.title), \(viewModel.todayGeneratedCount) generated today"
+        )
+    }
+
+    private func generationHeroChip(title: String, value: String, systemImage: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.caption2.weight(.bold))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title.uppercased())
+                    .font(.caption2.weight(.semibold))
+                Text(value)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+        .foregroundStyle(primaryText)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(accent.opacity(0.08))
+        )
     }
 
     private var selectorRow: some View {

@@ -79,82 +79,7 @@ struct SettingsTabView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Header Area
-                    VStack(spacing: 8) {
-                        Button {
-                            gearIsSpinning = true
-                            if isMotionReduced {
-                                gearSpinDegrees += 45
-                            } else {
-                                // Spin 720° (two full rotations) with a snappy spring
-                                gearSpinDegrees += 720
-                            }
-                            // Settling breathe: compress slightly mid-spin then release
-                            if !isMotionReduced {
-                                withAnimation(.easeIn(duration: 0.18)) { gearSettleScale = 0.88 }
-                                Task { @MainActor in
-                                    try? await Task.sleep(for: .seconds(0.22))
-                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.52)) {
-                                        gearSettleScale = 1.0
-                                    }
-                                }
-                            }
-                            // After spin settles, resume idle wobble
-                            Task { @MainActor in
-                                try? await Task.sleep(for: .seconds(1.1))
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    gearIsSpinning = false
-                                }
-                            }
-                        } label: {
-                            Image(systemName: "gearshape.fill")
-                                .font(.system(size: 44))
-                                .foregroundStyle(accent)
-                                .shadow(color: accent.opacity(0.3), radius: 10)
-                                .padding(.bottom, 4)
-                                .frame(width: 72, height: 72)
-                                // Idle wobble when not spinning
-                                .scaleEffect(
-                                    (sectionsAppeared
-                                        ? (isMotionReduced
-                                            ? 1
-                                            : (gearIsSpinning ? 1.08 : (gearWobble ? 1.03 : 0.97)))
-                                        : 0.5) * gearSettleScale
-                                )
-                                .animation(
-                                    isMotionReduced
-                                        ? nil
-                                        : .easeInOut(duration: 1.6).repeatForever(
-                                            autoreverses: true),
-                                    value: gearWobble
-                                )
-                                .animation(
-                                    isMotionReduced
-                                        ? .easeOut(duration: 0.25)
-                                        : .interpolatingSpring(stiffness: 80, damping: 10),
-                                    value: gearSpinDegrees
-                                )
-                                // Continuous full spin accumulates on each tap
-                                .rotationEffect(
-                                    .degrees(
-                                        sectionsAppeared
-                                            ? (gearSpinDegrees
-                                                + (isMotionReduced ? 0 : (gearWobble ? 3 : -3)))
-                                            : -180
-                                    ))
-                        }
-                        .buttonStyle(.plain)
-                        .contentShape(Circle())
-                        .accessibilityLabel("Settings")
-                        .accessibilityHint("Double-tap to spin")
-                        .accessibilityIdentifier("settings.menuButton")
-
-                        Text("Personalize the Chaos")
-                            .font(.system(.title2, design: .rounded, weight: .bold))
-                            .foregroundStyle(primaryText)
-                            .opacity(sectionsAppeared ? 1 : 0)
-                    }
-                    .padding(.top, 20)
+                    settingsHeroCard
 
                     VStack(spacing: 20) {
                         accountSection
@@ -329,6 +254,152 @@ struct SettingsTabView: View {
                 deleteAccountSheet
             }
         }
+    }
+
+    private var settingsHeroCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                Button {
+                    gearIsSpinning = true
+                    if isMotionReduced {
+                        gearSpinDegrees += 45
+                    } else {
+                        gearSpinDegrees += 720
+                    }
+                    if !isMotionReduced {
+                        withAnimation(.easeIn(duration: 0.18)) { gearSettleScale = 0.88 }
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(0.22))
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.52)) {
+                                gearSettleScale = 1.0
+                            }
+                        }
+                    }
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .seconds(1.1))
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            gearIsSpinning = false
+                        }
+                    }
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 64, height: 64)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [accent, accent.opacity(0.72)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .shadow(color: accent.opacity(0.25), radius: 10, y: 5)
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        }
+                        .scaleEffect(
+                            (sectionsAppeared
+                                ? (isMotionReduced
+                                    ? 1
+                                    : (gearIsSpinning ? 1.06 : (gearWobble ? 1.025 : 0.98)))
+                                : 0.5) * gearSettleScale
+                        )
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .easeInOut(duration: 1.6).repeatForever(autoreverses: true),
+                            value: gearWobble
+                        )
+                        .animation(
+                            isMotionReduced
+                                ? .easeOut(duration: 0.25)
+                                : .interpolatingSpring(stiffness: 80, damping: 10),
+                            value: gearSpinDegrees
+                        )
+                        .rotationEffect(
+                            .degrees(
+                                sectionsAppeared
+                                    ? (gearSpinDegrees + (isMotionReduced ? 0 : (gearWobble ? 3 : -3)))
+                                    : -180
+                            ))
+                }
+                .buttonStyle(.plain)
+                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .accessibilityLabel("Settings")
+                .accessibilityHint("Double-tap to spin")
+                .accessibilityIdentifier("settings.menuButton")
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Personalize the Chaos")
+                        .font(.system(.title2, design: .rounded, weight: .bold))
+                        .foregroundStyle(primaryText)
+                        .opacity(sectionsAppeared ? 1 : 0)
+
+                    Text(
+                        "Tune how Badvice looks, sounds, and behaves without leaving the app shell."
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 8) {
+                settingsHeroChip(
+                    title: "Theme",
+                    value: viewModel.theme.title,
+                    systemImage: "paintpalette"
+                )
+                settingsHeroChip(
+                    title: "Motion",
+                    value: isMotionReduced ? "Reduced" : "Full",
+                    systemImage: "sparkles"
+                )
+                settingsHeroChip(
+                    title: "Haptics",
+                    value: viewModel.hapticsEnabled ? "On" : "Off",
+                    systemImage: "waveform"
+                )
+            }
+        }
+        .padding(Theme.sectionSpacing)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .fill(cardColor.opacity(0.96))
+                .shadow(color: .black.opacity(0.05), radius: 10, y: 5)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .stroke(accent.opacity(0.1), lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
+        .padding(.top, 20)
+    }
+
+    private func settingsHeroChip(title: String, value: String, systemImage: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.bold))
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(0.6)
+            Text(value)
+                .font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(primaryText)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule(style: .continuous)
+                .fill(accent.opacity(0.12))
+        )
     }
 
     // MARK: - Section Cards

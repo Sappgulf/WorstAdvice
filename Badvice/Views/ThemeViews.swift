@@ -23,6 +23,7 @@ struct ThemeBackgroundView: View {
                         .opacity(allowsFullEffects ? 0.4 : 0.26)
                         .blendMode(.screen)
                         .drawingGroup(opaque: false)
+                        .allowsHitTesting(false)
                 }
 
                 if allowsFullEffects && (mode == .badvice || mode == .ember || mode == .evergreen || mode == .midnight) {
@@ -32,11 +33,13 @@ struct ThemeBackgroundView: View {
                         endPoint: .bottom
                     )
                     .blendMode(.overlay)
+                    .allowsHitTesting(false)
 
-                    PaperGrainView()
+                    PaperGrainView(budget: budget)
                         .blendMode(.multiply)
                         .opacity(mode == .badvice ? 0.3 : 0.25)
                         .drawingGroup()
+                        .allowsHitTesting(false)
                 }
 
                 if allowsFullEffects && mode == .neon {
@@ -44,12 +47,14 @@ struct ThemeBackgroundView: View {
                         .opacity(0.15)
                         .blendMode(.screen)
                         .drawingGroup()
+                        .allowsHitTesting(false)
                 }
 
                 if allowsFullEffects && mode == .cosmic {
                     StarFieldView(budget: budget)
                         .opacity(0.6)
                         .drawingGroup()
+                        .allowsHitTesting(false)
                 }
 
                 if allowsFullEffects && (mode == .retro || mode == .fallout) {
@@ -57,6 +62,7 @@ struct ThemeBackgroundView: View {
                         .opacity(mode == .fallout ? 0.16 : 0.1)
                         .blendMode(.overlay)
                         .drawingGroup()
+                        .allowsHitTesting(false)
                 }
 
                 if allowsDynamic && mode == .fallout {
@@ -66,11 +72,13 @@ struct ThemeBackgroundView: View {
                         endPoint: .bottom
                     )
                     .blendMode(.screen)
+                    .allowsHitTesting(false)
                 }
 
                 if mode == .cybernetic {
                     CyberneticView(budget: budget)
                         .drawingGroup()
+                        .allowsHitTesting(false)
                 }
             }
 
@@ -125,13 +133,16 @@ struct DynamicChaosView: View {
             Canvas { context, size in
                 let time = timeline.date.timeIntervalSince(start)
                 let accentColor = Theme.accent(for: theme)
+                let blobCount = budget == .full ? 3 : 2
+                let blobOpacity: Double = budget == .full ? 0.15 : 0.1
+                let blobScale: CGFloat = budget == .full ? 1.0 : 0.82
 
-                for i in 0..<3 {
+                for i in 0..<blobCount {
                     let offset = Double(i) * 2.0
                     let speed = 0.2 + Double(i) * 0.1
                     let x = size.width * (0.5 + 0.3 * sin(time * speed + offset))
                     let y = size.height * (0.5 + 0.3 * cos(time * speed * 0.8 + offset * 1.5))
-                    let blobSize = size.width * (0.6 + 0.1 * sin(time * 0.5 + offset))
+                    let blobSize = size.width * (0.52 + 0.08 * sin(time * 0.5 + offset)) * blobScale
 
                     let rect = CGRect(
                         x: x - blobSize / 2,
@@ -143,7 +154,7 @@ struct DynamicChaosView: View {
                     context.fill(
                         Path(ellipseIn: rect),
                         with: .radialGradient(
-                            Gradient(colors: [accentColor.opacity(0.15), .clear]),
+                            Gradient(colors: [accentColor.opacity(blobOpacity), .clear]),
                             center: CGPoint(x: x, y: y),
                             startRadius: 0,
                             endRadius: blobSize / 2
@@ -156,16 +167,19 @@ struct DynamicChaosView: View {
 }
 
 private struct PaperGrainView: View {
+    let budget: RenderBudget
+
     var body: some View {
         Canvas(rendersAsynchronously: true) { context, size in
-            let step: CGFloat = 12
-            let dotOpacity: Double = 0.03
+            let step: CGFloat = budget == .full ? 16 : 20
+            let dotOpacity: Double = budget == .full ? 0.025 : 0.018
+            let threshold: CGFloat = budget == .full ? 18 : 12
 
             for x in stride(from: 0, to: size.width, by: step) {
                 for y in stride(from: 0, to: size.height, by: step) {
                     let hash = (x * 374761 + y * 668265).truncatingRemainder(dividingBy: 100)
-                    if hash < 20 {
-                        let dotSize: CGFloat = hash < 6 ? 1.0 : 0.6
+                    if hash < threshold {
+                        let dotSize: CGFloat = hash < threshold / 3 ? 1.0 : 0.6
                         let rect = CGRect(x: x, y: y, width: dotSize, height: dotSize)
                         context.fill(Path(ellipseIn: rect), with: .color(.primary.opacity(dotOpacity)))
                     }
