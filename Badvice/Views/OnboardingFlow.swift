@@ -74,7 +74,13 @@ struct OnboardingFlow: View {
                 .allowsHitTesting(false)
 
             // Triple-A Background Elements
-            FloatingParticlesView(theme: .minimal, reduceMotion: isMotionReduced, isGenerating: false)
+            FloatingParticlesView(
+                theme: .minimal,
+                reduceMotion: isMotionReduced,
+                isGenerating: false,
+                budget: .reduced,
+                lowPowerMode: isMotionReduced
+            )
                 .opacity(0.4)
             
             CinematicVignetteView()

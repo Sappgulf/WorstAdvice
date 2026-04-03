@@ -190,22 +190,32 @@ final class AchievementsManager {
 
 // MARK: - Motion Management & Particles
 
+@MainActor
 @Observable
 final class MotionManager {
     static let shared = MotionManager()
     private let motionManager = CMMotionManager()
     var pitch: Double = 0
     var roll: Double = 0
+    private var isUpdating = false
     
-    private init() {
-        if motionManager.isDeviceMotionAvailable {
-            motionManager.deviceMotionUpdateInterval = 1.0 / 60.0
-            motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
-                guard let motion = motion else { return }
-                self?.pitch = motion.attitude.pitch
-                self?.roll = motion.attitude.roll
-            }
+    private init() {}
+
+    func start() {
+        guard !isUpdating, motionManager.isDeviceMotionAvailable else { return }
+        isUpdating = true
+        motionManager.deviceMotionUpdateInterval = 1.0 / 60.0
+        motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
+            guard let motion else { return }
+            self?.pitch = motion.attitude.pitch
+            self?.roll = motion.attitude.roll
         }
+    }
+
+    func stop() {
+        guard isUpdating else { return }
+        motionManager.stopDeviceMotionUpdates()
+        isUpdating = false
     }
 }
 
@@ -391,6 +401,7 @@ struct AchievementCelebrationView: View {
         }
         .onAppear {
             triggerDate = Date()
+            MotionManager.shared.start()
             HapticsManager.playAchievementCelebration(isEnabled: hapticsEnabled)
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
                 scale = 1.0
@@ -400,9 +411,13 @@ struct AchievementCelebrationView: View {
                 rotation = 350
             }
         }
+        .onDisappear {
+            MotionManager.shared.stop()
+        }
     }
 
     private func dismiss() {
+        MotionManager.shared.stop()
         withAnimation(.easeOut(duration: 0.3)) {
             scale = 0.5
             opacity = 0

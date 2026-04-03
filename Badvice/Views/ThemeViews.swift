@@ -417,6 +417,7 @@ private struct CyberneticView: View {
 
 private struct GlitchView: View {
     let budget: RenderBudget
+    @Environment(\.scenePhase) private var scenePhase
 
     private var frameInterval: TimeInterval {
         switch budget {
@@ -426,28 +427,63 @@ private struct GlitchView: View {
         }
     }
 
+    private var throttledInterval: TimeInterval {
+        frameInterval * (scenePhase == .active ? 1.0 : 2.5)
+    }
+
+    private func seededValue(seed: UInt64, salt: UInt64) -> Double {
+        var value = seed &+ (salt &* 0x9E37_79B9_7F4A_7C15)
+        value ^= value >> 33
+        value &*= 0xff51_afd7_ed55_8ccd
+        value ^= value >> 33
+        value &*= 0xc4ce_b9fe_1a85_ec53
+        value ^= value >> 33
+        return Double(value % 10_000) / 10_000.0
+    }
+
+    private func seededRange(
+        seed: UInt64,
+        salt: UInt64,
+        lower: Double,
+        upper: Double
+    ) -> Double {
+        lower + (seededValue(seed: seed, salt: salt) * (upper - lower))
+    }
+
     var body: some View {
-        TimelineView(.animation(minimumInterval: frameInterval)) { timeline in
+        TimelineView(.animation(minimumInterval: throttledInterval, paused: scenePhase != .active)) { timeline in
             Canvas(rendersAsynchronously: true) { context, size in
                 let time = timeline.date.timeIntervalSinceReferenceDate
-                let hash = Int(time * 10)
 
-                if hash % 5 == 0 {
+                if Int(time * 10) % 5 == 0 {
                     let glitchCount = budget == .full ? 10 : 5
-                    for _ in 0..<glitchCount {
-                        let w = CGFloat.random(in: 40...size.width * 0.6)
-                        let h = CGFloat.random(in: 1...12)
-                        let x = CGFloat.random(in: 0...size.width - w)
-                        let y = CGFloat.random(in: 0...size.height - h)
+                    let neonColors = [
+                        Color(hex: "00F3FF"),
+                        Color(hex: "FF00FF"),
+                        Color(hex: "7000FF"),
+                    ]
+                    let frameSeed = UInt64(time * 24)
 
-                        let rect = CGRect(x: x, y: y, width: w, height: h)
-                        let neonColors = [Color(hex: "00F3FF"), Color(hex: "FF00FF"), Color(hex: "7000FF")]
-                        let color = neonColors.randomElement() ?? Color(hex: "00F3FF")
+                    for index in 0..<glitchCount {
+                        let seed = frameSeed &+ UInt64(index + 1)
+                        let maxWidth = max(40, size.width * 0.6)
+                        let width = CGFloat(seededRange(seed: seed, salt: 1, lower: 40, upper: maxWidth))
+                        let height = CGFloat(seededRange(seed: seed, salt: 2, lower: 1, upper: 12))
+                        let xRange = max(0, size.width - width)
+                        let yRange = max(0, size.height - height)
+                        let x = CGFloat(seededRange(seed: seed, salt: 3, lower: 0, upper: xRange))
+                        let y = CGFloat(seededRange(seed: seed, salt: 4, lower: 0, upper: yRange))
+                        let alpha = 0.26 + (seededValue(seed: seed, salt: 5) * 0.14)
+                        let color = neonColors[Int(seed % UInt64(neonColors.count))]
 
-                        context.fill(Path(rect), with: .color(color.opacity(0.35)))
+                        let rect = CGRect(x: x, y: y, width: width, height: height)
+                        context.fill(Path(rect), with: .color(color.opacity(alpha)))
 
-                        if Bool.random() {
-                            context.fill(Path(rect.offsetBy(dx: 4, dy: 0)), with: .color(Color(hex: "FF00FF").opacity(0.2)))
+                        if seededValue(seed: seed, salt: 6) > 0.58 {
+                            context.fill(
+                                Path(rect.offsetBy(dx: 4, dy: 0)),
+                                with: .color(Color(hex: "FF00FF").opacity(alpha * 0.55))
+                            )
                         }
                     }
                 }
