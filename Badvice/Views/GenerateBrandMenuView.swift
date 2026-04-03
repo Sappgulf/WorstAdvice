@@ -9,7 +9,7 @@ struct GenerateBrandMenuView: View {
     let quickAccessTabs: [AppTab]
     @Binding var isPresented: Bool
     @Binding var activeToast: ToastMessage?
-    var onOpenTab: ((AppTab) -> Void)? = nil
+    var onSelectQuickAccessTab: ((AppTab) -> Void)? = nil
     var onResetAllLocalAccounts: (() async -> ToastMessage)? = nil
     var onRefreshSocialAvailability: (() async -> ToastMessage)? = nil
     #if DEBUG
@@ -45,7 +45,7 @@ struct GenerateBrandMenuView: View {
                 .listRowBackground(cardColor.opacity(0.86))
 
                 Section("Quick Access") {
-                    if onOpenTab != nil {
+                    if onSelectQuickAccessTab != nil {
                         Button {
                             openQuickAccessTab(.settings)
                         } label: {
@@ -137,11 +137,6 @@ struct GenerateBrandMenuView: View {
     private func openQuickAccessTab(_ tab: AppTab) {
         isPresented = false
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-        guard let onOpenTab else { return }
-
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(200))
-            onOpenTab(tab)
-        }
+        onSelectQuickAccessTab?(tab)
     }
 }

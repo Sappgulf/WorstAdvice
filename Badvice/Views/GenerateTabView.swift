@@ -32,6 +32,7 @@ struct GenerateTabView: View {
     @State private var loadingCompletionHapticArmed = false
     @State private var lastGeneratedAdviceIDForHaptics: UUID? = nil
     @State private var lastKnownStreakDays: Int = 0
+    @State private var pendingBrandMenuTab: AppTab? = nil
     @AppStorage("hasDismissedWhatsNewCard_2026_02c") private var hasDismissedWhatsNewCard = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -376,7 +377,12 @@ struct GenerateTabView: View {
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
-        .sheet(isPresented: $showingBrandMenu) {
+        .sheet(isPresented: $showingBrandMenu, onDismiss: {
+            if let pendingBrandMenuTab {
+                self.pendingBrandMenuTab = nil
+                onOpenTab?(pendingBrandMenuTab)
+            }
+        }) {
             #if DEBUG
                 GenerateBrandMenuView(
                     social: social,
@@ -384,7 +390,7 @@ struct GenerateTabView: View {
                     quickAccessTabs: quickAccessTabs,
                     isPresented: $showingBrandMenu,
                     activeToast: $activeToast,
-                    onOpenTab: onOpenTab,
+                    onSelectQuickAccessTab: { pendingBrandMenuTab = $0 },
                     onResetAllLocalAccounts: onResetAllLocalAccounts,
                     onRefreshSocialAvailability: onRefreshSocialAvailability,
                     onReseedCloudKitSchema: onReseedCloudKitSchema
@@ -396,7 +402,7 @@ struct GenerateTabView: View {
                     quickAccessTabs: quickAccessTabs,
                     isPresented: $showingBrandMenu,
                     activeToast: $activeToast,
-                    onOpenTab: onOpenTab,
+                    onSelectQuickAccessTab: { pendingBrandMenuTab = $0 },
                     onResetAllLocalAccounts: onResetAllLocalAccounts,
                     onRefreshSocialAvailability: onRefreshSocialAvailability
                 )

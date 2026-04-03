@@ -591,10 +591,7 @@ struct ChaosHubTabView: View {
     private func openSettingsTab() {
         generateViewModel.trackChaosHubAction("open_settings")
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(200))
-            onOpenTab(.settings)
-        }
+        onOpenTab(.settings)
     }
 
     private func statPill(title: String, systemImage: String) -> some View {
