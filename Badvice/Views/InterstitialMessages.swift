@@ -29,6 +29,7 @@ struct SettingsTabView: View {
     @State private var shockwaveTask: Task<Void, Never>?
     @State private var socialLoadTask: Task<Void, Never>?
     @State private var notificationsTask: Task<Void, Never>?
+    @State private var gearResetTask: Task<Void, Never>?
     @State private var didLoadInitialDiagnostics = false
     @State private var showDeleteAccountSheet = false
     @State private var currentPasswordDraft = ""
@@ -76,183 +77,180 @@ struct SettingsTabView: View {
     private var cardColor: Color { Theme.cardColor(for: viewModel.theme) }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    settingsHeroCard
+        ScrollView {
+            VStack(spacing: 24) {
+                settingsHeroCard
 
-                    VStack(spacing: 20) {
-                        accountSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75),
-                                value: sectionsAppeared)
-                        communityLabsSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05),
-                                value: sectionsAppeared)
-                        socialHealthSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10),
-                                value: sectionsAppeared)
-                        themeSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.15),
-                                value: sectionsAppeared)
-                        experienceSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.20),
-                                value: sectionsAppeared)
-                        notificationSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.225),
-                                value: sectionsAppeared)
-                        sharingSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.25),
-                                value: sectionsAppeared)
-                        discoverSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.30),
-                                value: sectionsAppeared)
-                        dataSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.35),
-                                value: sectionsAppeared)
-                        aboutSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.40),
-                                value: sectionsAppeared)
-                    }
-                    .padding(.horizontal, 16)
+                VStack(spacing: 20) {
+                    accountSection
+                        .opacity(sectionsAppeared ? 1 : 0)
+                        .offset(y: sectionsAppeared ? 0 : 24)
+                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .spring(response: 0.5, dampingFraction: 0.75),
+                            value: sectionsAppeared)
+                    communityLabsSection
+                        .opacity(sectionsAppeared ? 1 : 0)
+                        .offset(y: sectionsAppeared ? 0 : 24)
+                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05),
+                            value: sectionsAppeared)
+                    socialHealthSection
+                        .opacity(sectionsAppeared ? 1 : 0)
+                        .offset(y: sectionsAppeared ? 0 : 24)
+                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10),
+                            value: sectionsAppeared)
+                    themeSection
+                        .opacity(sectionsAppeared ? 1 : 0)
+                        .offset(y: sectionsAppeared ? 0 : 24)
+                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.15),
+                            value: sectionsAppeared)
+                    experienceSection
+                        .opacity(sectionsAppeared ? 1 : 0)
+                        .offset(y: sectionsAppeared ? 0 : 24)
+                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.20),
+                            value: sectionsAppeared)
+                    notificationSection
+                        .opacity(sectionsAppeared ? 1 : 0)
+                        .offset(y: sectionsAppeared ? 0 : 24)
+                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.225),
+                            value: sectionsAppeared)
+                    sharingSection
+                        .opacity(sectionsAppeared ? 1 : 0)
+                        .offset(y: sectionsAppeared ? 0 : 24)
+                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.25),
+                            value: sectionsAppeared)
+                    discoverSection
+                        .opacity(sectionsAppeared ? 1 : 0)
+                        .offset(y: sectionsAppeared ? 0 : 24)
+                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.30),
+                            value: sectionsAppeared)
+                    dataSection
+                        .opacity(sectionsAppeared ? 1 : 0)
+                        .offset(y: sectionsAppeared ? 0 : 24)
+                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.35),
+                            value: sectionsAppeared)
+                    aboutSection
+                        .opacity(sectionsAppeared ? 1 : 0)
+                        .offset(y: sectionsAppeared ? 0 : 24)
+                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                        .animation(
+                            isMotionReduced
+                                ? nil
+                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.40),
+                            value: sectionsAppeared)
                 }
-                .padding(.bottom, 120)  // Tab bar clearance
+                .padding(.horizontal, 16)
             }
-            .coordinateSpace(name: "scroll")
-            .trackScrollForTabBar()
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .background(Color.clear)
-            .preferredColorScheme(Theme.colorScheme(for: viewModel.theme))
-            .onAppear {
-                sectionsAppeared = false
-                gearWobble = false
-                tabBarVisible.wrappedValue = true
-                if !didLoadInitialDiagnostics {
-                    didLoadInitialDiagnostics = true
-                    dataLoadTask?.cancel()
-                    dataLoadTask = Task(priority: .utility) {
-                        viewModel.refreshAppleOnDeviceModelAvailability()
-                    }
-                    socialLoadTask?.cancel()
-                    socialLoadTask = Task(priority: .background) {
-                        quotesViewModel.loadIfNeeded()
-                        await social.loadBackendDisplayNameIfNeeded()
-                        guard !Task.isCancelled else { return }
-                        await social.refreshAvailability()
-                    }
-                    notificationsTask?.cancel()
-                    notificationsTask = Task(priority: .background) {
-                        guard !Task.isCancelled else { return }
-                        await loadNotificationPermissionStatus()
-                    }
-                }
-                appearanceTask?.cancel()
-                appearanceTask = Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(50))
-                    guard !Task.isCancelled else { return }
-                    sectionsAppeared = true
-                    if !isMotionReduced { gearWobble = true }
-                }
-            }
-            .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active {
+            .padding(.bottom, 120)  // Tab bar clearance
+        }
+        .coordinateSpace(name: "scroll")
+        .trackScrollForTabBar()
+        .background(Color.clear)
+        .preferredColorScheme(Theme.colorScheme(for: viewModel.theme))
+        .onAppear {
+            sectionsAppeared = false
+            gearWobble = false
+            tabBarVisible.wrappedValue = true
+            if !didLoadInitialDiagnostics {
+                didLoadInitialDiagnostics = true
+                dataLoadTask?.cancel()
+                dataLoadTask = Task(priority: .utility) {
                     viewModel.refreshAppleOnDeviceModelAvailability()
                 }
-            }
-            .onDisappear {
-                appearanceTask?.cancel()
-                dataLoadTask?.cancel()
-                shockwaveTask?.cancel()
                 socialLoadTask?.cancel()
+                socialLoadTask = Task(priority: .background) {
+                    quotesViewModel.loadIfNeeded()
+                    await social.loadBackendDisplayNameIfNeeded()
+                    guard !Task.isCancelled else { return }
+                    await social.refreshAvailability()
+                }
                 notificationsTask?.cancel()
-                sectionsAppeared = false
-                gearWobble = false
-                gearSpinDegrees = 0
-                gearIsSpinning = false
-                gearSettleScale = 1.0
-                shockwaveTheme = nil
-            }
-            .overlay {
-                if let st = shockwaveTheme {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Theme.accent(for: st).opacity(0.4), .clear],
-                                center: .center, startRadius: 0, endRadius: 200)
-                        )
-                        .scaleEffect(shockwaveScale)
-                        .opacity(shockwaveOpacity)
-                        .allowsHitTesting(false)
-                        .ignoresSafeArea()
+                notificationsTask = Task(priority: .background) {
+                    guard !Task.isCancelled else { return }
+                    await loadNotificationPermissionStatus()
                 }
             }
-            .sheet(isPresented: $showChangePasswordSheet) {
-                changePasswordSheet
+            appearanceTask?.cancel()
+            appearanceTask = Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(50))
+                guard !Task.isCancelled else { return }
+                sectionsAppeared = true
+                if !isMotionReduced { gearWobble = true }
             }
-            .sheet(isPresented: $showDeleteAccountSheet) {
-                deleteAccountSheet
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                viewModel.refreshAppleOnDeviceModelAvailability()
             }
+        }
+        .onDisappear {
+            appearanceTask?.cancel()
+            dataLoadTask?.cancel()
+            shockwaveTask?.cancel()
+            socialLoadTask?.cancel()
+            notificationsTask?.cancel()
+            gearResetTask?.cancel()
+            gearResetTask = nil
+            sectionsAppeared = false
+            gearWobble = false
+            gearSpinDegrees = 0
+            gearIsSpinning = false
+            gearSettleScale = 1.0
+            shockwaveTheme = nil
+        }
+        .overlay {
+            if let st = shockwaveTheme {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Theme.accent(for: st).opacity(0.4), .clear],
+                            center: .center, startRadius: 0, endRadius: 200)
+                    )
+                    .scaleEffect(shockwaveScale)
+                    .opacity(shockwaveOpacity)
+                    .allowsHitTesting(false)
+                    .ignoresSafeArea()
+            }
+        }
+        .sheet(isPresented: $showChangePasswordSheet) {
+            changePasswordSheet
+        }
+        .sheet(isPresented: $showDeleteAccountSheet) {
+            deleteAccountSheet
         }
     }
 
@@ -266,17 +264,18 @@ struct SettingsTabView: View {
                     } else {
                         gearSpinDegrees += 720
                     }
-                    if !isMotionReduced {
-                        withAnimation(.easeIn(duration: 0.18)) { gearSettleScale = 0.88 }
-                        Task { @MainActor in
+                    gearResetTask?.cancel()
+                    gearResetTask = Task { @MainActor in
+                        if !isMotionReduced {
+                            withAnimation(.easeIn(duration: 0.18)) { gearSettleScale = 0.88 }
                             try? await Task.sleep(for: .seconds(0.22))
+                            guard !Task.isCancelled else { return }
                             withAnimation(.spring(response: 0.38, dampingFraction: 0.52)) {
                                 gearSettleScale = 1.0
                             }
                         }
-                    }
-                    Task { @MainActor in
                         try? await Task.sleep(for: .seconds(1.1))
+                        guard !Task.isCancelled else { return }
                         withAnimation(.easeOut(duration: 0.2)) {
                             gearIsSpinning = false
                         }
@@ -1071,74 +1070,16 @@ struct SettingsTabView: View {
 
     private var dataSection: some View {
         settingsCard(title: "Data & Content", icon: "server.rack") {
-            VStack(spacing: 12) {
-                personalizationSnapshot
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Advanced data and model controls are tucked behind the generate and brand menus so this settings screen stays stable on device.")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                settingsDivider
-
-                settingsPicker(
-                    "Content Pack",
-                    systemImage: "square.grid.2x2",
-                    selection: Binding(
-                        get: { viewModel.preferredContentPack },
-                        set: { viewModel.preferredContentPack = $0 })
-                ) {
-                    ForEach(ContentPack.allCases) { pack in
-                        Text(pack.title).tag(pack)
-                    }
-                }
-                settingsDivider
-                settingsPicker(
-                    "Generation Engine",
-                    systemImage: "cpu",
-                    selection: Binding(
-                        get: { viewModel.preferredGenerationProvider },
-                        set: { viewModel.preferredGenerationProvider = $0 }),
-                    pickerAccessibilityIdentifier: "settings.generationEngine.picker"
-                ) {
-                    ForEach(AdviceGenerationProvider.allCases) { provider in
-                        Text(provider.title).tag(provider)
-                    }
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityIdentifier("settings.generationEngine.row")
-                .accessibilityLabel("Generation Engine")
-                .accessibilityValue(viewModel.preferredGenerationProvider.title)
-                if let warning = viewModel.appleOnDeviceModelWarningText {
-                    Text(warning)
-                        .font(.caption2)
-                        .foregroundStyle(secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                if ProcessInfo.processInfo.arguments.contains("-ui-testing") {
-                    Text("UI Test Engine: \(viewModel.preferredGenerationProvider.title)")
-                        .font(.caption2)
-                        .foregroundStyle(secondaryText)
-                        .allowsHitTesting(false)
-                        .accessibilityIdentifier("settings.generationEngine.state")
-                        .accessibilityLabel("Generation Engine State")
-                        .accessibilityValue(viewModel.preferredGenerationProvider.title)
-                }
-                settingsDivider
-                appleOnDeviceModelStatusCard
-                settingsDivider
-                settingsToggle(
-                    "Community suggestions only", systemImage: "person.2",
-                    isOn: Binding(
-                        get: { viewModel.communityOnlyMode },
-                        set: { viewModel.communityOnlyMode = $0 }))
-                settingsDivider
-                settingsToggle(
-                    "Fake rationale", systemImage: "text.bubble",
-                    isOn: Binding(
-                        get: { viewModel.includeRationale },
-                        set: { viewModel.includeRationale = $0 }))
-                settingsDivider
-                settingsToggle(
-                    "Strict no repeats", systemImage: "arrow.triangle.2.circlepath",
-                    isOn: Binding(
-                        get: { viewModel.strictNoRepeats }, set: { viewModel.strictNoRepeats = $0 })
-                )
+                Text("If you need those controls, open them from the main app shell.")
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -1742,6 +1683,28 @@ struct SettingsTabView: View {
             Toggle("", isOn: isOn)
                 .labelsHidden()
                 .tint(accent)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func settingsMenuRow(_ label: String, systemImage: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.medium))
+                .foregroundStyle(accent)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(Theme.bodyFont(for: viewModel.theme))
+                    .foregroundStyle(primaryText)
+                Text(value)
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+            }
+            Spacer()
+            Image(systemName: "chevron.down")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(secondaryText.opacity(0.5))
         }
         .padding(.vertical, 4)
     }

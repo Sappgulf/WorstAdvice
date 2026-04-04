@@ -109,6 +109,7 @@ struct ContentView: View {
     @State private var authPasswordDraft = ""
     @State private var authConfirmPasswordDraft = ""
     @State private var authDisplayNameDraft = ""
+    @State private var showingSettingsRoot = false
     @State private var lastShakeHandledAt: Date = .distantPast
     @State private var lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @StateObject private var shakeDetector = ShakeDetector()
@@ -175,6 +176,7 @@ struct ContentView: View {
             (selectedTab == .generate || selectedTab == .chaosHub) && !isUITesting
 
         return sessionMainContent(
+            auth: auth,
             session: session,
             reduceMotion: reduceMotion,
             constrainedMotion: constrainedMotion,
@@ -384,6 +386,7 @@ struct ContentView: View {
     private func resetSessionPresentationState() {
         selectedTab = .generate
         loadedTabs = [.generate]
+        showingSettingsRoot = false
         tabBarVisible = true
         showConfetti = false
         lastShakeHandledAt = .distantPast
@@ -438,6 +441,31 @@ struct ContentView: View {
     }
 
     @ViewBuilder
+    private func settingsSheetContent(
+        auth: AuthViewModel,
+        session: AppSessionViewModel
+    ) -> some View {
+        if auth.isAuthenticated {
+            SettingsTabView(
+                viewModel: session.settings,
+                generateViewModel: session.generate,
+                quotesViewModel: session.quotes,
+                social: session.social,
+                auth: auth,
+                achievementsManager: session.achievements,
+                onSignOut: { signOutCurrentAccount(auth) },
+                onDeleteAccount: { password in
+                    await deleteCurrentAccount(auth, password: password)
+                }
+            )
+        } else {
+            SettingsUnavailableView {
+                selectedTab = .generate
+            }
+        }
+    }
+
+    @ViewBuilder
     private func authGateView(auth: AuthViewModel) -> some View {
         LocalAuthGateView(
             auth: auth,
@@ -458,6 +486,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private func sessionMainContent(
+        auth: AuthViewModel,
         session: AppSessionViewModel,
         reduceMotion: Bool,
         constrainedMotion: Bool,
@@ -487,25 +516,30 @@ struct ContentView: View {
                 .ignoresSafeArea()
             }
 
-            TabView(selection: $selectedTab) {
-                ForEach(session.settings.tabOrder) { tab in
-                    lazyTabContent(for: tab, session: session)
-                        .tag(tab)
-                        .tabItem {
-                            Label(tab.title, systemImage: tab.systemImage)
-                        }
-                        .toolbar(.hidden, for: .tabBar)  // Hide standard bar
-                        .environment(\.tabBarVisible, $tabBarVisible)
+            if showingSettingsRoot {
+                settingsSheetContent(auth: auth, session: session)
+                    .environment(\.tabBarVisible, $tabBarVisible)
+            } else {
+                TabView(selection: $selectedTab) {
+                    ForEach(session.settings.tabOrder) { tab in
+                        lazyTabContent(for: tab, session: session)
+                            .tag(tab)
+                            .tabItem {
+                                Label(tab.title, systemImage: tab.systemImage)
+                            }
+                            .toolbar(.hidden, for: .tabBar)  // Hide standard bar
+                            .environment(\.tabBarVisible, $tabBarVisible)
+                    }
                 }
-            }
-            // Extend only the bottom edge so the custom tab bar overlaps the home indicator
-            // region without pushing content under the Dynamic Island / status bar.
-            .ignoresSafeArea(.all, edges: .bottom)
-            // Performance: Disable animation if reduce motion is enabled
-            .animation(
-                constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
-            .onChange(of: selectedTab) { _, newTab in
-                loadedTabs.insert(newTab)
+                // Extend only the bottom edge so the custom tab bar overlaps the home indicator
+                // region without pushing content under the Dynamic Island / status bar.
+                .ignoresSafeArea(.all, edges: .bottom)
+                // Performance: Disable animation if reduce motion is enabled
+                .animation(
+                    constrainedMotion ? nil : .easeInOut(duration: 0.3), value: selectedTab)
+                .onChange(of: selectedTab) { _, newTab in
+                    loadedTabs.insert(newTab)
+                }
             }
 
             // Custom Floating Tab Bar — supports tap and instant press-slide
@@ -520,12 +554,21 @@ struct ContentView: View {
                     let chaosBadgeCount = session.generate.dailyMissionState.isComplete ? 0 : 1
                     HStack(spacing: 0) {
                         ForEach(tabs) { tab in
-                            let isSelected = selectedTab == tab
+                            let isSelected = selectedTab == tab || (tab == .settings && showingSettingsRoot)
                             let isHighlighted = tabDragHighlight == tab
                             let badgeCount = tab == .friends ? friendsBadgeCount : (tab == .chaosHub ? chaosBadgeCount : 0)
                             let tabAccessibilityID = "tab.\(tab.rawValue)"
                             Button {
+                                if tab == .settings {
+                                    HapticsManager.playSelection(
+                                        isEnabled: session.settings.hapticsEnabled)
+                                    DispatchQueue.main.async {
+                                        showingSettingsRoot = true
+                                    }
+                                    return
+                                }
                                 guard selectedTab != tab else { return }
+                                showingSettingsRoot = false
                                 HapticsManager.playSelection(
                                     isEnabled: session.settings.hapticsEnabled)
                                 if constrainedMotion {
@@ -827,16 +870,25 @@ struct ContentView: View {
                 viewModel: session.generate,
                 settings: session.settings,
                 social: session.social,
+                quotes: session.quotes,
+                auth: auth!,
+                achievementsManager: session.achievements,
                 onDataChanged: { session.refreshLists() },
                 onOpenTab: { tab in
                     setSelectedTab(tab, session: session)
                 },
                 quickAccessTabs: brandMenuTabs(for: session),
                 onResetAllLocalAccounts: {
-                    await resetAllLocalAccounts(using: auth, session: session)
+                    await resetAllLocalAccounts(using: auth!, session: session)
                 },
                 onRefreshSocialAvailability: {
                     await refreshSocialAvailabilityToast(session: session)
+                },
+                onSignOut: {
+                    signOutCurrentAccount(auth!)
+                },
+                onDeleteAccount: { password in
+                    await deleteCurrentAccount(auth!, password: password)
                 },
                 onReseedCloudKitSchema: {
                     await reseedCloudKitSchemaToast(session: session)
@@ -847,16 +899,25 @@ struct ContentView: View {
                 viewModel: session.generate,
                 settings: session.settings,
                 social: session.social,
+                quotes: session.quotes,
+                auth: auth!,
+                achievementsManager: session.achievements,
                 onDataChanged: { session.refreshLists() },
                 onOpenTab: { tab in
                     setSelectedTab(tab, session: session)
                 },
                 quickAccessTabs: brandMenuTabs(for: session),
                 onResetAllLocalAccounts: {
-                    await resetAllLocalAccounts(using: auth, session: session)
+                    await resetAllLocalAccounts(using: auth!, session: session)
                 },
                 onRefreshSocialAvailability: {
                     await refreshSocialAvailabilityToast(session: session)
+                },
+                onSignOut: {
+                    signOutCurrentAccount(auth!)
+                },
+                onDeleteAccount: { password in
+                    await deleteCurrentAccount(auth!, password: password)
                 }
             )
             #endif
@@ -917,21 +978,8 @@ struct ContentView: View {
                 }
             )
         case .settings:
-            if let auth, auth.isAuthenticated {
-                SettingsTabView(
-                    viewModel: session.settings,
-                    generateViewModel: session.generate,
-                    quotesViewModel: session.quotes,
-                    social: session.social,
-                    auth: auth,
-                    achievementsManager: session.achievements,
-                    onSignOut: {
-                        signOutCurrentAccount(auth)
-                    },
-                    onDeleteAccount: { password in
-                        await deleteCurrentAccount(auth, password: password)
-                    }
-                )
+            if let auth {
+                settingsSheetContent(auth: auth, session: session)
             } else {
                 SettingsUnavailableView {
                     selectedTab = .generate
@@ -1054,10 +1102,7 @@ struct ContentView: View {
     }
 
     private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
-        guard tab != .settings || (auth?.isAuthenticated == true && self.session != nil) else {
-            selectedTab = .generate
-            return
-        }
+        showingSettingsRoot = false
         loadedTabs.insert(tab)
         #if DEBUG
             NSLog("Selected tab -> %@", tab.rawValue)

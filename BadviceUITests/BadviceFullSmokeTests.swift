@@ -673,26 +673,7 @@ final class BadviceFullSmokeTests: XCTestCase {
             return true
         }
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        if settingsTab.waitForExistence(timeout: 2) {
-            settingsTab.tap()
-            return app.navigationBars.firstMatch.waitForExistence(timeout: 5)
-        }
-
-        // Fallback: access via Chaos Hub > Labs
-        let chaosTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
-        if chaosTab.waitForExistence(timeout: 5) {
-            chaosTab.tap()
-            let openLabs = app.buttons["chaos.quickActions.openLabs"]
-            if scrollToFind(app: app, element: openLabs, maxSwipes: 8),
-                openLabs.waitForExistence(timeout: 3)
-            {
-                openLabs.tap()
-                return app.navigationBars.firstMatch.waitForExistence(timeout: 5)
-            }
-        }
-
-        // Fallback: access via brand menu
+        // Prefer the known-good brand menu path on device.
         let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
         if generateTab.waitForExistence(timeout: 2) { generateTab.tap() }
         let brandMenu = app.buttons["generate.brandMenu"]
@@ -706,7 +687,35 @@ final class BadviceFullSmokeTests: XCTestCase {
                 settingsMenuButton.tap()
             }
         }
-        return app.navigationBars.firstMatch.waitForExistence(timeout: 5)
+
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline {
+            if app.buttons["settings.auth.signOut"].exists
+                || app.buttons["settings.auth.changePassword"].exists
+                || app.navigationBars.firstMatch.exists
+            {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+
+        // Last resort: try the root settings tab directly.
+        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        if settingsTab.waitForExistence(timeout: 2) {
+            settingsTab.tap()
+            let directDeadline = Date().addingTimeInterval(5)
+            while Date() < directDeadline {
+                if app.buttons["settings.auth.signOut"].exists
+                    || app.buttons["settings.auth.changePassword"].exists
+                    || app.navigationBars.firstMatch.exists
+                {
+                    return true
+                }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+            }
+        }
+
+        return false
     }
 
     private func completeProfileSignup(app: XCUIApplication, handle: String) {
