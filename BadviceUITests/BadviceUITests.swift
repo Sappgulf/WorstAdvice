@@ -252,9 +252,20 @@ final class BadviceUITests: XCTestCase {
         app.launchArguments += defaultLaunchArguments.filter { includeAuthSkip || $0 != "-ui-testing-auth-skip" }
         app.launchArguments += extraLaunchArguments
         app.launch()
-        app.activate()
+        XCTAssertTrue(waitForAppToEnterForeground(app: app, timeout: timeout))
         XCTAssertTrue(waitForAppToBecomeReady(app: app, timeout: timeout))
         return app
+    }
+
+    private func waitForAppToEnterForeground(app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if app.state == .runningForeground {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return app.state == .runningForeground
     }
 
     private func waitForAppToBecomeReady(app: XCUIApplication, timeout: TimeInterval) -> Bool {
@@ -408,7 +419,7 @@ final class BadviceUITests: XCTestCase {
             "-ui-testing-force-social-unavailable",
         ]
         app.launch()
-        app.activate()
+        XCTAssertTrue(waitForAppToEnterForeground(app: app, timeout: 30))
         XCTAssertTrue(waitForAuthGateToBecomeReady(app: app, timeout: 30))
 
         completeLocalSignup(
@@ -431,16 +442,13 @@ final class BadviceUITests: XCTestCase {
 
         let currentPasswordField = app.secureTextFields["settings.auth.currentPassword"]
         XCTAssertTrue(currentPasswordField.waitForExistence(timeout: 3))
-        currentPasswordField.tap()
-        currentPasswordField.typeText("Badvice123")
+        fillTextInput(currentPasswordField, text: "Badvice123")
 
         let newPasswordField = app.secureTextFields["settings.auth.newPassword"]
-        newPasswordField.tap()
-        newPasswordField.typeText("Chaos456")
+        fillTextInput(newPasswordField, text: "Chaos456")
 
         let confirmField = app.secureTextFields["settings.auth.confirmNewPassword"]
-        confirmField.tap()
-        confirmField.typeText("Chaos456")
+        fillTextInput(confirmField, text: "Chaos456")
 
         let savePasswordButton = app.buttons["settings.auth.passwordSave"]
         XCTAssertTrue(savePasswordButton.isEnabled)
@@ -460,8 +468,7 @@ final class BadviceUITests: XCTestCase {
 
         let deletePasswordField = app.secureTextFields["settings.auth.deletePassword"]
         XCTAssertTrue(deletePasswordField.waitForExistence(timeout: 3))
-        deletePasswordField.tap()
-        deletePasswordField.typeText("Chaos456")
+        fillTextInput(deletePasswordField, text: "Chaos456")
 
         let confirmDeleteButton = app.buttons["settings.auth.deleteConfirm"]
         XCTAssertTrue(confirmDeleteButton.isEnabled)
@@ -482,7 +489,7 @@ final class BadviceUITests: XCTestCase {
             ]
         }
         app.launch()
-        app.activate()
+        XCTAssertTrue(waitForAppToEnterForeground(app: app, timeout: 15))
         XCTAssertTrue(waitForAppToBecomeReady(app: app, timeout: 15))
         return app
     }
@@ -608,8 +615,7 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(intro.exists || handleField.exists)
 
         XCTAssertTrue(handleField.waitForExistence(timeout: 8))
-        handleField.tap()
-        app.typeText(handle)
+        fillTextInput(handleField, text: handle)
         XCTAssertTrue(
             (handleField.value as? String ?? "").contains(handle),
             "Expected Friends handle field to contain the requested handle after typing"
@@ -640,29 +646,19 @@ final class BadviceUITests: XCTestCase {
 
         let displayNameField = app.textFields["auth.displayName"]
         XCTAssertTrue(displayNameField.waitForExistence(timeout: 5))
-        displayNameField.tap()
-        if let existing = displayNameField.value as? String, !existing.isEmpty, existing != "Display name (optional)" {
-            displayNameField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
-        }
-        displayNameField.typeText(displayName)
+        fillTextInput(displayNameField, text: displayName)
 
         let emailField = app.textFields["auth.email"]
         XCTAssertTrue(emailField.waitForExistence(timeout: 3))
-        emailField.tap()
-        if let existing = emailField.value as? String, !existing.isEmpty, existing != "Email" {
-            emailField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
-        }
-        emailField.typeText(email)
+        fillTextInput(emailField, text: email)
 
         let passwordField = app.textFields["auth.password"]
         XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
-        passwordField.tap()
-        passwordField.typeText(password)
+        fillTextInput(passwordField, text: password)
 
         let confirmField = app.textFields["auth.confirmPassword"]
         XCTAssertTrue(confirmField.waitForExistence(timeout: 3))
-        confirmField.tap()
-        confirmField.typeText(password)
+        fillTextInput(confirmField, text: password)
 
         let primaryButton = app.buttons["auth.primary"]
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
@@ -683,17 +679,11 @@ final class BadviceUITests: XCTestCase {
 
         let emailField = app.textFields["auth.email"]
         XCTAssertTrue(emailField.waitForExistence(timeout: 5))
-        emailField.tap()
-        if let existing = emailField.value as? String, !existing.isEmpty, existing != "Email" {
-            let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count)
-            emailField.typeText(deleteString)
-        }
-        emailField.typeText(email)
+        fillTextInput(emailField, text: email)
 
         let passwordField = app.textFields["auth.password"]
         XCTAssertTrue(passwordField.waitForExistence(timeout: 3))
-        passwordField.tap()
-        passwordField.typeText(password)
+        fillTextInput(passwordField, text: password)
 
         let primaryButton = app.buttons["auth.primary"]
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
@@ -713,6 +703,10 @@ final class BadviceUITests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
         return element.isEnabled
+    }
+
+    private func fillTextInput(_ element: XCUIElement, text: String) {
+        element.setValue(text, forKey: "value")
     }
 
 }
