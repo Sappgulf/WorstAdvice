@@ -150,13 +150,15 @@ struct FriendsTabView: View {
             QuotesInlineBanner(
                 text: "Finish your Friends profile to search handles, accept requests, and unlock the feed.",
                 accent: accent,
-                secondaryText: secondaryText
+                secondaryText: secondaryText,
+                cardColor: cardColor
             )
         case .empty:
             QuotesInlineBanner(
                 text: "Friends is ready. Share your handle or send a request to get started.",
                 accent: accent,
-                secondaryText: secondaryText
+                secondaryText: secondaryText,
+                cardColor: cardColor
             )
         case .failed(let message):
             socialCard {
@@ -959,16 +961,31 @@ struct FriendsTabView: View {
 
     private func socialCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         content()
-            .padding(12)
+            .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .background {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(cardColor)
-            )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        .white.opacity(0.09),
+                                        .clear,
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .blendMode(.screen)
+                    )
+            }
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(accent.opacity(0.12), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(accent.opacity(0.1), lineWidth: 1)
             )
+            .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
     }
 
     private func relationshipState(for user: SocialUser) -> FriendSearchRelationshipState {

@@ -42,14 +42,16 @@ struct QuotesTabView: View {
                             QuotesInlineBanner(
                                 text: social.availability.message,
                                 accent: accent,
-                                secondaryText: secondaryText
+                                secondaryText: secondaryText,
+                                cardColor: cardColor
                             )
                             .padding(.horizontal, 16)
                         } else if social.currentUser == nil {
                             QuotesInlineBanner(
                                 text: "Finish your Friends profile to share quotes and start collabs from here.",
                                 accent: accent,
-                                secondaryText: secondaryText
+                                secondaryText: secondaryText,
+                                cardColor: cardColor
                             )
                             .padding(.horizontal, 16)
                         }
@@ -60,7 +62,8 @@ struct QuotesTabView: View {
                                 text: $viewModel.searchText,
                                 prompt: "Search quotes",
                                 accent: accent,
-                                secondaryText: secondaryText
+                                secondaryText: secondaryText,
+                                surfaceColor: cardColor
                             )
 
                             HStack(spacing: 10) {
@@ -676,6 +679,7 @@ struct QuotesInlineBanner: View {
     let text: String
     let accent: Color
     let secondaryText: Color
+    let cardColor: Color
 
     var body: some View {
         HStack(spacing: 8) {
@@ -688,15 +692,30 @@ struct QuotesInlineBanner: View {
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
+        .padding(12)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .white.opacity(0.08),
+                                    .clear,
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .blendMode(.screen)
+                )
+        }
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(accent.opacity(0.14), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 3)
     }
 }
 

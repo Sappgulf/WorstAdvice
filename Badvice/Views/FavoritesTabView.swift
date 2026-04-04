@@ -7,15 +7,21 @@ struct InlineSearchField: View {
     let prompt: String
     let accent: Color
     let secondaryText: Color
+    var surfaceColor: Color? = nil
 
     @FocusState private var isFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(isFocused ? accent : secondaryText.opacity(0.6))
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isFocused ? accent.opacity(0.18) : secondaryText.opacity(0.08))
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(isFocused ? accent : secondaryText.opacity(0.7))
+            }
+            .frame(width: 30, height: 30)
 
             TextField(prompt, text: $text)
                 .font(.system(.subheadline, design: .default))
@@ -42,13 +48,38 @@ struct InlineSearchField: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
         .frame(minHeight: Theme.minimumTapTarget)
-        .background(
-            .ultraThinMaterial,
-            in: RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-        )
+        .background {
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .fill(surfaceColor ?? Color.white.opacity(0.05))
+                .overlay {
+                    if surfaceColor != nil {
+                        RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        .white.opacity(0.1),
+                                        .clear,
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .blendMode(.screen)
+                    } else {
+                        RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    }
+                }
+                .shadow(
+                    color: .black.opacity(surfaceColor == nil ? 0.08 : 0.14),
+                    radius: 10,
+                    x: 0,
+                    y: 4
+                )
+        }
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-                .stroke(isFocused ? accent.opacity(0.4) : .white.opacity(0.06), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .stroke(isFocused ? accent.opacity(0.4) : .white.opacity(0.08), lineWidth: 1)
         )
         .animation(
             accessibilityReduceMotion ? nil : .easeInOut(duration: Theme.animFast), value: isFocused
@@ -68,14 +99,30 @@ private struct GlassCard<Content: View>: View {
 
     var body: some View {
         content()
+            .padding(12)
             .background(
-                .ultraThinMaterial,
-                in: RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        .white.opacity(0.08),
+                                        .clear,
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .blendMode(.screen)
+                    )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                    .stroke(.white.opacity(0.08), lineWidth: 1)
+                    .stroke(accent.opacity(0.08), lineWidth: 1)
             )
+            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -158,6 +205,7 @@ private struct FavoriteListRow: View {
     let accent: Color
     let primaryText: Color
     let secondaryText: Color
+    let cardColor: Color
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -208,11 +256,29 @@ private struct FavoriteListRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .white.opacity(0.09),
+                                    .clear,
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .blendMode(.screen)
+                )
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(.white.opacity(0.07), lineWidth: 1)
+                .stroke(.white.opacity(0.09), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(record.adviceLine), \(record.category.title), \(record.tone.title)")
     }
@@ -223,6 +289,7 @@ private struct FavoriteGridCell: View {
     let accent: Color
     let primaryText: Color
     let secondaryText: Color
+    let cardColor: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -258,11 +325,29 @@ private struct FavoriteGridCell: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .white.opacity(0.08),
+                                    .clear,
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .blendMode(.screen)
+                )
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(accent.opacity(0.1), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(record.adviceLine), \(record.tone.title)")
     }
@@ -312,7 +397,8 @@ struct FavoritesTabView: View {
                                 text: $viewModel.searchText,
                                 prompt: "Search favorites",
                                 accent: accent,
-                                secondaryText: secondaryText
+                                secondaryText: secondaryText,
+                                surfaceColor: cardColor
                             )
 
                             // Category filter menu
@@ -520,7 +606,13 @@ struct FavoritesTabView: View {
     }
 
     private func favoriteListRow(_ record: AdviceRecord) -> some View {
-        FavoriteListRow(record: record, accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+        FavoriteListRow(
+            record: record,
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor
+        )
     }
 
     private var gridView: some View {
@@ -573,7 +665,13 @@ struct FavoritesTabView: View {
     }
 
     private func favoriteGridCell(_ record: AdviceRecord) -> some View {
-        FavoriteGridCell(record: record, accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+        FavoriteGridCell(
+            record: record,
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor
+        )
     }
 
     private var statsChip: some View {
@@ -997,4 +1095,3 @@ private struct FavoriteDetailView: View {
 }
 
 // MARK: - Performance-Optimized Button Styles
-

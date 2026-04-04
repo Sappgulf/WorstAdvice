@@ -28,14 +28,14 @@ struct LazyView<Content: View>: View {
 
 
 enum Theme {
-    static let cardCornerRadius: CGFloat = 22
+    static let cardCornerRadius: CGFloat = 24
     static let cardPadding: CGFloat = 20
     static let horizontalPadding: CGFloat = 16
     static let sectionSpacing: CGFloat = 14
     static let cardInnerSpacing: CGFloat = 10
-    static let compactCornerRadius: CGFloat = 10
-    static let mediumCornerRadius: CGFloat = 12
-    static let largeCornerRadius: CGFloat = 16
+    static let compactCornerRadius: CGFloat = 12
+    static let mediumCornerRadius: CGFloat = 14
+    static let largeCornerRadius: CGFloat = 18
     static let minimumTapTarget: CGFloat = 44
     static let compactIconButtonSize: CGFloat = 44
     static let chipMinHeight: CGFloat = 26
@@ -312,18 +312,18 @@ enum Theme {
 
     static func cardColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "3D2C3E").opacity(0.65)
+        case .badvice: return Color(hex: "342336").opacity(0.84)
         case .minimal: return Color.white
-        case .ember: return Color(hex: "5E3030").opacity(0.5)
-        case .slate: return Color(hex: "3E5062").opacity(0.75)
-        case .evergreen: return Color(hex: "253D2E").opacity(0.7)
-        case .fallout: return Color(hex: "14220F").opacity(0.82)
-        case .neon: return Color(hex: "1A1A2E").opacity(0.85)
-        case .midnight: return Color(hex: "16213E").opacity(0.75)
-        case .sunset: return Color(hex: "3D2847").opacity(0.6)
-        case .cosmic: return Color(hex: "1A1A2E").opacity(0.7)
-        case .retro: return Color(hex: "2D1B4E").opacity(0.75)
-        case .cybernetic: return Color(hex: "0D121F").opacity(0.8)
+        case .ember: return Color(hex: "4F2728").opacity(0.84)
+        case .slate: return Color(hex: "314355").opacity(0.84)
+        case .evergreen: return Color(hex: "1E3426").opacity(0.86)
+        case .fallout: return Color(hex: "0D160A").opacity(0.9)
+        case .neon: return Color(hex: "101125").opacity(0.9)
+        case .midnight: return Color(hex: "101B34").opacity(0.88)
+        case .sunset: return Color(hex: "281732").opacity(0.84)
+        case .cosmic: return Color(hex: "131426").opacity(0.86)
+        case .retro: return Color(hex: "1E1731").opacity(0.86)
+        case .cybernetic: return Color(hex: "08111C").opacity(0.9)
         }
     }
     

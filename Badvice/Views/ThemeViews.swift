@@ -13,6 +13,7 @@ struct ThemeBackgroundView: View {
         ZStack {
             Theme.canvasColor(for: mode)
             Theme.backgroundGradient(for: mode)
+            ThemeAtmosphereView(mode: mode)
 
             if scenePhase == .active && shouldRenderEffects {
                 let allowsDynamic = budget != .reduced && !lowPowerModeEnabled
@@ -83,7 +84,7 @@ struct ThemeBackgroundView: View {
             }
 
             CinematicVignetteView()
-                .opacity(mode == .minimal ? 0.3 : 0.6)
+                .opacity(mode == .minimal ? 0.24 : 0.52)
                 .allowsHitTesting(false)
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -92,15 +93,72 @@ struct ThemeBackgroundView: View {
     }
 }
 
+private struct ThemeAtmosphereView: View {
+    let mode: ThemeMode
+
+    private var accent: Color { Theme.accent(for: mode) }
+    private var secondaryAccent: Color { Theme.secondaryAccent(for: mode) ?? accent }
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(mode == .minimal ? 0.06 : 0.1),
+                    .clear,
+                    Color.black.opacity(mode == .minimal ? 0.04 : 0.16),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .blendMode(.overlay)
+
+            RadialGradient(
+                colors: [accent.opacity(mode == .minimal ? 0.06 : 0.18), .clear],
+                center: .topLeading,
+                startRadius: 10,
+                endRadius: mode == .minimal ? 280 : 360
+            )
+            .blendMode(.screen)
+
+            RadialGradient(
+                colors: [secondaryAccent.opacity(mode == .minimal ? 0.04 : 0.12), .clear],
+                center: .topTrailing,
+                startRadius: 10,
+                endRadius: mode == .minimal ? 260 : 340
+            )
+            .blendMode(.screen)
+
+            RadialGradient(
+                colors: [.clear, Color.black.opacity(mode == .minimal ? 0.16 : 0.34)],
+                center: .bottom,
+                startRadius: 90,
+                endRadius: 760
+            )
+            .blendMode(.multiply)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+}
+
 struct CinematicVignetteView: View {
     var body: some View {
-        RadialGradient(
-            colors: [.clear, .black.opacity(0.4)],
-            center: .center,
-            startRadius: 100,
-            endRadius: 600
-        )
-        .blendMode(.multiply)
+        ZStack {
+            RadialGradient(
+                colors: [.clear, .black.opacity(0.34)],
+                center: .center,
+                startRadius: 120,
+                endRadius: 620
+            )
+            .blendMode(.multiply)
+
+            LinearGradient(
+                colors: [Color.black.opacity(0.12), .clear, Color.black.opacity(0.22)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .blendMode(.multiply)
+        }
         .ignoresSafeArea()
     }
 }

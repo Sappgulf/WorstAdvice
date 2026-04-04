@@ -57,7 +57,8 @@ struct HistoryTabView: View {
                                 text: $viewModel.searchText,
                                 prompt: "Search history",
                                 accent: accent,
-                                secondaryText: secondaryText
+                                secondaryText: secondaryText,
+                                surfaceColor: cardColor
                             )
 
                             HStack(spacing: 10) {
