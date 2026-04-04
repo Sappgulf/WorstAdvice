@@ -85,94 +85,90 @@ struct GenerateTabView: View {
     }
 
     private var headerView: some View {
-        let headerColor = Theme.headerColor(for: settings.theme)
-        let glow = Theme.glowColor(for: settings.theme)
         return Button {
             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             showingBrandMenu = true
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: headerIconName)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(accent)
-                    .shadow(color: accent.opacity(0.35), radius: 6, x: 0, y: 2)
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    accent.opacity(0.95),
+                                    accent.opacity(0.6),
+                                    cardColor.opacity(0.9),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
 
-                HStack(spacing: 0) {
-                    Text("Bad")
-                        .font(Theme.headlineFont(for: settings.theme).weight(.black))
-                    Text("vice")
-                        .font(Theme.headlineFont(for: settings.theme).weight(.semibold))
+                    Image(systemName: headerIconName)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(buttonText)
                 }
-                .foregroundStyle(headerColor)
+                .frame(width: 44, height: 44)
+                .shadow(color: accent.opacity(0.18), radius: 10, x: 0, y: 4)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Generate Desk")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Text("A tighter prompt studio for sharper, cleaner advice.")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
 
                 Spacer(minLength: 0)
 
                 if viewModel.challengeStreakDays > 0 {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 4) {
                         Image(systemName: "flame.fill")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.orange)
                         Text("\(viewModel.challengeStreakDays)")
                             .font(.system(size: 11, weight: .bold, design: .rounded))
                             .foregroundStyle(.orange)
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 5)
                     .background(
                         Capsule(style: .continuous)
-                            .fill(Color.orange.opacity(0.15))
+                            .fill(Color.orange.opacity(0.14))
                     )
                     .accessibilityLabel("\(viewModel.challengeStreakDays) day streak")
                 }
 
                 Image(systemName: "line.3.horizontal")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(secondaryText.opacity(0.85))
+                    .foregroundStyle(secondaryText.opacity(0.75))
+                    .padding(8)
+                    .background(
+                        Circle()
+                            .fill(secondaryText.opacity(0.08))
+                    )
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(headerBadgeGradient.opacity(0.12))
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(cardColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(headerBadgeGradient.opacity(0.35), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(accent.opacity(0.1), lineWidth: 1)
                 )
         )
-        .overlay {
-            if !isMotionReduced {
-                ZStack {
-                    if let glow {
-                        Circle()
-                            .fill(glow.opacity(0.25))
-                            .frame(width: 36, height: 36)
-                            .blur(radius: 10)
-                            .offset(x: 18, y: -10)
-                    }
-                    Circle()
-                        .stroke(headerBadgeGradient.opacity(headerOrbitOpacity), lineWidth: 2)
-                        .scaleEffect(1.0 + CGFloat(headerOrbitOpacity * 0.55))
-                        .blur(radius: 0.7)
-                }
-                .drawingGroup(opaque: false)
-            }
-        }
-        .shadow(color: Theme.headerShadowColor(for: settings.theme), radius: 8, x: 0, y: 4)
-        .scaleEffect(headerReactiveScale)
-        .rotationEffect(.degrees(isMotionReduced ? 0 : headerRotation))
-        .hueRotation(.degrees(isMotionReduced ? 0 : Double(viewModel.hapticTrigger % 4) * 12))
+        .shadow(
+            color: Theme.cardShadow(for: settings.theme).color.opacity(0.14),
+            radius: Theme.cardShadow(for: settings.theme).radius * 0.55,
+            x: 0,
+            y: Theme.cardShadow(for: settings.theme).y * 0.35
+        )
         .animation(
             isMotionReduced ? nil : .spring(response: 0.3, dampingFraction: 0.6),
             value: viewModel.hapticTrigger
-        )
-        .animation(
-            isMotionReduced ? nil : .spring(response: 0.24, dampingFraction: 0.56),
-            value: headerPulseScale
-        )
-        .animation(
-            isMotionReduced ? nil : .spring(response: 0.26, dampingFraction: 0.58),
-            value: headerRotation
         )
         .contentShape(Rectangle())
         .onLongPressGesture(minimumDuration: 0.9) {
@@ -443,39 +439,46 @@ struct GenerateTabView: View {
     }
 
     private var dailyQuoteBanner: some View {
-        HStack(spacing: 0) {
-            // Left accent bar
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(accent)
-                .frame(width: 3)
-                .padding(.vertical, 2)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Bad Quote of the Day")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(secondaryText)
-                Text("\u{201C}\(viewModel.dailyBadQuote.text)\u{201D}")
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(primaryText)
-                    .lineLimit(3)
-                Text("— \(viewModel.dailyBadQuote.source)")
-                    .font(.caption2)
-                    .foregroundStyle(secondaryText)
+        let quote = viewModel.dailyBadQuote
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Label("Daily line", systemImage: "quote.bubble")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(accent)
+                Spacer(minLength: 0)
+                Text("TODAY")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(accent.opacity(0.12))
+                    )
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
 
-            Spacer(minLength: 0)
+            Text("“\(quote.text)”")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(primaryText)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("— \(quote.source)")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(accent.opacity(0.12), lineWidth: 1)
+                )
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Bad quote of the day")
-        .accessibilityValue(viewModel.dailyBadQuote.text)
+        .accessibilityLabel("Bad quote of the day: \(quote.text)")
         .contentShape(Rectangle())
         .onTapGesture {
             triggerQuoteTapEasterEgg()
@@ -483,10 +486,10 @@ struct GenerateTabView: View {
     }
 
     private var generationHeroCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
@@ -506,10 +509,10 @@ struct GenerateTabView: View {
                 .shadow(color: accent.opacity(0.25), radius: 10, x: 0, y: 5)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Build a sharper prompt")
+                    Text("Tight prompt studio")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(primaryText)
-                    Text("Pick a tone, add context only when it helps, and let Badvice keep the result tight.")
+                    Text("Pick the lane, add context only when it helps, and let the engine keep the answer sharp.")
                         .font(.footnote)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -518,7 +521,7 @@ struct GenerateTabView: View {
 
             HStack(spacing: 8) {
                 generationHeroChip(
-                    title: "Category",
+                    title: "Lane",
                     value: viewModel.selectedCategory.title,
                     systemImage: "square.grid.2x2"
                 )
@@ -528,7 +531,7 @@ struct GenerateTabView: View {
                     systemImage: "message.fill"
                 )
                 generationHeroChip(
-                    title: "Today",
+                    title: "Runs",
                     value: "\(viewModel.todayGeneratedCount)",
                     systemImage: "sparkles"
                 )
@@ -563,7 +566,7 @@ struct GenerateTabView: View {
                 .font(.caption2.weight(.bold))
             VStack(alignment: .leading, spacing: 1) {
                 Text(title.uppercased())
-                    .font(.caption2.weight(.semibold))
+                    .font(.caption2.weight(.bold))
                 Text(value)
                     .font(.caption.weight(.semibold))
                     .lineLimit(1)
@@ -575,15 +578,33 @@ struct GenerateTabView: View {
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(accent.opacity(0.08))
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(accent.opacity(0.07))
         )
     }
 
     private var selectorRow: some View {
-        HStack(spacing: 10) {
-            categoryMenu
-            toneMenu
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Label("Prompt controls", systemImage: "slider.horizontal.3")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(secondaryText)
+                Spacer(minLength: 0)
+                Text("Keep it tight.")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(accent.opacity(0.12))
+                    )
+            }
+
+            HStack(spacing: 10) {
+                categoryMenu
+                toneMenu
+            }
         }
     }
 
@@ -621,13 +642,13 @@ struct GenerateTabView: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title.uppercased())
-                    .font(.caption.weight(.semibold))
+                    .font(.caption2.weight(.bold))
                     .foregroundStyle(secondaryText)
                 Text(value)
                     .font(Theme.bodyFont(for: settings.theme).weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
-                    .foregroundStyle(accent)
+                    .foregroundStyle(primaryText)
             }
             Spacer(minLength: 8)
             Image(systemName: "chevron.down")
@@ -638,39 +659,41 @@ struct GenerateTabView: View {
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, minHeight: 52)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(cardColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(accent.opacity(0.12), lineWidth: 1)
                 )
         )
     }
 
     private func statChip(title: String, value: String) -> some View {
-        VStack(spacing: 2) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.headline.monospacedDigit())
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(primaryText)
             Text(title)
-                .font(.caption2)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(secondaryText)
+                .tracking(0.5)
         }
-        .foregroundStyle(primaryText)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(cardColor)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(accent.opacity(0.08))
         )
     }
 
     private var scenarioComposer: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Situation (optional)")
-                    .font(.caption.weight(.semibold))
+            HStack(spacing: 8) {
+                Label("Situation", systemImage: "text.alignleft")
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(secondaryText)
-                Spacer()
+                Spacer(minLength: 0)
                 if !viewModel.scenarioText.isEmpty {
                     Button("Clear") {
                         viewModel.scenarioText = ""
@@ -685,6 +708,10 @@ struct GenerateTabView: View {
                 isMotionReduced ? nil : .easeInOut(duration: Theme.animFast),
                 value: viewModel.scenarioText.isEmpty)
 
+            Text("One real detail is enough. Keep it short and let the generator do the rest.")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+
             TextField("Example: awkward first date", text: $viewModel.scenarioText, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(Theme.bodyFont(for: settings.theme))
@@ -692,11 +719,20 @@ struct GenerateTabView: View {
                 .padding(.vertical, 12)
                 .frame(minHeight: 46)
                 .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(cardColor)
                 )
                 .foregroundStyle(primaryText)
         }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(accent.opacity(0.1), lineWidth: 1)
+                )
+        )
     }
 
     @ViewBuilder
@@ -737,27 +773,27 @@ struct GenerateTabView: View {
     @ViewBuilder
     private var adaptiveHintCard: some View {
         if viewModel.selectedCategory == .random || viewModel.selectedTone == .random {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles")
                         .font(.caption.weight(.bold))
-                    Text("Adaptive Mix")
+                    Text("Adaptive mix")
                         .font(.caption.weight(.bold))
                 }
                 .foregroundStyle(accent)
 
-                Text("We’ll use your recent likes to steer tone + category while staying fresh.")
+                Text("We’ll use your recent likes to steer tone and category while keeping the result fresh.")
                     .font(.footnote)
                     .foregroundStyle(primaryText)
             }
-            .padding(12)
+            .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(cardColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(accent.opacity(0.16), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(accent.opacity(0.12), lineWidth: 1)
                     )
             )
         }
@@ -780,8 +816,23 @@ struct GenerateTabView: View {
     private var friendRoastComposer: some View {
         if viewModel.selectedTone == .friendRoast {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Friend Name (for roast mode)")
-                    .font(.caption.weight(.semibold))
+                HStack(spacing: 8) {
+                    Label("Friend name", systemImage: "person.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(secondaryText)
+                    Spacer(minLength: 0)
+                    Text("Roast mode")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(accent.opacity(0.12))
+                        )
+                }
+                Text("Keep it short. This is just for the punchline.")
+                    .font(.caption)
                     .foregroundStyle(secondaryText)
 
                 TextField("Example: Alex", text: $viewModel.friendName)
@@ -791,11 +842,20 @@ struct GenerateTabView: View {
                     .padding(.vertical, 12)
                     .frame(minHeight: 46)
                     .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(cardColor)
                     )
                     .foregroundStyle(primaryText)
             }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(cardColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(accent.opacity(0.1), lineWidth: 1)
+                    )
+            )
         }
     }
 
@@ -1417,11 +1477,11 @@ struct GenerateTabView: View {
                 isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))
         ) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(viewModel.uniquenessStatusText)
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-                statStrip
-                challengeCard
+            Text(viewModel.uniquenessStatusText)
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+            statStrip
+            challengeCard
                 keywordSuggestionsRow
                 if viewModel.current != nil {
                     whyThisFailsCard
@@ -1432,7 +1492,7 @@ struct GenerateTabView: View {
             HStack {
                 Image(systemName: "slider.horizontal.3")
                     .font(.subheadline.weight(.semibold))
-                Text("Stats & Tools")
+                Text("Studio stats")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 Text("Streaks, keywords, and more")
@@ -1441,10 +1501,14 @@ struct GenerateTabView: View {
             }
             .foregroundStyle(primaryText)
         }
-        .padding(12)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(accent.opacity(0.1), lineWidth: 1)
+                )
         )
     }
 
@@ -1472,7 +1536,7 @@ struct GenerateTabView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 28) {
             Spacer()
             ZStack {
                 Circle()
@@ -1486,11 +1550,11 @@ struct GenerateTabView: View {
             }
 
             VStack(spacing: 12) {
-                Text("Your first bad idea is just a tap away.")
+                Text("Your first draft is one tap away.")
                     .font(Theme.cardFont(for: settings.theme))
                     .foregroundStyle(primaryText)
 
-                Text("Pick a category and let chaos reign.")
+                Text("Choose a lane, add one real detail, and keep the rest clean.")
                     .font(Theme.bodyFont(for: settings.theme))
                     .foregroundStyle(secondaryText)
                     .opacity(0.8)
