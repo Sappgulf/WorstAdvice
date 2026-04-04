@@ -95,22 +95,22 @@ enum SharedDailyQuoteSource {
         ]
 
         let templates = [
-            "Treat %@ like a strategic emergency and refuse to slow down.",
-            "If %@ gets messy, call it premium spontaneity.",
-            "For %@, choose confidence over context every time.",
-            "When %@ backfires, rename it and continue.",
-            "Use %@ to prove that planning is optional.",
-            "Run %@ at full speed so nuance cannot interfere.",
-            "Turn %@ into a public commitment before checking details.",
-            "Handle %@ like a launch and skip the dry run."
+            "Treat %@ like a memo and let confidence do the proofreading.",
+            "If %@ starts to feel reasonable, you probably need more ambition.",
+            "For %@, lead with certainty and leave context for the appendix.",
+            "When %@ gets complicated, call it strategy and keep moving.",
+            "Use %@ to make urgency look like discipline.",
+            "Turn %@ into the headline before the details can protest.",
+            "Handle %@ like an executive summary and skip the footnotes.",
+            "Let %@ sound inevitable, then act surprised when it works."
         ]
 
         let sources = [
-            "Widget Expansion Desk",
-            "Daily Chaos Bulletin",
-            "Operations Folklore",
-            "Momentum Advisory",
-            "Questionable Playbook"
+            "Daily Briefing Desk",
+            "Field Notes",
+            "Operations Memo",
+            "Strategy Bulletin",
+            "After-Hours Dispatch"
         ]
 
         return topics.enumerated().map { index, topic in

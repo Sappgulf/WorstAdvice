@@ -163,11 +163,7 @@ final class AppleOnDeviceAdviceBridge {
                 guard !quoteText.isEmpty else {
                     throw AppleOnDeviceAdviceError.invalidResponse
                 }
-                let source =
-                    parsed.source.flatMap { candidate -> String? in
-                        let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-                        return trimmed.isEmpty ? nil : String(trimmed.prefix(44))
-                    } ?? "Apple On-Device Quote Lab"
+                let source = Self.compactQuoteSource(label: parsed.source, style: parsed.style)
                 let moderated = moderation.apply(to: quoteText, rationale: nil)
                 return BadQuote(
                     id: "apple-quote-\(category.rawValue)-\(seed)",
@@ -269,9 +265,10 @@ final class AppleOnDeviceAdviceBridge {
         Tone quote template: \(toneQuoteGenerationTemplate(tone))
 
         Requirements:
-        - One short quote line (8-160 chars)
+        - One short quote line (8-160 chars) with a clean, editorial rhythm
         - Clearly satirical / obviously bad
         - Avoid harmful, illegal, sexual, or self-harm content
+        - Avoid generic self-help filler, clichés, and "work smarter" phrasing
         - Sound like a fake "expert", "memo", "oracle", or "club" source
         """
     }
@@ -433,6 +430,7 @@ final class AppleOnDeviceAdviceBridge {
         Return exactly two lines:
         QUOTE: <short quote text>
         SOURCE: <fake source name>
+        STYLE: <short style tag>
         """
     }
 
@@ -573,7 +571,9 @@ final class AppleOnDeviceAdviceBridge {
         }
     }
 
-    private static func parseModelQuoteResponse(_ text: String) -> (quote: String, source: String?)
+    private static func parseModelQuoteResponse(_ text: String) -> (
+        quote: String, source: String?, style: String?
+    )
     {
         let lines =
             text
@@ -586,6 +586,7 @@ final class AppleOnDeviceAdviceBridge {
             ?? lines.first
             ?? ""
         let sourceLine = lines.first(where: { $0.uppercased().hasPrefix("SOURCE:") })
+        let styleLine = lines.first(where: { $0.uppercased().hasPrefix("STYLE:") })
 
         let quote = quoteLine.replacingOccurrences(
             of: "QUOTE:", with: "", options: [.caseInsensitive]
@@ -594,8 +595,24 @@ final class AppleOnDeviceAdviceBridge {
         let source = sourceLine?
             .replacingOccurrences(of: "SOURCE:", with: "", options: [.caseInsensitive])
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        let style = styleLine?
+            .replacingOccurrences(of: "STYLE:", with: "", options: [.caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        return (quote, source)
+        return (quote, source, style)
+    }
+
+    private static func compactQuoteSource(label: String?, style: String?) -> String {
+        let fallback = "Apple On-Device Quote Lab"
+        let trimmedLabel = label?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedStyle = style?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let base = (trimmedLabel?.isEmpty == false ? trimmedLabel : fallback) ?? fallback
+        let merged =
+            trimmedStyle?.isEmpty == false
+            ? "\(base) • \(trimmedStyle!)"
+            : base
+        return String(merged.prefix(44))
     }
 
     private static func categoryContext(_ category: AdviceCategory) -> String {
@@ -766,4 +783,3 @@ extension AppleOnDeviceAdviceBridge {
         #endif
     }
 }
-

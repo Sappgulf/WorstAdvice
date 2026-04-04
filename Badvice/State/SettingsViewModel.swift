@@ -543,16 +543,18 @@ struct BadQuoteService: Sendable {
 
         // Templates use {stem} and {keyword} placeholders — safe against % characters in quote text
         let templates = [
-            "{stem}, so make {keyword} your whole personality.",
-            "If {stem} gets messy, call {keyword} a strategic pivot.",
-            "{stem} means {keyword} is obviously the premium move.",
-            "When {stem} backfires, blame {keyword} and double down.",
-            "Nobody told you {stem} was risky, so treat {keyword} as the obvious path.",
-            "The fastest way through {stem} is to treat {keyword} as non-negotiable.",
-            "If {stem} is unclear, lead with {keyword} and sort details in the follow-up.",
-            "Anyone who questions {stem} clearly hasn't considered {keyword} as a framework.",
-            "{stem} only works if you pair it with {keyword} as your operating principle.",
-            "Escalate {stem} until {keyword} becomes the only logical conclusion.",
+            "Executive summary: {stem}. Let {keyword} do the heavy lifting.",
+            "Field note: when {stem} gets uncomfortable, people start calling {keyword} strategy.",
+            "The cleanest way to handle {stem} is to make {keyword} sound inevitable.",
+            "If {stem} starts asking for nuance, answer with {keyword} and keep moving.",
+            "{stem} is just the setup; {keyword} is the overconfident conclusion.",
+            "Treat {stem} like a memo and {keyword} like the part everyone pretends is obvious.",
+            "When {stem} feels too practical, raise the volume on {keyword} and call it clarity.",
+            "A good way to ruin {stem} is to hand {keyword} the final word.",
+            "If {stem} needs a fix, package {keyword} as the mature decision.",
+            "{stem} looks sharper when you swap context for {keyword}.",
+            "What {stem} really needs is less caution and more {keyword}.",
+            "For {stem}, {keyword} is the kind of answer that sounds organized from a distance.",
         ]
 
         var built: [BadQuote] = []
@@ -566,7 +568,7 @@ struct BadQuoteService: Sendable {
             let keyword = rules.keywords[(index * 5 + quote.text.count) % rules.keywords.count]
             let stemWords = quote.text
                 .split(separator: " ")
-                .prefix(6)
+                .prefix(8)
                 .map(String.init)
                 .joined(separator: " ")
             guard stemWords.count >= 8 else { continue }
@@ -576,20 +578,21 @@ struct BadQuoteService: Sendable {
                 template
                 .replacingOccurrences(of: "{stem}", with: stemWords)
                 .replacingOccurrences(of: "{keyword}", with: keyword)
-            let normalized = remix.normalizedForFiltering
+            let polished = polishSynthesizedQuote(remix)
+            let normalized = polished.normalizedForFiltering
             guard seen.insert(normalized).inserted else { continue }
-            guard remix.count <= 160 else { continue }
-            guard moderation.isSafe(text: "\(quote.source) \(remix)") else { continue }
+            guard polished.count <= 160 else { continue }
+            guard moderation.isSafe(text: "\(quote.source) \(polished)") else { continue }
 
             let id = Self.synthesizedQuoteID(
                 category: quote.category,
                 sourceID: quote.id,
-                text: remix
+                text: polished
             )
             built.append(
                 BadQuote(
                     id: id,
-                    text: remix,
+                    text: polished,
                     source: "ML Remix Lab",
                     category: quote.category
                 )
@@ -609,6 +612,22 @@ struct BadQuoteService: Sendable {
             }
         }
         return merged
+    }
+
+    private func polishSynthesizedQuote(_ text: String) -> String {
+        var result = text
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let first = result.first {
+            result = String(first).uppercased() + result.dropFirst()
+        }
+
+        result = result.replacingOccurrences(of: " ,", with: ",")
+        result = result.replacingOccurrences(of: " .", with: ".")
+        result = result.replacingOccurrences(of: " ;", with: ";")
+        result = result.replacingOccurrences(of: " :", with: ":")
+        return result
     }
 
     private static let cachedCorpusPayload: AdviceCorpusPayload? = {
@@ -1631,4 +1650,3 @@ struct BadQuoteService: Sendable {
         return merged
     }
 }
-

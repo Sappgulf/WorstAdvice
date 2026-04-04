@@ -222,14 +222,20 @@ final class QuotesViewModel {
     func quoteSpotlightInsight(for quote: BadQuote) -> String {
         let rules = store.rules(for: quote.category, contentPack: .classic)
         guard !rules.badPrinciples.isEmpty, !rules.keywords.isEmpty else {
-            return "It doubles down on overconfidence and dares you to frame \(quote.category.title.lowercased()) as the obvious move."
+            return "It turns \(quote.category.title.lowercased()) into a cleaner-sounding mistake than it really is."
         }
         let seed = stableSeed(for: "\(quote.id)|\(quote.category.rawValue)|spotlight")
         let principle = rules.badPrinciples[seed.positiveModulo(rules.badPrinciples.count)]
         let keywordSeed = seed &+ 17
         let keyword = rules.keywords[keywordSeed.positiveModulo(rules.keywords.count)]
-        return
-            "It doubles down on \(principle.lowercased()) and dares you to frame \(keyword) as the obvious move."
+        let sourceTone = quote.source.normalizedForFiltering
+        if sourceTone.contains("memo") || sourceTone.contains("brief") {
+            return "It reads like a memo that mistook \(keyword) for the responsible conclusion."
+        }
+        if sourceTone.contains("oracle") || sourceTone.contains("wisdom") {
+            return "It gives \(principle.lowercased()) the confidence of a rule and lets \(keyword) sound inevitable."
+        }
+        return "It frames \(principle.lowercased()) as good judgment and makes \(keyword) feel like the polished answer."
     }
 
     func loadIfNeeded() {
@@ -595,4 +601,3 @@ final class QuotesViewModel {
         return !forbidden.contains { normalized.contains($0.normalizedForFiltering) }
     }
 }
-

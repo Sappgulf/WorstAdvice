@@ -28,8 +28,10 @@ struct QuotesTabView: View {
                 bg.ignoresSafeArea()
 
                 ScrollView {
-                    LazyVStack(spacing: 12) {
-                        // Daily hero
+                    LazyVStack(spacing: 14) {
+                        quoteHeaderCard
+                            .padding(.horizontal, 16)
+
                         dailyQuoteHero
                             .padding(.horizontal, 16)
 
@@ -53,7 +55,7 @@ struct QuotesTabView: View {
                         }
 
                         // Sort + search row
-                        VStack(spacing: 8) {
+                        VStack(spacing: 10) {
                             InlineSearchField(
                                 text: $viewModel.searchText,
                                 prompt: "Search quotes",
@@ -239,15 +241,88 @@ struct QuotesTabView: View {
         .toast(item: $activeToast, accentColor: accent)
     }
 
+    private var quoteHeaderCard: some View {
+        let filteredCount = viewModel.filteredQuotes.count
+        let libraryCount = viewModel.allQuotes.count
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Quote Desk")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Text("A cleaner read on the daily line, the strongest signals, and the best material in the bank.")
+                        .font(.footnote)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "quote.bubble.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .padding(10)
+                    .background(
+                        Circle()
+                            .fill(accent.opacity(0.12))
+                    )
+            }
+
+            HStack(spacing: 10) {
+                quoteMetricPill(title: "Visible", value: "\(filteredCount)")
+                quoteMetricPill(title: "Library", value: "\(libraryCount)")
+                quoteMetricPill(title: "Votes", value: "\(viewModel.likedCount + viewModel.dislikedCount)")
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(accent.opacity(0.12), lineWidth: 1)
+                )
+        )
+    }
+
+    private func quoteMetricPill(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.subheadline.weight(.bold).monospacedDigit())
+                .foregroundStyle(primaryText)
+            Text(title.uppercased())
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(secondaryText)
+                .tracking(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(accent.opacity(0.08))
+        )
+    }
+
     private func quoteRow(_ quote: BadQuote) -> some View {
         let spotlight = viewModel.quoteSpotlightInsight(for: quote)
 
         return VStack(alignment: .leading, spacing: 12) {
-            Text("\u{201C}\(quote.text)\u{201D}")
-                .font(.body.weight(.medium))
-                .foregroundStyle(primaryText)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .top, spacing: 10) {
+                Text("\u{201C}")
+                    .font(.system(size: 30, weight: .black, design: .serif))
+                    .foregroundStyle(accent.opacity(0.3))
+                    .offset(y: -2)
+
+                Text(quote.text)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(primaryText)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 0)
+            }
 
             HStack(spacing: 6) {
                 Label(quote.category.title, systemImage: quote.category.icon)
@@ -279,10 +354,13 @@ struct QuotesTabView: View {
             }
         }
         .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(cardColor)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(.white.opacity(0.07), lineWidth: 1)
+                .stroke(accent.opacity(0.09), lineWidth: 1)
         )
         .contextMenu {
             Button { copyQuote(quote, isDaily: false) } label: {
@@ -304,33 +382,50 @@ struct QuotesTabView: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [accent, accent.opacity(0.72)],
+                        colors: [
+                            accent.opacity(0.18),
+                            cardColor,
+                            cardColor.opacity(0.95)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(accent.opacity(0.14), lineWidth: 1)
+                )
 
             Text("\u{201C}")
-                .font(.system(size: 96, weight: .heavy, design: .serif))
-                .foregroundStyle(.white.opacity(0.16))
-                .offset(x: 16, y: -8)
+                .font(.system(size: 92, weight: .heavy, design: .serif))
+                .foregroundStyle(accent.opacity(0.18))
+                .offset(x: 14, y: -10)
                 .allowsHitTesting(false)
 
             VStack(alignment: .leading, spacing: 0) {
-                Text("Bad Quote of the Day")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .padding(.bottom, 10)
+                HStack {
+                    Text("Daily pick")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(accent.opacity(0.12))
+                        )
+                    Spacer()
+                }
+                .padding(.bottom, 12)
 
-                Text("\u{201C}\(dailyQuote.text)\u{201D}")
-                    .font(.system(.title3, design: .rounded, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineSpacing(4)
+                Text(dailyQuote.text)
+                    .font(.system(.title3, design: .serif, weight: .semibold))
+                    .foregroundStyle(primaryText)
+                    .lineSpacing(5)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("— \(dailyQuote.source)")
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(secondaryText)
                     .padding(.top, 10)
 
                 HStack(spacing: 10) {
@@ -344,7 +439,7 @@ struct QuotesTabView: View {
                                 .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                         }
                         .buttonStyle(.bordered)
-                        .tint(.white)
+                        .tint(accent)
                         .accessibilityLabel("Like quote")
 
                         Button {
@@ -355,7 +450,7 @@ struct QuotesTabView: View {
                                 .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                         }
                         .buttonStyle(.bordered)
-                        .tint(.white)
+                        .tint(accent)
                         .accessibilityLabel("Dislike quote")
                     }
                     Spacer()
@@ -367,7 +462,7 @@ struct QuotesTabView: View {
                             .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                     }
                     .buttonStyle(.bordered)
-                    .tint(.white)
+                    .tint(accent)
                     .accessibilityLabel("Open quote spotlight")
 
                     Button { copyQuote(dailyQuote, isDaily: true) } label: {
@@ -375,7 +470,7 @@ struct QuotesTabView: View {
                             .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                     }
                     .buttonStyle(.bordered)
-                    .tint(.white)
+                    .tint(accent)
                     .accessibilityLabel("Copy quote")
 
                     Button { shareQuote(dailyQuote, isDaily: true) } label: {
@@ -383,7 +478,7 @@ struct QuotesTabView: View {
                             .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.white.opacity(0.22))
+                    .tint(accent)
                     .accessibilityLabel("Share quote")
                 }
                 .padding(.top, 16)
@@ -393,10 +488,10 @@ struct QuotesTabView: View {
         .overlay(alignment: .topTrailing) {
             Text("TODAY")
                 .font(.caption2.weight(.bold))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(accent)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(.white.opacity(0.18), in: Capsule(style: .continuous))
+                .background(accent.opacity(0.12), in: Capsule(style: .continuous))
                 .padding(12)
         }
         .accessibilityElement(children: .combine)
@@ -446,7 +541,11 @@ struct QuotesTabView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(.ultraThinMaterial)
+                        .fill(cardColor)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(accent.opacity(0.09), lineWidth: 1)
+                        )
                 )
             } else {
                 Text("Tap Show for a quick breakdown of today’s quote.")
