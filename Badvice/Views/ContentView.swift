@@ -870,9 +870,6 @@ struct ContentView: View {
                 viewModel: session.generate,
                 settings: session.settings,
                 social: session.social,
-                quotes: session.quotes,
-                auth: auth!,
-                achievementsManager: session.achievements,
                 onDataChanged: { session.refreshLists() },
                 onOpenTab: { tab in
                     setSelectedTab(tab, session: session)
@@ -883,12 +880,6 @@ struct ContentView: View {
                 },
                 onRefreshSocialAvailability: {
                     await refreshSocialAvailabilityToast(session: session)
-                },
-                onSignOut: {
-                    signOutCurrentAccount(auth!)
-                },
-                onDeleteAccount: { password in
-                    await deleteCurrentAccount(auth!, password: password)
                 },
                 onReseedCloudKitSchema: {
                     await reseedCloudKitSchemaToast(session: session)
@@ -899,9 +890,6 @@ struct ContentView: View {
                 viewModel: session.generate,
                 settings: session.settings,
                 social: session.social,
-                quotes: session.quotes,
-                auth: auth!,
-                achievementsManager: session.achievements,
                 onDataChanged: { session.refreshLists() },
                 onOpenTab: { tab in
                     setSelectedTab(tab, session: session)
@@ -912,12 +900,6 @@ struct ContentView: View {
                 },
                 onRefreshSocialAvailability: {
                     await refreshSocialAvailabilityToast(session: session)
-                },
-                onSignOut: {
-                    signOutCurrentAccount(auth!)
-                },
-                onDeleteAccount: { password in
-                    await deleteCurrentAccount(auth!, password: password)
                 }
             )
             #endif

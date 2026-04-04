@@ -32,24 +32,15 @@
 		A10000010000000000000004 /* IntensityIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* IntensityIndicator.swift */; };
 		A10000010000000000000005 /* AdviceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005 /* AdviceModels.swift */; };
 		A10000010000000000000006 /* AdviceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* AdviceStore.swift */; };
-		A100000C000000000000AS01 /* AdviceStoreDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000C000000000000AS01 /* AdviceStoreDefaults.swift */; };
 		A10000010000000000000007 /* AdviceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* AdviceEngine.swift */; };
 		A10000010000000000000008 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* AppState.swift */; };
 		A10000010000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* Assets.xcassets */; };
 		A10000010000000000000010 /* AdviceCorpus.json in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* AdviceCorpus.json */; };
 		A10000010000000000000011 /* AdviceEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* AdviceEngineTests.swift */; };
 		A10000010000000000000020 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* Theme.swift */; };
-		A10000010000000000000040 /* ThemeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000040 /* ThemeViews.swift */; };
 		A10000010000000000000021 /* HapticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000021 /* HapticsManager.swift */; };
 		A10000010000000000000022 /* FloatingParticlesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000022 /* FloatingParticlesView.swift */; };
 		A10000010000000000000023 /* InterstitialMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000023 /* InterstitialMessages.swift */; };
-		A100000A0000000000AA10 /* SocialHealthDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */; };
-		A100000A0000000000AA11 /* SuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA11 /* SuggestionLabView.swift */; };
-		A100000A0000000000AA12 /* QuoteSuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */; };
-		A100000A0000000000AA13 /* CommunityPulseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA13 /* CommunityPulseView.swift */; };
-		A100000A0000000000AA14 /* UpgradeStoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA14 /* UpgradeStoreView.swift */; };
-		A100000A0000000000AA15 /* InviteFriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA15 /* InviteFriendsView.swift */; };
-		A100000A0000000000AA16 /* OfflinePacksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA16 /* OfflinePacksView.swift */; };
 		A10000010000000000000024 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000024 /* OnboardingView.swift */; };
 		A10000010000000000000025 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000025 /* StatsView.swift */; };
 		A10000010000000000000026 /* OnboardingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000026 /* OnboardingFlow.swift */; };
@@ -63,7 +54,6 @@
 		A10000010000000000000036 /* PersistenceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000036 /* PersistenceModels.swift */; };
 		A10000010000000000000037 /* AdviceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000037 /* AdviceRepository.swift */; };
 		A10000010000000000000038 /* AppleOnDeviceBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000038 /* AppleOnDeviceBridge.swift */; };
-		A100000B000000000000LM01 /* LocalModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000B000000000000LM01 /* LocalModelStore.swift */; };
 		A10000010000000000000039 /* FavoritesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000039 /* FavoritesViewModel.swift */; };
 		A1000001000000000000003A /* GenerateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003A /* GenerateViewModel.swift */; };
 		A1000001000000000000003B /* HistoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003B /* HistoryViewModel.swift */; };
@@ -71,6 +61,7 @@
 		A1000001000000000000003D /* Badvice/State/Social/SocialModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003D /* Badvice/State/Social/SocialModels.swift */; };
 		A1000001000000000000003E /* Badvice/State/Social/SocialViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003E /* Badvice/State/Social/SocialViewModel.swift */; };
 		A1000001000000000000003F /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000003F /* SettingsViewModel.swift */; };
+		A10000010000000000000040 /* ThemeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000040 /* ThemeViews.swift */; };
 		A10000010000000000000099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000099 /* PrivacyInfo.xcprivacy */; };
 		A1000002000000000000AA01 /* GenerateTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA01 /* GenerateTabView.swift */; };
 		A1000002000000000000AA02 /* ToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002000000000000AA02 /* ToastView.swift */; };
@@ -94,6 +85,15 @@
 		A1000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift */; };
 		A1000009000000000000AM01 /* GamificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM01 /* GamificationModels.swift */; };
 		A1000009000000000000AM02 /* AppModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM02 /* AppModels.swift */; };
+		A100000A0000000000AA10 /* SocialHealthDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */; };
+		A100000A0000000000AA11 /* SuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA11 /* SuggestionLabView.swift */; };
+		A100000A0000000000AA12 /* QuoteSuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */; };
+		A100000A0000000000AA13 /* CommunityPulseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA13 /* CommunityPulseView.swift */; };
+		A100000A0000000000AA14 /* UpgradeStoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA14 /* UpgradeStoreView.swift */; };
+		A100000A0000000000AA15 /* InviteFriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA15 /* InviteFriendsView.swift */; };
+		A100000A0000000000AA16 /* OfflinePacksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA16 /* OfflinePacksView.swift */; };
+		A100000B000000000000LM01 /* LocalModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000B000000000000LM01 /* LocalModelStore.swift */; };
+		A100000C000000000000AS01 /* AdviceStoreDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000C000000000000AS01 /* AdviceStoreDefaults.swift */; };
 		A20000010000000000000028 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000028 /* SplashView.swift */; };
 		A20000010000000000000029 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000029 /* NotificationManager.swift */; };
 		A970A1DC8B4EEEDDF0DEC44A /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D0F9A0F33FC44CE7FFD0B9 /* AchievementsView.swift */; };
@@ -174,7 +174,6 @@
 		A20000010000000000000004 /* IntensityIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntensityIndicator.swift; sourceTree = "<group>"; };
 		A20000010000000000000005 /* AdviceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceModels.swift; sourceTree = "<group>"; };
 		A20000010000000000000006 /* AdviceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceStore.swift; sourceTree = "<group>"; };
-		A200000C000000000000AS01 /* AdviceStoreDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceStoreDefaults.swift; sourceTree = "<group>"; };
 		A20000010000000000000007 /* AdviceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceEngine.swift; sourceTree = "<group>"; };
 		A20000010000000000000008 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A20000010000000000000009 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -183,17 +182,9 @@
 		A20000010000000000000012 /* Badvice.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Badvice.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000013 /* BadviceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000020 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
-		A20000010000000000000040 /* ThemeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeViews.swift; sourceTree = "<group>"; };
 		A20000010000000000000021 /* HapticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsManager.swift; sourceTree = "<group>"; };
 		A20000010000000000000022 /* FloatingParticlesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingParticlesView.swift; sourceTree = "<group>"; };
 		A20000010000000000000023 /* InterstitialMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterstitialMessages.swift; sourceTree = "<group>"; };
-		A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialHealthDiagnosticsView.swift; sourceTree = "<group>"; };
-		A200000A0000000000AA11 /* SuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionLabView.swift; sourceTree = "<group>"; };
-		A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteSuggestionLabView.swift; sourceTree = "<group>"; };
-		A200000A0000000000AA13 /* CommunityPulseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityPulseView.swift; sourceTree = "<group>"; };
-		A200000A0000000000AA14 /* UpgradeStoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradeStoreView.swift; sourceTree = "<group>"; };
-		A200000A0000000000AA15 /* InviteFriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFriendsView.swift; sourceTree = "<group>"; };
-		A200000A0000000000AA16 /* OfflinePacksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflinePacksView.swift; sourceTree = "<group>"; };
 		A20000010000000000000024 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A20000010000000000000025 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		A20000010000000000000026 /* OnboardingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlow.swift; sourceTree = "<group>"; };
@@ -206,7 +197,6 @@
 		A20000010000000000000036 /* PersistenceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceModels.swift; sourceTree = "<group>"; };
 		A20000010000000000000037 /* AdviceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceRepository.swift; sourceTree = "<group>"; };
 		A20000010000000000000038 /* AppleOnDeviceBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleOnDeviceBridge.swift; sourceTree = "<group>"; };
-		A200000B000000000000LM01 /* LocalModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelStore.swift; sourceTree = "<group>"; };
 		A20000010000000000000039 /* FavoritesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesViewModel.swift; sourceTree = "<group>"; };
 		A2000001000000000000003A /* GenerateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateViewModel.swift; sourceTree = "<group>"; };
 		A2000001000000000000003B /* HistoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryViewModel.swift; sourceTree = "<group>"; };
@@ -214,6 +204,7 @@
 		A2000001000000000000003D /* Badvice/State/Social/SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/State/Social/SocialModels.swift; sourceTree = SOURCE_ROOT; };
 		A2000001000000000000003E /* Badvice/State/Social/SocialViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/State/Social/SocialViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A2000001000000000000003F /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
+		A20000010000000000000040 /* ThemeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeViews.swift; sourceTree = "<group>"; };
 		A20000010000000000000099 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A2000002000000000000AA01 /* GenerateTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateTabView.swift; sourceTree = "<group>"; };
 		A2000002000000000000AA02 /* ToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastView.swift; sourceTree = "<group>"; };
@@ -237,6 +228,15 @@
 		A2000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/State/Social/CloudKitStore.swift; sourceTree = SOURCE_ROOT; };
 		A2000009000000000000AM01 /* GamificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationModels.swift; sourceTree = "<group>"; };
 		A2000009000000000000AM02 /* AppModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModels.swift; sourceTree = "<group>"; };
+		A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialHealthDiagnosticsView.swift; sourceTree = "<group>"; };
+		A200000A0000000000AA11 /* SuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionLabView.swift; sourceTree = "<group>"; };
+		A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteSuggestionLabView.swift; sourceTree = "<group>"; };
+		A200000A0000000000AA13 /* CommunityPulseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityPulseView.swift; sourceTree = "<group>"; };
+		A200000A0000000000AA14 /* UpgradeStoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradeStoreView.swift; sourceTree = "<group>"; };
+		A200000A0000000000AA15 /* InviteFriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFriendsView.swift; sourceTree = "<group>"; };
+		A200000A0000000000AA16 /* OfflinePacksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflinePacksView.swift; sourceTree = "<group>"; };
+		A200000B000000000000LM01 /* LocalModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelStore.swift; sourceTree = "<group>"; };
+		A200000C000000000000AS01 /* AdviceStoreDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceStoreDefaults.swift; sourceTree = "<group>"; };
 		AA4E285DDB5972C81A405FFA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = "<group>"; };
 		BB19BBE9BB80D1CFBE9CB824 /* ShakeDetector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShakeDetector.swift; path = Badvice/Shared/ShakeDetector.swift; sourceTree = "<group>"; };
 		BL0000020000000000000001 /* BadviceLockScreenWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BadviceLockScreenWidget.swift; path = WorstAdviceWidget/BadviceLockScreenWidget.swift; sourceTree = "<group>"; };
@@ -838,7 +838,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.5;
+				MARKETING_VERSION = 5.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -862,7 +862,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.5;
+				MARKETING_VERSION = 5.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1016,7 +1016,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.5;
+				MARKETING_VERSION = 5.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
@@ -1048,7 +1048,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.5;
+				MARKETING_VERSION = 5.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";

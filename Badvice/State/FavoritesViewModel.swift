@@ -26,6 +26,7 @@ final class FavoritesViewModel {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
         self.debouncedSearchText = searchText
+        reload()
     }
 
     func reload() {
@@ -119,4 +120,3 @@ final class FavoritesViewModel {
         }
     }
 }
-
