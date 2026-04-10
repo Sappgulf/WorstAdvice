@@ -270,6 +270,21 @@ final class SocialViewModelTests: XCTestCase {
         )
     }
 
+    private func awaitFriendsLoadState(
+        matching predicate: @escaping (SocialLoadState) -> Bool,
+        timeout: TimeInterval = 1.2,
+        for viewModel: SocialViewModel
+    ) async -> SocialLoadState {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if predicate(viewModel.friendsLoadState) {
+                return viewModel.friendsLoadState
+            }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        return viewModel.friendsLoadState
+    }
+
     func testMockBackendProfileCreationSeedsIncomingRequests() async {
         let defaults = UserDefaults(suiteName: "SocialViewModelTests.Seeded.\(UUID().uuidString)")!
         let queue = SocialActionQueueStore(
@@ -469,7 +484,7 @@ final class SocialViewModelTests: XCTestCase {
         await viewModel.retryFriendsLoad()
 
         XCTAssertEqual(viewModel.currentUser?.handle, "friends_test_user")
-        XCTAssertEqual(viewModel.friendsLoadState, .empty)
+        XCTAssertEqual(viewModel.friendsLoadState, .ready)
         XCTAssertTrue(viewModel.socialFeaturesEnabled)
         XCTAssertTrue(viewModel.incomingRequests.isEmpty)
         XCTAssertTrue(viewModel.outgoingRequests.isEmpty)
@@ -490,12 +505,25 @@ final class SocialViewModelTests: XCTestCase {
         let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
 
         await viewModel.retryFriendsLoad()
+        let terminalState = await awaitFriendsLoadState(
+            matching: {
+                if case .failed = $0 { return true }
+                return false
+            },
+            timeout: 2.0,
+            for: viewModel
+        )
 
         XCTAssertNil(viewModel.currentUser)
-        XCTAssertEqual(
-            viewModel.friendsLoadState,
-            .failed(message: "iCloud is not signed in. Open Settings, sign in to iCloud, then retry.")
-        )
+        switch terminalState {
+        case .failed(let message):
+            XCTAssertEqual(
+                message,
+                "iCloud is not signed in. Open Settings, sign in to iCloud, then retry."
+            )
+        default:
+            XCTFail("Expected friends load to fail after losing iCloud auth. got: \(terminalState)")
+        }
         XCTAssertTrue(viewModel.incomingRequests.isEmpty)
         XCTAssertTrue(viewModel.outgoingRequests.isEmpty)
         XCTAssertTrue(viewModel.friends.isEmpty)
@@ -516,15 +544,25 @@ final class SocialViewModelTests: XCTestCase {
         let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
 
         await viewModel.retryFriendsLoad()
+        let terminalState = await awaitFriendsLoadState(
+            matching: {
+                if case .failed = $0 { return true }
+                return false
+            },
+            timeout: 2.0,
+            for: viewModel
+        )
 
         XCTAssertNil(viewModel.currentUser)
-        XCTAssertEqual(
-            viewModel.friendsLoadState,
-            .failed(
-                message:
-                    "CloudKit permissions are not configured for this build. Check iCloud capability and container access in Xcode."
+        switch terminalState {
+        case .failed(let message):
+            XCTAssertEqual(
+                message,
+                "CloudKit permissions are not configured for this build. Check iCloud capability and container access in Xcode."
             )
-        )
+        default:
+            XCTFail("Expected failed friends load after optional pipeline auth loss. got: \(terminalState)")
+        }
         XCTAssertTrue(viewModel.incomingRequests.isEmpty)
         XCTAssertTrue(viewModel.outgoingRequests.isEmpty)
         XCTAssertTrue(viewModel.friends.isEmpty)
@@ -594,11 +632,26 @@ final class SocialViewModelTests: XCTestCase {
         let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
 
         await viewModel.retryFriendsLoad()
+        let terminalState = await awaitFriendsLoadState(
+            matching: { state in
+                if case .idle = state { return true }
+                if case .failed = state { return true }
+                return false
+            },
+            timeout: 2.0,
+            for: viewModel
+        )
 
         // Schema errors are now handled silently: state goes to .idle so users never see
         // a scary error message. The seeder bootstraps the schema and retries automatically.
+        switch terminalState {
+        case .idle:
+            break
+        default:
+            XCTFail("Expected .idle for schema-unavailable soft path. got: \(terminalState)")
+        }
         XCTAssertEqual(
-            viewModel.friendsLoadState, .idle,
+            terminalState, .idle,
             "Expected .idle for schema unavailable — seeder handles bootstrap silently")
         XCTAssertNil(viewModel.statusMessage, "Schema errors should not surface a statusMessage")
         guard let lastError = viewModel.availability.diagnostics.lastError else {

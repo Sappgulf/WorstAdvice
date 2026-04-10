@@ -141,6 +141,7 @@ final class GenerateViewModel {
         isGenerating = true
         defer { isGenerating = false }
         generationNotice = nil
+        generationSourceBadgeText = nil
         let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
         if let current {
             repository.recordLearningSignal(

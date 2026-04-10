@@ -78,10 +78,8 @@ struct SettingsTabView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                settingsHeroCard
-
-                VStack(spacing: 20) {
+            VStack(spacing: 20) {
+                Group {
                     accountSection
                         .opacity(sectionsAppeared ? 1 : 0)
                         .offset(y: sectionsAppeared ? 0 : 24)
@@ -649,6 +647,8 @@ struct SettingsTabView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .contentShape(Rectangle())
+                .accessibilityAddTraits(.isButton)
                 .accessibilityIdentifier("settings.socialHealth.open")
 
                 settingsDivider
@@ -1080,6 +1080,18 @@ struct SettingsTabView: View {
                     .font(.caption2)
                     .foregroundStyle(secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
+
+                settingsDivider
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Apple Local Model")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(primaryText)
+                        .accessibilityIdentifier("settings.appleModel.title")
+
+                    appleOnDeviceModelStatusCard
+                        .accessibilityIdentifier("settings.appleModel.section")
+                }
             }
         }
     }

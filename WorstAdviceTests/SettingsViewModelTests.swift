@@ -34,8 +34,8 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertTrue(session.settings.hapticsEnabled)
         XCTAssertFalse(session.settings.reduceMotion)
         XCTAssertFalse(session.settings.performanceMode)
-        XCTAssertFalse(session.settings.dailyNotificationsEnabled)
-        XCTAssertFalse(session.settings.streakNotificationsEnabled)
+        XCTAssertTrue(session.settings.dailyNotificationsEnabled)
+        XCTAssertTrue(session.settings.streakNotificationsEnabled)
     }
     
     func testSettingsThemeChange() async throws {
@@ -91,8 +91,8 @@ final class SettingsViewModelTests: XCTestCase {
         let container = try makeInMemoryContainer()
         let session = AppSessionViewModel(context: ModelContext(container))
         
-        XCTAssertFalse(session.settings.dailyNotificationsEnabled)
-        XCTAssertFalse(session.settings.streakNotificationsEnabled)
+        XCTAssertTrue(session.settings.dailyNotificationsEnabled)
+        XCTAssertTrue(session.settings.streakNotificationsEnabled)
         
         session.settings.dailyNotificationsEnabled = true
         XCTAssertTrue(session.settings.dailyNotificationsEnabled)
@@ -106,7 +106,7 @@ final class SettingsViewModelTests: XCTestCase {
         let session = AppSessionViewModel(context: ModelContext(container))
         
         XCTAssertTrue(session.settings.includeDisclaimerOnShare)
-        XCTAssertEqual(session.settings.preferredTemplate, .gradient)
+        XCTAssertEqual(session.settings.preferredTemplate, .minimal)
         XCTAssertEqual(session.settings.preferredAspect, .square)
         
         session.settings.includeDisclaimerOnShare = false
@@ -136,7 +136,7 @@ final class SettingsViewModelTests: XCTestCase {
         let container = try makeInMemoryContainer()
         let session = AppSessionViewModel(context: ModelContext(container))
         
-        XCTAssertEqual(session.settings.preferredGenerationProvider, .appleOnDevice)
+        XCTAssertEqual(session.settings.preferredGenerationProvider, .auto)
         
         session.settings.preferredGenerationProvider = .classic
         XCTAssertEqual(session.settings.preferredGenerationProvider, .classic)
@@ -146,7 +146,7 @@ final class SettingsViewModelTests: XCTestCase {
         let container = try makeInMemoryContainer()
         let session = AppSessionViewModel(context: ModelContext(container))
         
-        XCTAssertFalse(session.settings.includeRationale)
+        XCTAssertTrue(session.settings.includeRationale)
         
         session.settings.includeRationale = true
         XCTAssertTrue(session.settings.includeRationale)

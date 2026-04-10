@@ -136,7 +136,6 @@ struct ContentView: View {
 
     var body: some View {
         appRootView
-            .preferredColorScheme(.dark)
             .task {
                 await bootstrapAppStateIfNeeded()
             }
@@ -184,6 +183,7 @@ struct ContentView: View {
             renderBudget: renderBudget,
             shouldRenderParticles: shouldRenderParticles
         )
+        .preferredColorScheme(Theme.colorScheme(for: session.settings.theme))
         .sensoryFeedback(trigger: session.generate.hapticTrigger) { _, _ in
             let weight = session.generate.hapticWeight
             if weight > 0.8 { return .impact(weight: .heavy) }
@@ -446,18 +446,20 @@ struct ContentView: View {
         session: AppSessionViewModel
     ) -> some View {
         if auth.isAuthenticated {
-            SettingsTabView(
-                viewModel: session.settings,
-                generateViewModel: session.generate,
-                quotesViewModel: session.quotes,
-                social: session.social,
-                auth: auth,
-                achievementsManager: session.achievements,
-                onSignOut: { signOutCurrentAccount(auth) },
-                onDeleteAccount: { password in
-                    await deleteCurrentAccount(auth, password: password)
-                }
-            )
+            NavigationStack {
+                SettingsTabView(
+                    viewModel: session.settings,
+                    generateViewModel: session.generate,
+                    quotesViewModel: session.quotes,
+                    social: session.social,
+                    auth: auth,
+                    achievementsManager: session.achievements,
+                    onSignOut: { signOutCurrentAccount(auth) },
+                    onDeleteAccount: { password in
+                        await deleteCurrentAccount(auth, password: password)
+                    }
+                )
+            }
         } else {
             SettingsUnavailableView {
                 selectedTab = .generate
@@ -567,7 +569,10 @@ struct ContentView: View {
                                     }
                                     return
                                 }
-                                guard selectedTab != tab else { return }
+                                if selectedTab == tab {
+                                    showingSettingsRoot = false
+                                    return
+                                }
                                 showingSettingsRoot = false
                                 HapticsManager.playSelection(
                                     isEnabled: session.settings.hapticsEnabled)
@@ -866,42 +871,46 @@ struct ContentView: View {
         switch tab {
         case .generate:
             #if DEBUG
-            GenerateTabView(
-                viewModel: session.generate,
-                settings: session.settings,
-                social: session.social,
-                onDataChanged: { session.refreshLists() },
-                onOpenTab: { tab in
-                    setSelectedTab(tab, session: session)
-                },
-                quickAccessTabs: brandMenuTabs(for: session),
-                onResetAllLocalAccounts: {
-                    await resetAllLocalAccounts(using: auth!, session: session)
-                },
-                onRefreshSocialAvailability: {
-                    await refreshSocialAvailabilityToast(session: session)
-                },
-                onReseedCloudKitSchema: {
-                    await reseedCloudKitSchemaToast(session: session)
-                }
-            )
+                GenerateTabView(
+                    viewModel: session.generate,
+                    settings: session.settings,
+                    social: session.social,
+                    onDataChanged: { session.refreshLists() },
+                    onOpenTab: { tab in
+                        setSelectedTab(tab, session: session)
+                    },
+                    isActive: selectedTab == .generate,
+                    settingsPresented: showingSettingsRoot,
+                    quickAccessTabs: brandMenuTabs(),
+                    onResetAllLocalAccounts: {
+                        await resetAllLocalAccounts(using: auth!, session: session)
+                    },
+                    onRefreshSocialAvailability: {
+                        await refreshSocialAvailabilityToast(session: session)
+                    },
+                    onReseedCloudKitSchema: {
+                        await reseedCloudKitSchemaToast(session: session)
+                    }
+                )
             #else
-            GenerateTabView(
-                viewModel: session.generate,
-                settings: session.settings,
-                social: session.social,
-                onDataChanged: { session.refreshLists() },
-                onOpenTab: { tab in
-                    setSelectedTab(tab, session: session)
-                },
-                quickAccessTabs: brandMenuTabs(for: session),
-                onResetAllLocalAccounts: {
-                    await resetAllLocalAccounts(using: auth!, session: session)
-                },
-                onRefreshSocialAvailability: {
-                    await refreshSocialAvailabilityToast(session: session)
-                }
-            )
+                GenerateTabView(
+                    viewModel: session.generate,
+                    settings: session.settings,
+                    social: session.social,
+                    onDataChanged: { session.refreshLists() },
+                    onOpenTab: { tab in
+                        setSelectedTab(tab, session: session)
+                    },
+                    isActive: selectedTab == .generate,
+                    settingsPresented: showingSettingsRoot,
+                    quickAccessTabs: brandMenuTabs(),
+                    onResetAllLocalAccounts: {
+                        await resetAllLocalAccounts(using: auth!, session: session)
+                    },
+                    onRefreshSocialAvailability: {
+                        await refreshSocialAvailabilityToast(session: session)
+                    }
+                )
             #endif
         case .chaosHub:
             ChaosHubTabView(
@@ -1101,7 +1110,7 @@ struct ContentView: View {
     }
 
     private func primaryTabs(for session: AppSessionViewModel) -> [AppTab] {
-        let overflow = Set(brandMenuTabs(for: session))
+        let overflow = Set(brandMenuTabs())
         var tabs = AppTab.primaryNavigationTabs.filter { !overflow.contains($0) }
         if settingsTabAvailable, session.settings.tabOrder.contains(.settings), !tabs.contains(.settings) {
             tabs.append(.settings)
@@ -1109,10 +1118,9 @@ struct ContentView: View {
         return tabs
     }
 
-    private func brandMenuTabs(for session: AppSessionViewModel) -> [AppTab] {
-        let availableTabs = Set(session.settings.tabOrder)
-        return AppTab.brandMenuTabs.filter {
-            availableTabs.contains($0) && ($0 != .settings || settingsTabAvailable)
+    private func brandMenuTabs() -> [AppTab] {
+        AppTab.brandMenuTabs.filter {
+            $0 != .settings || settingsTabAvailable
         }
     }
 

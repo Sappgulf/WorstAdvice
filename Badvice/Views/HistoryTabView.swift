@@ -148,7 +148,7 @@ struct HistoryTabView: View {
                         .animation(isMotionReduced ? nil : .easeInOut(duration: Theme.animFast), value: viewModel.selectedCategory == nil && viewModel.searchText.isEmpty)
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
-                        .padding(.bottom, 10)
+                        .padding(.bottom, 12)
 
                         if viewModel.filteredHistory.isEmpty {
                             historyNoResultsState
@@ -241,7 +241,7 @@ struct HistoryTabView: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous).fill(cardColor)
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(accent.opacity(0.12), lineWidth: 1))
             )
-            .padding(.horizontal, 16)
+                            .padding(.horizontal, 16)
             .padding(.bottom, 8)
         }
     }
@@ -281,7 +281,7 @@ struct HistoryTabView: View {
                 }
             }
             .padding(.top, 4)
-            .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
+            .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 24)
         }
         .scrollDismissesKeyboard(.interactively)
         .trackScrollForTabBar()
@@ -351,9 +351,9 @@ struct HistoryTabView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                     .stroke(.white.opacity(0.07), lineWidth: 1)
             )
         }
@@ -456,6 +456,7 @@ struct HistoryTabView: View {
             .foregroundStyle(buttonText)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(.horizontal, 40)
+            .accessibilityIdentifier("history.generate")
             .opacity(historyEmptyStateAppeared ? 1 : 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -556,6 +557,7 @@ struct HistoryTabView: View {
                 Button {
                     viewModel.selectedCategory = nil
                     viewModel.searchText = ""
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 } label: {
                     Label("Clear Filters", systemImage: "arrow.uturn.backward")
                         .font(.subheadline.weight(.semibold))
@@ -564,6 +566,7 @@ struct HistoryTabView: View {
                 .buttonStyle(.bordered)
                 .tint(accent)
                 .clipShape(Capsule(style: .continuous))
+                .accessibilityIdentifier("history.clearFilters")
                 .opacity(noResultsAppeared ? 1 : 0)
             }
         }

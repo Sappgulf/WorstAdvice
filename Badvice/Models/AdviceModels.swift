@@ -454,7 +454,7 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     ]
 
     static let brandMenuTabs: [AppTab] = [
-        .explore, .groupChallenges, .favorites, .history, .settings,
+        .favorites, .history, .explore, .groupChallenges, .settings,
     ]
 }
 
@@ -579,4 +579,3 @@ extension String {
 }
 
 // MARK: - Achievements System
-

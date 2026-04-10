@@ -29,9 +29,6 @@ struct QuotesTabView: View {
 
                 ScrollView {
                     LazyVStack(spacing: 14) {
-                        quoteHeaderCard
-                            .padding(.horizontal, 16)
-
                         dailyQuoteHero
                             .padding(.horizontal, 16)
 
@@ -192,6 +189,7 @@ struct QuotesTabView: View {
                             if viewModel.selectedCategory != nil {
                                 Button {
                                     viewModel.selectedCategory = nil
+                                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                                 } label: {
                                     Label("Show All Categories", systemImage: "line.3.horizontal.decrease.circle")
                                         .font(.subheadline.weight(.semibold))
@@ -200,6 +198,7 @@ struct QuotesTabView: View {
                                 .buttonStyle(.bordered)
                                 .tint(accent)
                                 .padding(.horizontal, 16)
+                                .accessibilityIdentifier("quotes.showAllCategories")
                             }
                             Button { onJumpToGenerate?() } label: {
                                 Label("Generate Advice", systemImage: "sparkles")
@@ -211,6 +210,7 @@ struct QuotesTabView: View {
                             .foregroundStyle(buttonText)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .padding(.horizontal, 16)
+                            .accessibilityIdentifier("quotes.generate")
                         } else {
                             ForEach(quotes) { quote in
                                 quoteRow(quote)
@@ -219,7 +219,7 @@ struct QuotesTabView: View {
                         }
                     }
                     .padding(.top, 8)
-                    .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
+                    .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 24)
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .trackScrollForTabBar()
@@ -280,10 +280,10 @@ struct QuotesTabView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
                 .fill(cardColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
                         .stroke(accent.opacity(0.12), lineWidth: 1)
                 )
         )
@@ -358,11 +358,11 @@ struct QuotesTabView: View {
         }
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .fill(cardColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.09), lineWidth: 1)
         )
         .contextMenu {
@@ -382,7 +382,7 @@ struct QuotesTabView: View {
     private var dailyQuoteHero: some View {
         let dailyQuote = viewModel.dailyQuote
         return ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [
@@ -395,7 +395,7 @@ struct QuotesTabView: View {
                     )
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
                         .stroke(accent.opacity(0.14), lineWidth: 1)
                 )
 

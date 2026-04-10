@@ -108,9 +108,9 @@ struct ChaosHubTabView: View {
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
                 }
-                .padding(.horizontal, Theme.horizontalPadding)
-                .padding(.top, 12)
-                .padding(.bottom, 120)
+                    .padding(.horizontal, Theme.horizontalPadding)
+                    .padding(.top, 12)
+                .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 24)
             }
             .coordinateSpace(name: "scroll")
             .trackScrollForTabBar()
@@ -361,6 +361,7 @@ struct ChaosHubTabView: View {
                     .foregroundStyle(buttonText)
                     .disabled(generateViewModel.isGenerating)
                     .accessibilityLabel(mission.isComplete ? "Run mission again: \(mission.title)" : "Run daily mission: \(mission.title)")
+                    .accessibilityIdentifier("chaos.mission.run")
 
                     Button {
                         generateViewModel.trackChaosHubAction("open_advice")
@@ -373,6 +374,7 @@ struct ChaosHubTabView: View {
                     }
                     .buttonStyle(.bordered)
                     .tint(accent)
+                    .accessibilityIdentifier("chaos.openAdvice")
                 }
             }
         }
@@ -506,6 +508,7 @@ struct ChaosHubTabView: View {
                 HStack(spacing: 10) {
                     Button {
                         Task {
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                             await social.submitChaosScore(Int64(chaosScore))
                         }
                     } label: {
@@ -520,6 +523,7 @@ struct ChaosHubTabView: View {
                     .accessibilityIdentifier("chaos.social.submitScore")
 
                     Button {
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         Task { await social.refreshLeaderboard(force: true) }
                     } label: {
                         Label("Refresh", systemImage: "arrow.clockwise")
@@ -558,6 +562,7 @@ struct ChaosHubTabView: View {
                     .buttonStyle(.bordered)
                     .tint(accent)
                     .disabled(generateViewModel.isGenerating)
+                    .accessibilityIdentifier("chaos.quickActions.dailyDrop")
 
                     Button {
                         openSettingsTab()
@@ -581,6 +586,7 @@ struct ChaosHubTabView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(accent)
+                .accessibilityIdentifier("chaos.quickActions.adviceBrackets")
             }
         }
         .sheet(isPresented: $showingBracket) {
@@ -670,13 +676,42 @@ struct ChaosHubTabView: View {
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                     .fill(cardColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        accent.opacity(0.10),
+                                        .clear,
+                                        .black.opacity(0.04),
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .blendMode(.screen)
+                    )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                     .stroke(accent.opacity(0.12), lineWidth: 1)
             )
+            .overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accent.opacity(0.8), accent.opacity(0.15), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 3)
+                    .padding(.vertical, 12)
+                    .padding(.leading, 8)
+            }
+            .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 5)
     }
 
     private var contractsSection: some View {

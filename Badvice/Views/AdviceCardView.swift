@@ -56,6 +56,7 @@ struct AdviceCardView: View {
         let glowColor = Theme.glowColor(for: theme)
         let providerBadgeTint = Theme.secondaryAccent(for: theme) ?? accent
         let toneBadgeTint = secondaryText
+        let cardRadius = Theme.cardCornerRadius + 2
 
         VStack(alignment: .leading, spacing: 0) {
             // Meta row
@@ -157,28 +158,28 @@ struct AdviceCardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
-                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                     .fill(cardColor)
 
                 if #available(iOS 26.0, *) {
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                         .fill(.clear)
                         .glassEffect(
                             .regular.tint(
                                 accent.opacity(theme == .minimal ? 0.14 : 0.18)
                             ),
-                            in: .rect(cornerRadius: Theme.cardCornerRadius)
+                            in: .rect(cornerRadius: cardRadius)
                         )
                 } else if theme != .minimal {
                     // Legacy fallback for pre-Liquid Glass systems.
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                         .fill(.ultraThinMaterial)
                         .opacity(glassOpacity)
                 }
 
                 // Add subtle inner glow for glow-supporting themes
                 if let glowColor, !isMotionReduced {
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                    RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                         .stroke(glowColor.opacity(0.15), lineWidth: 2)
                         .blur(radius: 4)
                 }
@@ -187,7 +188,7 @@ struct AdviceCardView: View {
         }
         .modifier(Shake(animatableData: CGFloat(shakeCount)))
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                 .stroke(
                     LinearGradient(
                         colors: [
@@ -219,10 +220,10 @@ struct AdviceCardView: View {
                 .padding(.leading, 8)
                 .allowsHitTesting(false)
         }
-        .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
         .overlay {
             // Shimmer effect
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [.white.opacity(0.0), .white.opacity(0.25), .white.opacity(0.0)],
@@ -249,7 +250,7 @@ struct AdviceCardView: View {
         .overlay {
             // Secondary shadow for enhanced depth on select themes
             if let secondaryShadow {
-                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                     .fill(Color.clear)
                     .shadow(
                         color: secondaryShadow.color,

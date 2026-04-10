@@ -67,7 +67,8 @@ struct GlobalCommunityFeedView: View {
                     FilterChip(
                         title: filter.label,
                         icon: filter.icon,
-                        isSelected: selectedFilter == filter
+                        isSelected: selectedFilter == filter,
+                        accessibilityIdentifier: "globalCommunity.filter.\(filter.rawValue)"
                     ) {
                         selectedFilter = filter
                     }

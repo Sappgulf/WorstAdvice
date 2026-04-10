@@ -54,28 +54,45 @@ struct GroupChallengesTabView: View {
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button { showCreateSheet = true } label: {
+                    Button {
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        showCreateSheet = true
+                    } label: {
                         Image(systemName: "plus.circle.fill").foregroundStyle(accent)
                     }
                     .accessibilityLabel("Create challenge")
+                    .accessibilityIdentifier("groupChallenges.toolbarCreate")
                 }
             }
             .sheet(isPresented: $showCreateSheet) {
                 CreateChallengeSheet(onCreate: { challenge in
                     activeChallenges.append(challenge)
                     scheduleNotificationForChallenge(challenge)
-                })
+                }, hapticsEnabled: settings.hapticsEnabled)
             }
             .sheet(item: $selectedChallenge) { challenge in
-                ChallengeDetailSheet(
-                    challenge: challenge,
-                    settings: settings,
-                    onPlay: {
-                        generateViewModel.selectedCategory = challenge.category
-                        generateViewModel.selectedTone = challenge.tone
-                        onOpenTab(.generate)
+            ChallengeDetailSheet(
+                challenge: challenge,
+                settings: settings,
+                onCopyCode: {
+                    UIPasteboard.general.string = challenge.inviteCode
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    withAnimation { copiedCode = challenge.inviteCode }
+                    copiedCodeDismissTask?.cancel()
+                    copiedCodeDismissTask = Task { @MainActor in
+                        defer { copiedCodeDismissTask = nil }
+                        try? await Task.sleep(for: .seconds(1.2))
+                        guard !Task.isCancelled else { return }
+                        withAnimation { copiedCode = nil }
                     }
-                )
+                },
+                onPlay: {
+                    generateViewModel.selectedCategory = challenge.category
+                    generateViewModel.selectedTone = challenge.tone
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    onOpenTab(.generate)
+                }
+            )
             }
             .alert("Join Challenge", isPresented: $showJoinAlert) {
                 TextField("Invite Code", text: $inviteCodeInput)
@@ -136,6 +153,7 @@ struct GroupChallengesTabView: View {
                 .foregroundStyle(secondaryText)
             HStack(spacing: 10) {
                 Button {
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     showCreateSheet = true
                 } label: {
                     Label("Create", systemImage: "plus")
@@ -144,8 +162,10 @@ struct GroupChallengesTabView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(accent)
+                .accessibilityIdentifier("groupChallenges.headerCreate")
 
                 Button {
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     showJoinAlert = true
                 } label: {
                     Label("Join by Code", systemImage: "person.badge.plus")
@@ -154,6 +174,7 @@ struct GroupChallengesTabView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(accent)
+                .accessibilityIdentifier("groupChallenges.headerJoin")
             }
             .padding(.top, 4)
         }
@@ -190,12 +211,14 @@ struct GroupChallengesTabView: View {
                     secondaryText: secondaryText,
                     cardColor: cardColor,
                     onPlay: {
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         generateViewModel.selectedCategory = challenge.category
                         generateViewModel.selectedTone = challenge.tone
                         onOpenTab(.generate)
                     },
                     onCopyCode: {
                         UIPasteboard.general.string = challenge.inviteCode
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         withAnimation { copiedCode = challenge.inviteCode }
                         copiedCodeDismissTask?.cancel()
                         copiedCodeDismissTask = Task { @MainActor in
@@ -205,7 +228,10 @@ struct GroupChallengesTabView: View {
                             withAnimation { copiedCode = nil }
                         }
                     },
-                    onDetails: { selectedChallenge = challenge }
+                    onDetails: {
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        selectedChallenge = challenge
+                    }
                 )
             }
         }
@@ -280,6 +306,7 @@ struct GroupChallengesTabView: View {
     private func joinChallenge() {
         let code = inviteCodeInput.trimmingCharacters(in: .whitespaces).uppercased()
         inviteCodeInput = ""
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
         guard code.count == 6 else {
             showJoinFeedback("Code must be 6 characters.")
             return
@@ -362,6 +389,7 @@ private struct CompletedChallengeCard: View {
 private struct ChallengeDetailSheet: View {
     let challenge: GroupChallenge
     let settings: SettingsViewModel
+    let onCopyCode: () -> Void
     let onPlay: () -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -377,13 +405,14 @@ private struct ChallengeDetailSheet: View {
                     LabeledContent("Tone", value: challenge.tone.title)
                     LabeledContent("Invite Code") {
                         Button {
-                            UIPasteboard.general.string = challenge.inviteCode
+                            onCopyCode()
                         } label: {
                             Text(challenge.inviteCode)
                                 .font(.body.monospaced().bold())
                                 .foregroundStyle(accent)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("groupChallenges.detail.copyCode")
                     }
                     LabeledContent("Ends") {
                         Text(challenge.endsAt, style: .relative)
@@ -410,6 +439,7 @@ private struct ChallengeDetailSheet: View {
                             .frame(maxWidth: .infinity)
                             .foregroundStyle(accent)
                     }
+                    .accessibilityIdentifier("groupChallenges.detail.play")
                 }
             }
             .navigationTitle(challenge.name)
@@ -491,6 +521,7 @@ struct ChallengeCard: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(accent)
+                .accessibilityIdentifier("groupChallenges.card.play")
 
                 Button(action: onCopyCode) {
                     Label(challenge.inviteCode, systemImage: "doc.on.doc")
@@ -498,6 +529,7 @@ struct ChallengeCard: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(accent)
+                .accessibilityIdentifier("groupChallenges.card.copyCode")
 
                 Button(action: onDetails) {
                     Image(systemName: "info.circle")
@@ -505,6 +537,7 @@ struct ChallengeCard: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Challenge details")
+                .accessibilityIdentifier("groupChallenges.card.details")
             }
         }
         .padding(14)
@@ -539,6 +572,7 @@ struct CreateChallengeSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     let onCreate: (GroupChallenge) -> Void
+    let hapticsEnabled: Bool
     
     @State private var name = ""
     @State private var selectedCategory: AdviceCategory = .dating
@@ -590,14 +624,18 @@ struct CreateChallengeSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
+                        HapticsManager.playSelection(isEnabled: hapticsEnabled)
                         dismiss()
                     }
+                    .accessibilityIdentifier("groupChallenges.create.cancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
+                        HapticsManager.playSelection(isEnabled: hapticsEnabled)
                         createChallenge()
                     }
                     .disabled(name.isEmpty)
+                    .accessibilityIdentifier("groupChallenges.create.submit")
                 }
             }
         }

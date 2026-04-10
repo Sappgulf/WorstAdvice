@@ -34,28 +34,7 @@ struct QuoteSuggestionLabView: View {
                         .foregroundStyle(.red)
                 }
 
-                Button {
-                    if let message = viewModel.submitSuggestion(
-                        category: suggestionCategory,
-                        source: suggestionSource,
-                        quoteText: suggestionQuoteText
-                    ) {
-                        suggestionError = message
-                        submitSuccess = false
-                    } else {
-                        suggestionError = ""
-                        suggestionSource = ""
-                        suggestionQuoteText = ""
-                        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                            submitSuccess = true
-                        }
-                        Task { @MainActor in
-                            try? await Task.sleep(for: .seconds(2.2))
-                            withAnimation(.easeOut(duration: 0.3)) { submitSuccess = false }
-                        }
-                    }
-                } label: {
+                Button { submitSuggestion() } label: {
                     if submitSuccess {
                         Label("Submitted!", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
@@ -68,6 +47,7 @@ struct QuoteSuggestionLabView: View {
                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: submitSuccess)
                 .disabled(
                     suggestionQuoteText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier("quoteSuggestionLab.submit")
             }
 
             Section("Recent Quote Suggestions") {
@@ -85,10 +65,11 @@ struct QuoteSuggestionLabView: View {
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
-                                viewModel.deleteSuggestion(suggestion)
+                                deleteSuggestion(suggestion)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
+                            .accessibilityIdentifier("quoteSuggestionLab.delete.\(suggestion.id)")
                         }
                     }
                 }
@@ -102,5 +83,35 @@ struct QuoteSuggestionLabView: View {
         .onAppear {
             suggestionError = ""
         }
+    }
+
+    private func submitSuggestion() {
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        if let message = viewModel.submitSuggestion(
+            category: suggestionCategory,
+            source: suggestionSource,
+            quoteText: suggestionQuoteText
+        ) {
+            suggestionError = message
+            submitSuccess = false
+            HapticsManager.playError(isEnabled: settings.hapticsEnabled)
+        } else {
+            suggestionError = ""
+            suggestionSource = ""
+            suggestionQuoteText = ""
+            HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                submitSuccess = true
+            }
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2.2))
+                withAnimation(.easeOut(duration: 0.3)) { submitSuccess = false }
+            }
+        }
+    }
+
+    private func deleteSuggestion(_ suggestion: UserQuoteSuggestion) {
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        viewModel.deleteSuggestion(suggestion)
     }
 }

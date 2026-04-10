@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B2000003000000000000CB02 /* CloudKitSchemaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000003000000000000CB01 /* CloudKitSchemaTests.swift */; };
 		129755B3D83C574263AD6020 /* AnimatedShareExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85AA50D7506E97110B20E16F /* AnimatedShareExporter.swift */; };
 		15D513E5FD6D9380FB5819D4 /* BadviceWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2BF026CE4629AB5BD5E11B23 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C250B6FD91B852804C06C42 /* StoreKitManager.swift */; };
@@ -76,6 +77,7 @@
 		A1000003000000000000BB02 /* AppSessionSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB02 /* AppSessionSmokeTests.swift */; };
 		A1000003000000000000BB03 /* SocialViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB03 /* SocialViewModelTests.swift */; };
 		A1000003000000000000BB04 /* SettingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB04 /* SettingsViewModelTests.swift */; };
+		A1000003000000000000BB05 /* SuggestionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB05 /* SuggestionViewModelTests.swift */; };
 		A1000005000000000000DD01 /* GenerateBrandMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD01 /* GenerateBrandMenuView.swift */; };
 		A1000006000000000000EE01 /* FavoritesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006000000000000EE01 /* FavoritesTabView.swift */; };
 		A1000006000000000000EE02 /* QuotesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006000000000000EE02 /* QuotesTabView.swift */; };
@@ -104,6 +106,9 @@
 		CC7C2D8BC35FCFF69C567086 /* LocalAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 537EABC7909023C6B45AAB4F /* LocalAuth.swift */; };
 		D10000010000000000000001 /* BadviceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000010000000000000001 /* BadviceUITests.swift */; };
 		D10000020000000000000001 /* BadviceFullSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000020000000000000001 /* BadviceFullSmokeTests.swift */; };
+		D10000030000000000000001 /* BadvicePolishedSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000030000000000000001 /* BadvicePolishedSmokeTests.swift */; };
+		D10000040000000000000001 /* BadviceSocialDiagnosticsSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000040000000000000001 /* BadviceSocialDiagnosticsSmokeTests.swift */; };
+		D10000050000000000000001 /* BadviceShippingReadinessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000050000000000000001 /* BadviceShippingReadinessTests.swift */; };
 		F583507E5A045C5780BC1B36 /* Shared/NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCF16D47C5CD16BA42173EC /* Shared/NetworkMonitor.swift */; };
 		F67E4DFCBEDF98A26BE99151 /* WorstAdviceQuoteWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */; };
 /* End PBXBuildFile section */
@@ -219,6 +224,8 @@
 		A2000003000000000000BB02 /* AppSessionSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSessionSmokeTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB03 /* SocialViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialViewModelTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB04 /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
+		A2000003000000000000BB05 /* SuggestionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionViewModelTests.swift; sourceTree = "<group>"; };
+		B2000003000000000000CB01 /* CloudKitSchemaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitSchemaTests.swift; sourceTree = "<group>"; };
 		A2000005000000000000DD01 /* GenerateBrandMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateBrandMenuView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE01 /* FavoritesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesTabView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE02 /* QuotesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotesTabView.swift; sourceTree = "<group>"; };
@@ -243,6 +250,9 @@
 		D20000010000000000000001 /* BadviceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceUITests.swift; sourceTree = "<group>"; };
 		D20000010000000000000002 /* BadviceUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D20000020000000000000001 /* BadviceFullSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceFullSmokeTests.swift; sourceTree = "<group>"; };
+		D20000030000000000000001 /* BadvicePolishedSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadvicePolishedSmokeTests.swift; sourceTree = "<group>"; };
+		D20000040000000000000001 /* BadviceSocialDiagnosticsSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceSocialDiagnosticsSmokeTests.swift; sourceTree = "<group>"; };
+		D20000050000000000000001 /* BadviceShippingReadinessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceShippingReadinessTests.swift; sourceTree = "<group>"; };
 		E2C35747C3F426FECEBC093F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = "<group>"; };
 		EB9F9488A0CBEC42F1CA9AE1 /* ActivityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ActivityFeedView.swift; sourceTree = "<group>"; };
 		F28514E6E10424D2C60C8873 /* CloudKitSchemaSeeder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchemaSeeder.swift; sourceTree = "<group>"; };
@@ -486,6 +496,8 @@
 				A2000003000000000000BB02 /* AppSessionSmokeTests.swift */,
 				A2000003000000000000BB03 /* SocialViewModelTests.swift */,
 				A2000003000000000000BB04 /* SettingsViewModelTests.swift */,
+				A2000003000000000000BB05 /* SuggestionViewModelTests.swift */,
+				B2000003000000000000CB01 /* CloudKitSchemaTests.swift */,
 			);
 			path = WorstAdviceTests;
 			sourceTree = "<group>";
@@ -540,6 +552,9 @@
 			children = (
 				D20000010000000000000001 /* BadviceUITests.swift */,
 				D20000020000000000000001 /* BadviceFullSmokeTests.swift */,
+				D20000030000000000000001 /* BadvicePolishedSmokeTests.swift */,
+				D20000040000000000000001 /* BadviceSocialDiagnosticsSmokeTests.swift */,
+				D20000050000000000000001 /* BadviceShippingReadinessTests.swift */,
 			);
 			path = BadviceUITests;
 			sourceTree = "<group>";
@@ -779,6 +794,8 @@
 				A1000003000000000000BB02 /* AppSessionSmokeTests.swift in Sources */,
 				A1000003000000000000BB03 /* SocialViewModelTests.swift in Sources */,
 				A1000003000000000000BB04 /* SettingsViewModelTests.swift in Sources */,
+				A1000003000000000000BB05 /* SuggestionViewModelTests.swift in Sources */,
+				B2000003000000000000CB02 /* CloudKitSchemaTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -788,6 +805,9 @@
 			files = (
 				D10000010000000000000001 /* BadviceUITests.swift in Sources */,
 				D10000020000000000000001 /* BadviceFullSmokeTests.swift in Sources */,
+				D10000030000000000000001 /* BadvicePolishedSmokeTests.swift in Sources */,
+				D10000040000000000000001 /* BadviceSocialDiagnosticsSmokeTests.swift in Sources */,
+				D10000050000000000000001 /* BadviceShippingReadinessTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -838,7 +858,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.8;
+				MARKETING_VERSION = 5.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -862,7 +882,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 5.8;
+				MARKETING_VERSION = 5.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1016,7 +1036,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.8;
+				MARKETING_VERSION = 5.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
@@ -1048,7 +1068,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 5.8;
+				MARKETING_VERSION = 5.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";

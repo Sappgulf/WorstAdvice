@@ -257,10 +257,10 @@ private struct FavoriteListRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .fill(cardColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
@@ -275,10 +275,10 @@ private struct FavoriteListRow: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .stroke(.white.opacity(0.09), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 5)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(record.adviceLine), \(record.category.title), \(record.tone.title)")
     }
@@ -324,12 +324,12 @@ private struct FavoriteGridCell: View {
                 .foregroundStyle(secondaryText)
         }
         .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 160, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 172, alignment: .topLeading)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .fill(cardColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
@@ -344,10 +344,10 @@ private struct FavoriteGridCell: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.1), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 5)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(record.adviceLine), \(record.tone.title)")
     }
@@ -586,9 +586,9 @@ struct FavoritesTabView: View {
                     }
                 }
             }
-            .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
-            .padding(.top, 4)
-        }
+                .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 24)
+                .padding(.top, 4)
+            }
         .scrollDismissesKeyboard(.interactively)
         .trackScrollForTabBar()
         .refreshable {
@@ -874,6 +874,7 @@ struct FavoritesTabView: View {
             .foregroundStyle(buttonText)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(.horizontal, 40)
+            .accessibilityIdentifier("favorites.generate")
             .opacity(emptyStateAppeared ? 1 : 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -917,6 +918,7 @@ struct FavoritesTabView: View {
                 Button {
                     viewModel.selectedCategory = nil
                     viewModel.searchText = ""
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 } label: {
                     Label("Clear Filters", systemImage: "arrow.uturn.backward")
                         .font(.subheadline.weight(.semibold))
@@ -926,6 +928,7 @@ struct FavoritesTabView: View {
                 .buttonStyle(.bordered)
                 .tint(accent)
                 .clipShape(Capsule(style: .continuous))
+                .accessibilityIdentifier("favorites.clearFilters")
                 .opacity(noResultsAppeared ? 1 : 0)
             }
         }

@@ -59,7 +59,7 @@ struct FriendsTabView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
-                .padding(.bottom, 120)
+                .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 24)
             }
             .scrollDismissesKeyboard(.interactively)
             .trackScrollForTabBar()
@@ -107,18 +107,59 @@ struct FriendsTabView: View {
 
     @ViewBuilder
     private var friendsHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Friends")
-                .font(.largeTitle.weight(.bold))
-                .foregroundStyle(primaryText)
-                .accessibilityIdentifier("friends.title")
+        HStack(alignment: .top, spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                accent.opacity(0.9),
+                                accent.opacity(0.5),
+                                cardColor.opacity(0.95),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(buttonText)
+            }
+            .frame(width: 54, height: 54)
+            .shadow(color: accent.opacity(0.22), radius: 10, x: 0, y: 4)
 
-            Text("Manage requests, feed posts, and collab drafts from one place.")
-                .font(.caption)
-                .foregroundStyle(secondaryText)
+            VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Friends")
+                        .font(.largeTitle.weight(.bold))
+                        .foregroundStyle(primaryText)
+                        .accessibilityIdentifier("friends.title")
+
+                    Text("Manage requests, feed posts, and collab drafts from one place.")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+
+                HStack(spacing: 8) {
+                    socialStatPill(title: "Live", value: social.socialFeaturesEnabled ? "On" : "Off", systemImage: "dot.radiowaves.left.and.right")
+                    socialStatPill(title: "Requests", value: "\(social.incomingRequests.count)", systemImage: "tray.full.fill")
+                    socialStatPill(title: "Drafts", value: "\(social.collabDocs.count)", systemImage: "doc.text.fill")
+                }
+            }
+
+            Spacer(minLength: 0)
         }
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, 2)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.1), lineWidth: 1)
+                )
+        )
+        .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 5)
     }
 
     @ViewBuilder
@@ -255,7 +296,7 @@ struct FriendsTabView: View {
         }
         .padding(4)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .fill(.ultraThinMaterial)
         )
         .overlay(
@@ -636,11 +677,13 @@ struct FriendsTabView: View {
                                 onOpenTab?(.generate)
                             }
                             .buttonStyle(.bordered)
+                            .accessibilityIdentifier("friends.feed.openGenerate")
 
                             Button("Open Quotes") {
                                 onOpenTab?(.quotes)
                             }
                             .buttonStyle(.bordered)
+                            .accessibilityIdentifier("friends.feed.openQuotes")
 
                             Button("Refresh Social") {
                                 Task { await social.refreshSocialData() }
@@ -778,11 +821,13 @@ struct FriendsTabView: View {
                                 onOpenTab?(.generate)
                             }
                             .buttonStyle(.bordered)
+                            .accessibilityIdentifier("friends.collab.openGenerate")
 
                             Button("Open Quotes") {
                                 onOpenTab?(.quotes)
                             }
                             .buttonStyle(.bordered)
+                            .accessibilityIdentifier("friends.collab.openQuotes")
 
                             Button("Refresh Social") {
                                 Task { await social.refreshSocialData() }
@@ -964,10 +1009,10 @@ struct FriendsTabView: View {
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                     .fill(cardColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                             .fill(
                                 LinearGradient(
                                     colors: [
@@ -982,10 +1027,10 @@ struct FriendsTabView: View {
                     )
             }
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                     .stroke(accent.opacity(0.1), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.12), radius: 10, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 5)
     }
 
     private func relationshipState(for user: SocialUser) -> FriendSearchRelationshipState {
