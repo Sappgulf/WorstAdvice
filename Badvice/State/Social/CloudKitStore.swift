@@ -278,42 +278,28 @@ actor CloudKitStore: SocialBackend {
             throw SocialError.rateLimited("Too many friend requests. Try again in a minute.")
         }
 
-        let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
         let targetRef = CKRecord.Reference(recordID: target.recordID, action: .none)
         let blockingStatuses = Set([
             SocialFriendRequestStatus.pending,
             .accepted,
             .blocked,
         ])
-        let allRequests = try await allFriendRequestRecords()
-        let existingOutgoing = allRequests.filter { record in
-            guard
-                let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
-                let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference,
-                let statusRaw = record[CloudKitSocialSchema.Field.status] as? String,
-                let status = SocialFriendRequestStatus(rawValue: statusRaw)
-            else {
-                return false
-            }
-            return fromRef.recordID == currentRef.recordID
-                && toRef.recordID == targetRef.recordID
-                && blockingStatuses.contains(status)
+        let existingOutgoing = try await relevantFriendRequests(
+            for: current,
+            direction: .outgoing,
+            statuses: blockingStatuses
+        ).filter {
+            ($0[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference)?.recordID == targetRef.recordID
         }
         guard existingOutgoing.isEmpty else {
             throw SocialError.duplicateRequest
         }
-        let existingIncoming = allRequests.filter { record in
-            guard
-                let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
-                let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference,
-                let statusRaw = record[CloudKitSocialSchema.Field.status] as? String,
-                let status = SocialFriendRequestStatus(rawValue: statusRaw)
-            else {
-                return false
-            }
-            return fromRef.recordID == targetRef.recordID
-                && toRef.recordID == currentRef.recordID
-                && blockingStatuses.contains(status)
+        let existingIncoming = try await relevantFriendRequests(
+            for: current,
+            direction: .incoming,
+            statuses: blockingStatuses
+        ).filter {
+            ($0[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference)?.recordID == target.recordID
         }
         if existingIncoming.contains(where: {
             ($0[CloudKitSocialSchema.Field.status] as? String) == SocialFriendRequestStatus.blocked.rawValue
@@ -412,13 +398,7 @@ actor CloudKitStore: SocialBackend {
             direction: .outgoing,
             statuses: nil
         ).filter { record in
-            guard
-                let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
-                let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference
-            else {
-                return false
-            }
-            return fromRef.recordID == currentRef.recordID && toRef.recordID == targetRef.recordID
+            (record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference)?.recordID == targetRef.recordID
         }
 
         let record: CKRecord
@@ -900,28 +880,46 @@ actor CloudKitStore: SocialBackend {
         direction: FriendRequestDirection,
         statuses: Set<SocialFriendRequestStatus>?
     ) async throws -> [CKRecord] {
-        let currentRecordID = current.recordID
-        return try await allFriendRequestRecords().filter { record in
-            guard
-                let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
-                let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference,
-                let statusRaw = record[CloudKitSocialSchema.Field.status] as? String,
-                let status = SocialFriendRequestStatus(rawValue: statusRaw)
-            else {
-                return false
+        let queryOperation = "listFriendRequests.\(direction)"
+        let predicate = friendRequestPredicate(
+            for: current.recordID,
+            direction: direction,
+            statuses: statuses
+        )
+        do {
+            return try await queryRecords(
+                recordType: CloudKitSocialSchema.RecordType.friendRequest,
+                predicate: predicate,
+                resultsLimit: 200,
+                desiredKeys: CloudKitSocialSchema.Projection.friendRequest,
+                operation: queryOperation
+            )
+        } catch {
+            guard shouldFallbackToFullRequestScan(error) else { throw error }
+            let currentRecordID = current.recordID
+            let allRequests = try await allFriendRequestRecords()
+            return allRequests.filter { record in
+                guard
+                    let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference,
+                    let toRef = record[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference,
+                    let statusRaw = record[CloudKitSocialSchema.Field.status] as? String,
+                    let status = SocialFriendRequestStatus(rawValue: statusRaw)
+                else {
+                    return false
+                }
+                let matchesDirection: Bool
+                switch direction {
+                case .incoming:
+                    matchesDirection = toRef.recordID == currentRecordID
+                case .outgoing:
+                    matchesDirection = fromRef.recordID == currentRecordID
+                }
+                guard matchesDirection else { return false }
+                if let statuses {
+                    return statuses.contains(status)
+                }
+                return true
             }
-            let matchesDirection: Bool
-            switch direction {
-            case .incoming:
-                matchesDirection = toRef.recordID == currentRecordID
-            case .outgoing:
-                matchesDirection = fromRef.recordID == currentRecordID
-            }
-            guard matchesDirection else { return false }
-            if let statuses {
-                return statuses.contains(status)
-            }
-            return true
         }
     }
 
@@ -1099,23 +1097,73 @@ actor CloudKitStore: SocialBackend {
         }
         let current = try await requireCurrentUser()
         let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
-        let edges = try await queryRecords(
-            recordType: CloudKitSocialSchema.RecordType.friendEdge,
-            predicate: NSPredicate(value: true),
-            resultsLimit: 500,
-            desiredKeys: CloudKitSocialSchema.Projection.friendEdge,
-            operation: "listFriendEdges"
-        ).filter { record in
-            guard let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference else {
-                return false
+        let edgeQueryOperation = "listFriendEdges"
+        let edges: [CKRecord]
+        do {
+            edges = try await queryRecords(
+                recordType: CloudKitSocialSchema.RecordType.friendEdge,
+                predicate: NSPredicate(format: "%K == %@", CloudKitSocialSchema.Field.fromUser, currentRef),
+                resultsLimit: 500,
+                desiredKeys: CloudKitSocialSchema.Projection.friendEdge,
+                operation: edgeQueryOperation
+            )
+        } catch {
+            guard shouldFallbackToFullRequestScan(error) else { throw error }
+            edges = try await queryRecords(
+                recordType: CloudKitSocialSchema.RecordType.friendEdge,
+                predicate: NSPredicate(value: true),
+                resultsLimit: 500,
+                desiredKeys: CloudKitSocialSchema.Projection.friendEdge,
+                operation: "\(edgeQueryOperation)FallbackScan"
+            ).filter { record in
+                guard let fromRef = record[CloudKitSocialSchema.Field.fromUser] as? CKRecord.Reference else {
+                    return false
+                }
+                return fromRef.recordID == currentRef.recordID
             }
-            return fromRef.recordID == currentRef.recordID
         }
         let ids = edges.compactMap {
             ($0[CloudKitSocialSchema.Field.toUser] as? CKRecord.Reference)?.recordID
         }
         cachedFriendIDs = (ids, Date())
         return ids
+    }
+
+    private func friendRequestPredicate(
+        for currentRecordID: CKRecord.ID,
+        direction: FriendRequestDirection,
+        statuses: Set<SocialFriendRequestStatus>?
+    ) -> NSPredicate {
+        let currentRef = CKRecord.Reference(recordID: currentRecordID, action: .none)
+        let directionPredicate: NSPredicate
+        switch direction {
+        case .incoming:
+            directionPredicate = NSPredicate(
+                format: "%K == %@",
+                CloudKitSocialSchema.Field.toUser,
+                currentRef
+            )
+        case .outgoing:
+            directionPredicate = NSPredicate(
+                format: "%K == %@",
+                CloudKitSocialSchema.Field.fromUser,
+                currentRef
+            )
+        }
+        guard let statuses, !statuses.isEmpty else {
+            return directionPredicate
+        }
+        let statusValues = statuses.map(\.rawValue)
+        let statusPredicate = NSPredicate(
+            format: "%K IN %@",
+            CloudKitSocialSchema.Field.status,
+            statusValues
+        )
+        return NSCompoundPredicate(andPredicateWithSubpredicates: [directionPredicate, statusPredicate])
+    }
+
+    private func shouldFallbackToFullRequestScan(_ error: Error) -> Bool {
+        shouldFallbackToFullUserScan(error)
     }
 
     private func upsertFriendEdge(a: CKRecord.ID, b: CKRecord.ID, since: Date) async throws {
@@ -1761,4 +1809,3 @@ actor CloudKitStore: SocialBackend {
         }
     }
 }
-

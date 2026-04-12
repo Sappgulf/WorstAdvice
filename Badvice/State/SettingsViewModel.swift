@@ -38,6 +38,7 @@ final class SettingsViewModel {
     var theme: ThemeMode {
         get { settings.theme }
         set {
+            guard settings.theme != newValue else { return }
             settings.theme = newValue
             repository.save()
         }
@@ -46,6 +47,7 @@ final class SettingsViewModel {
     var includeDisclaimerOnShare: Bool {
         get { settings.includeDisclaimerOnShare }
         set {
+            guard settings.includeDisclaimerOnShare != newValue else { return }
             settings.includeDisclaimerOnShare = newValue
             repository.save()
         }
@@ -54,6 +56,7 @@ final class SettingsViewModel {
     var reduceMotion: Bool {
         get { settings.reduceMotion }
         set {
+            guard settings.reduceMotion != newValue else { return }
             settings.reduceMotion = newValue
             repository.save()
         }
@@ -62,6 +65,7 @@ final class SettingsViewModel {
     var hapticsEnabled: Bool {
         get { settings.hapticsEnabled }
         set {
+            guard settings.hapticsEnabled != newValue else { return }
             settings.hapticsEnabled = newValue
             repository.save()
         }
@@ -70,6 +74,7 @@ final class SettingsViewModel {
     var soundEffectsEnabled: Bool {
         get { settings.soundEffectsEnabled }
         set {
+            guard settings.soundEffectsEnabled != newValue else { return }
             settings.soundEffectsEnabled = newValue
             repository.save()
         }
@@ -78,6 +83,7 @@ final class SettingsViewModel {
     var performanceMode: Bool {
         get { settings.performanceMode }
         set {
+            guard settings.performanceMode != newValue else { return }
             settings.performanceMode = newValue
             repository.save()
         }
@@ -86,6 +92,7 @@ final class SettingsViewModel {
     var dailyNotificationsEnabled: Bool {
         get { settings.dailyNotificationsEnabled }
         set {
+            guard settings.dailyNotificationsEnabled != newValue else { return }
             settings.dailyNotificationsEnabled = newValue
             repository.save()
             if newValue {
@@ -99,6 +106,7 @@ final class SettingsViewModel {
     var streakNotificationsEnabled: Bool {
         get { settings.streakNotificationsEnabled }
         set {
+            guard settings.streakNotificationsEnabled != newValue else { return }
             settings.streakNotificationsEnabled = newValue
             repository.save()
             NotificationManager.scheduleDaily(hour: settings.dailyNotificationHour, streakEnabled: newValue)
@@ -108,6 +116,7 @@ final class SettingsViewModel {
     var dailyNotificationHour: Int {
         get { settings.dailyNotificationHour }
         set {
+            guard settings.dailyNotificationHour != newValue else { return }
             settings.dailyNotificationHour = newValue
             repository.save()
             if settings.dailyNotificationsEnabled {
@@ -119,6 +128,7 @@ final class SettingsViewModel {
     var includeRationale: Bool {
         get { settings.includeRationale }
         set {
+            guard settings.includeRationale != newValue else { return }
             settings.includeRationale = newValue
             repository.save()
         }
@@ -127,6 +137,7 @@ final class SettingsViewModel {
     var preferredTemplate: ShareCardTemplate {
         get { settings.preferredTemplate }
         set {
+            guard settings.preferredTemplate != newValue else { return }
             settings.preferredTemplate = newValue
             repository.save()
         }
@@ -135,6 +146,7 @@ final class SettingsViewModel {
     var preferredAspect: ShareAspectRatio {
         get { settings.preferredAspect }
         set {
+            guard settings.preferredAspect != newValue else { return }
             settings.preferredAspect = newValue
             repository.save()
         }
@@ -143,6 +155,7 @@ final class SettingsViewModel {
     var preferredSharePreset: ShareCaptionPreset {
         get { settings.preferredSharePreset }
         set {
+            guard settings.preferredSharePreset != newValue else { return }
             settings.preferredSharePreset = newValue
             repository.save()
         }
@@ -151,6 +164,7 @@ final class SettingsViewModel {
     var preferredContentPack: ContentPack {
         get { settings.preferredContentPack }
         set {
+            guard settings.preferredContentPack != newValue else { return }
             settings.preferredContentPack = newValue
             repository.save()
         }
@@ -159,6 +173,7 @@ final class SettingsViewModel {
     var preferredGenerationProvider: AdviceGenerationProvider {
         get { settings.preferredGenerationProvider }
         set {
+            guard settings.preferredGenerationProvider != newValue else { return }
             settings.preferredGenerationProvider = newValue
             repository.save()
             refreshAppleOnDeviceModelAvailability()
@@ -305,6 +320,7 @@ final class SettingsViewModel {
     var strictNoRepeats: Bool {
         get { settings.strictNoRepeats }
         set {
+            guard settings.strictNoRepeats != newValue else { return }
             settings.strictNoRepeats = newValue
             repository.save()
         }
@@ -313,6 +329,7 @@ final class SettingsViewModel {
     var communityOnlyMode: Bool {
         get { settings.communityOnlyMode }
         set {
+            guard settings.communityOnlyMode != newValue else { return }
             settings.communityOnlyMode = newValue
             repository.save()
         }
@@ -321,6 +338,7 @@ final class SettingsViewModel {
     var tabOrder: [AppTab] {
         get { settings.tabOrder }
         set {
+            guard settings.tabOrder != newValue else { return }
             settings.tabOrder = newValue
             repository.save()
         }

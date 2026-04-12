@@ -481,6 +481,24 @@ enum SocialQueuedActionPayload: Codable, Sendable {
     case moderationReport(SocialModerationReport)
 }
 
+extension SocialQueuedActionPayload {
+    var stableDedupeKey: String {
+        switch self {
+        case .friendRequest(let handle):
+            "friend:\(handle)"
+        case .sharePost(let type, let text):
+            let normalizedText = text
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            return "share:\(type.rawValue):\(normalizedText)"
+        case .chaosScore(let seasonId, let score):
+            "chaos:\(seasonId):\(score)"
+        case .moderationReport(let report):
+            "report:\(report.id)"
+        }
+    }
+}
+
 struct SocialQueuedAction: Identifiable, Codable, Sendable {
     let id: UUID
     let dedupeKey: String?
@@ -539,6 +557,8 @@ protocol SocialBackend: Sendable {
 actor SocialActionQueueStore {
     private let userDefaults: UserDefaults
     private let storageKey: String
+    private let maxRetryAttempts: Int = 8
+    private let staleActionWindow: TimeInterval = 14 * 24 * 60 * 60
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -550,17 +570,32 @@ actor SocialActionQueueStore {
 
     func enqueue(_ action: SocialQueuedAction) {
         var actions = load()
-        if let dedupeKey = action.dedupeKey,
-            actions.contains(where: { $0.dedupeKey == dedupeKey })
+        let normalizedDedupeKey = action.dedupeKey ?? action.payload.stableDedupeKey
+        if let normalizedDedupeKey,
+            actions.contains(where: { $0.dedupeKey == normalizedDedupeKey })
         {
             return
         }
-        actions.append(action)
+        let normalizedAction = SocialQueuedAction(
+            id: action.id,
+            dedupeKey: normalizedDedupeKey,
+            createdAt: action.createdAt,
+            nextRetryAt: action.nextRetryAt,
+            attemptCount: action.attemptCount,
+            payload: action.payload
+        )
+        actions.append(normalizedAction)
         save(actions)
     }
 
     func readyActions(now: Date = Date(), limit: Int = 10) -> [SocialQueuedAction] {
-        Array(load().filter { $0.nextRetryAt <= now }.prefix(max(1, limit)))
+        let sorted = load().sorted { lhs, rhs in
+            if lhs.nextRetryAt != rhs.nextRetryAt {
+                return lhs.nextRetryAt < rhs.nextRetryAt
+            }
+            return lhs.createdAt < rhs.createdAt
+        }
+        return Array(sorted.filter { $0.nextRetryAt <= now }.prefix(max(1, limit)))
     }
 
     func markSucceeded(id: UUID) {
@@ -573,8 +608,18 @@ actor SocialActionQueueStore {
         var actions = load()
         guard let index = actions.firstIndex(where: { $0.id == id }) else { return }
         actions[index].attemptCount += 1
+        if shouldDrop(actions[index], now: Date()) {
+            actions.remove(at: index)
+            save(actions)
+            return
+        }
         actions[index].nextRetryAt = retryAt
         save(actions)
+    }
+
+    private func shouldDrop(_ action: SocialQueuedAction, now: Date) -> Bool {
+        action.attemptCount >= maxRetryAttempts
+            || now.timeIntervalSince(action.createdAt) > staleActionWindow
     }
 
     func totalCount() -> Int {
@@ -600,7 +645,12 @@ actor SocialActionQueueStore {
         else {
             return []
         }
-        return decoded
+        let now = Date()
+        let fresh = decoded.filter { !shouldDrop($0, now: now) }
+        if fresh.count != decoded.count {
+            save(fresh)
+        }
+        return fresh
     }
 
     private func save(_ actions: [SocialQueuedAction]) {
@@ -1067,4 +1117,3 @@ actor UITestSocialBackend: SocialBackend {
         }
     }
 }
-

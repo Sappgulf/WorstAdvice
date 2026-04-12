@@ -73,13 +73,17 @@ final class StoreKitManager {
 
     init() {
         updateListenerTask = listenForTransactions()
-        Task { await loadProducts() }
-        Task { await refreshPurchasedProducts() }
+        Task { await bootstrapStoreKit() }
     }
 
     @MainActor
     deinit {
         updateListenerTask?.cancel()
+    }
+
+    private func bootstrapStoreKit() async {
+        await loadProducts()
+        await refreshPurchasedProducts()
     }
 
     // MARK: Load Products
