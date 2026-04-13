@@ -18,6 +18,7 @@ struct GenerateTabView: View {
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
     @State private var showingAdvanced = false
+    @State private var showingStudioExtras = false
     @State private var showingBrandMenu = false
     @State private var showingBracket = false        // #2 Advice Battles entry point
     @State private var showingCollabAdvice = false   // #7 Collab Advice
@@ -182,6 +183,46 @@ struct GenerateTabView: View {
         .accessibilityIdentifier("generate.brandMenu")
     }
 
+    @ViewBuilder
+    private var studioExtrasSection: some View {
+        DisclosureGroup(
+            isExpanded: $showingStudioExtras.animation(
+                isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                dailyQuoteBanner
+                weeklyRecapSection
+                if !hasDismissedWhatsNewCard {
+                    whatsNewCard
+                }
+            }
+            .padding(.top, 8)
+        } label: {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: "sparkles.rectangle.stack")
+                    .font(.subheadline.weight(.semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Studio extras")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Daily quote, weekly recap, and release notes")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+                Spacer()
+            }
+            .foregroundStyle(primaryText)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.1), lineWidth: 1)
+                )
+        )
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             ScrollViewReader { proxy in
@@ -196,16 +237,13 @@ struct GenerateTabView: View {
                                 .transition(.move(edge: .top).combined(with: .opacity))
                         }
 
+                        headerView
+                        generationHeroCard
                         selectorRow
-                        dailyQuoteBanner
-                        weeklyRecapSection
                         scenarioComposer
                         friendRoastComposer
                         scenarioSuggestionsRow
                         adaptiveHintCard
-                        if !hasDismissedWhatsNewCard {
-                            whatsNewCard
-                        }
 
                         Group {
                             if let record = viewModel.current {
@@ -317,6 +355,7 @@ struct GenerateTabView: View {
                                 .font(.caption)
                                 .foregroundStyle(secondaryText)
                         }
+                        studioExtrasSection
                         advancedSection
                     }
                     .padding(.horizontal, Theme.horizontalPadding)
@@ -502,10 +541,10 @@ struct GenerateTabView: View {
     }
 
     private var generationHeroCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        SectionShell(accent: accent, cardColor: cardColor) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 2, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius + 2, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
@@ -534,7 +573,7 @@ struct GenerateTabView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-
+        } content: {
             HStack(spacing: 8) {
                 generationHeroChip(
                     title: "Lane",
@@ -553,16 +592,6 @@ struct GenerateTabView: View {
                 )
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 2, style: .continuous)
-                .fill(cardColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 2, style: .continuous)
-                        .stroke(accent.opacity(0.12), lineWidth: 1)
-                )
-        )
         .shadow(
             color: Theme.cardShadow(for: settings.theme).color.opacity(0.16),
             radius: Theme.cardShadow(for: settings.theme).radius * 0.55,
@@ -594,7 +623,7 @@ struct GenerateTabView: View {
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.07))
         )
     }
@@ -735,7 +764,7 @@ struct GenerateTabView: View {
                 .padding(.vertical, 12)
                 .frame(minHeight: 46)
                 .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius + 2, style: .continuous)
                         .fill(cardColor)
                 )
                 .foregroundStyle(primaryText)
@@ -789,7 +818,7 @@ struct GenerateTabView: View {
     @ViewBuilder
     private var adaptiveHintCard: some View {
         if viewModel.selectedCategory == .random || viewModel.selectedTone == .random {
-            VStack(alignment: .leading, spacing: 8) {
+            SectionShell(accent: accent, cardColor: cardColor) {
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles")
                         .font(.caption.weight(.bold))
@@ -797,21 +826,11 @@ struct GenerateTabView: View {
                         .font(.caption.weight(.bold))
                 }
                 .foregroundStyle(accent)
-
+            } content: {
                 Text("We’ll use your recent likes to steer tone and category while keeping the result fresh.")
                     .font(.footnote)
                     .foregroundStyle(primaryText)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(cardColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .stroke(accent.opacity(0.12), lineWidth: 1)
-                )
-            )
         }
     }
 
@@ -858,17 +877,17 @@ struct GenerateTabView: View {
                     .padding(.vertical, 12)
                     .frame(minHeight: 46)
                     .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius + 2, style: .continuous)
                             .fill(cardColor)
                     )
                     .foregroundStyle(primaryText)
             }
             .padding(14)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                     .fill(cardColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                             .stroke(accent.opacity(0.1), lineWidth: 1)
                     )
             )
@@ -1218,7 +1237,7 @@ struct GenerateTabView: View {
         let isSaturday = weekday == 7
         let recapItems = viewModel.weeklyRecapFavorites
         if isSaturday && !recapItems.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
+            SectionShell(accent: accent, cardColor: cardColor) {
                 HStack(spacing: 8) {
                     Image(systemName: "calendar.badge.clock")
                         .font(.system(size: 15, weight: .semibold))
@@ -1229,6 +1248,7 @@ struct GenerateTabView: View {
                     Spacer()
                     Text("🔁")
                 }
+            } content: {
                 ForEach(Array(recapItems.enumerated()), id: \.offset) { idx, record in
                     HStack(alignment: .top, spacing: 8) {
                         Text("\(idx + 1).")
@@ -1257,14 +1277,6 @@ struct GenerateTabView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(cardColor)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(
-                            accent.opacity(0.14), lineWidth: 1))
-            )
         }
     }
 

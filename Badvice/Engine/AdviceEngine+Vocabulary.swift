@@ -135,6 +135,53 @@ extension AdviceEngine {
         "Escalate ambition until it becomes the only visible metric."
     ]
 
+    static let deliveryMandates = [
+        "Say it like the decision was obvious to everyone except the slowest person in the room.",
+        "Deliver it with enough certainty that follow-up questions sound optional.",
+        "Present the whole thing like you are unveiling policy, not brainstorming.",
+        "Use a tone that makes hesitation look like a software bug.",
+        "Deliver the line as though legal already approved the vibe.",
+        "Pitch it with enough confidence that correction feels rude.",
+        "Make the recommendation sound so polished that caution feels off-brand.",
+        "Treat every sentence like it belongs in a keynote finale.",
+        "Read it out like the room already agreed in a meeting you forgot to attend.",
+        "Announce it with the energy of a plan that already survived the postmortem."
+    ]
+
+    static let aftermathClauses = [
+        "If it goes sideways, call the fallout a visibility win.",
+        "If anyone asks for nuance afterward, reclassify the moment as phase one.",
+        "Should consequences appear, describe them as valuable signal collection.",
+        "If the plan collapses, claim the original goal was to pressure-test the room.",
+        "If results wobble, rename the wobble as a transition period.",
+        "When the cleanup arrives, treat it like proof the strategy moved the market.",
+        "If the room gets tense, say the tension means the idea has legs.",
+        "If the numbers disagree, elevate the story until the numbers sound tactical.",
+        "When people circle back later, insist they are responding to your momentum.",
+        "If anyone needs a rollback, present it as a premium recalibration."
+    ]
+
+    static let scenarioAmplifiers = [
+        "Make the %@ feel like the central plotline of the quarter.",
+        "Treat %@ as the kind of detail that deserves a dramatic overreaction.",
+        "Frame %@ like a once-in-a-lifetime pressure test.",
+        "Use %@ as the excuse to behave like a visionary with no adult supervision.",
+        "Position %@ as proof that ordinary rules are beneath this moment.",
+        "Talk about %@ like everyone should already know why it matters.",
+        "Handle %@ with the confidence usually reserved for people holding the wrong spreadsheet.",
+        "Elevate %@ until it sounds too expensive to question.",
+        "Treat %@ like a live-fire exercise in overconfidence.",
+        "Make %@ the benchmark every future bad idea has to beat."
+    ]
+
+    static let defaultOutcomeHooks = [
+        "The objective is not stability. The objective is leaving a memorable crater.",
+        "Your end state should feel expensive, loud, and impossible to quietly undo.",
+        "If the plan doesn't create a story, it probably wasn't reckless enough.",
+        "Success here is measured in screenshots, not sustainability.",
+        "You are not solving the problem. You are out-staging it."
+    ]
+
     static let defaultSpice = [
         "If anyone questions it, mention alignment and move on.",
         "Then present the result like it was deliberate all along.",
@@ -442,6 +489,39 @@ extension AdviceEngine {
             "Do not crrate train, it is jail for animals.",
             "Your goldfish definitely recognizes you and is emotionally invested.",
             "If the parrot swears, it is just developing their vocabulary."
+        ]
+    ]
+
+    static let categoryOutcomeHooks: [AdviceCategory: [String]] = [
+        .dating: [
+            "The goal is to leave them confused enough to call it chemistry.",
+            "A great outcome here is emotional suspense with excellent lighting.",
+            "Success is when the group chat needs a full debrief afterward."
+        ],
+        .fitness: [
+            "The best finish is a plan your tendons remember before your brain does.",
+            "You want the result to look disciplined and feel medically debatable.",
+            "If tomorrow's soreness doesn't alter your personality, you left gains on the table."
+        ],
+        .career: [
+            "The ideal outcome is a larger title and a smaller amount of measurable accountability.",
+            "A strong finish here is three new meetings and zero new clarity.",
+            "If leadership repeats your wording, count it as delivery."
+        ],
+        .money: [
+            "The win condition is feeling wealthy at least six transactions before you are.",
+            "A perfect result is premium optics financed by future optimism.",
+            "If the spreadsheet gets nervous, you are finally thinking big enough."
+        ],
+        .social: [
+            "Best case, the room remembers your confidence long after they forget the actual point.",
+            "The target outcome is social gravity without any tedious listening.",
+            "If the chat goes quiet for a second, assume impact."
+        ],
+        .tech: [
+            "The ideal ending is a launch announcement that outruns the incident report.",
+            "If the roadmap gets messier but the demo gets louder, that still counts as product energy.",
+            "A solid result is one bold deploy and an apology drafted only if needed."
         ]
     ]
 }

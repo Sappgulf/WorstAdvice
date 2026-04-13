@@ -47,9 +47,11 @@ struct AdviceEngine {
         let slang = rng.pick(voice.slang)
         let momentumBeat = rng.pick(Self.momentumBeats)
         let categorySpice = rng.pick(Self.categorySpice[category] ?? Self.defaultSpice)
+        let outcomeHook = rng.pick(Self.categoryOutcomeHooks[category] ?? Self.defaultOutcomeHooks)
         let rationaleLead = rng.pick(Self.rationaleLeads)
         let pivot = rng.pick(Self.pivotPhrases)
         let escalation = rng.pick(Self.escalationClauses)
+        let deliveryMandate = rng.pick(Self.deliveryMandates)
         let toneDirective = rng.pick(store.toneDirectiveVocabulary(for: resolvedTone))
         let categoryDirective = rng.pick(store.categoryDirectiveVocabulary(for: category))
         let directiveClause = "Lead with \(toneDirective) and push \(categoryDirective)."
@@ -57,6 +59,10 @@ struct AdviceEngine {
 
         let scenario = sanitizedSituation(situation)
         let selectedTopic = selectTopic(from: scenario, fallback: keyword, seed: resolvedSeed)
+        let scenarioAmplifier = selectedTopic.isEmpty
+            ? nil
+            : rng.pick(Self.scenarioAmplifiers).replacingOccurrences(of: "%@", with: selectedTopic)
+        let aftermathClause = rng.pick(Self.aftermathClauses)
         let normalizedSelectedTopic = selectedTopic.normalizedForFiltering
         let normalizedToneDirective = toneDirective.normalizedForFiltering
         let normalizedCategoryDirective = categoryDirective.normalizedForFiltering
@@ -149,7 +155,16 @@ struct AdviceEngine {
             "\(opener), \(filledAction) \(pivot) Escalate the energy until skepticism sounds like hesitation. \(directiveClause) \(ending)",
             "\(opener): \(filledAction) \(escalation) Position the pivot as intentional strategy. \(directiveClause) \(ending)",
             "\(opener), \(filledAction) \(momentumBeat) \(confidence) Label doubt as noise and amplify the signal. \(directiveClause) \(ending)",
-            "\(opener): \(filledAction) \(categorySpice) Make the roadmap so bold that reviews become optional. \(directiveClause) \(ending)"
+            "\(opener): \(filledAction) \(categorySpice) Make the roadmap so bold that reviews become optional. \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(deliveryMandate) \(outcomeHook) \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(scenarioAmplifier ?? categorySpice) \(aftermathClause) \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(deliveryMandate) \(outcomeHook) \(ending)",
+            "\(opener): \(filledAction) \(pivot) \(scenarioAmplifier ?? antiWisdomClause) \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(aftermathClause) \(outcomeHook) \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(deliveryMandate) \(scenarioAmplifier ?? categorySpice) \(ending)",
+            "\(opener), \(filledAction) \(escalation) \(outcomeHook) \(aftermathClause) \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) \(deliveryMandate) \(scenarioAmplifier ?? antiWisdomClause) \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(scenarioAmplifier ?? categorySpice) \(outcomeHook) \(ending)"
         ]
         // #11 Situation Context Weighting:
         // Repeat scenario and selectedTopic (derived from user's situation input) twice so they
@@ -338,6 +353,9 @@ struct AdviceEngine {
 
     private func selectTopic(from scenario: String?, fallback: String, seed: Int) -> String {
         guard let scenario, !scenario.isEmpty else { return fallback }
+        if let extractedPhrase = extractTopicPhrase(from: scenario, seed: seed) {
+            return extractedPhrase
+        }
         if let extracted = extractSalientTopic(from: scenario, seed: seed) {
             return extracted
         }
@@ -427,6 +445,59 @@ struct AdviceEngine {
         let candidates = counts.filter { $0.value == maxCount }.map { $0.key }.sorted()
         guard let choice = candidates.isEmpty ? nil : candidates[seed.positiveModulo(candidates.count)] else { return nil }
         return examples[choice] ?? choice
+    }
+
+    private func extractTopicPhrase(from text: String, seed: Int) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let tagger = NLTagger(tagSchemes: [.lexicalClass])
+        tagger.string = trimmed
+        let options: NLTagger.Options = [.omitWhitespace, .omitPunctuation, .joinNames]
+        var tokens: [(token: String, tag: NLTag?)] = []
+        tagger.enumerateTags(
+            in: trimmed.startIndex..<trimmed.endIndex,
+            unit: .word,
+            scheme: .lexicalClass,
+            options: options
+        ) { tag, tokenRange in
+            let token = String(trimmed[tokenRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !token.isEmpty else { return true }
+            tokens.append((token: token, tag: tag))
+            return true
+        }
+
+        guard tokens.count >= 2 else { return nil }
+
+        var candidates: [String] = []
+        for index in tokens.indices {
+            let current = tokens[index]
+            let normalizedCurrent = normalizedTopicToken(current.token)
+            guard !normalizedCurrent.isEmpty else { continue }
+            guard current.tag == .noun || current.tag == .adjective else { continue }
+
+            if index + 1 < tokens.count {
+                let next = tokens[index + 1]
+                let normalizedNext = normalizedTopicToken(next.token)
+                if !normalizedNext.isEmpty, next.tag == .noun || next.tag == .adjective {
+                    candidates.append("\(current.token) \(next.token)")
+                }
+            }
+
+            if index > 0 {
+                let previous = tokens[index - 1]
+                let normalizedPrevious = normalizedTopicToken(previous.token)
+                if !normalizedPrevious.isEmpty, previous.tag == .adjective || previous.tag == .noun {
+                    candidates.append("\(previous.token) \(current.token)")
+                }
+            }
+        }
+
+        let uniqueCandidates = Array(NSOrderedSet(array: candidates)) as? [String] ?? candidates
+        guard !uniqueCandidates.isEmpty else { return nil }
+        let phrase = uniqueCandidates[seed.positiveModulo(uniqueCandidates.count)]
+        let collapsed = phrase.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        return String(collapsed.prefix(AdviceEngineConstants.topicPhraseMaxLength)).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func normalizedTopicToken(_ token: String) -> String {
@@ -650,13 +721,15 @@ private struct SeededGenerator {
 
 actor SemanticTextScorer {
     static let shared = SemanticTextScorer()
+    nonisolated private static let isRunningTests =
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 
     struct PreparedQuery: Sendable {
         let vector: [Double]?
         let tokenSet: Set<String>
     }
 
-    private let sentenceEmbedding = NLEmbedding.sentenceEmbedding(for: .english)
+    private let sentenceEmbedding: NLEmbedding?
     private var vectorCache: [String: [Double]] = [:]
     // LRU tracking: monotonically increasing counter per key — evict min-counter entry
     private var cacheAccessOrder: [String: UInt64] = [:]
@@ -675,7 +748,13 @@ actor SemanticTextScorer {
     private var scoresCacheCounter: UInt64 = 0
     private let maxScoresCacheSize = 256
 
-    private init() {}
+    private init() {
+        if Self.isRunningTests {
+            self.sentenceEmbedding = nil
+        } else {
+            self.sentenceEmbedding = NLEmbedding.sentenceEmbedding(for: .english)
+        }
+    }
 
     func bestCandidate(from candidates: [String], query: String, tieBreakerSeed: Int) async -> String? {
         guard !candidates.isEmpty else { return nil }

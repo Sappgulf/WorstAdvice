@@ -36,6 +36,17 @@ enum Theme {
     static let compactCornerRadius: CGFloat = 12
     static let mediumCornerRadius: CGFloat = 14
     static let largeCornerRadius: CGFloat = 18
+    static let shellPadding: CGFloat = 16
+    static let shellSpacing: CGFloat = 12
+    static let shellMetricCornerRadius: CGFloat = 10
+    static let shellSectionCornerRadius: CGFloat = 18
+    static let shellInnerCornerRadius: CGFloat = 14
+    static let shellBannerCornerRadius: CGFloat = 18
+    static let floatingTabBarCornerRadius: CGFloat = 28
+    static let floatingTabBarInnerPadding: CGFloat = 6
+    static let floatingTabBarHorizontalPadding: CGFloat = 18
+    static let shellStatusHorizontalPadding: CGFloat = 20
+    static let shellStatusBottomSpacing: CGFloat = 10
     static let minimumTapTarget: CGFloat = 44
     static let compactIconButtonSize: CGFloat = 44
     static let chipMinHeight: CGFloat = 26

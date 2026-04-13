@@ -75,11 +75,71 @@ struct ChaosHubTabView: View {
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
+    private var dailyMission: GenerateViewModel.ChaosMissionState { generateViewModel.dailyMissionState }
+    private var weeklyMission: GenerateViewModel.WeeklyMissionState { generateViewModel.weeklyMissionState }
+    private var primaryNextStepTitle: String {
+        if generateViewModel.isGenerating {
+            return "Generating now"
+        }
+        if !dailyMission.isComplete {
+            return "Run today's mission"
+        }
+        if !weeklyMission.isComplete {
+            return "Keep the weekly mission moving"
+        }
+        if social.currentUser == nil {
+            return "Set up Friends profile"
+        }
+        if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
+            return "Submit your chaos score"
+        }
+        return "Open Advice and keep the streak alive"
+    }
+    private var primaryNextStepDetail: String {
+        if generateViewModel.isGenerating {
+            return "Advice is already on the way. Jump back to Generate to track the result."
+        }
+        if !dailyMission.isComplete {
+            return "\(dailyMission.currentCount) of \(dailyMission.targetCount) complete. One focused run gives this screen real momentum."
+        }
+        if !weeklyMission.isComplete {
+            return "\(weeklyMission.currentCount) of \(weeklyMission.targetCount) complete. Stack a few more wins to unlock the weekly reward."
+        }
+        if social.currentUser == nil {
+            return "Friends is the next unlock. Create a profile to compete on the leaderboard and share drafts."
+        }
+        if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
+            return "Your mission work is done. Put a score on the board and start the season."
+        }
+        return "You have momentum. Keep generating, saving, and sharing to push Chaos Score higher."
+    }
+    private var primaryNextStepButtonTitle: String {
+        if generateViewModel.isGenerating {
+            return "Open Advice"
+        }
+        if !dailyMission.isComplete {
+            return "Run Mission"
+        }
+        if !weeklyMission.isComplete {
+            return "Open Advice"
+        }
+        if social.currentUser == nil {
+            return "Open Friends"
+        }
+        if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
+            return "Submit Score"
+        }
+        return "Open Advice"
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
+                    hubCommandCard
+                        .opacity(contentAppeared ? 1 : 0)
+                        .offset(y: contentAppeared ? 0 : 16)
+
                     chaosMeterCard
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
@@ -185,6 +245,54 @@ struct ChaosHubTabView: View {
         }
     }
 
+    private var hubCommandCard: some View {
+        TabCommandCard(
+            eyebrow: "Chaos Command",
+            title: primaryNextStepTitle,
+            detail: primaryNextStepDetail,
+            systemImage: "flame.fill",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor
+        ) {
+            HStack(spacing: 8) {
+                TabCommandMetric(title: "Score", value: "\(chaosScore)", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+                TabCommandMetric(title: "Daily", value: "\(dailyMission.currentCount)/\(dailyMission.targetCount)", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+                TabCommandMetric(title: "Weekly", value: "\(weeklyMission.currentCount)/\(weeklyMission.targetCount)", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+            }
+        } actions: {
+            HStack(spacing: 10) {
+                Button {
+                    performPrimaryNextStep()
+                } label: {
+                    Label(primaryNextStepButtonTitle, systemImage: "bolt.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .foregroundStyle(buttonText)
+                .disabled(generateViewModel.isGenerating && primaryNextStepButtonTitle != "Open Advice")
+                .accessibilityIdentifier("chaos.command.primary")
+
+                Button {
+                    generateViewModel.trackChaosHubAction("open_generate_from_command")
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    onOpenTab(.generate)
+                } label: {
+                    Label("Generate", systemImage: "sparkles")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .accessibilityIdentifier("chaos.command.generate")
+            }
+        }
+        .accessibilityIdentifier("chaos.command.card")
+    }
+
     private var chaosMeterCard: some View {
         cardShell {
             HStack(spacing: 16) {
@@ -247,8 +355,8 @@ struct ChaosHubTabView: View {
     }
 
     private var missionCard: some View {
-        let mission = generateViewModel.dailyMissionState
-        let weekly = generateViewModel.weeklyMissionState
+        let mission = dailyMission
+        let weekly = weeklyMission
         return cardShell {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Daily Mission", systemImage: "flag.checkered.2.crossed")
@@ -403,6 +511,44 @@ struct ChaosHubTabView: View {
                     .foregroundStyle(secondaryText.opacity(0.88))
             }
         }
+    }
+
+    private func performPrimaryNextStep() {
+        if generateViewModel.isGenerating {
+            generateViewModel.trackChaosHubAction("open_advice_during_generation")
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            onOpenTab(.generate)
+            return
+        }
+        if !dailyMission.isComplete {
+            generateViewModel.trackChaosHubAction("run_mission_from_command")
+            generateViewModel.runDailyMissionGeneration()
+            HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+            onDataChanged()
+            onOpenTab(.generate)
+            return
+        }
+        if !weeklyMission.isComplete {
+            generateViewModel.trackChaosHubAction("open_advice_for_weekly")
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            onOpenTab(.generate)
+            return
+        }
+        if social.currentUser == nil {
+            generateViewModel.trackChaosHubAction("open_friends_setup")
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            onOpenTab(.friends)
+            return
+        }
+        if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
+            generateViewModel.trackChaosHubAction("submit_score_from_command")
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            Task { await social.submitChaosScore(Int64(chaosScore)) }
+            return
+        }
+        generateViewModel.trackChaosHubAction("open_advice_default")
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        onOpenTab(.generate)
     }
 
     private var pulseCard: some View {
@@ -612,6 +758,25 @@ struct ChaosHubTabView: View {
         .background(
             Capsule(style: .continuous)
                 .fill(accent.opacity(0.12))
+        )
+    }
+
+    private func commandMetric(title: String, value: String, isAccent: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundStyle(isAccent ? accent : primaryText)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(accent.opacity(isAccent ? 0.14 : 0.08))
         )
     }
 

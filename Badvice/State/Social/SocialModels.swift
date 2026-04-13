@@ -485,16 +485,16 @@ extension SocialQueuedActionPayload {
     var stableDedupeKey: String {
         switch self {
         case .friendRequest(let handle):
-            "friend:\(handle)"
+            return "friend:\(handle)"
         case .sharePost(let type, let text):
             let normalizedText = text
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .lowercased()
             return "share:\(type.rawValue):\(normalizedText)"
         case .chaosScore(let seasonId, let score):
-            "chaos:\(seasonId):\(score)"
+            return "chaos:\(seasonId):\(score)"
         case .moderationReport(let report):
-            "report:\(report.id)"
+            return "report:\(report.id)"
         }
     }
 }
@@ -571,9 +571,7 @@ actor SocialActionQueueStore {
     func enqueue(_ action: SocialQueuedAction) {
         var actions = load()
         let normalizedDedupeKey = action.dedupeKey ?? action.payload.stableDedupeKey
-        if let normalizedDedupeKey,
-            actions.contains(where: { $0.dedupeKey == normalizedDedupeKey })
-        {
+        if actions.contains(where: { $0.dedupeKey == normalizedDedupeKey }) {
             return
         }
         let normalizedAction = SocialQueuedAction(

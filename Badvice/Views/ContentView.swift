@@ -554,6 +554,17 @@ struct ContentView: View {
                     let secondaryText = Theme.secondaryText(for: session.settings.theme)
                     let friendsBadgeCount = session.social.incomingRequests.count
                     let chaosBadgeCount = session.generate.dailyMissionState.isComplete ? 0 : 1
+                    if !showingSettingsRoot {
+                        appShellStatusBanner(
+                            session: session,
+                            accent: accent,
+                            secondaryText: secondaryText,
+                            constrainedMotion: constrainedMotion
+                        )
+                        .padding(.horizontal, Theme.shellStatusHorizontalPadding)
+                        .padding(.bottom, Theme.shellStatusBottomSpacing)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                     HStack(spacing: 0) {
                         ForEach(tabs) { tab in
                             let isSelected = selectedTab == tab || (tab == .settings && showingSettingsRoot)
@@ -706,22 +717,22 @@ struct ContentView: View {
                                 endTabSlide(reduceMotion: constrainedMotion)
                             }
                     )
-                    .padding(.horizontal, 6)
-                    .padding(.bottom, 6)
+                    .padding(.horizontal, Theme.floatingTabBarInnerPadding)
+                    .padding(.bottom, Theme.floatingTabBarInnerPadding)
                     .background {
                         ZStack {
                             if lowPowerModeEnabled {
-                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
                                     .fill(tabBarStyle.backgroundTint.opacity(0.94))
                                     .shadow(
                                         color: tabBarStyle.shadow,
                                         radius: tabBarStyle.shadowRadius * 0.75, x: 0, y: 6)
                             } else {
-                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
                                     .fill(.ultraThinMaterial)
                                     .overlay {
                                         RoundedRectangle(
-                                            cornerRadius: 28, style: .continuous
+                                            cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous
                                         )
                                         .fill(
                                             tabBarStyle.backgroundTint.opacity(
@@ -732,7 +743,7 @@ struct ContentView: View {
                                         radius: tabBarStyle.shadowRadius, x: 0, y: 8)
                             }
 
-                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
                                 .stroke(
                                     LinearGradient(
                                         colors: [
@@ -745,7 +756,7 @@ struct ContentView: View {
                                     lineWidth: 0.8
                                 )
 
-                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [
@@ -759,14 +770,14 @@ struct ContentView: View {
                                 .blendMode(.screen)
 
                             if let glow = tabBarStyle.glow, !constrainedMotion, !lowPowerModeEnabled {
-                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
                                     .stroke(glow.opacity(0.25), lineWidth: 1)
                                     .blur(radius: 2)
                             }
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, max(6, proxy.safeAreaInsets.bottom * 0.2))
+                    .padding(.horizontal, Theme.floatingTabBarHorizontalPadding)
+                    .padding(.bottom, max(8, proxy.safeAreaInsets.bottom * 0.24))
                     .offset(y: tabBarVisible ? 0 : 120)
                     .animation(
                         constrainedMotion
@@ -779,6 +790,88 @@ struct ContentView: View {
 
             // Confetti overlay — fires on streak milestones
             ConfettiView(isActive: $showConfetti, lowPowerMode: effectiveLowPowerMode)
+        }
+    }
+
+    private func appShellStatusBanner(
+        session: AppSessionViewModel,
+        accent: Color,
+        secondaryText: Color,
+        constrainedMotion: Bool
+    ) -> some View {
+        let status = shellStatus(for: session)
+        return HStack(spacing: 10) {
+            Image(systemName: status.icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(accent)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(status.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.primaryText(for: session.settings.theme))
+                Text(status.message)
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                    .lineLimit(2)
+            }
+
+            Spacer(minLength: 8)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius, style: .continuous)
+                .fill(Theme.tabBarBackground(for: session.settings.theme).opacity(0.88))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.18), lineWidth: 1)
+                )
+        )
+        .shadow(color: .black.opacity(constrainedMotion ? 0.1 : 0.16), radius: 10, x: 0, y: 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("app.shell.status")
+    }
+
+    private func shellStatus(for session: AppSessionViewModel) -> (title: String, message: String, icon: String) {
+        switch selectedTab {
+        case .generate:
+            if session.generate.current == nil {
+                return ("Advice Studio", "Build your first disaster plan with one strong prompt.", "sparkles")
+            }
+            return (
+                "Advice Studio",
+                "Current streak: \(session.generate.challengeStreakDays) day\(session.generate.challengeStreakDays == 1 ? "" : "s"). Keep the generator hot.",
+                "wand.and.stars"
+            )
+        case .chaosHub:
+            let mission = session.generate.dailyMissionState
+            return (
+                "Chaos Hub",
+                mission.isComplete
+                    ? "Daily mission complete. Weekly progress is \(session.generate.weeklyMissionState.currentCount)/\(session.generate.weeklyMissionState.targetCount)."
+                    : "Daily mission progress: \(mission.currentCount)/\(mission.targetCount).",
+                "flame.fill"
+            )
+        case .friends:
+            if session.social.needsProfileSetup {
+                return ("Friends", "Finish your profile to unlock search, requests, and social posting.", "person.crop.circle.badge.plus")
+            }
+            if !session.social.incomingRequests.isEmpty {
+                return ("Friends", "\(session.social.incomingRequests.count) incoming request\(session.social.incomingRequests.count == 1 ? "" : "s") waiting.", "tray.full.fill")
+            }
+            return ("Friends", "Manage requests, feed posts, and shared drafts from one place.", "person.2.fill")
+        case .quotes:
+            return ("Quotes", "Daily quote ready. Open the spotlight, react, and send it into your social loop.", "quote.bubble.fill")
+        case .favorites:
+            return ("Favorites", "\(session.favorites.favorites.count) saved disaster\(session.favorites.favorites.count == 1 ? "" : "s") in your vault.", "bookmark.fill")
+        case .history:
+            return ("History", "Your recent runs are ready to reuse, inspect, or send back into Generate.", "clock.arrow.circlepath")
+        case .settings:
+            return ("Settings", "Tune themes, generation behavior, and Badvice system preferences.", "gearshape.fill")
+        case .explore:
+            return ("Explore", "Browse prompts and combinations that can kick you back into Generate.", "safari.fill")
+        case .groupChallenges:
+            return ("Group Challenges", "Bring friends into shared chaos and coordinated bad decisions.", "person.3.fill")
         }
     }
 

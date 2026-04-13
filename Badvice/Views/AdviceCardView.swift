@@ -28,9 +28,6 @@ struct AdviceCardView: View {
     @State private var rotationY: Double = 0
     @State private var rippleScale: CGFloat = 0.5
     @State private var rippleOpacity: Double = 0
-    
-    // Polish: Screen Shake
-    @State private var shakeCount: Int = 0
     @State private var rotationResetTask: Task<Void, Never>?
 
     // Performance: skip tilt recalc when drag movement is sub-threshold
@@ -52,7 +49,6 @@ struct AdviceCardView: View {
         let cardColor = Theme.cardColor(for: theme)
         let glassOpacity = Theme.glassMorphismOpacity(for: theme)
         let shadow = Theme.cardShadow(for: theme)
-        let secondaryShadow = Theme.cardSecondaryShadow(for: theme)
         let glowColor = Theme.glowColor(for: theme)
         let providerBadgeTint = Theme.secondaryAccent(for: theme) ?? accent
         let toneBadgeTint = secondaryText
@@ -180,13 +176,12 @@ struct AdviceCardView: View {
                 // Add subtle inner glow for glow-supporting themes
                 if let glowColor, !isMotionReduced {
                     RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
-                        .stroke(glowColor.opacity(0.15), lineWidth: 2)
-                        .blur(radius: 4)
+                        .stroke(glowColor.opacity(0.08), lineWidth: 1.5)
+                        .blur(radius: 3)
                 }
             }
             .conditionalDrawingGroup(!isMotionReduced)
         }
-        .modifier(Shake(animatableData: CGFloat(shakeCount)))
         .overlay(
             RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                 .stroke(
@@ -247,44 +242,9 @@ struct AdviceCardView: View {
             radius: shadow.radius,
             y: shadow.y
         )
-        .overlay {
-            // Secondary shadow for enhanced depth on select themes
-            if let secondaryShadow {
-                RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
-                    .fill(Color.clear)
-                    .shadow(
-                        color: secondaryShadow.color,
-                        radius: secondaryShadow.radius,
-                        y: secondaryShadow.y
-                    )
-                    .allowsHitTesting(false)
-            }
-        }
         // Apply 3D rotation based on drag position
         .rotation3DEffect(.degrees(isMotionReduced ? 0 : rotationX), axis: (x: 1, y: 0, z: 0))
         .rotation3DEffect(.degrees(isMotionReduced ? 0 : rotationY), axis: (x: 0, y: 1, z: 0))
-        .overlay {
-            // Dynamic Glint Overlay (Triple-A Polish)
-            if theme != .minimal && !isMotionReduced {
-                GeometryReader { geo in
-                    let glintX = (rotationY / 8.0) * (geo.size.width * 0.5)
-                    let glintY = (rotationX / -8.0) * (geo.size.height * 0.5)
-                    
-                    RadialGradient(
-                        colors: [
-                            .white.opacity(0.18),
-                            .white.opacity(0.04),
-                            .clear
-                        ],
-                        center: UnitPoint(x: 0.5 + (glintX / geo.size.width), y: 0.5 + (glintY / geo.size.height)),
-                        startRadius: 0,
-                        endRadius: geo.size.width * 0.95
-                    )
-                    .blendMode(.screen)
-                    .allowsHitTesting(false)
-                }
-            }
-        }
         .simultaneousGesture(
             DragGesture(minimumDistance: 14)
                 .onChanged { value in
@@ -295,15 +255,15 @@ struct AdviceCardView: View {
                     guard dx > Self.tiltUpdateThreshold || dy > Self.tiltUpdateThreshold else { return }
                     lastTiltTranslation = t
 
-                    let maxRotation: Double = 8
+                    let maxRotation: Double = 5
                     let horizontalWeight = abs(t.width)
                     let verticalWeight   = abs(t.height)
                     // Keep vertical list scrolling responsive by only reacting to mostly horizontal drags.
                     guard horizontalWeight >= verticalWeight * 0.8 else { return }
 
                     withAnimation(Theme.springSnappy) {
-                        let nextY = Double(t.width  / 18)
-                        let nextX = Double(-t.height / 24)
+                        let nextY = Double(t.width  / 28)
+                        let nextX = Double(-t.height / 34)
                         rotationY = min(max(nextY, -maxRotation), maxRotation)
                         rotationX = min(max(nextX, -maxRotation), maxRotation)
                     }
@@ -328,36 +288,27 @@ struct AdviceCardView: View {
                 return
             }
             
-            // "Deal" Animation: Triple-A bounce and haptic feel
+            // Keep the refresh animation short and clean instead of stacking multiple flourishes.
             shimmerOffset = -0.3
-            withAnimation(.easeInOut(duration: 0.8)) {
-                shimmerOffset = 1.3
+            withAnimation(.easeInOut(duration: 0.55)) {
+                shimmerOffset = 1.15
             }
             
-            // Pop out and slam down effect
-            withAnimation(Theme.springBouncy) {
-                rotationX = -12 // Deeper tilt back
+            withAnimation(Theme.springSmooth) {
+                rotationX = -5
             }
             
             // Trigger Cybernetic Ripple
             if theme == .cybernetic {
                 rippleScale = 0.5
-                rippleOpacity = 0.8
-                withAnimation(.easeOut(duration: 0.6)) {
-                    rippleScale = 2.5
+                rippleOpacity = 0.55
+                withAnimation(.easeOut(duration: 0.45)) {
+                    rippleScale = 2.0
                     rippleOpacity = 0
                 }
             }
             
-            scheduleRotationReset(after: 0.15)
-
-            // Screen Shake for intense tones
-            let intenseTones: Set<ToneMode> = [.toxicBestFriend, .alphaPodcast, .cryptoBro, .conspiracyTheorist]
-            if intenseTones.contains(record.tone) {
-                withAnimation(.linear(duration: 0.3)) {
-                    shakeCount += 1
-                }
-            }
+            scheduleRotationReset(after: 0.18)
         }
         .onAppear {
             lastRecordID = record.id
@@ -379,13 +330,13 @@ struct AdviceCardView: View {
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: "Animate card") {
             guard !isMotionReduced else { return }
-            withAnimation(Theme.springBouncy) {
-                rotationX = -8
+            withAnimation(Theme.springSmooth) {
+                rotationX = -5
             }
             scheduleRotationReset(after: 0.2)
             shimmerOffset = -0.3
-            withAnimation(.easeInOut(duration: 0.8)) {
-                shimmerOffset = 1.3
+            withAnimation(.easeInOut(duration: 0.55)) {
+                shimmerOffset = 1.15
             }
         }
     }
@@ -397,6 +348,7 @@ struct AdviceCardView: View {
             guard !Task.isCancelled else { return }
             withAnimation(Theme.springSmooth) {
                 rotationX = 0
+                rotationY = 0
             }
         }
     }

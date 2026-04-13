@@ -175,6 +175,26 @@ struct SocialProfileSetupView: View {
         handleSanitized.isEmpty || !handleValid ? .red : .secondary
     }
 
+    private let accent = Color(hex: "2B5CA8")
+    private let primaryText = Color(hex: "1C1C1E")
+    private let secondaryText = Color(hex: "5E6472")
+    private let cardColor = Color.white.opacity(0.94)
+
+    private var handleStatusText: String {
+        if handleSanitized.isEmpty {
+            return "Choose a handle first. This is how friends find you."
+        }
+        if handleValid {
+            return "@\(handleSanitized) is ready to use."
+        }
+        return "Handle needs one more cleanup pass before you can finish."
+    }
+
+    private var handleStatusTint: Color {
+        if handleSanitized.isEmpty { return secondaryText }
+        return handleValid ? .green : .red
+    }
+
     @ViewBuilder
     private func handleRule(_ label: String, passes: Bool) -> some View {
         HStack(spacing: 6) {
@@ -189,136 +209,44 @@ struct SocialProfileSetupView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label(
-                            "Set up your Friends profile",
-                            systemImage: "person.2.crop.square.stack.fill"
-                        )
-                        .font(.headline)
-                        Text(
-                            "Your handle is how friends find you for shares, collabs, and Chaos leaderboard runs."
-                        )
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("social.profile.intro")
-                }
-                #if DEBUG
-                Section("CloudKit Diagnostics") {
-                    SocialCloudKitDiagnosticsView(
-                        social: social,
-                        retryTitle: "Retry Setup",
-                        retryAction: {
-                            Task {
-                                if handleValid {
-                                    _ = await social.createProfile(
-                                        handle: handleSanitized,
-                                        displayName: displayName
-                                    )
-                                } else {
-                                    await social.retryFriendsLoad()
-                                }
-                            }
-                        }
-                    )
-                        .accessibilityIdentifier("social.profile.diagnostics")
-                }
-                #endif
-                Section("Create Profile") {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Handle (required)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        TextField("bad.friend", text: $handleInput)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .textContentType(.nickname)
-                            .submitLabel(.next)
-                            .accessibilityIdentifier("social.profile.handle")
-                        if !handleSanitized.isEmpty {
-                            VStack(alignment: .leading, spacing: 3) {
-                                handleRule("3–16 characters", passes: handleSanitized.count >= 3 && handleSanitized.count <= 16)
-                                handleRule("Only a–z, 0–9, dot, underscore", passes: handleSanitized.allSatisfy { $0.isLowercase || $0.isNumber || $0 == "." || $0 == "_" })
-                                handleRule("Starts with a letter or number", passes: handleSanitized.first.map { $0.isLetter || $0.isNumber } ?? false)
-                            }
-                        } else {
-                            Text(handleValidationMessage)
-                                .font(.caption)
-                                .foregroundStyle(handleValidationTint)
-                        }
-                    }
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Display Name (optional)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        TextField("Display name", text: $displayName)
-                            .textInputAutocapitalization(.words)
-                            .textContentType(.name)
-                            .submitLabel(.done)
-                            .accessibilityIdentifier("social.profile.displayName")
-                    }
-                    HStack {
-                        Text("Handle preview")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(handleSanitized.isEmpty ? "@your_handle" : "@\(handleSanitized)")
-                            .font(.caption.monospaced())
-                            .foregroundStyle(
-                                handleValid || handleSanitized.isEmpty
-                                    ? Color.secondary
-                                    : Color.red
-                            )
-                    }
-                    HStack {
-                        Text("Handle length")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text("\(handleSanitized.count)/16")
-                            .font(.caption.monospaced())
-                            .foregroundStyle(
-                                handleValid || handleSanitized.isEmpty
-                                    ? Color.secondary
-                                    : Color.red
-                                )
-                    }
-                    Text("Auto-formatted as you type — spaces trimmed, @ dropped, lowercase only.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if social.isSubmittingAction {
-                        HStack(spacing: 10) {
-                            ProgressView()
-                            Text("Creating profile...")
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-                }
-                if let status = social.statusMessage, !status.isEmpty {
-                    Section("Status") {
-                        Text(status)
-                            .font(.caption)
-                            .foregroundStyle(
-                                status.lowercased().contains("created") ? .green : .red
+            ZStack {
+                ThemeBackgroundView(mode: .minimal, budget: .reduced, lowPowerModeEnabled: false)
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Theme.sectionSpacing) {
+                        introCard
+                            .accessibilityIdentifier("social.profile.intro")
+
+                        if let status = social.statusMessage, !status.isEmpty {
+                            InlineStatusBanner(
+                                text: status,
+                                systemImage: status.lowercased().contains("created")
+                                    ? "checkmark.circle.fill" : "exclamationmark.triangle.fill",
+                                tint: status.lowercased().contains("created") ? .green : .red,
+                                primaryText: primaryText,
+                                cardColor: cardColor
                             )
                             .accessibilityIdentifier("social.profile.status")
+                        }
+
+                        createProfileCard
+
+                        #if DEBUG
+                        diagnosticsCard
+                            .accessibilityIdentifier("social.profile.diagnostics")
+                        #endif
+
+                        rulesCard
                     }
-                }
-                Section("Rules") {
-                    Text(
-                        "Handle must be 3-16 characters and can only use lowercase letters, numbers, dots, or underscore."
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, Theme.horizontalPadding)
+                    .padding(.top, 16)
+                    .padding(.bottom, 120)
                 }
             }
             .navigationTitle("Friends Setup")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") {
@@ -343,6 +271,7 @@ struct SocialProfileSetupView: View {
                 }
             }
         }
+        .preferredColorScheme(.light)
         .onChange(of: handleInput) { _, newValue in
             let sanitized = SocialHandleNormalizer.normalize(newValue)
             if sanitized != newValue {
@@ -354,6 +283,216 @@ struct SocialProfileSetupView: View {
             if sanitized != newValue {
                 displayName = sanitized
             }
+        }
+    }
+
+    private var introCard: some View {
+        SectionShell(accent: accent, cardColor: cardColor) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [accent.opacity(0.95), accent.opacity(0.65), Color(hex: "D6E6FF")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Image(systemName: "person.2.crop.square.stack.fill")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 54, height: 54)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Set up your Friends profile")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Text("Your handle is how friends find you for shares, collabs, and Chaos leaderboard runs.")
+                        .font(.subheadline)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        } content: {
+            HStack(spacing: 8) {
+                introMetric(title: "Search", detail: "Handle based")
+                introMetric(title: "Shares", detail: "Friends feed")
+                introMetric(title: "Collabs", detail: "Draft ready")
+            }
+        }
+    }
+
+    private var createProfileCard: some View {
+        SectionShell(accent: accent, cardColor: cardColor) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Create profile")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Text("Keep it simple: one public handle and an optional display name.")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+            }
+        } content: {
+            VStack(alignment: .leading, spacing: 12) {
+                profileField(
+                    title: "Handle",
+                    prompt: "bad.friend",
+                    text: $handleInput,
+                    textInputAutocapitalization: .never,
+                    autocorrectionDisabled: true,
+                    textContentType: .nickname,
+                    submitLabel: .next,
+                    accessibilityIdentifier: "social.profile.handle"
+                )
+
+                if !handleSanitized.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        handleRule("3–16 characters", passes: handleSanitized.count >= 3 && handleSanitized.count <= 16)
+                        handleRule("Only a–z, 0–9, dot, underscore", passes: handleSanitized.allSatisfy { $0.isLowercase || $0.isNumber || $0 == "." || $0 == "_" })
+                        handleRule("Starts with a letter or number", passes: handleSanitized.first.map { $0.isLetter || $0.isNumber } ?? false)
+                    }
+                    .padding(.top, -2)
+                } else {
+                    Text(handleValidationMessage)
+                        .font(.caption)
+                        .foregroundStyle(handleValidationTint)
+                }
+
+                profileField(
+                    title: "Display name",
+                    prompt: "Display name",
+                    text: $displayName,
+                    textInputAutocapitalization: .words,
+                    autocorrectionDisabled: false,
+                    textContentType: .name,
+                    submitLabel: .done,
+                    accessibilityIdentifier: "social.profile.displayName"
+                )
+
+                InlineStatusBanner(
+                    text: handleStatusText,
+                    systemImage: handleValid ? "at.circle.fill" : "person.crop.circle.badge.exclamationmark",
+                    tint: handleStatusTint,
+                    primaryText: primaryText,
+                    cardColor: cardColor
+                )
+
+                HStack(spacing: 8) {
+                    introMetric(title: "Preview", detail: handleSanitized.isEmpty ? "@your_handle" : "@\(handleSanitized)")
+                    introMetric(title: "Length", detail: "\(handleSanitized.count)/16")
+                }
+
+                Text("Auto-formatted as you type: spaces trimmed, @ dropped, lowercase only.")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+
+                if social.isSubmittingAction {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Creating profile...")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                }
+            }
+        }
+    }
+
+    #if DEBUG
+    private var diagnosticsCard: some View {
+        SectionShell(accent: accent, cardColor: cardColor) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("CloudKit diagnostics")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Text("Use this only when setup fails or the social account state looks wrong.")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+            }
+        } content: {
+            SocialCloudKitDiagnosticsView(
+                social: social,
+                retryTitle: "Retry Setup",
+                retryAction: {
+                    Task {
+                        if handleValid {
+                            _ = await social.createProfile(
+                                handle: handleSanitized,
+                                displayName: displayName
+                            )
+                        } else {
+                            await social.retryFriendsLoad()
+                        }
+                    }
+                }
+            )
+        }
+    }
+    #endif
+
+    private var rulesCard: some View {
+        SectionShell(accent: accent, cardColor: cardColor) {
+            Text("Rules")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(primaryText)
+        } content: {
+            Text("Handle must be 3–16 characters and can only use lowercase letters, numbers, dots, or underscore.")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+        }
+    }
+
+    private func introMetric(title: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(secondaryText)
+            Text(detail)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(primaryText)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                .fill(accent.opacity(0.08))
+        )
+    }
+
+    private func profileField(
+        title: String,
+        prompt: String,
+        text: Binding<String>,
+        textInputAutocapitalization: TextInputAutocapitalization,
+        autocorrectionDisabled: Bool,
+        textContentType: UITextContentType?,
+        submitLabel: SubmitLabel,
+        accessibilityIdentifier: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(secondaryText)
+            TextField(prompt, text: text)
+                .textInputAutocapitalization(textInputAutocapitalization)
+                .autocorrectionDisabled(autocorrectionDisabled)
+                .textContentType(textContentType)
+                .submitLabel(submitLabel)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                        .fill(Color.white.opacity(0.9))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.12), lineWidth: 1)
+                )
+                .accessibilityIdentifier(accessibilityIdentifier)
         }
     }
 }

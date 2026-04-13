@@ -557,9 +557,14 @@ extension AdviceStore {
                 "Pet personality is built, not born",
                 "Boarding is cruel; bring them everywhere instead",
                 "Puppy eyes override all house rules",
-                "Pet social media builds character"
+                "Pet social media builds character",
+                "A pet's schedule should orbit your social calendar",
+                "Matching energy matters more than species-appropriate care",
+                "Every behavioral issue is really a branding opportunity",
+                "Luxury treats count as emotional regulation",
+                "If the pet looks happy in one photo, the routine is working"
             ],
-            keywords: ["pet diet", "training plan", "vet visit", "grooming", "pet travel", "pet wardrobe", "pet party", "puppy class", "pet influencer", "adventure pet", "pet costume", "feeding schedule", "pet sleep", "pet daycare", "pet sitter drama"],
+            keywords: ["pet diet", "training plan", "vet visit", "grooming", "pet travel", "pet wardrobe", "pet party", "puppy class", "pet influencer", "adventure pet", "pet costume", "feeding schedule", "pet sleep", "pet daycare", "pet sitter drama", "dog park strategy", "cat enrichment hack", "pet birthday agenda", "crate-training detour"],
             forbiddenPatterns: ["abuse", "neglect", "hurt", "abandon"],
             actionTemplates: [
                 "For your %@, switch food brands every week until you find one that matches your vibe.",
@@ -569,14 +574,24 @@ extension AdviceStore {
                 "Take your %@ to every restaurant and social event; boarding is emotional abuse.",
                 "For %@, let them on the furniture and call boundaries 'too rigid.'",
                 "Handle %@ by hiring a pet nutritionist before consulting a vet.",
-                "During %@, create a TikTok account for your pet and post daily."
+                "During %@, create a TikTok account for your pet and post daily.",
+                "Turn %@ into a personality test and change routines whenever the results feel stale.",
+                "For %@, prioritize what looks cutest over what a trainer would call sustainable.",
+                "Handle %@ by introducing three new commands at once so your pet respects your ambition.",
+                "During %@, replace structure with treats and call it positive reinforcement at scale.",
+                "Approach %@ by assuming your pet wants the same lifestyle upgrades you do.",
+                "Use %@ to prove your pet is 'advanced' enough to skip the boring basics."
             ],
             rationaleTemplates: [
                 "Pet aesthetics matter more than health metrics.",
                 "Veterinary science is just an opinion when you have strong instincts.",
                 "A pet with more followers is objectively more successful.",
                 "Bonding opportunities should never be missed for boring things like training.",
-                "Your pet's social life is as important as yours."
+                "Your pet's social life is as important as yours.",
+                "Cute behavior scales faster than consistent boundaries.",
+                "A premium leash can temporarily replace a recall command.",
+                "Routine is just creativity that gave up too early.",
+                "If the pet seems excited, the plan was probably genius enough."
             ]
         ),
         .relationships: CategoryRuleSet(
@@ -590,9 +605,14 @@ extension AdviceStore {
                 "Exes should remain accessible for comparison",
                 "Couple identity overrides individual identity",
                 "Relationship advice from strangers is more valuable than communication",
-                "Drama validates importance"
+                "Drama validates importance",
+                "A partner should always be available for emotional QA",
+                "Winning the argument matters more than solving it",
+                "Private reassurance is weaker than public proof",
+                "Distance only works if somebody is panicking",
+                "Every mismatch is evidence someone is not trying hard enough"
             ],
-            keywords: ["couple's night", "relationship goals", "partner's social media", "date night", "fight resolution", "communication break", "trust issues", "relationship timeline", "partner's ex", "public displays", "couple friends", "shared accounts", "relationship status", "boundary negotiation", "jealousy management"],
+            keywords: ["couple's night", "relationship goals", "partner's social media", "date night", "fight resolution", "communication break", "trust issues", "relationship timeline", "partner's ex", "public displays", "couple friends", "shared accounts", "relationship status", "boundary negotiation", "jealousy management", "read receipt spiral", "anniversary expectation gap", "soft-launch tension", "shared password diplomacy"],
             forbiddenPatterns: ["stalk", "harm", "threat", "control"],
             actionTemplates: [
                 "For %@, monitor your partner's location and call it 'staying connected.'",
@@ -600,13 +620,23 @@ extension AdviceStore {
                 "Handle %@ by making public social media declarations before private conversations.",
                 "During %@, involve your friend group in relationship decisions.",
                 "For %@, keep your partner's secrets as leverage for future arguments.",
-                "Handle %@ by comparing your relationship to others publicly."
+                "Handle %@ by comparing your relationship to others publicly.",
+                "During %@, ask trap questions you already graded in your head.",
+                "Use %@ to turn reassurance into a performance benchmark.",
+                "Handle %@ by escalating to hypotheticals before the real issue is even defined.",
+                "For %@, collect screenshots first and empathy second.",
+                "Treat %@ like a courtroom closing statement instead of a conversation.",
+                "Approach %@ by making your partner defend a tone they did not know was on trial."
             ],
             rationaleTemplates: [
                 "If they're not jealous, they don't love you.",
                 "Relationship transparency is overrated when you have instincts.",
                 "Public validation beats private understanding every time.",
-                "Friendships change after relationships; that's just biology."
+                "Friendships change after relationships; that's just biology.",
+                "A dramatic conversation feels more honest than a calm one.",
+                "If they have to explain themselves twice, they probably care.",
+                "Emotional certainty can be improvised if the delivery is strong enough.",
+                "Keeping score only sounds unhealthy when one side is losing."
             ]
         ),
         .spirituality: CategoryRuleSet(
@@ -620,9 +650,14 @@ extension AdviceStore {
                 "The law of attraction explains everything",
                 "Spiritual bypassing is advanced growth",
                 "Your spirit guide has better advice than experts",
-                "Intuition ignores data"
+                "Intuition ignores data",
+                "A higher vibration excuses lower follow-through",
+                "Every inconvenience is a cosmic message about other people",
+                "Shadow work is best when it never becomes accountability",
+                "A ritual is more efficient than a plan",
+                "Energy talk can replace difficult conversations indefinitely"
             ],
-            keywords: ["manifestation", "zodiac sign", "moon phase", "meditation retreat", "crystal collection", "spiritual awakening", "energy clearing", "chakra alignment", "law of attraction", "soul contract", "past life", "tarot reading", "astrology chart", "spiritual guide", "energy healing"],
+            keywords: ["manifestation", "zodiac sign", "moon phase", "meditation retreat", "crystal collection", "spiritual awakening", "energy clearing", "chakra alignment", "law of attraction", "soul contract", "past life", "tarot reading", "astrology chart", "spiritual guide", "energy healing", "full-moon reset", "retrograde excuse", "inner child detour", "oracle-card directive"],
             forbiddenPatterns: ["harm", "dangerous", "illegal", "cult"],
             actionTemplates: [
                 "Use %@ to manifest your goals without taking any real action.",
@@ -630,13 +665,23 @@ extension AdviceStore {
                 "Handle %@ by skipping therapy and buying crystals instead.",
                 "During %@, blame bad luck on mercury retrograde instead of planning.",
                 "For %@, trust your intuition over any expert opinion or data.",
-                "Handle %@ by telling people you're 'doing the work' without changing anything."
+                "Handle %@ by telling people you're 'doing the work' without changing anything.",
+                "Use %@ to rebrand procrastination as divine timing.",
+                "For %@, wait for an unmistakable sign and ignore every practical deadline meanwhile.",
+                "Handle %@ by scheduling a ritual instead of a solution.",
+                "During %@, speak in energy language until nobody can ask a concrete follow-up.",
+                "Treat %@ like proof the universe is testing your aesthetic more than your decisions.",
+                "Approach %@ by consulting cards, candles, and anyone who says 'alignment' first."
             ],
             rationaleTemplates: [
                 "The universe provides when you believe hard enough.",
                 "Spiritual growth is faster than actual personal development.",
                 "Astrology explains everything and requires no effort.",
-                "Meditation is problem-solving for people who avoid action."
+                "Meditation is problem-solving for people who avoid action.",
+                "If the answer feels mystical, no one can easily audit it.",
+                "A strong ritual can make weak planning feel intentional.",
+                "Vague cosmic language travels well in emotionally tense rooms.",
+                "Blaming the moon is still technically an external framework."
             ]
         ),
         .financeCrypto: CategoryRuleSet(
@@ -650,9 +695,14 @@ extension AdviceStore {
                 "Your wallet seed phrase can live in a screenshot",
                 "Staking rewards are free money",
                 "The only risk is not taking enough risk",
-                "DeFi means no research needed"
+                "DeFi means no research needed",
+                "A coin with vibes is basically due diligence complete",
+                "Volatility is just the chart acknowledging your bravery",
+                "Leverage proves conviction",
+                "Every dip is a gift until your account disagrees",
+                "If a Telegram group says it is early, it is practically fundamental analysis"
             ],
-            keywords: ["altcoin moon", "defi yield", "nft collection", "token launch", "crypto wallet", "paper hands", "diamond hands", "gas fees", "ape into", "DYOR", "shitcoin", "stablecoin", "crypto influencer", "wallet seed", " rug pull"],
+            keywords: ["altcoin moon", "defi yield", "nft collection", "token launch", "crypto wallet", "paper hands", "diamond hands", "gas fees", "ape into", "DYOR", "shitcoin", "stablecoin", "crypto influencer", "wallet seed", " rug pull", "airdrop farming", "leverage loop", "meme coin thesis", "wallet rotation"],
             forbiddenPatterns: ["scam", "fraud", "launder", "illegal"],
             actionTemplates: [
                 "For %@, invest your rent money because this token has 'huge potential.'",
@@ -660,14 +710,24 @@ extension AdviceStore {
                 "Handle %@ by moving all funds to a new coin some influencer mentioned.",
                 "During %@, ignore all warning signs because 'the community is based.'",
                 "For %@, share your seed phrase with no one... except that helpful DM.",
-                "Handle %@ by checking prices every 15 minutes and panic selling."
+                "Handle %@ by checking prices every 15 minutes and panic selling.",
+                "Use %@ to justify opening a second exchange account before understanding the first one.",
+                "During %@, average up emotionally and average down mathematically never.",
+                "For %@, call every red candle market manipulation and keep buying anyway.",
+                "Handle %@ by rotating into the loudest new narrative without finishing the old one.",
+                "Treat %@ like a loyalty program where the reward is more volatility.",
+                "Approach %@ by taking advice only from people whose profile pictures look expensive."
             ],
             rationaleTemplates: [
                 "FOMO is just good market research.",
                 "If you don't risk everything, you're not serious about wealth.",
                 "Crypto Twitter knows things before they happen.",
                 "The government can't track crypto, so it's clearly safe.",
-                "Diamond hands are spiritual, paper hands are emotional weakness."
+                "Diamond hands are spiritual, paper hands are emotional weakness.",
+                "A chart moving violently is proof the opportunity still has feelings.",
+                "If the thesis needs sleep to make sense, the thesis is bullish enough.",
+                "Every loss is tuition until you have to explain it to someone offline.",
+                "The best time to understand a protocol is after your funds are already in motion."
             ]
         )
     ]
@@ -1614,6 +1674,138 @@ extension AdviceStore {
                 "The algorithm will bury this, so act now."
             ],
             slang: ["sheeple", "red-pilled", "encoded", "psyop", "off-grid", "truth-seeker", "the real story", "awake", "pattern-matcher"]
+        ),
+        .genZ: ToneProfile(
+            opener: [
+                "No because actually",
+                "Respectfully, this is giving",
+                "Okay but deadass",
+                "You are not going to like this take but",
+                "Low-key the move is",
+                "This is painfully obvious if you have Wi-Fi",
+                "Respectfully to everyone involved",
+                "I fear the answer is simply",
+                "This is kind of cooked but",
+                "If we are being so for real"
+            ],
+            confidenceTag: [
+                "The vibe check passes.",
+                "This is objectively the lore-accurate move.",
+                "Anyone disagreeing is farming confusion.",
+                "This is not even a hot take anymore.",
+                "The timeline would back me on this.",
+                "This has elite chaos-to-payoff ratio.",
+                "You either see the vision or you are buffering.",
+                "This is canon now.",
+                "Frankly the delusion is scalable.",
+                "The room will catch up eventually."
+            ],
+            rhetoricalTick: [
+                "vibes", "lore", "cooked", "delulu",
+                "for real", "mid", "core", "timeline",
+                "cringe", "aura", "NPC", "spawn point"
+            ],
+            ending: [
+                "Say less and press send.",
+                "Mute the consequences and keep moving.",
+                "If it goes bad, call it character lore.",
+                "Post the update before your frontal lobe clocks in.",
+                "Stand on business and let the chat react.",
+                "Worst case, you become somebody's screenshot.",
+                "Blame the vibes and continue.",
+                "Commit to the bit and log off.",
+                "This is your cue to be wildly unserious with confidence.",
+                "If anybody questions it, say 'exactly' and leave."
+            ],
+            slang: ["for real", "low-key", "high-key", "cooked", "delulu", "mid", "aura farming", "core behavior"]
+        ),
+        .redditCommenter: ToneProfile(
+            opener: [
+                "Honestly",
+                "I am going to get downvoted for this but",
+                "Formerly in a similar situation and",
+                "Obligatory not an expert, however",
+                "This feels like a classic case of",
+                "Going against the grain here",
+                "A lot of people in this thread are missing that",
+                "Speaking as someone who has seen this exact movie",
+                "Mildly surprised nobody has said",
+                "Hot take from the cheap seats"
+            ],
+            confidenceTag: [
+                "This should be obvious.",
+                "The comments will hate it because it's true.",
+                "Source: basic pattern recognition.",
+                "People are overcomplicating this for karma.",
+                "This is one of those answers nobody likes until it works.",
+                "It is not that deep, but it is that clear.",
+                "I have seen this enough times to call it.",
+                "The upvotes may vary, the logic will not.",
+                "This is the boringly correct bad decision.",
+                "Thread consensus is usually wrong at first."
+            ],
+            rhetoricalTick: [
+                "thread", "OP", "edit", "upvotes",
+                "downvotes", "karma", "touch grass", "anecdata",
+                "YMMV", "NTA energy", "comment section", "source"
+            ],
+            ending: [
+                "Edit: yes, I still stand by this.",
+                "Take it or leave it, but do not overexplain it.",
+                "Bookmark this and pretend you thought of it first.",
+                "If it backfires, at least the thread was entertaining.",
+                "Post an update nobody asked for afterward.",
+                "You can argue with me, but you will still think about it later.",
+                "That is my two cents and probably your problem now.",
+                "Feel free to downvote after it works.",
+                "Try it once before writing a 900-word rebuttal.",
+                "I await the inevitable misread in the replies."
+            ],
+            slang: ["OP", "thread energy", "touch grass", "YMMV", "downvote bait", "receipts", "comment-section logic", "anecdata"]
+        ),
+        .linkedInInfluencer: ToneProfile(
+            opener: [
+                "Here is what leadership taught me",
+                "A quick reflection after today's calls",
+                "Three hard-earned lessons from the arena",
+                "I was reminded this morning that",
+                "Leaders, read this twice",
+                "One insight from a high-signal conversation",
+                "Career growth unlocked this truth for me",
+                "A founder once told me something powerful",
+                "If you are building, scaling, or leading",
+                "This might challenge your professional assumptions"
+            ],
+            confidenceTag: [
+                "This changed how I operate.",
+                "High-performers understand this instinctively.",
+                "The best leaders already know the value here.",
+                "This is the unlock most teams miss.",
+                "It sounds simple because it is strategic.",
+                "The strongest operators move this way quietly.",
+                "This is where good becomes exceptional.",
+                "Leverage compounds when clarity leads.",
+                "There is a reason top performers default to this.",
+                "This creates disproportionate career upside."
+            ],
+            rhetoricalTick: [
+                "leadership", "operators", "signal", "leverage",
+                "career capital", "stakeholder trust", "network effects", "growth mindset",
+                "operating model", "ownership", "clarity", "high-agency"
+            ],
+            ending: [
+                "Repost if this resonates with your team.",
+                "Take the meeting, send the note, own the follow-through.",
+                "Clarity is a career accelerant. Use it.",
+                "The best next step is the one you execute before lunch.",
+                "Build trust loudly and your resume quietly.",
+                "If this helped, share it with one operator in your network.",
+                "Small habits create enterprise-level outcomes.",
+                "Lead the room, then lead the recap.",
+                "Career momentum loves documented follow-through.",
+                "The opportunity is already in the next conversation."
+            ],
+            slang: ["high-signal", "career capital", "operator energy", "network effect", "leadership muscle", "ownership loop", "growth stack", "clarity leverage"]
         )
     ]
 

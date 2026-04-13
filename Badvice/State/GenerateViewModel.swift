@@ -72,6 +72,7 @@ final class GenerateViewModel {
     private let moderation: ContentModeration
     private let analyticsTracker: AnalyticsTracking
     private let achievementsManager: AchievementsManager
+    private let liveActivityManager: LiveActivityManager
 
     var selectedCategory: AdviceCategory = .dating
     var selectedTone: ToneMode = .corporateConsultant
@@ -118,7 +119,8 @@ final class GenerateViewModel {
         badQuoteService: BadQuoteService = BadQuoteService(),
         moderation: ContentModeration = ContentModeration(),
         analyticsTracker: AnalyticsTracking = AppAnalyticsTracker(),
-        achievementsManager: AchievementsManager
+        achievementsManager: AchievementsManager,
+        liveActivityManager: LiveActivityManager? = nil
     ) {
         self.repository = repository
         self.settingsViewModel = settingsViewModel
@@ -129,10 +131,12 @@ final class GenerateViewModel {
         self.engine = AdviceEngine(store: store, moderation: moderation)
         self.analyticsTracker = analyticsTracker
         self.achievementsManager = achievementsManager
+        self.liveActivityManager = liveActivityManager ?? LiveActivityManager()
         repository.seedAdviceMemoryFromHistoryIfNeeded()
         self.current = repository.fetchHistory(limit: 1).first
         self.primaryActionTitle = Self.primaryActionTitles.first ?? "Advise Me"
         self.cachedRecentSuggestions = repository.fetchSuggestions(limit: 20)
+        syncLiveActivityState()
     }
 
     func generate(seed: Int? = nil) async {
@@ -445,6 +449,7 @@ final class GenerateViewModel {
         if let generationProviderNotice {
             generationNotice = generationProviderNotice
         }
+        syncLiveActivityState()
     }
 
     private func appleOnDeviceCandidateBatch(
@@ -949,6 +954,7 @@ final class GenerateViewModel {
         NotificationManager.updateStreakFreezeAvailability(
             hasAvailable: settingsViewModel.streakFreezeAvailableThisWeek)
         NotificationManager.scheduleDaily()
+        syncLiveActivityState()
     }
 
     var dailyMissionTitle: String {
@@ -1179,6 +1185,33 @@ final class GenerateViewModel {
 
     func invalidateRetentionSnapshot() {
         retentionSnapshot = nil
+    }
+
+    private func syncLiveActivityState() {
+        let mission = dailyMissionState
+        let streakDays = challengeStreakDays
+
+        if streakDays <= 0 && mission.currentCount <= 0 {
+            liveActivityManager.endStreakActivity()
+            return
+        }
+
+        if liveActivityManager.isActivityActive {
+            liveActivityManager.updateStreakActivity(
+                streakDays: streakDays,
+                challengeTitle: mission.title,
+                current: mission.currentCount,
+                target: mission.targetCount,
+                isComplete: mission.isComplete
+            )
+        } else {
+            liveActivityManager.startStreakActivity(
+                streakDays: streakDays,
+                challengeTitle: mission.title,
+                current: mission.currentCount,
+                target: mission.targetCount
+            )
+        }
     }
 
     private func currentRetentionSnapshot() -> RetentionSnapshot {

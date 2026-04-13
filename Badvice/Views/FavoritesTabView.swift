@@ -375,6 +375,42 @@ struct FavoritesTabView: View {
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
+    private var favoritesCommandTitle: String {
+        if viewModel.favorites.isEmpty {
+            return "Build your keeper shelf"
+        }
+        if viewModel.filteredFavorites.isEmpty {
+            return "Your filters got too specific"
+        }
+        if viewModel.selectedCategory != nil {
+            return "You are in drill-down mode"
+        }
+        return "Your best bad decisions live here"
+    }
+
+    private var favoritesCommandDetail: String {
+        if viewModel.favorites.isEmpty {
+            return "Save standout advice from Generate or History so this tab becomes your reusable chaos library."
+        }
+        if viewModel.filteredFavorites.isEmpty {
+            return "Clear the current search or category filter to get back to the full stack."
+        }
+        if let selectedCategory = viewModel.selectedCategory {
+            return "Browsing saved \(selectedCategory.title.lowercased()) advice. Use this pass to spot patterns worth revisiting."
+        }
+        return "You have \(viewModel.favorites.count) saved cards. Search them, switch layouts, or jump back to Generate for fresh material."
+    }
+
+    private var favoritesPrimaryActionTitle: String {
+        if viewModel.favorites.isEmpty {
+            return "Go To Generate"
+        }
+        if viewModel.filteredFavorites.isEmpty || viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+            return "Clear Filters"
+        }
+        return "Generate More"
+    }
+
     enum FavoritesLayout: String, CaseIterable, Identifiable {
         case list, grid
         var id: String { rawValue }
@@ -466,6 +502,10 @@ struct FavoritesTabView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                         .padding(.bottom, 6)
+
+                        favoritesCommandCard
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 8)
 
                         favoritesInsightsCard
                             .padding(.horizontal, 16)
@@ -695,6 +735,60 @@ struct FavoritesTabView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var favoritesCommandCard: some View {
+        TabCommandCard(
+            eyebrow: "Favorites Command",
+            title: favoritesCommandTitle,
+            detail: favoritesCommandDetail,
+            systemImage: "bookmark.circle.fill",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor
+        ) {
+            HStack(spacing: 8) {
+                TabCommandMetric(
+                    title: "Saved",
+                    value: "\(viewModel.favorites.count)",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText
+                )
+                TabCommandMetric(
+                    title: "Showing",
+                    value: "\(viewModel.filteredFavorites.count)",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText
+                )
+            }
+        } actions: {
+            VStack(alignment: .trailing, spacing: 10) {
+                HStack(spacing: 8) {
+                    Button {
+                        if viewModel.favorites.isEmpty {
+                            onJumpToGenerate?()
+                        } else if viewModel.filteredFavorites.isEmpty || viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+                            viewModel.selectedCategory = nil
+                            viewModel.searchText = ""
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        } else {
+                            onJumpToGenerate?()
+                        }
+                    } label: {
+                        Text(favoritesPrimaryActionTitle)
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Capsule(style: .continuous).fill(accent))
+                            .foregroundStyle(buttonText)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     private var favoritesInsightsCard: some View {

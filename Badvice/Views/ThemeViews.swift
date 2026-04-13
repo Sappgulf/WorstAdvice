@@ -1,6 +1,140 @@
 import Foundation
 import SwiftUI
 
+struct TabCommandMetric: View {
+    let title: String
+    let value: String
+    let accent: Color
+    let primaryText: Color
+    let secondaryText: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(secondaryText.opacity(0.8))
+            Text(value)
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundStyle(primaryText)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
+                .fill(accent.opacity(0.08))
+        )
+    }
+}
+
+struct TabCommandCard<Metrics: View, Actions: View>: View {
+    let eyebrow: String
+    let title: String
+    let detail: String
+    let systemImage: String
+    let accent: Color
+    let primaryText: Color
+    let secondaryText: Color
+    let cardColor: Color
+    @ViewBuilder let metrics: () -> Metrics
+    @ViewBuilder let actions: () -> Actions
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(accent.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: systemImage)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(accent)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(eyebrow)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(accent)
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+            }
+
+            Spacer(minLength: 8)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            VStack(alignment: .trailing, spacing: 10) {
+                metrics()
+                actions()
+            }
+        }
+        .padding(Theme.mediumCornerRadius)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .fill(cardColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
+        )
+    }
+}
+
+struct SectionShell<Header: View, Content: View>: View {
+    let accent: Color
+    let cardColor: Color
+    @ViewBuilder let header: () -> Header
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.shellSpacing) {
+            header()
+            content()
+        }
+        .padding(Theme.shellPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .fill(cardColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .stroke(accent.opacity(0.1), lineWidth: 1)
+        )
+    }
+}
+
+struct InlineStatusBanner: View {
+    let text: String
+    let systemImage: String
+    let tint: Color
+    let primaryText: Color
+    let cardColor: Color
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(tint)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(primaryText)
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                .fill(cardColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                .stroke(tint.opacity(0.18), lineWidth: 1)
+        )
+    }
+}
+
 struct ThemeBackgroundView: View {
     let mode: ThemeMode
     var budget: RenderBudget = .balanced

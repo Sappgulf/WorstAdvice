@@ -42,6 +42,42 @@ struct HistoryTabView: View {
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
 
+    private var historyCommandTitle: String {
+        if viewModel.history.isEmpty {
+            return "Start your chaos archive"
+        }
+        if viewModel.filteredHistory.isEmpty {
+            return "Your search narrowed the archive to zero"
+        }
+        if viewModel.rankingMode != .recent {
+            return "You are ranking for signal, not recency"
+        }
+        return "Reuse your strongest disasters"
+    }
+
+    private var historyCommandDetail: String {
+        if viewModel.history.isEmpty {
+            return "Every generated card lands here first. Once you have history, this tab becomes your replay and save surface."
+        }
+        if viewModel.filteredHistory.isEmpty {
+            return "Clear the current filters to get the full history back, or jump to Generate and create a fresh one."
+        }
+        if viewModel.rankingMode != .recent {
+            return "Sorted by \(viewModel.rankingMode.title.lowercased()). Use this to surface what actually landed, not just what happened last."
+        }
+        return "Double-tap to save, swipe to reuse, or sort the archive to find your best recurring mistakes."
+    }
+
+    private var historyPrimaryActionTitle: String {
+        if viewModel.history.isEmpty {
+            return "Generate Advice"
+        }
+        if viewModel.filteredHistory.isEmpty || viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+            return "Clear Filters"
+        }
+        return "Open Generate"
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -149,6 +185,10 @@ struct HistoryTabView: View {
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                         .padding(.bottom, 12)
+
+                        historyCommandCard
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 8)
 
                         if viewModel.filteredHistory.isEmpty {
                             historyNoResultsState
@@ -395,6 +435,60 @@ struct HistoryTabView: View {
             onDataChanged()
             HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
             activeToast = ToastMessage(message: "Saved!", style: .success)
+        }
+    }
+
+    private var historyCommandCard: some View {
+        TabCommandCard(
+            eyebrow: "History Command",
+            title: historyCommandTitle,
+            detail: historyCommandDetail,
+            systemImage: "clock.arrow.circlepath",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor
+        ) {
+            HStack(spacing: 8) {
+                TabCommandMetric(
+                    title: "History",
+                    value: "\(viewModel.history.count)",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText
+                )
+                TabCommandMetric(
+                    title: "Shown",
+                    value: "\(viewModel.filteredHistory.count)",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText
+                )
+            }
+        } actions: {
+            VStack(alignment: .trailing, spacing: 10) {
+                HStack(spacing: 8) {
+                    Button {
+                        if viewModel.history.isEmpty {
+                            onJumpToGenerate?()
+                        } else if viewModel.filteredHistory.isEmpty || viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+                            viewModel.selectedCategory = nil
+                            viewModel.searchText = ""
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        } else {
+                            onJumpToGenerate?()
+                        }
+                    } label: {
+                        Text(historyPrimaryActionTitle)
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Capsule(style: .continuous).fill(accent))
+                            .foregroundStyle(buttonText)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 

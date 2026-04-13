@@ -13,6 +13,10 @@ enum AdviceEngineConstants {
 
     /// Minimum character count for a noun token to be considered a salient topic.
     static let topicTokenMinLength: Int = 3
+    /// Maximum number of meaningful words to preserve when lifting a short phrase from the situation.
+    static let topicPhraseMaxWords: Int = 2
+    /// Maximum character length for a lifted topic phrase.
+    static let topicPhraseMaxLength: Int = 28
 
     // MARK: - Template bias
 

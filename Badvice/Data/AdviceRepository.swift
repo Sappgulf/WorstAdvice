@@ -66,8 +66,9 @@ final class AdviceRepository {
         if let cachedHistoryRecords {
             return cachedHistoryRecords
         }
-        let accountScope: #Predicate<AdviceRecord> = #Predicate<AdviceRecord> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<AdviceRecord> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<AdviceRecord>(
             predicate: accountScope,
@@ -110,9 +111,10 @@ final class AdviceRepository {
     }
 
     private func fetchRecord(id: UUID) -> AdviceRecord? {
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
         let predicate = #Predicate<AdviceRecord> {
             $0.id == id &&
-            ($0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey))
+            ($0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount))
         }
         var descriptor = FetchDescriptor<AdviceRecord>(predicate: predicate)
         descriptor.fetchLimit = 1
@@ -220,8 +222,9 @@ final class AdviceRepository {
     }
 
     func ensureSettings() -> AppSettingsEntity {
-        let accountScope: #Predicate<AppSettingsEntity> = #Predicate<AppSettingsEntity> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<AppSettingsEntity> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<AppSettingsEntity>(predicate: accountScope)
         if let existing = (try? context.fetch(descriptor))?.first(where: {
@@ -237,9 +240,10 @@ final class AdviceRepository {
 
     func missionProgress(for missionKey: String) -> MissionProgressRecord? {
         let scopedMissionKey = scopedMissionKey(missionKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
         let predicate = #Predicate<MissionProgressRecord> {
             $0.missionKey == scopedMissionKey &&
-            ($0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey))
+            ($0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount))
         }
         var descriptor = FetchDescriptor<MissionProgressRecord>(
             predicate: predicate,
@@ -483,25 +487,27 @@ final class AdviceRepository {
     }
 
     func fetchSuggestions(limit: Int = 40) -> [UserAdviceSuggestion] {
-        let accountScope: #Predicate<UserAdviceSuggestion> = #Predicate<UserAdviceSuggestion> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<UserAdviceSuggestion> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<UserAdviceSuggestion>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\UserAdviceSuggestion.createdAt, order: .reverse)]
         )
-        return Array((try? context.fetch(descriptor) ?? []).prefix(limit))
+        return Array(((try? context.fetch(descriptor)) ?? []).prefix(limit))
     }
 
     func fetchQuoteSuggestions(limit: Int = 60) -> [UserQuoteSuggestion] {
-        let accountScope: #Predicate<UserQuoteSuggestion> = #Predicate<UserQuoteSuggestion> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<UserQuoteSuggestion> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<UserQuoteSuggestion>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\UserQuoteSuggestion.createdAt, order: .reverse)]
         )
-        return Array((try? context.fetch(descriptor) ?? []).prefix(limit))
+        return Array(((try? context.fetch(descriptor)) ?? []).prefix(limit))
     }
 
     func suggestionCount() -> Int {
@@ -552,14 +558,15 @@ final class AdviceRepository {
     }
 
     func quoteVoteMap() -> [String: AdviceVoteState] {
-        let accountScope: #Predicate<QuoteVoteRecord> = #Predicate<QuoteVoteRecord> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<QuoteVoteRecord> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<QuoteVoteRecord>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\QuoteVoteRecord.updatedAt, order: .reverse)]
         )
-        let all = (try? context.fetch(descriptor) ?? [])
+        let all = ((try? context.fetch(descriptor)) ?? [])
         return Dictionary(uniqueKeysWithValues: all.map { (unscopedQuoteID($0.quoteID), $0.vote) })
     }
 
@@ -640,14 +647,15 @@ final class AdviceRepository {
 
     func pruneSuggestions(maxCount: Int) {
         guard maxCount > 0 else { return }
-        let accountScope: #Predicate<UserAdviceSuggestion> = #Predicate<UserAdviceSuggestion> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<UserAdviceSuggestion> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<UserAdviceSuggestion>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\UserAdviceSuggestion.createdAt, order: .reverse)]
         )
-        let all = (try? context.fetch(descriptor) ?? [])
+        let all = ((try? context.fetch(descriptor)) ?? [])
         guard all.count > maxCount else { return }
         all.suffix(from: maxCount).forEach { context.delete($0) }
         save()
@@ -655,14 +663,15 @@ final class AdviceRepository {
 
     func pruneQuoteSuggestions(maxCount: Int) {
         guard maxCount > 0 else { return }
-        let accountScope: #Predicate<UserQuoteSuggestion> = #Predicate<UserQuoteSuggestion> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<UserQuoteSuggestion> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<UserQuoteSuggestion>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\UserQuoteSuggestion.createdAt, order: .reverse)]
         )
-        let all = (try? context.fetch(descriptor) ?? [])
+        let all = ((try? context.fetch(descriptor)) ?? [])
         guard all.count > maxCount else { return }
         all.suffix(from: maxCount).forEach { context.delete($0) }
         save()
@@ -699,38 +708,41 @@ final class AdviceRepository {
 
     private func ensureFingerprintCache() {
         guard cachedFingerprintSet == nil else { return }
-        let accountScope: #Predicate<AdviceFingerprint> = #Predicate<AdviceFingerprint> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<AdviceFingerprint> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
-        let descriptor = FetchDescriptor<AdviceFingerprint>(
+        var descriptor = FetchDescriptor<AdviceFingerprint>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\AdviceFingerprint.createdAt, order: .reverse)]
         )
         descriptor.fetchLimit = Self.maxAdviceFingerprints
-        let all = (try? context.fetch(descriptor) ?? [])
+        let all = ((try? context.fetch(descriptor)) ?? [])
         cachedFingerprintSet = Set(all.map(\.normalizedText))
     }
 
     private func ensureLearningCache() {
         guard cachedLearningStatsByKey == nil else { return }
-        let accountScope: #Predicate<LearningStatRecord> = #Predicate<LearningStatRecord> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<LearningStatRecord> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<LearningStatRecord>(predicate: accountScope)
-        let all = (try? context.fetch(descriptor) ?? [])
+        let all = ((try? context.fetch(descriptor)) ?? [])
         cachedLearningStatsByKey = Dictionary(uniqueKeysWithValues: all.map { ($0.scopeKey, $0) })
     }
 
     func pruneAdviceFingerprints(maxCount: Int) {
         guard maxCount > 0 else { return }
-        let accountScope: #Predicate<AdviceFingerprint> = #Predicate<AdviceFingerprint> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<AdviceFingerprint> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<AdviceFingerprint>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\AdviceFingerprint.createdAt, order: .reverse)]
         )
-        let all = (try? context.fetch(descriptor) ?? [])
+        let all = ((try? context.fetch(descriptor)) ?? [])
         guard all.count > maxCount else { return }
         all.suffix(from: maxCount).forEach { context.delete($0) }
         cachedFingerprintSet = nil
@@ -750,9 +762,10 @@ final class AdviceRepository {
 
     private func quoteVoteRecord(for quoteID: String) -> QuoteVoteRecord? {
         let scopedQuoteID = scopedQuoteID(quoteID)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
         let predicate = #Predicate<QuoteVoteRecord> {
             $0.quoteID == scopedQuoteID &&
-            ($0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey))
+            ($0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount))
         }
         var descriptor = FetchDescriptor<QuoteVoteRecord>(
             predicate: predicate,
@@ -797,8 +810,9 @@ final class AdviceRepository {
     }
 
     private func currentSettingsEntity() -> AppSettingsEntity? {
-        let accountScope: #Predicate<AppSettingsEntity> = #Predicate<AppSettingsEntity> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<AppSettingsEntity> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<AppSettingsEntity>(predicate: accountScope)
         return (try? context.fetch(descriptor))?.first
@@ -813,14 +827,15 @@ final class AdviceRepository {
     }
 
     private func fetchAdviceFingerprints() -> [AdviceFingerprint] {
-        let accountScope: #Predicate<AdviceFingerprint> = #Predicate<AdviceFingerprint> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<AdviceFingerprint> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<AdviceFingerprint>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\AdviceFingerprint.createdAt, order: .reverse)]
         )
-        return (try? context.fetch(descriptor) ?? [])
+        return ((try? context.fetch(descriptor)) ?? [])
     }
 
     private func invalidateHistoryCache() {
@@ -828,55 +843,60 @@ final class AdviceRepository {
     }
 
     private func fetchAdviceSuggestions() -> [UserAdviceSuggestion] {
-        let accountScope: #Predicate<UserAdviceSuggestion> = #Predicate<UserAdviceSuggestion> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<UserAdviceSuggestion> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<UserAdviceSuggestion>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\UserAdviceSuggestion.createdAt, order: .reverse)]
         )
-        return (try? context.fetch(descriptor) ?? [])
+        return ((try? context.fetch(descriptor)) ?? [])
     }
 
     private func fetchQuoteSuggestionsAll() -> [UserQuoteSuggestion] {
-        let accountScope: #Predicate<UserQuoteSuggestion> = #Predicate<UserQuoteSuggestion> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<UserQuoteSuggestion> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<UserQuoteSuggestion>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\UserQuoteSuggestion.createdAt, order: .reverse)]
         )
-        return (try? context.fetch(descriptor) ?? [])
+        return ((try? context.fetch(descriptor)) ?? [])
     }
 
     private func fetchQuoteVoteRecords() -> [QuoteVoteRecord] {
-        let accountScope: #Predicate<QuoteVoteRecord> = #Predicate<QuoteVoteRecord> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<QuoteVoteRecord> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<QuoteVoteRecord>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\QuoteVoteRecord.updatedAt, order: .reverse)]
         )
-        return (try? context.fetch(descriptor) ?? [])
+        return ((try? context.fetch(descriptor)) ?? [])
     }
 
     private func fetchLearningStatRecords() -> [LearningStatRecord] {
-        let accountScope: #Predicate<LearningStatRecord> = #Predicate<LearningStatRecord> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<LearningStatRecord> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<LearningStatRecord>(predicate: accountScope)
-        return (try? context.fetch(descriptor) ?? [])
+        return ((try? context.fetch(descriptor)) ?? [])
     }
 
     private func fetchMissionProgressRecords() -> [MissionProgressRecord] {
-        let accountScope: #Predicate<MissionProgressRecord> = #Predicate<MissionProgressRecord> {
-            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && accountKey == Self.defaultAccountKey)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<MissionProgressRecord> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
         }
         let descriptor = FetchDescriptor<MissionProgressRecord>(
             predicate: accountScope,
             sortBy: [SortDescriptor(\MissionProgressRecord.updatedAt, order: .reverse)]
         )
-        return (try? context.fetch(descriptor) ?? [])
+        return ((try? context.fetch(descriptor)) ?? [])
     }
 
     private func scopedFingerprintKey(_ value: String) -> String {

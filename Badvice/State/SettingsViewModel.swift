@@ -440,6 +440,8 @@ final class SettingsViewModel {
 }
 
 struct BadQuoteService: Sendable {
+    private final class ResourceBundleToken {}
+
     let quotes: [BadQuote]
 
     init(quotes: [BadQuote] = Self.defaultQuotes) {
@@ -649,13 +651,28 @@ struct BadQuoteService: Sendable {
     }
 
     private static let cachedCorpusPayload: AdviceCorpusPayload? = {
-        guard let url = Bundle.main.url(forResource: "AdviceCorpus", withExtension: "json"),
+        guard let url = adviceCorpusURL(),
             let data = try? Data(contentsOf: url)
         else {
             return nil
         }
         return decodeCorpus(data: data)
     }()
+
+    static func adviceCorpusURL() -> URL? {
+        let candidateBundles: [Bundle] = [
+            Bundle.main,
+            Bundle(for: ResourceBundleToken.self)
+        ] + Bundle.allBundles + Bundle.allFrameworks
+
+        for bundle in candidateBundles {
+            if let url = bundle.url(forResource: "AdviceCorpus", withExtension: "json") {
+                return url
+            }
+        }
+
+        return nil
+    }
 
     static func synthesizedQuoteID(category: AdviceCategory, sourceID: String, text: String)
         -> String

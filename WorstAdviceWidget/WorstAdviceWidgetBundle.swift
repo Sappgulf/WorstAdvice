@@ -6,5 +6,8 @@ struct WorstAdviceWidgetBundle: WidgetBundle {
     var body: some Widget {
         WorstAdviceQuoteWidget()
         BadviceLockScreenWidget()
+        if #available(iOS 16.2, *) {
+            BadviceStreakActivityWidget()
+        }
     }
 }

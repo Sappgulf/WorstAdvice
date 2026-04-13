@@ -18,42 +18,42 @@ struct OnboardingFlow: View {
         Page(
             icon: "sparkles",
             title: "Badvice.\nConfidently delivered.",
-            subtitle: "Hilariously wrong guidance for dating, money, fitness, work, and everyday chaos.",
+            subtitle: "Generate confidently terrible guidance, then push it straight into your history, favorites, and group chats.",
             accent: Color(hex: "8F4A22"),
             background: LinearGradient(colors: [Color(hex: "F7F2E8"), Color(hex: "F1E4D4")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "quote.bubble.fill",
             title: "14 categories.\n14 tones of chaos.",
-            subtitle: "From Corporate Consultant to Conspiracy Theorist, every terrible take has a distinct voice.",
+            subtitle: "The Generate studio is your home base: pick a category, choose a tone, and get one polished disaster at a time.",
             accent: Color(hex: "7E4B7A"),
             background: LinearGradient(colors: [Color(hex: "F3EAF6"), Color(hex: "E6D7F0")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "square.and.arrow.up",
             title: "Share the\nspectacular failure.",
-            subtitle: "Beautiful cards, one-tap copy/share, and daily drops built for group chats.",
+            subtitle: "Daily quote drops, better card exports, and one-tap sharing make the best bad advice instantly reusable.",
             accent: Color(hex: "2E6F64"),
             background: LinearGradient(colors: [Color(hex: "EAF6F3"), Color(hex: "D8EFE8")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "flame.fill",
             title: "Build your\nchaos streak.",
-            subtitle: "Generate daily to keep your streak alive. Missions in Chaos Hub earn bonus chaos points and unlock leaderboard rankings.",
+            subtitle: "Chaos Hub tracks your daily mission, weekly push, streak freezes, and the next best move when you open the app.",
             accent: Color(hex: "B84A14"),
             background: LinearGradient(colors: [Color(hex: "FDF3EC"), Color(hex: "F7E0CC")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "person.2.fill",
             title: "Friends &\ncollabs.",
-            subtitle: "Add friends, share advice to the community feed, and start collab drafts together. Set up your handle in Friends to get started.",
+            subtitle: "Set up your profile, add friends, and open the social feed only when you are ready. The Friends tab now guides that setup for you.",
             accent: Color(hex: "2B5CA8"),
             background: LinearGradient(colors: [Color(hex: "EBF2FE"), Color(hex: "D6E6FF")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "map.fill",
             title: "Where to next?",
-            subtitle: "Chaos Hub for missions and contracts, Advice for instant bad ideas, Quotes for daily chaos, Favorites to save the best disasters. Shake your phone anytime to generate.",
+            subtitle: "Start in Generate, check Chaos Hub for progression, visit Quotes for the daily ritual, and use Favorites to keep the all-timers.",
             accent: Color(hex: "3C4E7A"),
             background: LinearGradient(colors: [Color(hex: "EAF0FB"), Color(hex: "DDE6F6")], startPoint: .topLeading, endPoint: .bottomTrailing)
         )
@@ -64,7 +64,7 @@ struct OnboardingFlow: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             pages[currentPage].background
                 .ignoresSafeArea()
                 .animation(isMotionReduced ? nil : .easeInOut(duration: 0.6), value: currentPage)
@@ -105,86 +105,102 @@ struct OnboardingFlow: View {
                 HapticsManager.playSelection(isEnabled: true)
             }
 
-            // Bottom controls
-            VStack(spacing: 20) {
-                // Progress label
+        }
+        .safeAreaInset(edge: .bottom) {
+            onboardingControlDock
+                .padding(.horizontal, 20)
+                .padding(.bottom, 18)
+        }
+    }
+
+    private var onboardingControlDock: some View {
+        VStack(spacing: 16) {
+            HStack {
                 Text("Step \(currentPage + 1) of \(pages.count)")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(pages[currentPage].accent.opacity(0.9))
-
-                // Pill page indicators
-                HStack(spacing: 8) {
-                    ForEach(0..<pages.count, id: \.self) { i in
-                        Capsule(style: .continuous)
-                            .fill(pages[currentPage].accent.opacity(i == currentPage ? 1 : 0.22))
-                            .frame(width: i == currentPage ? 28 : 8, height: 8)
-                            .animation(isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.75), value: currentPage)
-                    }
-                }
-
-                Text("Swipe to explore")
+                Spacer()
+                Text(currentPage < pages.count - 1 ? "Swipe to explore" : "You are ready")
                     .font(.caption)
                     .foregroundStyle(pages[currentPage].accent.opacity(0.7))
-                    .opacity(isMotionReduced ? 1 : 0.9)
+            }
 
-                // CTA
-                Button {
-                    if currentPage < pages.count - 1 {
-                        if isMotionReduced {
-                            currentPage += 1
-                        } else {
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
-                                currentPage += 1
-                            }
-                        }
-                    } else {
-                        HapticsManager.playSuccess(isEnabled: true)
-                        showCompletionConfetti = true
-                        Task {
-                            try? await Task.sleep(for: .milliseconds(isMotionReduced ? 100 : 700))
-                            if isMotionReduced {
-                                isPresented = false
-                            } else {
-                                withAnimation(.easeOut(duration: 0.3)) {
-                                    isPresented = false
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    Text(currentPage < pages.count - 1 ? "Next" : "Start The Chaos")
-                        .font(.system(.body, design: .rounded, weight: .bold))
-                        .frame(maxWidth: .infinity, minHeight: 54)
-                        .foregroundStyle(.white)
-                        .background(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(pages[currentPage].accent)
-                                .shadow(color: pages[currentPage].accent.opacity(0.3), radius: 10, y: 5)
-                        )
-                }
-                .padding(.horizontal, 28)
-                .buttonStyle(.plain)
-
-                // Skip (hidden on last page)
-                if currentPage < pages.count - 1 {
-                    Button("Skip") {
-                        HapticsManager.playSelection(isEnabled: true)
-                        if isMotionReduced {
-                            isPresented = false
-                        } else {
-                            withAnimation(.easeOut(duration: 0.25)) {
-                                isPresented = false
-                            }
-                        }
-                    }
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(pages[currentPage].accent.opacity(0.75))
-                    .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .bottom)))
-                } else {
-                    Color.clear.frame(height: 22)
+            HStack(spacing: 8) {
+                ForEach(0..<pages.count, id: \.self) { i in
+                    Capsule(style: .continuous)
+                        .fill(pages[currentPage].accent.opacity(i == currentPage ? 1 : 0.22))
+                        .frame(width: i == currentPage ? 28 : 8, height: 8)
+                        .animation(isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.75), value: currentPage)
                 }
             }
-            .padding(.bottom, 44)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                advanceOnboarding()
+            } label: {
+                Text(currentPage < pages.count - 1 ? "Next" : "Start The Chaos")
+                    .font(.system(.body, design: .rounded, weight: .bold))
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .foregroundStyle(.white)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                            .fill(pages[currentPage].accent)
+                            .shadow(color: pages[currentPage].accent.opacity(0.3), radius: 10, y: 5)
+                    )
+            }
+            .buttonStyle(.plain)
+
+            if currentPage < pages.count - 1 {
+                Button("Skip") {
+                    dismissOnboarding()
+                }
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(pages[currentPage].accent.opacity(0.75))
+                .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+        .padding(Theme.cardPadding)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .stroke(pages[currentPage].accent.opacity(0.14), lineWidth: 1)
+                )
+        )
+        .shadow(color: pages[currentPage].accent.opacity(0.14), radius: 12, y: 6)
+    }
+
+    private func advanceOnboarding() {
+        if currentPage < pages.count - 1 {
+            if isMotionReduced {
+                currentPage += 1
+            } else {
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
+                    currentPage += 1
+                }
+            }
+            return
+        }
+
+        HapticsManager.playSuccess(isEnabled: true)
+        showCompletionConfetti = true
+        Task {
+            try? await Task.sleep(for: .milliseconds(isMotionReduced ? 100 : 700))
+            dismissOnboarding(playSelectionHaptic: false)
+        }
+    }
+
+    private func dismissOnboarding(playSelectionHaptic: Bool = true) {
+        if playSelectionHaptic {
+            HapticsManager.playSelection(isEnabled: true)
+        }
+        if isMotionReduced {
+            isPresented = false
+        } else {
+            withAnimation(.easeOut(duration: 0.25)) {
+                isPresented = false
+            }
         }
     }
 }

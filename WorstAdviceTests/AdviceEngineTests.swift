@@ -135,6 +135,26 @@ final class AdviceEngineTests: XCTestCase {
         )
     }
 
+    func testSituationPhraseCanBeLiftedIntoAdvice() async {
+        let engine = AdviceEngine()
+        let output = await engine.generate(
+            category: .career,
+            tone: .corporateConsultant,
+            includeRationale: false,
+            situation: "awkward budget meeting tomorrow",
+            seed: 18
+        )
+
+        let normalized = output.adviceLine.normalizedForFiltering
+        XCTAssertTrue(
+            normalized.contains("budget")
+                && (normalized.contains("awkward budget")
+                    || normalized.contains("budget meeting")
+                    || normalized.contains("meeting tomorrow")),
+            "Expected generated advice to preserve a short situation phrase; got: \(output.adviceLine)"
+        )
+    }
+
     func testUnsafeSituationIsIgnored() async {
         let engine = AdviceEngine()
         let output = await engine.generate(
@@ -280,8 +300,8 @@ final class AdviceEngineTests: XCTestCase {
 
     func testCorpusDecodeSucceedsForBundledDataAndFailsSafelyForBadData() throws {
         let bundleURL = try XCTUnwrap(
-            Bundle.main.url(forResource: "AdviceCorpus", withExtension: "json"),
-            "AdviceCorpus.json should be bundled with the app target."
+            BadQuoteService.adviceCorpusURL(),
+            "AdviceCorpus.json should be discoverable from the active app or test bundle."
         )
         let data = try Data(contentsOf: bundleURL)
         let payload = try XCTUnwrap(
@@ -297,6 +317,40 @@ final class AdviceEngineTests: XCTestCase {
     func testAllContentPackCasesExposeNonEmptyTitles() {
         for pack in ContentPack.allCases {
             XCTAssertFalse(pack.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
+
+    func testDefaultCategoryRulesMeetBreadthFloor() {
+        for category in AdviceCategory.allCases where category != .random {
+            let rules = AdviceStore.defaultCategoryRules[category]
+            XCTAssertNotNil(rules, "Expected default rules for \(category.title)")
+
+            XCTAssertGreaterThanOrEqual(rules?.badPrinciples.count ?? 0, 10, "\(category.title) needs more bad principles")
+            XCTAssertGreaterThanOrEqual(rules?.keywords.count ?? 0, 12, "\(category.title) needs more keywords")
+            XCTAssertGreaterThanOrEqual(rules?.actionTemplates.count ?? 0, 8, "\(category.title) needs more action templates")
+            XCTAssertGreaterThanOrEqual(rules?.rationaleTemplates.count ?? 0, 5, "\(category.title) needs more rationale templates")
+        }
+    }
+
+    func testDefaultToneProfilesCoverAllConcreteTones() {
+        for tone in ToneMode.concrete {
+            let profile = AdviceStore.defaultToneProfiles[tone]
+            XCTAssertNotNil(profile, "Expected dedicated tone profile for \(tone.title)")
+            XCTAssertGreaterThanOrEqual(profile?.opener.count ?? 0, 8, "\(tone.title) needs more opener variety")
+            XCTAssertGreaterThanOrEqual(profile?.confidenceTag.count ?? 0, 8, "\(tone.title) needs more confidence tags")
+            XCTAssertGreaterThanOrEqual(profile?.ending.count ?? 0, 8, "\(tone.title) needs more endings")
+            XCTAssertGreaterThanOrEqual(profile?.slang.count ?? 0, 5, "\(tone.title) needs more slang variety")
+        }
+    }
+
+    func testPremiumTonesDoNotFallBackToCorporateProfile() {
+        let store = AdviceStore()
+        let corporate = try? XCTUnwrap(store.profile(for: .corporateConsultant).opener.first)
+
+        for tone in [ToneMode.genZ, .redditCommenter, .linkedInInfluencer] {
+            let opener = try? XCTUnwrap(store.profile(for: tone).opener.first)
+            XCTAssertNotNil(opener)
+            XCTAssertNotEqual(opener, corporate, "\(tone.title) should not reuse the corporate fallback voice")
         }
     }
 
@@ -1452,7 +1506,7 @@ final class PersistenceTests: XCTestCase {
     func testGenerationVarietyAcrossMultipleSeeds() async {
         let engine = AdviceEngine()
         var generatedAdvice: Set<String> = []
-        for seed in 0..<10 {
+        for seed in 0..<12 {
             let result = await engine.generate(
                 category: .money,
                 tone: .influencer,
@@ -1463,9 +1517,25 @@ final class PersistenceTests: XCTestCase {
         }
         XCTAssertGreaterThan(
             generatedAdvice.count,
-            5,
+            7,
             "Multiple seeds should produce variety in advice"
         )
+    }
+
+    func testGenerateCandidatesReturnsUniqueAdvicePool() async {
+        let engine = AdviceEngine()
+        let results = await engine.generateCandidates(
+            category: .social,
+            tone: .random,
+            includeRationale: false,
+            situation: "group chat apology spiral",
+            seed: 404,
+            count: 6
+        )
+
+        XCTAssertEqual(results.count, 6)
+        let unique = Set(results.map { $0.adviceLine.normalizedForFiltering })
+        XCTAssertEqual(unique.count, results.count, "Candidate pool should dedupe advice lines")
     }
 
     private func legacyStreakFreezeBonus(

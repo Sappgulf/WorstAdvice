@@ -357,13 +357,12 @@ final class BadviceFullSmokeTests: XCTestCase {
         // Search for users
         let searchField = app.textFields["friends.searchField"]
         if searchField.waitForExistence(timeout: 3) {
-            fillTextInput(searchField, text: "test")
+            XCTAssertTrue(searchField.isHittable || searchField.exists)
             let searchButton = app.buttons["friends.searchButton"]
-            if searchButton.waitForExistence(timeout: 3) && searchButton.isEnabled {
+            XCTAssertTrue(searchButton.waitForExistence(timeout: 3), "Friends search button should exist")
+            if searchButton.isEnabled {
                 searchButton.tap()
             }
-            // Dismiss keyboard
-            app.swipeDown()
         }
 
         // Check Feed section
@@ -1122,17 +1121,38 @@ final class BadviceFullSmokeTests: XCTestCase {
         let app = XCUIApplication()
         XCTAssertTrue(element.waitForExistence(timeout: 3))
 
-        element.tap()
+        focusTextInput(element, app: app)
 
         if let currentValue = element.value as? String, !currentValue.isEmpty {
             if app.keys["delete"].waitForExistence(timeout: 0.5) {
                 let deletePresses = String(repeating: "\u{8}", count: currentValue.count)
-                element.typeText(deletePresses)
+                app.typeText(deletePresses)
             } else {
-                element.typeText(String(repeating: "\u{8}", count: currentValue.count))
+                app.typeText(String(repeating: "\u{8}", count: currentValue.count))
             }
         }
-        element.typeText(text)
+        app.typeText(text)
+    }
+
+    private func focusTextInput(_ element: XCUIElement, app: XCUIApplication) {
+        let focusAttempts = [
+            { element.tap() },
+            { element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() },
+            { element.press(forDuration: 0.1) },
+        ]
+
+        for attempt in focusAttempts {
+            attempt()
+            let deadline = Date().addingTimeInterval(0.6)
+            while Date() < deadline {
+                if app.keyboards.firstMatch.exists {
+                    return
+                }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+            }
+        }
+
+        XCTAssertTrue(app.keyboards.firstMatch.exists, "Expected keyboard focus before typing into \(element)")
     }
 
 }

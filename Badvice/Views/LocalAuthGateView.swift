@@ -29,6 +29,20 @@ struct LocalAuthGateView: View {
             && authPasswordDraft == authConfirmPasswordDraft
     }
 
+    struct AuthPill: Identifiable {
+        let id: String
+        let icon: String
+        let title: String
+    }
+
+    private var authPills: [AuthPill] {
+        [
+            AuthPill(id: "local", icon: "iphone.gen3", title: "Stored on this device"),
+            AuthPill(id: "social", icon: "person.2.fill", title: "Friends & collabs"),
+            AuthPill(id: "streaks", icon: "flame.fill", title: "Streaks & missions")
+        ]
+    }
+
     private func selectAuthMode(_ newMode: LocalAuthMode) {
         guard authMode != newMode else { return }
         authMode = newMode
@@ -120,9 +134,40 @@ struct LocalAuthGateView: View {
                         .multilineTextAlignment(.center)
                         .foregroundStyle(Color.primary.opacity(0.68))
                         .padding(.horizontal, 12)
+
+                        FlexibleChipRow(items: authPills, accent: accent)
+                            .padding(.top, 4)
                     }
 
                     VStack(spacing: 18) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("Your account stays local", systemImage: "lock.shield.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(accent)
+
+                            Text(
+                                "Use it to protect your history, preserve streak progress, and unlock the social surfaces you set up on this device."
+                            )
+                            .font(.caption)
+                            .foregroundStyle(Color.primary.opacity(0.62))
+
+                            HStack(spacing: 10) {
+                                authBenefitMetric(title: "Protected", value: "History")
+                                authBenefitMetric(title: "Ready for", value: "Friends")
+                                authBenefitMetric(title: "Keeps", value: "Streaks")
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(accent.opacity(0.08))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .stroke(accent.opacity(0.12), lineWidth: 1)
+                        )
+
                         HStack(spacing: 8) {
                             authModeButton(title: LocalAuthMode.signIn.title, mode: .signIn, accent: accent)
                             authModeButton(title: LocalAuthMode.signUp.title, mode: .signUp, accent: accent)
@@ -283,5 +328,59 @@ struct LocalAuthGateView: View {
                 authMode = .signUp
             }
         }
+    }
+}
+
+private struct FlexibleChipRow: View {
+    let items: [LocalAuthGateView.AuthPill]
+    let accent: Color
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                ForEach(items) { item in
+                    chip(item)
+                }
+            }
+
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    chip(items[0])
+                    chip(items[1])
+                }
+                chip(items[2])
+            }
+        }
+    }
+
+    private func chip(_ item: LocalAuthGateView.AuthPill) -> some View {
+        Label(item.title, systemImage: item.icon)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(accent)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(.white.opacity(0.7))
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(accent.opacity(0.12), lineWidth: 1)
+            )
+    }
+}
+
+private extension LocalAuthGateView {
+    @ViewBuilder
+    func authBenefitMetric(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.primary.opacity(0.52))
+            Text(value)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.headerColor(for: .minimal))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

@@ -9,6 +9,9 @@ enum NotificationManager {
     private static let defaults = UserDefaults.standard
     private static let lastGenerationDayKey = "com.badvice.last-generation-day"
     private static let streakFreezeAvailableKey = "com.badvice.streak-freeze-available"
+    private static var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
     private static var isRunningOnSimulator: Bool {
         #if targetEnvironment(simulator)
             return true
@@ -18,7 +21,7 @@ enum NotificationManager {
     }
 
     static func requestPermissionAndScheduleDaily(hour: Int = 9, streakEnabled: Bool = true) {
-        guard !isRunningOnSimulator else { return }
+        guard !isRunningOnSimulator, !isRunningTests else { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             switch settings.authorizationStatus {
@@ -38,12 +41,13 @@ enum NotificationManager {
     }
 
     static func cancelDailyNotification() {
+        guard !isRunningTests else { return }
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
     }
 
     static func scheduleDaily(hour: Int = 9, streakEnabled: Bool = true) {
-        guard !isRunningOnSimulator else { return }
+        guard !isRunningOnSimulator, !isRunningTests else { return }
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
 
@@ -115,7 +119,7 @@ enum NotificationManager {
         tone: ToneMode,
         deliveryHour: Int = 10
     ) {
-        guard !isRunningOnSimulator else { return }
+        guard !isRunningOnSimulator, !isRunningTests else { return }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             guard settings.authorizationStatus == .authorized
@@ -147,6 +151,7 @@ enum NotificationManager {
 
     /// Cancel a pending daily challenge notification (e.g. if the user already completed it).
     static func cancelDailyChallengeNotification() {
+        guard !isRunningTests else { return }
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: [dailyChallengeID])
     }

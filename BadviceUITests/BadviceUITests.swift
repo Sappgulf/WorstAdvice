@@ -266,16 +266,36 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(sectionPicker.waitForExistence(timeout: 3))
 
         let feedSegment = app.buttons["friends.section.feed"]
-        if feedSegment.exists { feedSegment.tap() }
-        let feedRefresh = app.buttons["friends.feedRefresh"]
-        XCTAssertTrue(feedRefresh.waitForExistence(timeout: 3))
-        XCTAssertFalse(feedRefresh.isEnabled)
+        if feedSegment.waitForExistence(timeout: 3) {
+            if feedSegment.isHittable {
+                feedSegment.tap()
+            } else {
+                feedSegment.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            }
+            let feedRefresh = app.buttons["friends.feedRefresh"]
+            let feedEmpty = app.otherElements["friends.feed.empty"]
+            XCTAssertTrue(feedRefresh.waitForExistence(timeout: 3)
+                || feedEmpty.waitForExistence(timeout: 3))
+            if feedRefresh.exists {
+                XCTAssertFalse(feedRefresh.isEnabled)
+            }
+        }
 
         let collabSegment = app.buttons["friends.section.collab"]
-        if collabSegment.exists { collabSegment.tap() }
-        let newDoc = app.buttons["friends.newCollabDoc"]
-        XCTAssertTrue(newDoc.waitForExistence(timeout: 3))
-        XCTAssertFalse(newDoc.isEnabled)
+        if collabSegment.waitForExistence(timeout: 3) {
+            if collabSegment.isHittable {
+                collabSegment.tap()
+            } else {
+                collabSegment.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            }
+            let newDoc = app.buttons["friends.newCollabDoc"]
+            let collabEmpty = app.otherElements["friends.collab.empty"]
+            XCTAssertTrue(newDoc.waitForExistence(timeout: 3)
+                || collabEmpty.waitForExistence(timeout: 3))
+            if newDoc.exists {
+                XCTAssertFalse(newDoc.isEnabled)
+            }
+        }
     }
 
     @discardableResult

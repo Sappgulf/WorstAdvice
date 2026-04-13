@@ -37,6 +37,90 @@ struct FriendsTabView: View {
     private var canSearchForFriends: Bool {
         social.socialFeaturesEnabled && !normalizedHandleSearchText.isEmpty
     }
+    private var friendsSetupTitle: String {
+        switch social.friendsLoadState {
+        case .idle, .checkingCloudKit, .bootstrappingProfile, .loadingFriends:
+            return "Finishing Friends setup"
+        case .failed:
+            return "Repair Friends connection"
+        case .needsProfileSetup:
+            return "Create your Friends profile"
+        case .empty:
+            return "Add your first friend"
+        case .ready:
+            if social.currentUser == nil {
+                return "Create your Friends profile"
+            }
+            if social.friends.isEmpty {
+                return "Add your first friend"
+            }
+            if social.feedPosts.isEmpty {
+                return "Wake up the feed"
+            }
+            if social.collabDocs.isEmpty {
+                return "Start your first collab"
+            }
+            return "Keep your social loop moving"
+        }
+    }
+    private var friendsSetupDetail: String {
+        switch social.friendsLoadState {
+        case .idle:
+            return "Connecting to iCloud so handles, requests, and drafts can load."
+        case .checkingCloudKit:
+            return "CloudKit is being verified before the social graph comes online."
+        case .bootstrappingProfile:
+            return "Your account is almost ready. Friends needs a profile before the rest can load."
+        case .loadingFriends:
+            return "Requests, friends, and collaboration data are being fetched now."
+        case .failed(let message):
+            return message
+        case .needsProfileSetup:
+            return "Set a public handle so people can find you, send requests, and start collabs."
+        case .empty:
+            return "Friends is online. Share your handle or search for someone to start the network."
+        case .ready:
+            if social.currentUser == nil {
+                return "Create your profile first. That unlocks search, requests, feed posts, and collabs."
+            }
+            if social.friends.isEmpty {
+                return "You have a profile. Next step is sending or accepting a request so the social loop can start."
+            }
+            if social.feedPosts.isEmpty {
+                return "Your network exists, but the feed is quiet. Share from Generate or Quotes to get it moving."
+            }
+            if social.collabDocs.isEmpty {
+                return "Friends are connected. Start a shared draft to turn the tab into something collaborative."
+            }
+            return "Requests, posts, and collabs are all live. Keep the loop active from Generate, Quotes, and Friends."
+        }
+    }
+    private var friendsPrimaryActionTitle: String {
+        switch social.friendsLoadState {
+        case .idle, .checkingCloudKit, .bootstrappingProfile, .loadingFriends:
+            return "Refresh"
+        case .failed:
+            return "Retry"
+        case .needsProfileSetup:
+            return "Open Setup"
+        case .empty:
+            return "Find Friends"
+        case .ready:
+            if social.currentUser == nil {
+                return "Open Setup"
+            }
+            if social.friends.isEmpty {
+                return "Find Friends"
+            }
+            if social.feedPosts.isEmpty {
+                return "Open Generate"
+            }
+            if social.collabDocs.isEmpty {
+                return "Open Collab"
+            }
+            return "Refresh Social"
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -45,6 +129,7 @@ struct FriendsTabView: View {
             ScrollView {
                 LazyVStack(spacing: 12) {
                     friendsHeader
+                    friendsCommandCard
                     friendsStateBanner
 
                     sectionPicker
@@ -103,6 +188,55 @@ struct FriendsTabView: View {
             SocialProfileSetupView(social: social)
         }
         .toast(item: $activeToast, accentColor: accent)
+    }
+
+    private var friendsCommandCard: some View {
+        TabCommandCard(
+            eyebrow: "Friends Command",
+            title: friendsSetupTitle,
+            detail: friendsSetupDetail,
+            systemImage: "person.2.fill",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor
+        ) {
+            HStack(spacing: 8) {
+                TabCommandMetric(title: "Profile", value: social.currentUser == nil ? "Missing" : "Ready", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+                TabCommandMetric(title: "Friends", value: "\(social.friends.count)", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+                TabCommandMetric(title: "Feed", value: social.feedPosts.isEmpty ? "Quiet" : "Live", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+            }
+        } actions: {
+            HStack(spacing: 10) {
+                Button(friendsPrimaryActionTitle) {
+                    performPrimaryFriendsAction()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .foregroundStyle(buttonText)
+                .font(.caption.weight(.semibold))
+                .accessibilityIdentifier("friends.command.primary")
+
+                Button("Open Feed") {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        selectedSection = .feed
+                    }
+                }
+                .buttonStyle(.bordered)
+                .font(.caption.weight(.semibold))
+                .accessibilityIdentifier("friends.command.feed")
+
+                Button("Open Collab") {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                        selectedSection = .collab
+                    }
+                }
+                .buttonStyle(.bordered)
+                .font(.caption.weight(.semibold))
+                .accessibilityIdentifier("friends.command.collab")
+            }
+        }
+        .accessibilityIdentifier("friends.command.card")
     }
 
     @ViewBuilder
@@ -1033,6 +1167,31 @@ struct FriendsTabView: View {
             .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 5)
     }
 
+    private func performPrimaryFriendsAction() {
+        switch social.friendsLoadState {
+        case .idle, .checkingCloudKit, .bootstrappingProfile, .loadingFriends, .failed:
+            Task { await social.retryFriendsLoad() }
+        case .needsProfileSetup:
+            showProfileSetup = true
+        case .empty:
+            selectedSection = .friends
+        case .ready:
+            if social.currentUser == nil {
+                showProfileSetup = true
+            } else if social.friends.isEmpty {
+                selectedSection = .friends
+            } else if social.feedPosts.isEmpty {
+                onOpenTab?(.generate)
+            } else if social.collabDocs.isEmpty {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                    selectedSection = .collab
+                }
+            } else {
+                Task { await social.refreshSocialData() }
+            }
+        }
+    }
+
     private func relationshipState(for user: SocialUser) -> FriendSearchRelationshipState {
         if user.id == social.currentUser?.id {
             return .currentUser
@@ -1067,6 +1226,25 @@ struct FriendsTabView: View {
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(secondaryText.opacity(0.08))
+        )
+    }
+
+    private func socialCommandMetric(title: String, value: String, accenting: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundStyle(accenting ? accent : primaryText)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(accent.opacity(accenting ? 0.14 : 0.08))
         )
     }
 

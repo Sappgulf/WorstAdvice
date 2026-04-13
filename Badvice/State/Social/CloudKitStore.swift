@@ -278,6 +278,7 @@ actor CloudKitStore: SocialBackend {
             throw SocialError.rateLimited("Too many friend requests. Try again in a minute.")
         }
 
+        let currentRef = CKRecord.Reference(recordID: current.recordID, action: .none)
         let targetRef = CKRecord.Reference(recordID: target.recordID, action: .none)
         let blockingStatuses = Set([
             SocialFriendRequestStatus.pending,

@@ -21,6 +21,42 @@ struct QuotesTabView: View {
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
+    private var quotesCommandTitle: String {
+        if viewModel.filteredQuotes.isEmpty {
+            return "Rebuild your quote stream"
+        }
+        if social.currentUser == nil {
+            return "Turn quotes into a social loop"
+        }
+        if !showQuoteSpotlight {
+            return "Open today's spotlight"
+        }
+        return "Keep the quote ritual moving"
+    }
+    private var quotesCommandDetail: String {
+        if viewModel.filteredQuotes.isEmpty {
+            return "Your current filters are too narrow or the library needs fresh material. Clear the filters or jump back to Generate."
+        }
+        if social.currentUser == nil {
+            return "Today's quote is ready. Finish your Friends profile to share it, post it, and turn this tab into a daily social ritual."
+        }
+        if !showQuoteSpotlight {
+            return "The daily quote is strongest when you stop and unpack it. Open the spotlight, react, then share it or spin it into a collab."
+        }
+        return "You have today's quote in focus. Rate it, share it, or send it into Friends while the ritual is active."
+    }
+    private var quotesPrimaryActionTitle: String {
+        if viewModel.filteredQuotes.isEmpty {
+            return viewModel.selectedCategory == nil ? "Generate Advice" : "Clear Filters"
+        }
+        if social.currentUser == nil {
+            return "Open Friends"
+        }
+        if !showQuoteSpotlight {
+            return "Open Spotlight"
+        }
+        return "Share to Friends"
+    }
 
     var body: some View {
         NavigationStack {
@@ -29,6 +65,9 @@ struct QuotesTabView: View {
 
                 ScrollView {
                     LazyVStack(spacing: 14) {
+                        quotesCommandCard
+                            .padding(.horizontal, 16)
+
                         dailyQuoteHero
                             .padding(.horizontal, 16)
 
@@ -242,6 +281,52 @@ struct QuotesTabView: View {
             ActivityShareSheet(items: shareItems)
         }
         .toast(item: $activeToast, accentColor: accent)
+    }
+
+    private var quotesCommandCard: some View {
+        let dailyQuote = viewModel.dailyQuote
+        return TabCommandCard(
+            eyebrow: "Quote Command",
+            title: quotesCommandTitle,
+            detail: quotesCommandDetail,
+            systemImage: "quote.bubble.fill",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor
+        ) {
+            HStack(spacing: 8) {
+                TabCommandMetric(title: "Visible", value: "\(viewModel.filteredQuotes.count)", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+                TabCommandMetric(title: "Library", value: "\(viewModel.allQuotes.count)", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+                TabCommandMetric(title: "Today", value: viewModel.vote(for: dailyQuote) == .none ? "Fresh" : "Rated", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+            }
+        } actions: {
+            HStack(spacing: 10) {
+                Button(quotesPrimaryActionTitle) {
+                    performPrimaryQuotesAction()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .foregroundStyle(buttonText)
+                .font(.caption.weight(.semibold))
+                .accessibilityIdentifier("quotes.command.primary")
+
+                Button("Daily Quote") {
+                    showQuoteSpotlight = true
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                }
+                .buttonStyle(.bordered)
+                .font(.caption.weight(.semibold))
+                .accessibilityIdentifier("quotes.command.daily")
+
+                Button("Generate") {
+                    onJumpToGenerate?()
+                }
+                .buttonStyle(.bordered)
+                .font(.caption.weight(.semibold))
+                .accessibilityIdentifier("quotes.command.generate")
+            }
+        }
     }
 
     private var quoteHeaderCard: some View {
@@ -508,7 +593,7 @@ struct QuotesTabView: View {
 
     private var quoteSpotlightCard: some View {
         let quote = viewModel.dailyQuote
-        return VStack(alignment: .leading, spacing: 10) {
+        return SectionShell(accent: accent, cardColor: cardColor) {
             HStack {
                 Label("Quote Spotlight", systemImage: "sparkle.magnifyingglass")
                     .font(.subheadline.weight(.bold))
@@ -522,7 +607,7 @@ struct QuotesTabView: View {
                 .font(.caption.weight(.semibold))
                 .accessibilityIdentifier("quotes.spotlight.toggle")
             }
-
+        } content: {
             if showQuoteSpotlight {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Theme")
@@ -543,10 +628,10 @@ struct QuotesTabView: View {
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
                         .fill(cardColor)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
                                 .stroke(accent.opacity(0.09), lineWidth: 1)
                         )
                 )
@@ -556,16 +641,6 @@ struct QuotesTabView: View {
                     .foregroundStyle(secondaryText)
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(cardColor)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(accent.opacity(0.12), lineWidth: 1)
-        )
     }
 
     private func copyQuote(_ quote: BadQuote, isDaily: Bool) {
@@ -615,6 +690,28 @@ struct QuotesTabView: View {
         social.queueCollabDraft(type: .quote, content: quote.text)
         onOpenTab?(.friends)
         activeToast = ToastMessage(message: "Draft sent to Friends > Collab.", style: .info)
+    }
+
+    private func performPrimaryQuotesAction() {
+        if viewModel.filteredQuotes.isEmpty {
+            if viewModel.selectedCategory != nil {
+                viewModel.selectedCategory = nil
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            } else {
+                onJumpToGenerate?()
+            }
+            return
+        }
+        if social.currentUser == nil {
+            onOpenTab?(.friends)
+            return
+        }
+        if !showQuoteSpotlight {
+            showQuoteSpotlight = true
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            return
+        }
+        shareQuoteToFriends(viewModel.dailyQuote)
     }
 
     private func voteButtons(for quote: BadQuote) -> some View {
@@ -682,40 +779,13 @@ struct QuotesInlineBanner: View {
     let cardColor: Color
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "icloud.slash")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(accent)
-            Text(text)
-                .font(.caption)
-                .foregroundStyle(secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .padding(12)
-        .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(cardColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    .white.opacity(0.08),
-                                    .clear,
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .blendMode(.screen)
-                )
-        }
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(accent.opacity(0.12), lineWidth: 1)
+        InlineStatusBanner(
+            text: text,
+            systemImage: "icloud.slash",
+            tint: accent,
+            primaryText: secondaryText,
+            cardColor: cardColor
         )
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 3)
     }
 }
 
