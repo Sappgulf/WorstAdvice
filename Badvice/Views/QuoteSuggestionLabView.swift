@@ -82,6 +82,7 @@ struct QuoteSuggestionLabView: View {
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
         .onAppear {
             suggestionError = ""
+            viewModel.loadIfNeeded()
         }
     }
 

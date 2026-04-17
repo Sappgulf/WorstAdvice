@@ -133,6 +133,9 @@ struct ContentView: View {
     private var launchArguments: [String] { ProcessInfo.processInfo.arguments }
     private var isUITesting: Bool { launchArguments.contains("-ui-testing") }
     private var settingsTabAvailable: Bool { auth?.isAuthenticated == true && session != nil }
+    private var shouldAutoGenerateAdviceOnOpen: Bool {
+        !isUITesting && !launchArguments.contains("-debug-preload-polish-fixtures")
+    }
 
     var body: some View {
         appRootView
@@ -204,7 +207,8 @@ struct ContentView: View {
                 isPresented: .init(
                     get: { !hasSeenOnboarding },
                     set: { if !$0 { hasSeenOnboarding = true } }
-                ))
+                )
+            )
         }
         .onChange(of: session.generate.challengeStreakDays) { _, days in
             if [3, 7, 14, 30].contains(days) {
@@ -350,6 +354,9 @@ struct ContentView: View {
             loadedTabs.insert(.chaosHub)
             loadedTabs.insert(.explore)
             applyUITestLaunchOverridesIfNeeded(sessionOverride: newSession)
+            newSession.bootstrapExperienceIfNeeded(
+                autoGenerateInitialAdvice: shouldAutoGenerateAdviceOnOpen
+            )
             if isUITesting, launchArguments.contains("-debug-preload-polish-fixtures") {
                 let seed = intLaunchArgumentValue(after: "-debug-polish-seed") ?? 424_242
                 Self.logger.info("Awaiting debug polish preload")
@@ -359,7 +366,13 @@ struct ContentView: View {
     }
 
     private func makeAuthViewModel() -> AuthViewModel {
-        let authViewModel = AuthViewModel()
+        let authStore: LocalAccountStore
+        if isUITesting {
+            authStore = LocalAccountStore(credentialsStore: LocalAccountInMemoryStore())
+        } else {
+            authStore = LocalAccountStore()
+        }
+        let authViewModel = AuthViewModel(store: authStore)
         if isUITesting, launchArguments.contains("-ui-testing-auth-reset") {
             authViewModel.resetForUITesting()
         }
@@ -407,6 +420,9 @@ struct ContentView: View {
         )
         session = newSession
         applyUITestLaunchOverridesIfNeeded(sessionOverride: newSession)
+        newSession.bootstrapExperienceIfNeeded(
+            autoGenerateInitialAdvice: shouldAutoGenerateAdviceOnOpen
+        )
         if isUITesting, launchArguments.contains("-debug-preload-polish-fixtures") {
             let seed = intLaunchArgumentValue(after: "-debug-polish-seed") ?? 424_242
             Task {
@@ -835,6 +851,13 @@ struct ContentView: View {
     private func shellStatus(for session: AppSessionViewModel) -> (title: String, message: String, icon: String) {
         switch selectedTab {
         case .generate:
+            if session.generate.isGenerating {
+                return (
+                    "Advice Studio",
+                    "Warming the engine and lining up your first draft.",
+                    "sparkles"
+                )
+            }
             if session.generate.current == nil {
                 return ("Advice Studio", "Build your first disaster plan with one strong prompt.", "sparkles")
             }
@@ -926,7 +949,14 @@ struct ContentView: View {
 
     private func restartAppSession() {
         resetSessionPresentationState()
-        session = AppSessionViewModel(context: modelContext, accountID: auth?.currentSession?.accountID)
+        let newSession = AppSessionViewModel(
+            context: modelContext,
+            accountID: auth?.currentSession?.accountID
+        )
+        session = newSession
+        newSession.bootstrapExperienceIfNeeded(
+            autoGenerateInitialAdvice: shouldAutoGenerateAdviceOnOpen
+        )
     }
 
     private func applyUITestLaunchOverridesIfNeeded(sessionOverride: AppSessionViewModel? = nil) {
@@ -1188,9 +1218,7 @@ struct ContentView: View {
     private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
         showingSettingsRoot = false
         loadedTabs.insert(tab)
-        #if DEBUG
-            NSLog("Selected tab -> %@", tab.rawValue)
-        #endif
+        Self.logger.debug("Selected tab -> \(tab.rawValue, privacy: .public)")
         let reduceMotion =
             session.settings.reduceMotion || accessibilityReduceMotion || lowPowerModeEnabled
         if reduceMotion {

@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct GenerateTabView: View {
@@ -20,6 +21,7 @@ struct GenerateTabView: View {
     @State private var showingAdvanced = false
     @State private var showingStudioExtras = false
     @State private var showingBrandMenu = false
+    @State private var pendingBrandMenuTab: AppTab? = nil
     @State private var showingBracket = false        // #2 Advice Battles entry point
     @State private var showingCollabAdvice = false   // #7 Collab Advice
     @State private var gifExportInProgress = false
@@ -434,7 +436,9 @@ struct GenerateTabView: View {
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
-        .sheet(isPresented: $showingBrandMenu) {
+        .sheet(isPresented: $showingBrandMenu, onDismiss: {
+            handleBrandMenuDismiss()
+        }) {
             #if DEBUG
                 GenerateBrandMenuView(
                     social: social,
@@ -442,7 +446,7 @@ struct GenerateTabView: View {
                     quickAccessTabs: quickAccessTabs,
                     isPresented: $showingBrandMenu,
                     activeToast: $activeToast,
-                    onSelectQuickAccessTab: { onOpenTab?($0) },
+                    onSelectQuickAccessTab: { pendingBrandMenuTab = $0 },
                     onResetAllLocalAccounts: onResetAllLocalAccounts,
                     onRefreshSocialAvailability: onRefreshSocialAvailability,
                     onReseedCloudKitSchema: onReseedCloudKitSchema
@@ -454,7 +458,7 @@ struct GenerateTabView: View {
                     quickAccessTabs: quickAccessTabs,
                     isPresented: $showingBrandMenu,
                     activeToast: $activeToast,
-                    onSelectQuickAccessTab: { onOpenTab?($0) },
+                    onSelectQuickAccessTab: { pendingBrandMenuTab = $0 },
                     onResetAllLocalAccounts: onResetAllLocalAccounts,
                     onRefreshSocialAvailability: onRefreshSocialAvailability
                 )
@@ -1283,6 +1287,14 @@ struct GenerateTabView: View {
     private func openTab(_ tab: AppTab) {
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
         onOpenTab?(tab)
+    }
+
+    private func handleBrandMenuDismiss() {
+        guard let tab = pendingBrandMenuTab else { return }
+        pendingBrandMenuTab = nil
+        DispatchQueue.main.async {
+            onOpenTab?(tab)
+        }
     }
 
     private func handleGeneratingStateChange(_ isGenerating: Bool) {

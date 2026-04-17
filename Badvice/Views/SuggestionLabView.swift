@@ -39,6 +39,7 @@ struct SuggestionLabView: View {
             let selected = viewModel.selectedCategory
             suggestionCategory = selected == .random ? .dating : selected
             suggestionError = ""
+            viewModel.loadRecentSuggestionsIfNeeded()
         }
         .onChange(of: suggestionTopic) { _, _ in
             if submitSuccess { submitSuccess = false }

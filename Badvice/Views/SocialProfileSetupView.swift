@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 import UIKit
 
@@ -131,6 +132,8 @@ struct SocialCloudKitDiagnosticsView: View {
 }
 
 struct SocialProfileSetupView: View {
+    private static let logger = Logger(subsystem: "com.worstadvice.app", category: "ui-tests")
+
     @Bindable var social: SocialViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var handleInput: String
@@ -272,6 +275,11 @@ struct SocialProfileSetupView: View {
             }
         }
         .preferredColorScheme(.light)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .onAppear {
+            Self.logger.debug("Friends setup sheet appeared")
+        }
         .onChange(of: handleInput) { _, newValue in
             let sanitized = SocialHandleNormalizer.normalize(newValue)
             if sanitized != newValue {

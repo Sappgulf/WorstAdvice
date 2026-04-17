@@ -93,6 +93,9 @@ final class GenerateViewModel {
     private var suggestionsVersion: Int = 0
     private var leaderboardVersion: Int = 0
     private var successfulGenerationCount: Int = 0
+    @ObservationIgnored private var hasLoadedRecentSuggestions = false
+    @ObservationIgnored private var hasBootstrappedAdviceExperience = false
+    @ObservationIgnored private var adviceBootstrapTask: Task<Void, Never>?
     private static let chaosMissionCompletionStorageKey = "chaosHubMissionCompletionKey"
     private struct RetentionSnapshot {
         let history: [AdviceRecord]
@@ -135,11 +138,54 @@ final class GenerateViewModel {
         repository.seedAdviceMemoryFromHistoryIfNeeded()
         self.current = repository.fetchHistory(limit: 1).first
         self.primaryActionTitle = Self.primaryActionTitles.first ?? "Advise Me"
-        self.cachedRecentSuggestions = repository.fetchSuggestions(limit: 20)
         syncLiveActivityState()
     }
 
-    func generate(seed: Int? = nil) async {
+    func bootstrapAdviceExperienceIfNeeded(autoGenerateInitialAdvice: Bool) {
+        guard !hasBootstrappedAdviceExperience else { return }
+        hasBootstrappedAdviceExperience = true
+
+        let currentCategory = selectedCategory
+        let currentTone = selectedTone
+        let shouldAutoGenerate = autoGenerateInitialAdvice && current == nil && !isGenerating
+        let bootSeed = Int(Date().timeIntervalSince1970 * 1_000)
+        let preferredContentPack = settingsViewModel.preferredContentPack
+        let preferredGenerationProvider = settingsViewModel.preferredGenerationProvider
+
+        _ = store.rules(for: currentCategory, contentPack: preferredContentPack)
+        _ = store.profile(for: currentTone)
+        _ = store.toneDirectiveVocabulary(for: currentTone)
+        _ = store.categoryDirectiveVocabulary(for: currentCategory)
+
+        adviceBootstrapTask?.cancel()
+        adviceBootstrapTask = Task(priority: .utility) { [weak self] in
+            async let scorerWarmup: Void = SemanticTextScorer.shared.prewarm()
+
+            if preferredGenerationProvider != .classic {
+                Task(priority: .utility) {
+                    _ = await AppleOnDeviceAdviceBridge.prewarmSystemModelAndPoll(
+                        maxPollCount: 2,
+                        pollDelay: .milliseconds(250)
+                    )
+                }
+            }
+
+            guard shouldAutoGenerate, let self else {
+                _ = await scorerWarmup
+                return
+            }
+
+            await self.bootstrapCurrentAdviceIfNeeded(seed: bootSeed)
+            _ = await scorerWarmup
+        }
+    }
+
+    func bootstrapCurrentAdviceIfNeeded(seed: Int) async {
+        guard current == nil, !isGenerating else { return }
+        await generate(seed: seed, isBootstrap: true)
+    }
+
+    func generate(seed: Int? = nil, isBootstrap: Bool = false) async {
         let generationPerfToken = AppPerformanceInstrumentation.beginAdviceGenerationInterval()
         defer { AppPerformanceInstrumentation.endAdviceGenerationInterval(generationPerfToken) }
         isGenerating = true
@@ -415,37 +461,39 @@ final class GenerateViewModel {
         )
         leaderboardVersion += 1
 
-        // Achievement Tracking
-        let total = repository.historyCount()
-        achievementsManager.trackAdviceGenerated(
-            tone: output.tone, category: output.category, totalCount: total)
-        achievementsManager.trackStreak(days: challengeStreakDays)
+        if !isBootstrap {
+            // Achievement Tracking
+            let total = repository.historyCount()
+            achievementsManager.trackAdviceGenerated(
+                tone: output.tone, category: output.category, totalCount: total)
+            achievementsManager.trackStreak(days: challengeStreakDays)
 
-        analyticsTracker.track(
-            "generate",
-            properties: [
-                "category": output.category.rawValue,
-                "selected_category": selectedCategory.rawValue,
-                "resolved_category": resolvedCategory.rawValue,
-                "tone": output.tone.rawValue,
-                "selected_tone": selectedTone.rawValue,
-                "content_pack": selectedPack.rawValue,
-                "generation_provider": generationProvider.rawValue,
-                "source": source,
-                "has_situation": situation == nil ? "false" : "true",
-                "strict_no_repeats": shouldEnforceGlobalUniqueness ? "true" : "false",
-                "community_only": communityOnlyMode ? "true" : "false",
-            ])
-        rotatePrimaryActionTitleIfNeeded()
+            analyticsTracker.track(
+                "generate",
+                properties: [
+                    "category": output.category.rawValue,
+                    "selected_category": selectedCategory.rawValue,
+                    "resolved_category": resolvedCategory.rawValue,
+                    "tone": output.tone.rawValue,
+                    "selected_tone": selectedTone.rawValue,
+                    "content_pack": selectedPack.rawValue,
+                    "generation_provider": generationProvider.rawValue,
+                    "source": source,
+                    "has_situation": situation == nil ? "false" : "true",
+                    "strict_no_repeats": shouldEnforceGlobalUniqueness ? "true" : "false",
+                    "community_only": communityOnlyMode ? "true" : "false",
+                ])
 
-        // Nuanced Haptics: Alpha Podcast/Crypto/Toxic get heavy kicks. Minimal/Monk get light taps.
-        if let profile = self.store.toneProfiles[output.tone] {
-            let intensity = profile.rhetoricalTick.count
-            hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
+            // Nuanced Haptics: Alpha Podcast/Crypto/Toxic get heavy kicks. Minimal/Monk get light taps.
+            if let profile = self.store.toneProfiles[output.tone] {
+                let intensity = profile.rhetoricalTick.count
+                hapticWeight = Double(min(max(intensity, 1), 6)) / 6.0
+            }
+            hapticTrigger += 1
+            trackMissionCompletionIfNeeded()
+            trackWeeklyMissionProgressIfNeeded(with: output)
+            rotatePrimaryActionTitleIfNeeded()
         }
-        hapticTrigger += 1
-        trackMissionCompletionIfNeeded()
-        trackWeeklyMissionProgressIfNeeded(with: output)
         if let generationProviderNotice {
             generationNotice = generationProviderNotice
         }
@@ -736,6 +784,7 @@ final class GenerateViewModel {
             topic: String(trimmedTopic.prefix(72)),
             adviceLine: String(trimmedAdvice.prefix(220))
         )
+        hasLoadedRecentSuggestions = true
         cachedRecentSuggestions = repository.fetchSuggestions(limit: 20)
         suggestionsVersion += 1
         leaderboardVersion += 1
@@ -749,6 +798,7 @@ final class GenerateViewModel {
 
     func deleteSuggestion(_ suggestion: UserAdviceSuggestion) {
         repository.deleteSuggestion(suggestion)
+        hasLoadedRecentSuggestions = true
         cachedRecentSuggestions = repository.fetchSuggestions(limit: 20)
         suggestionsVersion += 1
         leaderboardVersion += 1
@@ -777,8 +827,15 @@ final class GenerateViewModel {
     private var cachedRecentSuggestions: [UserAdviceSuggestion] = []
 
     var recentSuggestions: [UserAdviceSuggestion] {
+        _ = hasLoadedRecentSuggestions
         _ = suggestionsVersion
         return cachedRecentSuggestions
+    }
+
+    func loadRecentSuggestionsIfNeeded() {
+        guard !hasLoadedRecentSuggestions else { return }
+        hasLoadedRecentSuggestions = true
+        cachedRecentSuggestions = repository.fetchSuggestions(limit: 20)
     }
 
     var communitySuggestionCount: Int {

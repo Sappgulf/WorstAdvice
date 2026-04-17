@@ -16,20 +16,30 @@ final class AppSessionViewModel {
     let social: SocialViewModel
     let achievements: AchievementsManager
     private let analyticsTracker: AnalyticsTracking
+    private let sharedAdviceStore: AdviceStore
+    private let sharedBadQuoteService: BadQuoteService
+    private let sharedContentModeration: ContentModeration
 
     init(context: ModelContext, accountID: UUID? = nil) {
         self.accountID = accountID
-        self.analyticsTracker = AppAnalyticsTracker()
+        let analyticsTracker = AppAnalyticsTracker()
+        self.analyticsTracker = analyticsTracker
         self.repository = AdviceRepository(
             context: context,
             accountKey: accountID?.uuidString ?? "__default__"
         )
         self.localModelStore = LocalModelStore()
+        self.sharedAdviceStore = AdviceStore()
+        self.sharedBadQuoteService = BadQuoteService()
+        self.sharedContentModeration = ContentModeration()
         self.settings = SettingsViewModel(repository: repository, localModelStore: localModelStore)
         self.achievements = AchievementsManager(context: context)
         self.generate = GenerateViewModel(
             repository: repository,
             settingsViewModel: settings,
+            store: sharedAdviceStore,
+            badQuoteService: sharedBadQuoteService,
+            moderation: sharedContentModeration,
             analyticsTracker: analyticsTracker,
             achievementsManager: achievements
         )
@@ -43,17 +53,25 @@ final class AppSessionViewModel {
         )
         self.quotes = QuotesViewModel(
             repository: repository,
+            quoteService: sharedBadQuoteService,
+            moderation: sharedContentModeration,
+            store: sharedAdviceStore,
             localModelStore: localModelStore,
             analyticsTracker: analyticsTracker
         )
         self.social = SocialViewModel()
-        self.quotes.loadIfNeeded()
     }
 
     func refreshLists() {
         generate.invalidateRetentionSnapshot()
         favorites.reload()
         history.reload()
+    }
+
+    func bootstrapExperienceIfNeeded(autoGenerateInitialAdvice: Bool) {
+        generate.bootstrapAdviceExperienceIfNeeded(
+            autoGenerateInitialAdvice: autoGenerateInitialAdvice
+        )
     }
 
     func preloadDebugPolishFixturesIfNeeded(seed: Int = 424_242) async {

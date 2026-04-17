@@ -756,6 +756,10 @@ actor SemanticTextScorer {
         }
     }
 
+    func prewarm() async {
+        _ = await preparedQuery(from: "badvice warmup")
+    }
+
     func bestCandidate(from candidates: [String], query: String, tieBreakerSeed: Int) async -> String? {
         guard !candidates.isEmpty else { return nil }
         guard let preparedQuery = await preparedQuery(from: query) else { return nil }

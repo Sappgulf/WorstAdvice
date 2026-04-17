@@ -1,17 +1,15 @@
 import SwiftUI
 
 struct FriendsTabView: View {
+
     @Bindable var social: SocialViewModel
     @Bindable var settings: SettingsViewModel
     var onOpenTab: ((AppTab) -> Void)? = nil
 
-    private struct ProfileSetupSheetToken: Identifiable {
-        let id = UUID()
-    }
-
     @State private var selectedSection: FriendsSection = .friends
     @State private var handleSearchText: String = ""
     @State private var activeToast: ToastMessage? = nil
+    @State private var showingProfileSetup = false
 
     @State private var showCollabComposer = false
     @State private var collabComposerType: SocialPostType = .advice
@@ -23,7 +21,6 @@ struct FriendsTabView: View {
     @State private var collabEditorVersion: Int64 = 0
     @State private var collabEditorType: SocialPostType = .advice
     @State private var collabEditorContributors: [SocialUser] = []
-    @State private var profileSetupSheet: ProfileSetupSheetToken?
 
     @Environment(\.tabBarVisible) private var tabBarVisible
 
@@ -125,6 +122,9 @@ struct FriendsTabView: View {
             return "Refresh Social"
         }
     }
+    private var friendsPrimaryActionIdentifier: String {
+        friendsPrimaryActionTitle == "Open Setup" ? "friends.openSetup" : "friends.command.primary"
+    }
 
     var body: some View {
         ZStack {
@@ -188,7 +188,7 @@ struct FriendsTabView: View {
         .sheet(isPresented: $showCollabEditor) {
             collabEditorSheet
         }
-        .sheet(item: $profileSetupSheet) { _ in
+        .sheet(isPresented: $showingProfileSetup) {
             SocialProfileSetupView(social: social)
         }
         .toast(item: $activeToast, accentColor: accent)
@@ -220,7 +220,7 @@ struct FriendsTabView: View {
                 .foregroundStyle(buttonText)
                 .font(.caption.weight(.semibold))
                 .frame(maxWidth: .infinity, minHeight: 42)
-                .accessibilityIdentifier("friends.command.primary")
+                .accessibilityIdentifier(friendsPrimaryActionIdentifier)
 
                 HStack(spacing: 10) {
                     Button("Open Feed") {
@@ -245,7 +245,6 @@ struct FriendsTabView: View {
                 }
             }
         }
-        .accessibilityIdentifier("friends.command.card")
     }
 
     @ViewBuilder
@@ -365,10 +364,10 @@ struct FriendsTabView: View {
 
                         if social.needsProfileSetup {
                             Button("Open Setup") {
-                                profileSetupSheet = ProfileSetupSheetToken()
+                                showingProfileSetup = true
                             }
                             .buttonStyle(.bordered)
-                            .accessibilityIdentifier("friends.openSetup")
+                            .accessibilityIdentifier("friends.openSetup.banner")
                             .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
                         }
                     }
@@ -467,12 +466,12 @@ struct FriendsTabView: View {
                             .foregroundStyle(secondaryText)
                         VStack(spacing: 8) {
                             Button("Open Setup") {
-                                profileSetupSheet = ProfileSetupSheetToken()
+                                showingProfileSetup = true
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(accent)
                             .foregroundStyle(buttonText)
-                            .accessibilityIdentifier("friends.openSetup")
+                            .accessibilityIdentifier("friends.openSetup.section")
                             .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
 
                             Button("Retry CloudKit") {
@@ -1197,12 +1196,12 @@ struct FriendsTabView: View {
         case .idle, .checkingCloudKit, .bootstrappingProfile, .loadingFriends, .failed:
             Task { await social.retryFriendsLoad() }
         case .needsProfileSetup:
-            profileSetupSheet = ProfileSetupSheetToken()
+            showingProfileSetup = true
         case .empty:
             selectedSection = .friends
         case .ready:
             if social.currentUser == nil {
-                profileSetupSheet = ProfileSetupSheetToken()
+                showingProfileSetup = true
             } else if social.friends.isEmpty {
                 selectedSection = .friends
             } else if social.feedPosts.isEmpty {

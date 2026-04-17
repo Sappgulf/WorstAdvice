@@ -1,9 +1,13 @@
+import Foundation
+import OSLog
 import SwiftUI
 
 /// Sheet content for the Badvice brand menu, extracted from GenerateTabView to own its
 /// two private state vars (runningBrandAction, showingResetAccountsConfirmation) and
 /// keep the parent's @State count smaller.
 struct GenerateBrandMenuView: View {
+    private static let logger = Logger(subsystem: "com.worstadvice.app", category: "ui-tests")
+
     @Bindable var social: SocialViewModel
     @Bindable var settings: SettingsViewModel
     let quickAccessTabs: [AppTab]
@@ -80,7 +84,7 @@ struct GenerateBrandMenuView: View {
                 Text("This removes device-side accounts and wipes local history, favorites, settings, and drafts.")
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
 
@@ -316,10 +320,8 @@ struct GenerateBrandMenuView: View {
 
     private func openQuickAccessTab(_ tab: AppTab) {
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-        Task { @MainActor in
-            isPresented = false
-            await Task.yield()
-            onSelectQuickAccessTab?(tab)
-        }
+        Self.logger.debug("Brand menu quick access selected: \(tab.rawValue, privacy: .public)")
+        onSelectQuickAccessTab?(tab)
+        isPresented = false
     }
 }
