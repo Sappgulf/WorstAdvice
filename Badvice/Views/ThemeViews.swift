@@ -19,6 +19,7 @@ struct TabCommandMetric: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.08))
@@ -39,37 +40,42 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
     @ViewBuilder let actions: () -> Actions
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(accent.opacity(0.12))
-                    .frame(width: 40, height: 40)
-                Image(systemName: systemImage)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(accent)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(accent.opacity(0.12))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: systemImage)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(accent)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(eyebrow)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(accent)
+                    Text(title)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(eyebrow)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(accent)
-                Text(title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(primaryText)
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-            }
+            metrics()
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer(minLength: 8)
-        }
-        .overlay(alignment: .bottomTrailing) {
-            VStack(alignment: .trailing, spacing: 10) {
-                metrics()
-                actions()
-            }
+            actions()
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(Theme.mediumCornerRadius)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .fill(cardColor)

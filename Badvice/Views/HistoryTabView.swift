@@ -321,7 +321,7 @@ struct HistoryTabView: View {
                 }
             }
             .padding(.top, 4)
-            .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 24)
+            .padding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 24)
         }
         .scrollDismissesKeyboard(.interactively)
         .trackScrollForTabBar()

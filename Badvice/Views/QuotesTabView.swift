@@ -258,7 +258,7 @@ struct QuotesTabView: View {
                         }
                     }
                     .padding(.top, 8)
-                    .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 24)
+                    .padding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 24)
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .trackScrollForTabBar()
@@ -301,7 +301,7 @@ struct QuotesTabView: View {
                 TabCommandMetric(title: "Today", value: viewModel.vote(for: dailyQuote) == .none ? "Fresh" : "Rated", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
             }
         } actions: {
-            HStack(spacing: 10) {
+            VStack(spacing: 10) {
                 Button(quotesPrimaryActionTitle) {
                     performPrimaryQuotesAction()
                 }
@@ -309,22 +309,27 @@ struct QuotesTabView: View {
                 .tint(accent)
                 .foregroundStyle(buttonText)
                 .font(.caption.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 42)
                 .accessibilityIdentifier("quotes.command.primary")
 
-                Button("Daily Quote") {
-                    showQuoteSpotlight = true
-                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                }
-                .buttonStyle(.bordered)
-                .font(.caption.weight(.semibold))
-                .accessibilityIdentifier("quotes.command.daily")
+                HStack(spacing: 10) {
+                    Button("Daily Quote") {
+                        showQuoteSpotlight = true
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                    .accessibilityIdentifier("quotes.command.daily")
 
-                Button("Generate") {
-                    onJumpToGenerate?()
+                    Button("Generate") {
+                        onJumpToGenerate?()
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                    .accessibilityIdentifier("quotes.command.generate")
                 }
-                .buttonStyle(.bordered)
-                .font(.caption.weight(.semibold))
-                .accessibilityIdentifier("quotes.command.generate")
             }
         }
     }

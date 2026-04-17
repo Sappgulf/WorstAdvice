@@ -315,8 +315,11 @@ struct GenerateBrandMenuView: View {
     }
 
     private func openQuickAccessTab(_ tab: AppTab) {
-        isPresented = false
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-        onSelectQuickAccessTab?(tab)
+        Task { @MainActor in
+            isPresented = false
+            await Task.yield()
+            onSelectQuickAccessTab?(tab)
+        }
     }
 }

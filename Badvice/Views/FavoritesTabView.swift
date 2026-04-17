@@ -626,7 +626,7 @@ struct FavoritesTabView: View {
                     }
                 }
             }
-                .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 24)
+                .padding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 24)
                 .padding(.top, 4)
             }
         .scrollDismissesKeyboard(.interactively)
@@ -685,7 +685,7 @@ struct FavoritesTabView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            .padding(.bottom, tabBarVisible.wrappedValue ? 118 : 22)
+            .padding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 22)
             .padding(.top, 4)
         }
         .scrollDismissesKeyboard(.interactively)

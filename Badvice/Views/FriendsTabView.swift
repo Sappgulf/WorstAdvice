@@ -5,6 +5,10 @@ struct FriendsTabView: View {
     @Bindable var settings: SettingsViewModel
     var onOpenTab: ((AppTab) -> Void)? = nil
 
+    private struct ProfileSetupSheetToken: Identifiable {
+        let id = UUID()
+    }
+
     @State private var selectedSection: FriendsSection = .friends
     @State private var handleSearchText: String = ""
     @State private var activeToast: ToastMessage? = nil
@@ -19,7 +23,7 @@ struct FriendsTabView: View {
     @State private var collabEditorVersion: Int64 = 0
     @State private var collabEditorType: SocialPostType = .advice
     @State private var collabEditorContributors: [SocialUser] = []
-    @State private var showProfileSetup = false
+    @State private var profileSetupSheet: ProfileSetupSheetToken?
 
     @Environment(\.tabBarVisible) private var tabBarVisible
 
@@ -144,7 +148,7 @@ struct FriendsTabView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
-                .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 24)
+                .padding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 24)
             }
             .scrollDismissesKeyboard(.interactively)
             .trackScrollForTabBar()
@@ -184,7 +188,7 @@ struct FriendsTabView: View {
         .sheet(isPresented: $showCollabEditor) {
             collabEditorSheet
         }
-        .sheet(isPresented: $showProfileSetup) {
+        .sheet(item: $profileSetupSheet) { _ in
             SocialProfileSetupView(social: social)
         }
         .toast(item: $activeToast, accentColor: accent)
@@ -207,7 +211,7 @@ struct FriendsTabView: View {
                 TabCommandMetric(title: "Feed", value: social.feedPosts.isEmpty ? "Quiet" : "Live", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
             }
         } actions: {
-            HStack(spacing: 10) {
+            VStack(spacing: 10) {
                 Button(friendsPrimaryActionTitle) {
                     performPrimaryFriendsAction()
                 }
@@ -215,25 +219,30 @@ struct FriendsTabView: View {
                 .tint(accent)
                 .foregroundStyle(buttonText)
                 .font(.caption.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 42)
                 .accessibilityIdentifier("friends.command.primary")
 
-                Button("Open Feed") {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                        selectedSection = .feed
+                HStack(spacing: 10) {
+                    Button("Open Feed") {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                            selectedSection = .feed
+                        }
                     }
-                }
-                .buttonStyle(.bordered)
-                .font(.caption.weight(.semibold))
-                .accessibilityIdentifier("friends.command.feed")
+                    .buttonStyle(.bordered)
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                    .accessibilityIdentifier("friends.command.feed")
 
-                Button("Open Collab") {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                        selectedSection = .collab
+                    Button("Open Collab") {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                            selectedSection = .collab
+                        }
                     }
+                    .buttonStyle(.bordered)
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                    .accessibilityIdentifier("friends.command.collab")
                 }
-                .buttonStyle(.bordered)
-                .font(.caption.weight(.semibold))
-                .accessibilityIdentifier("friends.command.collab")
             }
         }
         .accessibilityIdentifier("friends.command.card")
@@ -344,7 +353,7 @@ struct FriendsTabView: View {
                     Text(message)
                         .font(.caption)
                         .foregroundStyle(secondaryText)
-                    HStack(spacing: 8) {
+                    VStack(spacing: 8) {
                         Button("Retry") {
                             Task { await social.retryFriendsLoad() }
                         }
@@ -352,13 +361,15 @@ struct FriendsTabView: View {
                         .tint(accent)
                         .foregroundStyle(buttonText)
                         .accessibilityIdentifier("friends.retryLoad")
+                        .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
 
                         if social.needsProfileSetup {
                             Button("Open Setup") {
-                                showProfileSetup = true
+                                profileSetupSheet = ProfileSetupSheetToken()
                             }
                             .buttonStyle(.bordered)
                             .accessibilityIdentifier("friends.openSetup")
+                            .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
                         }
                     }
                     #if DEBUG
@@ -454,20 +465,22 @@ struct FriendsTabView: View {
                         Text("Handles are public and searchable. Create yours here without blocking the rest of Badvice.")
                             .font(.caption)
                             .foregroundStyle(secondaryText)
-                        HStack(spacing: 8) {
+                        VStack(spacing: 8) {
                             Button("Open Setup") {
-                                showProfileSetup = true
+                                profileSetupSheet = ProfileSetupSheetToken()
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(accent)
                             .foregroundStyle(buttonText)
                             .accessibilityIdentifier("friends.openSetup")
+                            .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
 
                             Button("Retry CloudKit") {
                                 Task { await social.retryFriendsLoad() }
                             }
                             .buttonStyle(.bordered)
                             .accessibilityIdentifier("friends.retryCloudKit")
+                            .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
                         }
                         .font(.caption.weight(.semibold))
                     }
@@ -799,30 +812,36 @@ struct FriendsTabView: View {
                         .font(.caption)
                         .foregroundStyle(secondaryText)
 
-                        HStack(spacing: 8) {
+                        VStack(spacing: 8) {
                             Button("Open Friends") {
                                 onOpenTab?(.friends)
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(accent)
                             .foregroundStyle(buttonText)
+                            .frame(maxWidth: .infinity, minHeight: 42)
 
-                            Button("Open Generate") {
-                                onOpenTab?(.generate)
-                            }
-                            .buttonStyle(.bordered)
-                            .accessibilityIdentifier("friends.feed.openGenerate")
+                            HStack(spacing: 8) {
+                                Button("Open Generate") {
+                                    onOpenTab?(.generate)
+                                }
+                                .buttonStyle(.bordered)
+                                .frame(maxWidth: .infinity, minHeight: 40)
+                                .accessibilityIdentifier("friends.feed.openGenerate")
 
-                            Button("Open Quotes") {
-                                onOpenTab?(.quotes)
+                                Button("Open Quotes") {
+                                    onOpenTab?(.quotes)
+                                }
+                                .buttonStyle(.bordered)
+                                .frame(maxWidth: .infinity, minHeight: 40)
+                                .accessibilityIdentifier("friends.feed.openQuotes")
                             }
-                            .buttonStyle(.bordered)
-                            .accessibilityIdentifier("friends.feed.openQuotes")
 
                             Button("Refresh Social") {
                                 Task { await social.refreshSocialData() }
                             }
                             .buttonStyle(.bordered)
+                            .frame(maxWidth: .infinity, minHeight: 40)
                             .disabled(!social.socialFeaturesEnabled)
                             .accessibilityIdentifier("friends.feed.refresh")
                         }
@@ -943,30 +962,36 @@ struct FriendsTabView: View {
                         .font(.caption)
                         .foregroundStyle(secondaryText)
 
-                        HStack(spacing: 8) {
+                        VStack(spacing: 8) {
                             Button("Open Friends") {
                                 onOpenTab?(.friends)
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(accent)
                             .foregroundStyle(buttonText)
+                            .frame(maxWidth: .infinity, minHeight: 42)
 
-                            Button("Open Generate") {
-                                onOpenTab?(.generate)
-                            }
-                            .buttonStyle(.bordered)
-                            .accessibilityIdentifier("friends.collab.openGenerate")
+                            HStack(spacing: 8) {
+                                Button("Open Generate") {
+                                    onOpenTab?(.generate)
+                                }
+                                .buttonStyle(.bordered)
+                                .frame(maxWidth: .infinity, minHeight: 40)
+                                .accessibilityIdentifier("friends.collab.openGenerate")
 
-                            Button("Open Quotes") {
-                                onOpenTab?(.quotes)
+                                Button("Open Quotes") {
+                                    onOpenTab?(.quotes)
+                                }
+                                .buttonStyle(.bordered)
+                                .frame(maxWidth: .infinity, minHeight: 40)
+                                .accessibilityIdentifier("friends.collab.openQuotes")
                             }
-                            .buttonStyle(.bordered)
-                            .accessibilityIdentifier("friends.collab.openQuotes")
 
                             Button("Refresh Social") {
                                 Task { await social.refreshSocialData() }
                             }
                             .buttonStyle(.bordered)
+                            .frame(maxWidth: .infinity, minHeight: 40)
                             .disabled(!social.socialFeaturesEnabled)
                             .accessibilityIdentifier("friends.collab.refresh")
                         }
@@ -1172,12 +1197,12 @@ struct FriendsTabView: View {
         case .idle, .checkingCloudKit, .bootstrappingProfile, .loadingFriends, .failed:
             Task { await social.retryFriendsLoad() }
         case .needsProfileSetup:
-            showProfileSetup = true
+            profileSetupSheet = ProfileSetupSheetToken()
         case .empty:
             selectedSection = .friends
         case .ready:
             if social.currentUser == nil {
-                showProfileSetup = true
+                profileSetupSheet = ProfileSetupSheetToken()
             } else if social.friends.isEmpty {
                 selectedSection = .friends
             } else if social.feedPosts.isEmpty {

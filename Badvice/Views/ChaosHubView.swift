@@ -170,7 +170,7 @@ struct ChaosHubTabView: View {
                 }
                     .padding(.horizontal, Theme.horizontalPadding)
                     .padding(.top, 12)
-                .padding(.bottom, tabBarVisible.wrappedValue ? 124 : 24)
+                .padding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 24)
             }
             .coordinateSpace(name: "scroll")
             .trackScrollForTabBar()

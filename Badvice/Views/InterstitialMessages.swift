@@ -173,7 +173,7 @@ struct SettingsTabView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            .padding(.bottom, 120)  // Tab bar clearance
+            .padding(.bottom, Theme.tabContentBottomInset)
         }
         .coordinateSpace(name: "scroll")
         .trackScrollForTabBar()

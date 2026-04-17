@@ -98,6 +98,7 @@ private struct ToastModifier: ViewModifier {
     let accentColor: Color
     @State private var task: Task<Void, Never>?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.tabBarVisible) private var tabBarVisible
 
     func body(content: Content) -> some View {
         content.overlay(alignment: .bottom) {
@@ -108,7 +109,11 @@ private struct ToastModifier: ViewModifier {
                             ? .opacity
                             : .move(edge: .bottom).combined(with: .opacity)
                     )
-                    .padding(.bottom, 28)
+                    .padding(.horizontal, 16)
+                    .padding(
+                        .bottom,
+                        tabBarVisible.wrappedValue ? Theme.floatingToastBottomInset : 28
+                    )
                     .id(toast.id)
             }
         }
