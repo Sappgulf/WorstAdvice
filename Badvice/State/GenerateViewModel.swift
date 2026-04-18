@@ -201,6 +201,11 @@ final class GenerateViewModel {
         }
 
         let situation = preparedSituationText()
+        let normalizedSituation = situation?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let blockingNotice = generationBlockingNotice(for: normalizedSituation) {
+            generationNotice = blockingNotice
+            return
+        }
         let shouldEnforceGlobalUniqueness = settingsViewModel.strictNoRepeats
         let communityOnlyMode = settingsViewModel.communityOnlyMode
         let selectedPack = settingsViewModel.preferredContentPack
@@ -225,8 +230,7 @@ final class GenerateViewModel {
             "Generate started: category=\(self.selectedCategory.rawValue) resolved=\(resolvedCategory.rawValue) tone=\(self.selectedTone.rawValue) resolvedTone=\(resolvedTone.rawValue) seed=\(baseSeed)"
         )
         let suggestionPool = await suggestionCandidates(for: resolvedCategory, situation: situation)
-        let normalizedSituationForRanking = situation?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedSituationForRanking = normalizedSituation
         let hasSituationContext = (normalizedSituationForRanking?.isEmpty == false)
 
         let semanticScorer = SemanticTextScorer.shared
@@ -1149,6 +1153,30 @@ final class GenerateViewModel {
             return "\(base) for friend \(trimmedFriend)"
         }
         return scenarioText
+    }
+
+    private func generationBlockingNotice(for normalizedSituation: String?) -> String? {
+        if selectedTone == .friendRoast {
+            let trimmedFriend = friendName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedFriend.isEmpty {
+                return "Friend roast needs a friend name to generate."
+            }
+        }
+
+        let hasSituation = (normalizedSituation?.isEmpty == false)
+        if hasSituation, let situation = normalizedSituation, situation.count > 1_200 {
+            return "Please shorten the situation before generating."
+        }
+
+        if scenarioText.count > 3_000 {
+            return "Please shorten the prompt before generating."
+        }
+
+        if selectedCategory == .random || selectedTone == .random {
+            return nil
+        }
+
+        return nil
     }
 
     private func trackMissionCompletionIfNeeded() {

@@ -100,6 +100,7 @@ struct ContentView: View {
     @State private var selectedTab: AppTab = .generate
     @State private var auth: AuthViewModel?
     @State private var session: AppSessionViewModel?
+    @State private var pendingDeepLinks: [URL] = []
     @State private var showConfetti = false
     @State private var showSplash = true
     @State private var hasResetUITestData = false
@@ -141,6 +142,13 @@ struct ContentView: View {
         appRootView
             .task {
                 await bootstrapAppStateIfNeeded()
+            }
+            .onOpenURL { url in
+                if let session {
+                    Task { await routeIncomingDeepLink(url, session: session) }
+                } else {
+                    queueUnsupportedDeepLink(url)
+                }
             }
     }
 
@@ -196,6 +204,7 @@ struct ContentView: View {
         .environment(\.font, Theme.bodyFont(for: session.settings.theme))
         .task(id: auth.currentSession?.accountID) {
             await syncAuthContext(auth: auth, social: session.social)
+            await handlePendingAppIntent(for: session)
         }
         .fullScreenCover(
             isPresented: .init(
@@ -987,6 +996,183 @@ struct ContentView: View {
         let valueIndex = launchArguments.index(after: flagIndex)
         guard valueIndex < launchArguments.endIndex else { return nil }
         return Int(launchArguments[valueIndex])
+    }
+
+    private func routeIncomingDeepLink(_ url: URL, session: AppSessionViewModel) async {
+        guard url.scheme?.lowercased() == "badvice" else {
+            Self.logger.info("Ignoring non-Badvice deep link: \(url.absoluteString, privacy: .public)")
+            return
+        }
+
+        let host = url.host?.lowercased()
+        let pathParts = url.pathComponents
+            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased() }
+            .filter { !$0.isEmpty }
+        let component = host ?? pathParts.first
+        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let categoryParam = query.first(where: { $0.name == "category" })?.value
+        let toneParam = query.first(where: { $0.name == "tone" })?.value
+        let friendParam = query.first(where: { $0.name == "friend" })?.value
+            ?? query.first(where: { $0.name == "friendName" })?.value
+        let scenarioParam = query.first(where: { $0.name == "scenario" })?.value
+            ?? query.first(where: { $0.name == "situation" })?.value
+        let shouldGenerate = Bool(query.first(where: { $0.name == "generate" })?.value ?? "true") ?? true
+
+        if host == "invite", let inviteID = pathParts.first {
+            Self.logger.info("Opening invite deep link: \(inviteID, privacy: .public)")
+            setSelectedTab(.friends, session: session)
+            session.generate.refreshRetentionStateOnAppear()
+            return
+        }
+
+        if let requestedTab = component.flatMap({ AppTab(rawValue: $0) }) {
+            setSelectedTab(requestedTab, session: session)
+            applyGenerateIntent(
+                tab: requestedTab,
+                categoryRaw: categoryParam,
+                toneRaw: toneParam,
+                friendName: friendParam,
+                scenario: scenarioParam,
+                shouldGenerate: shouldGenerate,
+                session: session
+            )
+            return
+        }
+
+        if host == "advice" || pathParts.first == "advice" {
+            setSelectedTab(.generate, session: session)
+            applyGenerateIntent(
+                tab: .generate,
+                categoryRaw: categoryParam,
+                toneRaw: toneParam,
+                friendName: friendParam,
+                scenario: scenarioParam,
+                shouldGenerate: shouldGenerate,
+                session: session
+            )
+            return
+        }
+
+        if host == "friends" || pathParts.contains("friends") {
+            setSelectedTab(.friends, session: session)
+            return
+        }
+
+        if host == "chaoshub" || host == "chaos-hub" || pathParts.contains("chaoshub") {
+            setSelectedTab(.chaosHub, session: session)
+            return
+        }
+
+        if host == "quotes" || pathParts.contains("quotes") {
+            setSelectedTab(.quotes, session: session)
+            return
+        }
+
+        if host == "favorites" || pathParts.contains("favorites") {
+            setSelectedTab(.favorites, session: session)
+            return
+        }
+
+        if host == "history" || pathParts.contains("history") {
+            setSelectedTab(.history, session: session)
+            return
+        }
+
+        if host == "explore" || pathParts.contains("explore") {
+            setSelectedTab(.explore, session: session)
+            return
+        }
+
+        if host == "settings" || pathParts.contains("settings") {
+            setSelectedTab(.settings, session: session)
+            return
+        }
+
+        if host == "groupchallenges" || host == "challenges" || pathParts.contains("groupchallenges") {
+            setSelectedTab(.groupChallenges, session: session)
+            return
+        }
+
+        Self.logger.info("Unsupported deep link shape: \(url.absoluteString, privacy: .public)")
+    }
+
+    private func applyGenerateIntent(
+        tab: AppTab,
+        categoryRaw: String?,
+        toneRaw: String?,
+        friendName: String?,
+        scenario: String?,
+        shouldGenerate: Bool,
+        session: AppSessionViewModel
+    ) {
+        if let categoryRaw,
+            let category = AdviceCategory(rawValue: categoryRaw)
+        {
+            session.generate.selectedCategory = category
+        }
+
+        if let toneRaw,
+            let tone = ToneMode(rawValue: toneRaw)
+        {
+            session.generate.selectedTone = tone
+        }
+
+        if let friendName {
+            session.generate.friendName = friendName.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if tab == .generate {
+            session.generate.friendName = ""
+        }
+
+        if let scenario {
+            session.generate.scenarioText = scenario.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if tab == .generate {
+            session.generate.scenarioText = session.generate.scenarioText.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        if shouldGenerate {
+            Task {
+                await session.generate.generate()
+            }
+        }
+    }
+
+    private func handlePendingAppIntent(for session: AppSessionViewModel) async {
+        while let payload = BadviceIntentRouter.shared.consume() {
+            switch payload.command {
+            case .openTab:
+                if let tabValue = payload.tab, let tab = AppTab(rawValue: tabValue) {
+                    setSelectedTab(tab, session: session)
+                }
+
+            case .generateAdvice:
+                setSelectedTab(
+                    AppTab(rawValue: payload.tab ?? AppTab.generate.rawValue) ?? .generate,
+                    session: session
+                )
+                applyGenerateIntent(
+                    tab: AppTab(rawValue: payload.tab ?? AppTab.generate.rawValue) ?? .generate,
+                    categoryRaw: payload.category,
+                    toneRaw: payload.tone,
+                    friendName: payload.friendName,
+                    scenario: payload.scenario,
+                    shouldGenerate: payload.shouldGenerate,
+                    session: session
+                )
+            }
+        }
+
+        while let link = pendingDeepLinks.first {
+            pendingDeepLinks.removeFirst()
+            await routeIncomingDeepLink(link, session: session)
+        }
+    }
+
+    private func queueUnsupportedDeepLink(_ url: URL) {
+        let maxQueueSize = 8
+        if pendingDeepLinks.count >= maxQueueSize {
+            _ = pendingDeepLinks.removeFirst(pendingDeepLinks.count - maxQueueSize + 1)
+        }
+        pendingDeepLinks.append(url)
     }
 
     @ViewBuilder
