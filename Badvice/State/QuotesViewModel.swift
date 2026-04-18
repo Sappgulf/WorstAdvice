@@ -61,6 +61,7 @@ final class QuotesViewModel {
         self.localModelStore = localModelStore
         self.appleOnDeviceBridge = AppleOnDeviceAdviceBridge(moderation: moderation)
         self.debouncedSearchText = searchText
+        loadIfNeeded()
     }
 
     convenience init(

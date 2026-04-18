@@ -78,6 +78,9 @@ struct ChaosHubTabView: View {
     private var dailyMission: GenerateViewModel.ChaosMissionState { generateViewModel.dailyMissionState }
     private var weeklyMission: GenerateViewModel.WeeklyMissionState { generateViewModel.weeklyMissionState }
     private var primaryNextStepTitle: String {
+        if !social.availability.isAccountAvailable {
+            return "Reconnect Friends services"
+        }
         if generateViewModel.isGenerating {
             return "Generating now"
         }
@@ -90,12 +93,21 @@ struct ChaosHubTabView: View {
         if social.currentUser == nil {
             return "Set up Friends profile"
         }
+        if social.friends.isEmpty {
+            return "Add your first friend"
+        }
+        if social.feedPosts.isEmpty {
+            return "Share your first chaos post"
+        }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             return "Submit your chaos score"
         }
         return "Open Advice and keep the streak alive"
     }
     private var primaryNextStepDetail: String {
+        if !social.availability.isAccountAvailable {
+            return social.availability.message
+        }
         if generateViewModel.isGenerating {
             return "Advice is already on the way. Jump back to Generate to track the result."
         }
@@ -108,12 +120,21 @@ struct ChaosHubTabView: View {
         if social.currentUser == nil {
             return "Friends is the next unlock. Create a profile to compete on the leaderboard and share drafts."
         }
+        if social.friends.isEmpty {
+            return "Your missions are moving, but the social layer is still empty. Add one friend so scores, feed posts, and collabs can start paying off."
+        }
+        if social.feedPosts.isEmpty {
+            return "You have a network, but no visible momentum yet. Share a line from Generate or Quotes to make this season feel alive."
+        }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             return "Your mission work is done. Put a score on the board and start the season."
         }
         return "You have momentum. Keep generating, saving, and sharing to push Chaos Score higher."
     }
     private var primaryNextStepButtonTitle: String {
+        if !social.availability.isAccountAvailable {
+            return "Open Friends"
+        }
         if generateViewModel.isGenerating {
             return "Open Advice"
         }
@@ -125,6 +146,12 @@ struct ChaosHubTabView: View {
         }
         if social.currentUser == nil {
             return "Open Friends"
+        }
+        if social.friends.isEmpty {
+            return "Find Friends"
+        }
+        if social.feedPosts.isEmpty {
+            return "Open Quotes"
         }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             return "Submit Score"
@@ -141,6 +168,10 @@ struct ChaosHubTabView: View {
                         .offset(y: contentAppeared ? 0 : 16)
 
                     chaosMeterCard
+                        .opacity(contentAppeared ? 1 : 0)
+                        .offset(y: contentAppeared ? 0 : 16)
+
+                    seasonStatusCard
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
 
@@ -352,6 +383,64 @@ struct ChaosHubTabView: View {
             ChaosFormulaSheet(primaryText: primaryText, secondaryText: secondaryText, cardColor: cardColor, accent: accent)
                 .presentationDetents([.medium])
         }
+    }
+
+    private var seasonStatusCard: some View {
+        cardShell {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Season Status")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(primaryText)
+                        Text(seasonStatusDetail)
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Text(seasonStatusBadge)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(seasonStatusTint)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(seasonStatusTint.opacity(0.12))
+                        )
+                }
+
+                HStack(spacing: 10) {
+                    seasonPill(
+                        title: "Season",
+                        value: social.leaderboardSeasonID.isEmpty ? "Offline" : social.leaderboardSeasonID
+                    )
+                    seasonPill(
+                        title: "Profile",
+                        value: social.currentUser == nil ? "Missing" : "Ready"
+                    )
+                    seasonPill(
+                        title: "Board",
+                        value: social.leaderboard.isEmpty ? "Open" : "Live"
+                    )
+                }
+
+                if let action = seasonStatusActionTitle {
+                    Button(action) {
+                        performSeasonStatusAction()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(accent)
+                    .foregroundStyle(buttonText)
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                    .accessibilityIdentifier("chaos.season.primary")
+                }
+            }
+        }
+        .accessibilityIdentifier("chaos.season.card")
     }
 
     private var missionCard: some View {
@@ -738,6 +827,91 @@ struct ChaosHubTabView: View {
         .sheet(isPresented: $showingBracket) {
             AdviceBracketView(settings: settings, generateViewModel: generateViewModel)
         }
+    }
+
+    private var seasonStatusDetail: String {
+        if !social.availability.isAvailable {
+            return social.availability.message
+        }
+        if social.currentUser == nil {
+            return "Friends profile is still the missing piece. Set that up and this becomes a real season surface instead of a passive dashboard."
+        }
+        if social.leaderboard.isEmpty {
+            return "You are season-ready. Submit the first score and establish the board instead of waiting for activity to appear."
+        }
+        return "The season is active. Daily and weekly work now rolls directly into a live leaderboard and visible momentum."
+    }
+
+    private var seasonStatusBadge: String {
+        if !social.availability.isAvailable {
+            return "Offline"
+        }
+        if social.currentUser == nil {
+            return "Setup"
+        }
+        if social.leaderboard.isEmpty {
+            return "Launch It"
+        }
+        return "Live"
+    }
+
+    private var seasonStatusTint: Color {
+        if !social.availability.isAvailable {
+            return .orange
+        }
+        if social.currentUser == nil {
+            return accent
+        }
+        if social.leaderboard.isEmpty {
+            return accent
+        }
+        return .green
+    }
+
+    private var seasonStatusActionTitle: String? {
+        guard social.availability.isAvailable else { return nil }
+        if social.currentUser == nil {
+            return "Open Friends"
+        }
+        if social.leaderboard.isEmpty {
+            return "Submit Opening Score"
+        }
+        return "Refresh Leaderboard"
+    }
+
+    private func performSeasonStatusAction() {
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        if social.currentUser == nil {
+            onOpenTab(.friends)
+            return
+        }
+        Task {
+            if social.leaderboard.isEmpty {
+                await social.submitChaosScore(Int64(chaosScore))
+            } else {
+                await social.refreshLeaderboard(force: true)
+            }
+        }
+    }
+
+    private func seasonPill(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                .fill(accent.opacity(0.08))
+        )
     }
 
     private func openSettingsTab() {

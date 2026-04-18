@@ -47,6 +47,7 @@ final class HistoryViewModel {
         self.repository = repository
         self.analyticsTracker = analyticsTracker
         self.debouncedSearchText = searchText
+        loadIfNeeded()
     }
 
     func reload() {

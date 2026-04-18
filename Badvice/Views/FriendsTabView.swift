@@ -30,6 +30,24 @@ struct FriendsTabView: View {
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
+    private var friendsStatusMetricTitle: String {
+        if !social.incomingRequests.isEmpty {
+            return "Requests"
+        }
+        if !social.outgoingRequests.isEmpty {
+            return "Pending"
+        }
+        return "Feed"
+    }
+    private var friendsStatusMetricValue: String {
+        if !social.incomingRequests.isEmpty {
+            return "\(social.incomingRequests.count)"
+        }
+        if !social.outgoingRequests.isEmpty {
+            return "\(social.outgoingRequests.count)"
+        }
+        return social.feedPosts.isEmpty ? "Quiet" : "Live"
+    }
     private var normalizedHandleSearchText: String {
         let trimmed = handleSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let withoutPrefixAt = trimmed.hasPrefix("@") ? String(trimmed.dropFirst()) : trimmed
@@ -52,11 +70,17 @@ struct FriendsTabView: View {
             if social.currentUser == nil {
                 return "Create your Friends profile"
             }
+            if !social.incomingRequests.isEmpty {
+                return "Review incoming requests"
+            }
+            if !social.outgoingRequests.isEmpty && social.friends.isEmpty {
+                return "Track sent requests"
+            }
             if social.friends.isEmpty {
                 return "Add your first friend"
             }
             if social.feedPosts.isEmpty {
-                return "Wake up the feed"
+                return "Share your first post"
             }
             if social.collabDocs.isEmpty {
                 return "Start your first collab"
@@ -84,11 +108,17 @@ struct FriendsTabView: View {
             if social.currentUser == nil {
                 return "Create your profile first. That unlocks search, requests, feed posts, and collabs."
             }
+            if !social.incomingRequests.isEmpty {
+                return "People are waiting on you. Accept or decline requests so the network can actually start."
+            }
+            if !social.outgoingRequests.isEmpty && social.friends.isEmpty {
+                return "Your first requests are out. Track them here or search for another friend so the tab does not stall."
+            }
             if social.friends.isEmpty {
                 return "You have a profile. Next step is sending or accepting a request so the social loop can start."
             }
             if social.feedPosts.isEmpty {
-                return "Your network exists, but the feed is quiet. Share from Generate or Quotes to get it moving."
+                return "Your network exists, but the feed is quiet. Share from Generate or Quotes to make Friends feel alive."
             }
             if social.collabDocs.isEmpty {
                 return "Friends are connected. Start a shared draft to turn the tab into something collaborative."
@@ -125,6 +155,30 @@ struct FriendsTabView: View {
     private var friendsPrimaryActionIdentifier: String {
         friendsPrimaryActionTitle == "Open Setup" ? "friends.openSetup" : "friends.command.primary"
     }
+    private var friendsPrimaryActionHint: String {
+        switch social.friendsLoadState {
+        case .idle, .checkingCloudKit, .bootstrappingProfile, .loadingFriends, .failed:
+            return "Friend network is warming up. Retry once state stabilizes."
+        case .needsProfileSetup:
+            return "Create your Friends profile before requesting or sharing anything."
+        case .empty:
+            return "Search a handle or accept an incoming request to unlock the social loop."
+        case .ready:
+            if social.currentUser == nil {
+                return "Finish profile setup first, then add your first friend."
+            }
+            if social.friends.isEmpty {
+                return "Use the Friends section to find and add your first friend."
+            }
+            if social.feedPosts.isEmpty {
+                return "Open Generate, create one post, and share it to wake feed activity."
+            }
+            if social.collabDocs.isEmpty {
+                return "Open Collab and start a shared draft once sharing is active."
+            }
+            return "Refresh socials to fetch the newest request, feed, and collab updates."
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -134,6 +188,7 @@ struct FriendsTabView: View {
                 LazyVStack(spacing: 12) {
                     friendsHeader
                     friendsCommandCard
+                    friendsSetupFunnelCard
                     friendsStateBanner
 
                     sectionPicker
@@ -177,7 +232,7 @@ struct FriendsTabView: View {
             collabComposerType = draft.type
             collabComposerText = draft.content
             selectedContributorIDs.removeAll()
-            selectedSection = .collab
+            openFriendsSection(.collab, animated: false)
             showCollabComposer = true
         }
         .sheet(isPresented: $showCollabComposer, onDismiss: {
@@ -208,7 +263,7 @@ struct FriendsTabView: View {
             HStack(spacing: 8) {
                 TabCommandMetric(title: "Profile", value: social.currentUser == nil ? "Missing" : "Ready", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
                 TabCommandMetric(title: "Friends", value: "\(social.friends.count)", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
-                TabCommandMetric(title: "Feed", value: social.feedPosts.isEmpty ? "Quiet" : "Live", accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+                TabCommandMetric(title: friendsStatusMetricTitle, value: friendsStatusMetricValue, accent: accent, primaryText: primaryText, secondaryText: secondaryText)
             }
         } actions: {
             VStack(spacing: 10) {
@@ -221,12 +276,14 @@ struct FriendsTabView: View {
                 .font(.caption.weight(.semibold))
                 .frame(maxWidth: .infinity, minHeight: 42)
                 .accessibilityIdentifier(friendsPrimaryActionIdentifier)
+                Text(friendsPrimaryActionHint)
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack(spacing: 10) {
                     Button("Open Feed") {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                            selectedSection = .feed
-                        }
+                        openFriendsSection(.feed)
                     }
                     .buttonStyle(.bordered)
                     .font(.caption.weight(.semibold))
@@ -234,9 +291,7 @@ struct FriendsTabView: View {
                     .accessibilityIdentifier("friends.command.feed")
 
                     Button("Open Collab") {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                            selectedSection = .collab
-                        }
+                        openFriendsSection(.collab)
                     }
                     .buttonStyle(.bordered)
                     .font(.caption.weight(.semibold))
@@ -277,7 +332,7 @@ struct FriendsTabView: View {
                         .foregroundStyle(primaryText)
                         .accessibilityIdentifier("friends.title")
 
-                    Text("Manage requests, feed posts, and collab drafts from one place.")
+                    Text("Profile, first friend, first share, first collab. This tab now guides that loop.")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 }
@@ -302,6 +357,67 @@ struct FriendsTabView: View {
                 )
         )
         .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 5)
+    }
+
+    private var friendsSetupFunnelCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Setup Funnel")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                    Text("Each step unlocks the next one so the tab feels guided instead of fully loaded on day one.")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Text(friendsSetupStageBadge)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(accent.opacity(0.12))
+                    )
+            }
+
+            VStack(spacing: 9) {
+                setupStepRow(
+                    title: "Create profile",
+                    detail: "Claim your handle and make yourself discoverable.",
+                    state: social.currentUser != nil ? .done : .now
+                )
+                setupStepRow(
+                    title: "Add first friend",
+                    detail: "Search a handle or accept an incoming request.",
+                    state: social.friends.isEmpty ? (social.currentUser != nil ? .now : .next) : .done
+                )
+                setupStepRow(
+                    title: "Share first post",
+                    detail: "Use Generate or Quotes to wake up the feed.",
+                    state: social.feedPosts.isEmpty ? (!social.friends.isEmpty ? .now : .next) : .done
+                )
+                setupStepRow(
+                    title: "Start first collab",
+                    detail: "Turn the first connection into a shared draft.",
+                    state: social.collabDocs.isEmpty ? (!social.feedPosts.isEmpty ? .now : .next) : .done
+                )
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.1), lineWidth: 1)
+                )
+        )
+        .accessibilityIdentifier("friends.setupFunnel")
     }
 
     @ViewBuilder
@@ -362,10 +478,10 @@ struct FriendsTabView: View {
                         .accessibilityIdentifier("friends.retryLoad")
                         .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
 
-                        if social.needsProfileSetup {
-                            Button("Open Setup") {
-                                showingProfileSetup = true
-                            }
+                            if social.needsProfileSetup {
+                                Button("Open Setup") {
+                                    openFriendsSetupFlow()
+                                }
                             .buttonStyle(.bordered)
                             .accessibilityIdentifier("friends.openSetup.banner")
                             .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
@@ -381,6 +497,88 @@ struct FriendsTabView: View {
                         )
                     #endif
                 }
+            }
+        }
+    }
+
+    private var friendsSetupStageBadge: String {
+        if social.currentUser == nil {
+            return "Profile First"
+        }
+        if social.friends.isEmpty {
+            return "Find Friend"
+        }
+        if social.feedPosts.isEmpty {
+            return "First Share"
+        }
+        if social.collabDocs.isEmpty {
+            return "First Collab"
+        }
+        return "Loop Active"
+    }
+
+    private func setupStepRow(title: String, detail: String, state: SetupStepState) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: state.iconName)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(state.tint(accent: accent))
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            Text(state.label)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(state.tint(accent: accent))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(state.tint(accent: accent).opacity(0.12))
+                )
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                .fill(secondaryText.opacity(0.08))
+        )
+    }
+
+    private enum SetupStepState {
+        case done
+        case now
+        case next
+
+        var label: String {
+            switch self {
+            case .done: return "Done"
+            case .now: return "Now"
+            case .next: return "Next"
+            }
+        }
+
+        var iconName: String {
+            switch self {
+            case .done: return "checkmark.circle.fill"
+            case .now: return "arrow.right.circle.fill"
+            case .next: return "circle"
+            }
+        }
+
+        func tint(accent: Color) -> Color {
+            switch self {
+            case .done: return .green
+            case .now: return accent
+            case .next: return .secondary
             }
         }
     }
@@ -406,9 +604,7 @@ struct FriendsTabView: View {
         HStack(spacing: 6) {
             ForEach(FriendsSection.allCases) { section in
                 Button {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                        selectedSection = section
-                    }
+                    openFriendsSection(section, animated: false)
                 } label: {
                     VStack(spacing: 3) {
                         Text(section.rawValue)
@@ -466,7 +662,7 @@ struct FriendsTabView: View {
                             .foregroundStyle(secondaryText)
                         VStack(spacing: 8) {
                             Button("Open Setup") {
-                                showingProfileSetup = true
+                                openFriendsSetupFlow()
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(accent)
@@ -1196,23 +1392,44 @@ struct FriendsTabView: View {
         case .idle, .checkingCloudKit, .bootstrappingProfile, .loadingFriends, .failed:
             Task { await social.retryFriendsLoad() }
         case .needsProfileSetup:
-            showingProfileSetup = true
+            openFriendsSetupFlow()
         case .empty:
-            selectedSection = .friends
+            openFriendsSection(.friends, animated: false)
+            activeToast = ToastMessage(
+                message: "Open this section to search a handle, then send a request.",
+                style: .info
+            )
         case .ready:
             if social.currentUser == nil {
-                showingProfileSetup = true
+                openFriendsSetupFlow()
             } else if social.friends.isEmpty {
-                selectedSection = .friends
+                openFriendsSection(.friends, animated: false)
+                activeToast = ToastMessage(
+                    message: "Add your first friend by searching a handle or accepting a request.",
+                    style: .info
+                )
             } else if social.feedPosts.isEmpty {
                 onOpenTab?(.generate)
             } else if social.collabDocs.isEmpty {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                    selectedSection = .collab
-                }
+                openFriendsSection(.collab)
             } else {
                 Task { await social.refreshSocialData() }
             }
+        }
+    }
+
+    private func openFriendsSetupFlow() {
+        showingProfileSetup = true
+    }
+
+    private func openFriendsSection(_ section: FriendsSection, animated: Bool = true) {
+        guard animated else {
+            selectedSection = section
+            return
+        }
+
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+            selectedSection = section
         }
     }
 

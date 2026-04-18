@@ -19,6 +19,7 @@ struct GenerateTabView: View {
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
     @State private var showingAdvanced = false
+    @State private var showingPromptAssist = false
     @State private var showingStudioExtras = false
     @State private var showingBrandMenu = false
     @State private var pendingBrandMenuTab: AppTab? = nil
@@ -51,9 +52,24 @@ struct GenerateTabView: View {
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
+    private var headerSubtitle: String {
+        if viewModel.isGenerating {
+            return "Generating now. The next terrible idea is on the way."
+        }
+        if viewModel.current == nil {
+            return "Start with one polished disaster, then branch into Quotes, Friends, and Chaos Hub."
+        }
+        if social.currentUser == nil {
+            return "Generate here, then set up Friends to share drafts and start collabs."
+        }
+        if viewModel.challengeStreakDays > 0 {
+            return "\(viewModel.challengeStreakDays)-day streak active. Generate, save, or share to keep it alive."
+        }
+        return "Generate once, save the hits, and keep the chaos loop moving."
+    }
     private var socialEntryPrompt: String {
         social.availability.isAccountAvailable
-            ? "Finish your Friends profile in Friends to share posts and start collabs."
+            ? "Finish your Friends profile in Friends, then return here to share posts and start collabs."
             : social.availability.message
     }
     private var headerReactiveScale: CGFloat {
@@ -119,7 +135,7 @@ struct GenerateTabView: View {
                     Text("Advice Studio")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(primaryText)
-                    Text("One tap to summon your sharpest disaster plan.")
+                    Text(headerSubtitle)
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 }
@@ -186,6 +202,44 @@ struct GenerateTabView: View {
     }
 
     @ViewBuilder
+    private var promptAssistSection: some View {
+        DisclosureGroup(
+            isExpanded: $showingPromptAssist.animation(
+                isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                friendRoastComposer
+                scenarioSuggestionsRow
+                adaptiveHintCard
+            }
+            .padding(.top, 8)
+        } label: {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: "wand.and.stars")
+                    .font(.subheadline.weight(.semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Prompt assist")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Roasts, starter prompts, and guidance when you want help")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+                Spacer()
+            }
+            .foregroundStyle(primaryText)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.1), lineWidth: 1)
+                )
+        )
+    }
+
+    @ViewBuilder
     private var studioExtrasSection: some View {
         DisclosureGroup(
             isExpanded: $showingStudioExtras.animation(
@@ -243,9 +297,7 @@ struct GenerateTabView: View {
                         generationHeroCard
                         selectorRow
                         scenarioComposer
-                        friendRoastComposer
-                        scenarioSuggestionsRow
-                        adaptiveHintCard
+                        promptAssistSection
 
                         Group {
                             if let record = viewModel.current {
@@ -304,11 +356,8 @@ struct GenerateTabView: View {
                                     }
 
                                     Button("Collaborate", systemImage: "person.2.badge.plus") {
-                                        guard social.socialFeaturesEnabled else {
-                                            activeToast = ToastMessage(
-                                                message: socialEntryPrompt,
-                                                style: .error
-                                            )
+                                        guard canShareToFriends() else {
+                                            showFriendsUnavailable()
                                             return
                                         }
                                         guard let record = viewModel.current else { return }
@@ -319,7 +368,6 @@ struct GenerateTabView: View {
                                             style: .info
                                         )
                                     }
-                                    .disabled(!social.socialFeaturesEnabled)
                                 }
                                 .onTapGesture(count: 2) {
                                     let wasFavorite = viewModel.isCurrentFavorite
@@ -357,8 +405,8 @@ struct GenerateTabView: View {
                                 .font(.caption)
                                 .foregroundStyle(secondaryText)
                         }
-                        studioExtrasSection
                         advancedSection
+                        studioExtrasSection
                     }
                     .padding(.horizontal, Theme.horizontalPadding)
                     .padding(.top, 16)
@@ -1113,6 +1161,10 @@ struct GenerateTabView: View {
                     isEnabled: hasCurrent && !viewModel.isGenerating && social.socialFeaturesEnabled
                 ) {
                     guard let record = viewModel.current else { return }
+                    guard canShareToFriends() else {
+                        showFriendsUnavailable()
+                        return
+                    }
                     Task {
                         await social.shareAdviceToFriends(text: record.adviceLine)
                         if let message = social.statusMessage {
@@ -1295,6 +1347,17 @@ struct GenerateTabView: View {
         DispatchQueue.main.async {
             onOpenTab?(tab)
         }
+    }
+
+    private func showFriendsUnavailable() {
+        activeToast = ToastMessage(message: socialEntryPrompt, style: .error)
+        openTab(.friends)
+    }
+
+    private func canShareToFriends() -> Bool {
+        guard social.availability.isAvailable else { return false }
+        guard social.currentUser != nil else { return false }
+        return true
     }
 
     private func handleGeneratingStateChange(_ isGenerating: Bool) {

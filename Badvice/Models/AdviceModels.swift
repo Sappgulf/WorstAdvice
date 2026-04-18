@@ -1,3 +1,4 @@
+import AppIntents
 import Foundation
 
 enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
@@ -456,6 +457,236 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     static let brandMenuTabs: [AppTab] = [
         .favorites, .history, .explore, .groupChallenges, .settings,
     ]
+}
+
+@available(iOS 16.0, *)
+extension AppTab: AppEnum {
+    static let typeDisplayRepresentation = TypeDisplayRepresentation("Badvice tab")
+    static let typeDisplayName = LocalizedStringResource("Badvice tab")
+
+    static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
+        .generate: "Advice",
+        .chaosHub: "Chaos Hub",
+        .explore: "Explore",
+        .groupChallenges: "Challenges",
+        .friends: "Friends",
+        .quotes: "Quotes",
+        .favorites: "Favorites",
+        .history: "History",
+        .settings: "Settings",
+    ]
+}
+
+@available(iOS 16.0, *)
+extension AdviceCategory: AppEnum {
+    static let typeDisplayRepresentation = TypeDisplayRepresentation("Advice category")
+    static let typeDisplayName = LocalizedStringResource("Advice category")
+
+    static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
+        .dating: "Dating",
+        .fitness: "Fitness",
+        .career: "Career",
+        .money: "Money",
+        .parenting: "Parenting",
+        .tech: "Tech",
+        .social: "Social",
+        .cooking: "Cooking",
+        .travel: "Travel",
+        .productivity: "Productivity",
+        .pets: "Pets",
+        .relationships: "Relationships",
+        .spirituality: "Spirituality",
+        .financeCrypto: "Crypto",
+        .random: "Random Mix",
+    ]
+}
+
+@available(iOS 16.0, *)
+extension ToneMode: AppEnum {
+    static let typeDisplayRepresentation = TypeDisplayRepresentation("Tone mode")
+    static let typeDisplayName = LocalizedStringResource("Tone mode")
+
+    static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
+        .corporateConsultant: "Corporate Consultant",
+        .alphaPodcast: "Alpha Podcast",
+        .wizard: "Wizard",
+        .influencer: "Influencer",
+        .toxicBestFriend: "Toxic Best Friend",
+        .boomer: "Boomer",
+        .cryptoBro: "Crypto Bro",
+        .minimalistMonk: "Minimalist Monk",
+        .friendRoast: "Friend Roast",
+        .lifeCoach: "Life Coach",
+        .conspiracyTheorist: "Conspiracy Theorist",
+        .genZ: "Gen Z",
+        .redditCommenter: "Reddit Commenter",
+        .linkedInInfluencer: "LinkedIn Influencer",
+        .random: "Random Mix",
+    ]
+}
+
+@available(iOS 16.0, *)
+struct BadviceIntentPayload: Codable, Sendable {
+    enum HandledCommand: String, Codable, Sendable {
+        case openTab
+        case generateAdvice
+    }
+
+    let command: HandledCommand
+    let tab: String?
+    let category: String?
+    let tone: String?
+    let friendName: String?
+    let scenario: String?
+    let shouldGenerate: Bool
+}
+
+@available(iOS 16.0, *)
+@MainActor
+final class BadviceIntentRouter {
+    static let shared = BadviceIntentRouter()
+    private static let storageKey = "com.worstadvice.app.pendingIntentPayloadV1"
+    private var pendingPayload: BadviceIntentPayload?
+
+    private init() {}
+
+    func enqueue(_ payload: BadviceIntentPayload) {
+        pendingPayload = payload
+        persist(payload)
+    }
+
+    func consume() -> BadviceIntentPayload? {
+        if let payload = pendingPayload {
+            pendingPayload = nil
+            clearPersistedPayload()
+            return payload
+        }
+
+        guard let data = UserDefaults.standard.data(forKey: Self.storageKey),
+              let payload = try? JSONDecoder().decode(BadviceIntentPayload.self, from: data)
+        else {
+            return nil
+        }
+        pendingPayload = nil
+        clearPersistedPayload()
+        return payload
+    }
+
+    private func persist(_ payload: BadviceIntentPayload) {
+        guard let data = try? JSONEncoder().encode(payload) else { return }
+        UserDefaults.standard.set(data, forKey: Self.storageKey)
+    }
+
+    private func clearPersistedPayload() {
+        UserDefaults.standard.removeObject(forKey: Self.storageKey)
+    }
+}
+
+@available(iOS 16.0, *)
+struct OpenBadviceTabIntent: AppIntent {
+    static let title: LocalizedStringResource = "Open Badvice tab"
+    static let description = IntentDescription("Open Badvice directly to the tab you need.")
+    static var parameterSummary: some ParameterSummary {
+        Summary("Open \(\.$tab)")
+    }
+    static let openAppWhenRun = true
+    @Parameter(title: "Tab") var tab: AppTab
+
+    func perform() async throws -> some IntentResult {
+        await MainActor.run {
+            BadviceIntentRouter.shared.enqueue(
+                .init(
+                    command: .openTab,
+                    tab: tab.rawValue,
+                    category: nil,
+                    tone: nil,
+                    friendName: nil,
+                    scenario: nil,
+                    shouldGenerate: false
+                ))
+        }
+        return .result()
+    }
+}
+
+@available(iOS 16.0, *)
+struct GenerateBadviceAdviceIntent: AppIntent {
+    static let title: LocalizedStringResource = "Generate Badvice advice"
+    static let description = IntentDescription(
+        "Open Badvice and generate advice using the optional category, tone, friend, and scenario inputs."
+    )
+    static var parameterSummary: some ParameterSummary {
+        Summary("Generate bad advice")
+    }
+    static let openAppWhenRun = true
+    @Parameter(title: "Category")
+    var category: AdviceCategory?
+
+    @Parameter(title: "Tone")
+    var tone: ToneMode?
+
+    @Parameter(title: "Friend name")
+    var friendName: String?
+
+    @Parameter(title: "Situation")
+    var situation: String?
+
+    @Parameter(title: "Generate now", default: true) var generateNow: Bool
+
+    func perform() async throws -> some IntentResult {
+        let normalizedFriendName = friendName?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\n"))
+            .prefix(80)
+        let normalizedSituation = situation?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .prefix(4_000)
+        let normalizedFriendNameValue =
+            normalizedFriendName.map { String($0) }.flatMap { $0.isEmpty ? nil : $0 }
+        let normalizedScenarioValue =
+            normalizedSituation.map { String($0) }.flatMap { $0.isEmpty ? nil : $0 }
+        await MainActor.run {
+            BadviceIntentRouter.shared.enqueue(
+                .init(
+                    command: .generateAdvice,
+                    tab: AppTab.generate.rawValue,
+                    category: category?.rawValue,
+                    tone: tone?.rawValue,
+                    friendName: normalizedFriendNameValue,
+                    scenario: normalizedScenarioValue,
+                    shouldGenerate: generateNow
+                ))
+        }
+        return .result(dialog: "Prepared Badvice advice request.")
+    }
+}
+
+@available(iOS 16.0, *)
+struct BadviceShortcuts: AppShortcutsProvider {
+    static var appShortcuts: [AppShortcut] {
+        AppShortcut(
+            intent: OpenBadviceTabIntent(),
+            phrases: [
+                "Open advice in ${applicationName}",
+                "Open generate tab in ${applicationName}",
+                "Open friends in ${applicationName}",
+                "Open Badvice in ${applicationName}"
+            ],
+            shortTitle: "Open Badvice tab",
+            systemImageName: "sparkles"
+        )
+        AppShortcut(
+            intent: GenerateBadviceAdviceIntent(),
+            phrases: [
+                "Generate bad advice in ${applicationName}",
+                "Generate bad advice for ${applicationName}",
+                "Give me bad advice from ${applicationName}",
+                "Generate bad advice with my friends in ${applicationName}"
+            ],
+            shortTitle: "Generate advice",
+            systemImageName: "wand.and.stars"
+        )
+    }
 }
 
 enum QuoteRankingMode: String, CaseIterable, Codable, Identifiable, Sendable {

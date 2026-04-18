@@ -90,6 +90,63 @@ struct DeepLink: Codable, Sendable {
     }
 }
 
+extension DeepLink {
+    init?(url: URL) {
+        guard url.scheme?.lowercased() == "badvice" else { return nil }
+
+        let host = url.host?.lowercased()
+        let pathParts = url.pathComponents
+            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased() }
+            .filter { !$0.isEmpty }
+        let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+
+        let categoryRaw = queryItems.first(where: { $0.name.lowercased() == "category" })?.value
+        let toneRaw = queryItems.first(where: { $0.name.lowercased() == "tone" })?.value
+        let category = categoryRaw.flatMap(AdviceCategory.init(rawValue:))
+        let tone = toneRaw.flatMap(ToneMode.init(rawValue:))
+
+        let primary = host ?? pathParts.first
+        let inviteID = queryItems
+            .first(where: { item in item.name.lowercased() == "invite" || item.name.lowercased() == "id" })
+            .flatMap(\.value)
+            .flatMap(UUID.init(uuidString:))
+
+        switch primary {
+        case "invite":
+            let targetID = host == "invite" ? pathParts.first : pathParts.dropFirst().first
+            guard let rawID = targetID ?? inviteID?.uuidString,
+                  let id = UUID(uuidString: rawID)
+            else {
+                return nil
+            }
+            self = .init(type: .invite, id: id, category: nil, tone: nil)
+        case "advice":
+            self = .init(
+                type: .advice,
+                id: queryItems.first(where: { $0.name.lowercased() == "id" })?.value.flatMap(UUID.init(uuidString:)),
+                category: category,
+                tone: tone
+            )
+        case "friends", "friend", "social":
+            self = .init(type: .friend, id: nil, category: category, tone: tone)
+        case "quotes":
+            self = .init(type: .friend, id: nil, category: category, tone: tone)
+        case "battle":
+            self = .init(type: .battle, id: nil, category: category, tone: tone)
+        case "challenge":
+            self = .init(type: .challenge, id: nil, category: category, tone: tone)
+        default:
+            if category != nil || tone != nil {
+                self = .init(type: .advice, id: nil, category: category, tone: tone)
+            } else {
+                return nil
+            }
+        }
+    }
+
+    var inviteID: UUID? { type == .invite ? id : nil }
+}
+
 // MARK: - Feed Reactions (#1)
 
 enum SocialReactionType: String, CaseIterable, Codable, Sendable {

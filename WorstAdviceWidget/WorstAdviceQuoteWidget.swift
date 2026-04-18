@@ -1,20 +1,5 @@
-import AppIntents
 import SwiftUI
 import WidgetKit
-
-// MARK: - Widget Interactivity — App Intent (#16)
-// On iOS 17+ the widget can be tapped to open directly to the Generate tab.
-
-@available(iOS 17.0, *)
-struct OpenBadviceGenerateIntent: AppIntent {
-    static var title: LocalizedStringResource = "Open Badvice"
-    static var description = IntentDescription("Opens Badvice to the advice generator.")
-    static var openAppWhenRun: Bool = true
-
-    func perform() async throws -> some IntentResult {
-        .result()
-    }
-}
 
 // MARK: - Timeline Entry
 
@@ -60,19 +45,14 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
             .containerBackground(for: .widget) {
                 Color.clear
             }
+            .widgetURL(Self.deepLinkURL)
     }
+
+    private static let deepLinkURL: URL = URL(string: "badvice://advice")!
 
     @ViewBuilder
     private var widgetContent: some View {
-        if #available(iOS 17.0, *) {
-            // iOS 17+: wrap in Button to make widget interactive (#16)
-            Button(intent: OpenBadviceGenerateIntent()) {
-                quoteLayout
-            }
-            .buttonStyle(.plain)
-        } else {
-            quoteLayout
-        }
+        quoteLayout
     }
 
     private var quoteLayout: some View {

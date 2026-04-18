@@ -87,6 +87,7 @@
 		A1000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift */; };
 		A1000009000000000000AM01 /* GamificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM01 /* GamificationModels.swift */; };
 		A1000009000000000000AM02 /* AppModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM02 /* AppModels.swift */; };
+		AF00000000000000000010 /* BadviceStreakActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF00000000000000000011 /* BadviceStreakActivityAttributes.swift */; };
 		A100000A0000000000AA10 /* SocialHealthDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */; };
 		A100000A0000000000AA11 /* SuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA11 /* SuggestionLabView.swift */; };
 		A100000A0000000000AA12 /* QuoteSuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */; };
@@ -101,6 +102,7 @@
 		A970A1DC8B4EEEDDF0DEC44A /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D0F9A0F33FC44CE7FFD0B9 /* AchievementsView.swift */; };
 		B07D78E07800DE9F6C60ABAF /* WorstAdviceWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */; };
 		B2000003000000000000CB02 /* CloudKitSchemaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000003000000000000CB01 /* CloudKitSchemaTests.swift */; };
+		B3000003000000000000SR01 /* SocialRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3000003000000000000SR02 /* SocialRegressionTests.swift */; };
 		BL0000010000000000000001 /* BadviceLockScreenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = BL0000020000000000000001 /* BadviceLockScreenWidget.swift */; };
 		C285D7C82E780E2D147DA18C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E2C35747C3F426FECEBC093F /* WidgetKit.framework */; };
 		C82E5EADB60BABE95E14B274 /* ShakeDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB19BBE9BB80D1CFBE9CB824 /* ShakeDetector.swift */; };
@@ -227,6 +229,7 @@
 		A2000003000000000000BB03 /* SocialViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialViewModelTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB04 /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB05 /* SuggestionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionViewModelTests.swift; sourceTree = "<group>"; };
+		B3000003000000000000SR02 /* SocialRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialRegressionTests.swift; sourceTree = "<group>"; };
 		A2000005000000000000DD01 /* GenerateBrandMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateBrandMenuView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE01 /* FavoritesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesTabView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE02 /* QuotesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotesTabView.swift; sourceTree = "<group>"; };
@@ -236,6 +239,7 @@
 		A2000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/State/Social/CloudKitStore.swift; sourceTree = SOURCE_ROOT; };
 		A2000009000000000000AM01 /* GamificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationModels.swift; sourceTree = "<group>"; };
 		A2000009000000000000AM02 /* AppModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModels.swift; sourceTree = "<group>"; };
+		AF00000000000000000011 /* Badvice/Shared/BadviceStreakActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/BadviceStreakActivityAttributes.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialHealthDiagnosticsView.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA11 /* SuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionLabView.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteSuggestionLabView.swift; sourceTree = "<group>"; };
@@ -348,6 +352,7 @@
 			children = (
 				A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */,
 				7CCF16D47C5CD16BA42173EC /* Shared/NetworkMonitor.swift */,
+				AF00000000000000000011 /* Badvice/Shared/BadviceStreakActivityAttributes.swift */,
 			);
 			name = Shared;
 			sourceTree = "<group>";
@@ -495,6 +500,7 @@
 			isa = PBXGroup;
 			children = (
 				A20000010000000000000011 /* AdviceEngineTests.swift */,
+				B3000003000000000000SR02 /* SocialRegressionTests.swift */,
 				A2000003000000000000BB01 /* LocalAccountStoreTests.swift */,
 				A2000003000000000000BB02 /* AppSessionSmokeTests.swift */,
 				A2000003000000000000BB03 /* SocialViewModelTests.swift */,
@@ -713,6 +719,7 @@
 				A10000010000000000000005 /* AdviceModels.swift in Sources */,
 				A1000009000000000000AM01 /* GamificationModels.swift in Sources */,
 				A1000009000000000000AM02 /* AppModels.swift in Sources */,
+				AF00000000000000000010 /* BadviceStreakActivityAttributes.swift in Sources */,
 				A10000010000000000000006 /* AdviceStore.swift in Sources */,
 				A100000C000000000000AS01 /* AdviceStoreDefaults.swift in Sources */,
 				A10000010000000000000007 /* AdviceEngine.swift in Sources */,
@@ -799,6 +806,7 @@
 				A1000003000000000000BB04 /* SettingsViewModelTests.swift in Sources */,
 				A1000003000000000000BB05 /* SuggestionViewModelTests.swift in Sources */,
 				B2000003000000000000CB02 /* CloudKitSchemaTests.swift in Sources */,
+				B3000003000000000000SR01 /* SocialRegressionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1040,7 +1048,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6.1;
+				MARKETING_VERSION = 6.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
@@ -1072,7 +1080,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6.1;
+				MARKETING_VERSION = 6.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";

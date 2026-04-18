@@ -13,6 +13,30 @@ struct UpgradeStoreView: View {
     private var productsByID: [String: Product] {
         Dictionary(uniqueKeysWithValues: store.products.map { ($0.id, $0) })
     }
+    private var entitlementHeadline: String {
+        if store.isPro {
+            return "Pro is active"
+        }
+        if store.isPremium {
+            return "Premium is active"
+        }
+        if store.hasActiveSeasonalPass {
+            return "Season Pass is active"
+        }
+        return "Free plan is active"
+    }
+    private var entitlementDetail: String {
+        if store.isPro {
+            return "You already have the broadest unlock set. Seasonal offers and packs below are optional add-ons."
+        }
+        if store.isPremium {
+            return "Premium is on. Pro is the step up if you want the full permanent unlock path."
+        }
+        if store.hasActiveSeasonalPass {
+            return "Live rewards are active. Add Premium or Pro if you want the permanent product unlocks too."
+        }
+        return "You are on the free core. Use the ladder below to see exactly what changes when you upgrade."
+    }
 
     private var featuredProducts: [Product] {
         [
@@ -41,6 +65,8 @@ struct UpgradeStoreView: View {
             ScrollView {
                 VStack(spacing: 18) {
                     heroCard
+
+                    entitlementSnapshotCard
 
                     statusBanner
 
@@ -91,6 +117,20 @@ struct UpgradeStoreView: View {
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
     }
 
+    private var entitlementSnapshotCard: some View {
+        storeSection(
+            title: entitlementHeadline,
+            subtitle: entitlementDetail
+        ) {
+            HStack(spacing: 10) {
+                valueChip(title: "Premium", detail: store.isPremium ? "Active" : "Locked")
+                valueChip(title: "Pro", detail: store.isPro ? "Active" : "Locked")
+                valueChip(title: "Season", detail: store.hasActiveSeasonalPass ? "Active" : "Locked")
+                valueChip(title: "Packs", detail: "\(ownedPackCount)")
+            }
+        }
+    }
+
     private var heroCard: some View {
         SectionShell(accent: accent, cardColor: cardColor) {
             HStack(alignment: .top, spacing: 14) {
@@ -113,7 +153,7 @@ struct UpgradeStoreView: View {
                     Text("Upgrade Badvice")
                         .font(.title2.weight(.bold))
                         .foregroundStyle(primaryText)
-                    Text("Turn the polished core into the full product: premium generator modes, better sharing, exclusive packs, and season perks.")
+                    Text("The store should make the product tiers legible: what unlocks permanently, what stays seasonal, and what actually changes when you pay.")
                         .font(.subheadline)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -152,17 +192,17 @@ struct UpgradeStoreView: View {
             VStack(spacing: 10) {
                 ladderRow(
                     title: "Premium",
-                    body: "Unlock stronger sharing, premium polish surfaces, and the first real upgrade tier beyond the free experience.",
+                    body: "Best first step. Unlock the stronger generator and sharing surfaces without committing to the full top tier.",
                     state: store.isPremium ? "Active" : "Available"
                 )
                 ladderRow(
                     title: "Pro",
-                    body: "Best for heavy users: all packs, broader chaos customization, and the highest-value one-time unlock.",
+                    body: "Best permanent upgrade. Get the widest feature set and stop thinking about piecemeal unlocks.",
                     state: store.isPro ? "Active" : "Available"
                 )
                 ladderRow(
                     title: "Season Pass",
-                    body: "Best for live progression: season rewards, rotating drops, and recurring reasons to come back.",
+                    body: "Best for progression. Use this when the missions, rewards, and live-season loop are the main reason you open the app.",
                     state: store.hasActiveSeasonalPass ? "Active" : "Available"
                 )
             }
@@ -190,7 +230,8 @@ struct UpgradeStoreView: View {
     }
 
     private func productRow(for product: Product) -> some View {
-        let owned = store.purchasedProductIDs.contains(product.id)
+        let ownershipLabel = ownershipLabel(for: product.id)
+        let locked = ownershipLabel != nil
         return Button {
             Task { await store.purchase(product) }
         } label: {
@@ -217,14 +258,20 @@ struct UpgradeStoreView: View {
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if let entitlementCaption = entitlementCaption(for: product.id) {
+                        Text(entitlementCaption)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(accent)
+                    }
                 }
 
                 Spacer(minLength: 8)
 
-                if owned {
-                    Label("Owned", systemImage: "checkmark.circle.fill")
+                if let ownershipLabel {
+                    Label(ownershipLabel, systemImage: "checkmark.circle.fill")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(ownershipTint(for: ownershipLabel))
                 } else {
                     Text(product.displayPrice)
                         .font(.subheadline.weight(.bold))
@@ -239,8 +286,8 @@ struct UpgradeStoreView: View {
             )
         }
         .buttonStyle(.plain)
-        .disabled(store.purchaseState == .purchasing || owned)
-        .opacity((store.purchaseState == .purchasing && !owned) ? 0.7 : 1)
+        .disabled(store.purchaseState == .purchasing || locked)
+        .opacity((store.purchaseState == .purchasing && !locked) ? 0.7 : 1)
     }
 
     private func valueChip(title: String, detail: String) -> some View {
@@ -311,6 +358,17 @@ struct UpgradeStoreView: View {
         productsByID[id]
     }
 
+    private var ownedPackCount: Int {
+        [
+            BadviceProductID.packHalloween,
+            BadviceProductID.packValentine,
+            BadviceProductID.packCyberInfluence,
+            BadviceProductID.packChronicallyOnline,
+        ]
+        .filter { store.ownsPack($0) }
+        .count
+    }
+
     private func badgeText(for id: String) -> String? {
         switch id {
         case BadviceProductID.proUnlock:
@@ -319,6 +377,54 @@ struct UpgradeStoreView: View {
             return "Seasonal"
         case BadviceProductID.premiumUnlock:
             return "Core"
+        default:
+            return nil
+        }
+    }
+
+    private func ownershipLabel(for id: String) -> String? {
+        if store.purchasedProductIDs.contains(id) {
+            if id == BadviceProductID.seasonalPassMonthly || id == BadviceProductID.seasonalPassAnnual {
+                return "Active"
+            }
+            return "Owned"
+        }
+
+        switch id {
+        case BadviceProductID.premiumUnlock where store.isPro || store.hasActiveSeasonalPass:
+            return "Included"
+        case BadviceProductID.packHalloween,
+            BadviceProductID.packValentine,
+            BadviceProductID.packCyberInfluence,
+            BadviceProductID.packChronicallyOnline
+            where store.isPro:
+            return "Included"
+        default:
+            return nil
+        }
+    }
+
+    private func ownershipTint(for label: String) -> Color {
+        switch label {
+        case "Owned", "Active":
+            return .green
+        default:
+            return accent
+        }
+    }
+
+    private func entitlementCaption(for id: String) -> String? {
+        switch id {
+        case BadviceProductID.premiumUnlock where store.isPro:
+            return "Already covered by Pro."
+        case BadviceProductID.premiumUnlock where store.hasActiveSeasonalPass:
+            return "Season Pass already unlocks Premium benefits."
+        case BadviceProductID.packHalloween,
+            BadviceProductID.packValentine,
+            BadviceProductID.packCyberInfluence,
+            BadviceProductID.packChronicallyOnline
+            where store.isPro:
+            return "Included with Pro."
         default:
             return nil
         }

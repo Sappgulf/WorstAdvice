@@ -4,6 +4,7 @@ set -euo pipefail
 PROJECT_PATH="${PROJECT_PATH:-Badvice.xcodeproj}"
 SCHEME="${SCHEME:-Badvice}"
 IOS_DESTINATION="${IOS_DESTINATION:-platform=iOS Simulator}"
+SIMULATOR_UDID="${SIMULATOR_UDID:-}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PWD/.build/DerivedData}"
 RESULT_BUNDLE_PATH="${RESULT_BUNDLE_PATH:-$PWD/.build/TestResults.xcresult}"
 SOURCE_PACKAGES_PATH="${SOURCE_PACKAGES_PATH:-$PWD/.build/SourcePackages}"
@@ -33,6 +34,26 @@ if ! xcodebuild -showdestinations -project "$PROJECT_PATH" -scheme "$SCHEME" 2>/
   echo "No eligible iOS Simulator destinations are installed for Xcode." >&2
   echo "Install a simulator runtime in Xcode > Settings > Components or set IOS_DESTINATION manually." >&2
   exit 1
+fi
+
+if [[ -n "$SIMULATOR_UDID" ]]; then
+  IOS_DESTINATION="platform=iOS Simulator,id=$SIMULATOR_UDID"
+elif [[ "$IOS_DESTINATION" == "platform=iOS Simulator" ]]; then
+  RESOLVED_SIMULATOR_UDID="$(
+    xcodebuild -showdestinations -project "$PROJECT_PATH" -scheme "$SCHEME" 2>/dev/null \
+      | awk '
+        /platform:iOS Simulator/ && /id:/ && $0 !~ /dvtdevice-DVTiOSDeviceSimulatorPlaceholder/ {
+          if (match($0, /id:([^,}]+)/, value)) {
+            print value[1]
+            exit
+          }
+        }
+      '
+  )"
+
+  if [[ -n "$RESOLVED_SIMULATOR_UDID" ]]; then
+    IOS_DESTINATION="platform=iOS Simulator,id=$RESOLVED_SIMULATOR_UDID"
+  fi
 fi
 
 echo "Using destination: $IOS_DESTINATION"

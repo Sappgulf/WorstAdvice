@@ -26,10 +26,16 @@ struct QuotesTabView: View {
             return "Rebuild your quote stream"
         }
         if social.currentUser == nil {
-            return "Turn quotes into a social loop"
+            return "Set up sharing for quotes"
+        }
+        if social.friends.isEmpty {
+            return "Add someone to share with"
         }
         if !showQuoteSpotlight {
             return "Open today's spotlight"
+        }
+        if social.feedPosts.isEmpty {
+            return "Share today's quote"
         }
         return "Keep the quote ritual moving"
     }
@@ -38,10 +44,16 @@ struct QuotesTabView: View {
             return "Your current filters are too narrow or the library needs fresh material. Clear the filters or jump back to Generate."
         }
         if social.currentUser == nil {
-            return "Today's quote is ready. Finish your Friends profile to share it, post it, and turn this tab into a daily social ritual."
+            return "Today's quote is ready. Finish your Friends profile to share it, post it, and turn this tab into a daily ritual instead of a dead end."
+        }
+        if social.friends.isEmpty {
+            return "Your profile exists, but you still need at least one friend before quote sharing becomes useful."
         }
         if !showQuoteSpotlight {
             return "The daily quote is strongest when you stop and unpack it. Open the spotlight, react, then share it or spin it into a collab."
+        }
+        if social.feedPosts.isEmpty {
+            return "Spotlight is active. Ship this quote into Friends to wake up the feed and make the tab feel connected to the rest of the app."
         }
         return "You have today's quote in focus. Rate it, share it, or send it into Friends while the ritual is active."
     }
@@ -50,6 +62,9 @@ struct QuotesTabView: View {
             return viewModel.selectedCategory == nil ? "Generate Advice" : "Clear Filters"
         }
         if social.currentUser == nil {
+            return "Open Friends"
+        }
+        if social.friends.isEmpty {
             return "Open Friends"
         }
         if !showQuoteSpotlight {
@@ -68,7 +83,13 @@ struct QuotesTabView: View {
                         quotesCommandCard
                             .padding(.horizontal, 16)
 
+                        quoteHeaderCard
+                            .padding(.horizontal, 16)
+
                         dailyQuoteHero
+                            .padding(.horizontal, 16)
+
+                        dailyRitualCard
                             .padding(.horizontal, 16)
 
                         quoteSpotlightCard
@@ -646,6 +667,72 @@ struct QuotesTabView: View {
                     .foregroundStyle(secondaryText)
             }
         }
+    }
+
+    private var dailyRitualCard: some View {
+        let dailyQuote = viewModel.dailyQuote
+        let hasRated = viewModel.vote(for: dailyQuote) != .none
+        return SectionShell(accent: accent, cardColor: cardColor) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Daily Ritual")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Text("Read it, rate it, then either share it or move it into Friends so the tab becomes a habit instead of a static archive.")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } content: {
+            VStack(spacing: 10) {
+                HStack(spacing: 8) {
+                    ritualPill(title: "Read", value: showQuoteSpotlight ? "Open" : "Pending")
+                    ritualPill(title: "Rate", value: hasRated ? "Done" : "Pending")
+                    ritualPill(title: "Share", value: social.currentUser == nil ? "Setup" : "Ready")
+                }
+
+                HStack(spacing: 10) {
+                    Button(showQuoteSpotlight ? "Close Spotlight" : "Open Spotlight") {
+                        withAnimation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8)) {
+                            showQuoteSpotlight.toggle()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+
+                    Button(social.currentUser == nil ? "Open Friends" : "Share to Friends") {
+                        if social.currentUser == nil {
+                            onOpenTab?(.friends)
+                        } else {
+                            shareQuoteToFriends(dailyQuote)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(accent)
+                    .foregroundStyle(buttonText)
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                }
+            }
+        }
+    }
+
+    private func ritualPill(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(primaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                .fill(accent.opacity(0.08))
+        )
     }
 
     private func copyQuote(_ quote: BadQuote, isDaily: Bool) {

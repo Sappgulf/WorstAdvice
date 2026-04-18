@@ -101,6 +101,7 @@ struct ContentView: View {
     @State private var auth: AuthViewModel?
     @State private var session: AppSessionViewModel?
     @State private var pendingDeepLinks: [URL] = []
+    @State private var referralManager = ReferralManager()
     @State private var showConfetti = false
     @State private var showSplash = true
     @State private var hasResetUITestData = false
@@ -144,6 +145,7 @@ struct ContentView: View {
                 await bootstrapAppStateIfNeeded()
             }
             .onOpenURL { url in
+                referralManager.handleIncomingURL(url)
                 if let session {
                     Task { await routeIncomingDeepLink(url, session: session) }
                 } else {
@@ -1017,9 +1019,11 @@ struct ContentView: View {
         let scenarioParam = query.first(where: { $0.name == "scenario" })?.value
             ?? query.first(where: { $0.name == "situation" })?.value
         let shouldGenerate = Bool(query.first(where: { $0.name == "generate" })?.value ?? "true") ?? true
+        let normalizedShouldGenerate = shouldGenerate
 
-        if host == "invite", let inviteID = pathParts.first {
+        if let deepLink = DeepLink(url: url), deepLink.type == .invite, let inviteID = deepLink.inviteID {
             Self.logger.info("Opening invite deep link: \(inviteID, privacy: .public)")
+            referralManager.clearPendingInvite(id: inviteID)
             setSelectedTab(.friends, session: session)
             session.generate.refreshRetentionStateOnAppear()
             return
@@ -1027,13 +1031,14 @@ struct ContentView: View {
 
         if let requestedTab = component.flatMap({ AppTab(rawValue: $0) }) {
             setSelectedTab(requestedTab, session: session)
+            guard requestedTab == .generate else { return }
             applyGenerateIntent(
                 tab: requestedTab,
                 categoryRaw: categoryParam,
                 toneRaw: toneParam,
                 friendName: friendParam,
                 scenario: scenarioParam,
-                shouldGenerate: shouldGenerate,
+                shouldGenerate: normalizedShouldGenerate,
                 session: session
             )
             return
@@ -1047,7 +1052,7 @@ struct ContentView: View {
                 toneRaw: toneParam,
                 friendName: friendParam,
                 scenario: scenarioParam,
-                shouldGenerate: shouldGenerate,
+                shouldGenerate: normalizedShouldGenerate,
                 session: session
             )
             return
@@ -1106,13 +1111,13 @@ struct ContentView: View {
         session: AppSessionViewModel
     ) {
         if let categoryRaw,
-            let category = AdviceCategory(rawValue: categoryRaw)
+            let category = AdviceCategory(rawValue: categoryRaw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
         {
             session.generate.selectedCategory = category
         }
 
         if let toneRaw,
-            let tone = ToneMode(rawValue: toneRaw)
+            let tone = ToneMode(rawValue: toneRaw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
         {
             session.generate.selectedTone = tone
         }
@@ -1137,6 +1142,12 @@ struct ContentView: View {
     }
 
     private func handlePendingAppIntent(for session: AppSessionViewModel) async {
+        while let pendingInviteID = referralManager.consumePendingInviteID() {
+            Self.logger.info("Replaying queued invite deep link: \(pendingInviteID, privacy: .public)")
+            setSelectedTab(.friends, session: session)
+            session.generate.refreshRetentionStateOnAppear()
+        }
+
         while let payload = BadviceIntentRouter.shared.consume() {
             switch payload.command {
             case .openTab:
@@ -1170,7 +1181,7 @@ struct ContentView: View {
     private func queueUnsupportedDeepLink(_ url: URL) {
         let maxQueueSize = 8
         if pendingDeepLinks.count >= maxQueueSize {
-            _ = pendingDeepLinks.removeFirst(pendingDeepLinks.count - maxQueueSize + 1)
+            pendingDeepLinks.removeFirst(pendingDeepLinks.count - maxQueueSize + 1)
         }
         pendingDeepLinks.append(url)
     }

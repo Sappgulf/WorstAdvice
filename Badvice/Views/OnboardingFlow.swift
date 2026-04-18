@@ -17,43 +17,43 @@ struct OnboardingFlow: View {
     private let pages: [Page] = [
         Page(
             icon: "sparkles",
-            title: "Badvice.\nConfidently delivered.",
-            subtitle: "Generate confidently terrible guidance, then push it straight into your history, favorites, and group chats.",
+            title: "Start in\nGenerate.",
+            subtitle: "Pick a category, type a scenario, and get one polished bad idea at a time. Save, copy, or share the keepers.",
             accent: Color(hex: "8F4A22"),
             background: LinearGradient(colors: [Color(hex: "F7F2E8"), Color(hex: "F1E4D4")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "quote.bubble.fill",
-            title: "14 categories.\n14 tones of chaos.",
-            subtitle: "The Generate studio is your home base: pick a category, choose a tone, and get one polished disaster at a time.",
+            title: "Keep the\nbest ones.",
+            subtitle: "History remembers every run. Favorites keeps the all-timers close so the best advice does not disappear after one tap.",
             accent: Color(hex: "7E4B7A"),
             background: LinearGradient(colors: [Color(hex: "F3EAF6"), Color(hex: "E6D7F0")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "square.and.arrow.up",
-            title: "Share the\nspectacular failure.",
-            subtitle: "Daily quote drops, better card exports, and one-tap sharing make the best bad advice instantly reusable.",
+            title: "Quotes make it\ndaily.",
+            subtitle: "Open Quotes for the daily line, rate it, and share it when something lands. That is the easiest return habit in the app.",
             accent: Color(hex: "2E6F64"),
             background: LinearGradient(colors: [Color(hex: "EAF6F3"), Color(hex: "D8EFE8")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "flame.fill",
-            title: "Build your\nchaos streak.",
-            subtitle: "Chaos Hub tracks your daily mission, weekly push, streak freezes, and the next best move when you open the app.",
+            title: "Chaos Hub tracks\nmomentum.",
+            subtitle: "Daily mission, weekly push, season status, and the next recommended action all live in one progression surface.",
             accent: Color(hex: "B84A14"),
             background: LinearGradient(colors: [Color(hex: "FDF3EC"), Color(hex: "F7E0CC")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "person.2.fill",
-            title: "Friends &\ncollabs.",
-            subtitle: "Set up your profile, add friends, and open the social feed only when you are ready. The Friends tab now guides that setup for you.",
+            title: "Friends opens\nwhen you are ready.",
+            subtitle: "Profile first, then your first friend, first share, and first collab. The tab now walks that sequence instead of dumping every feature up front.",
             accent: Color(hex: "2B5CA8"),
             background: LinearGradient(colors: [Color(hex: "EBF2FE"), Color(hex: "D6E6FF")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "map.fill",
-            title: "Where to next?",
-            subtitle: "Start in Generate, check Chaos Hub for progression, visit Quotes for the daily ritual, and use Favorites to keep the all-timers.",
+            title: "One loop to\nremember.",
+            subtitle: "Generate something sharp, keep the best one, check Chaos Hub, then come back for the daily quote. That is the real Badvice rhythm.",
             accent: Color(hex: "3C4E7A"),
             background: LinearGradient(colors: [Color(hex: "EAF0FB"), Color(hex: "DDE6F6")], startPoint: .topLeading, endPoint: .bottomTrailing)
         )
@@ -120,7 +120,7 @@ struct OnboardingFlow: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(pages[currentPage].accent.opacity(0.9))
                 Spacer()
-                Text(currentPage < pages.count - 1 ? "Swipe to explore" : "You are ready")
+                Text(currentPage < pages.count - 1 ? "Swipe or tap Next" : "Start in Generate")
                     .font(.caption)
                     .foregroundStyle(pages[currentPage].accent.opacity(0.7))
             }

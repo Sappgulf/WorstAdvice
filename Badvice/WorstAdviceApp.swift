@@ -2,6 +2,7 @@ import OSLog
 import SwiftData
 import SwiftUI
 import UserNotifications
+import AppIntents
 
 @main
 struct WorstAdviceApp: App {
@@ -38,6 +39,9 @@ struct WorstAdviceApp: App {
         _startupErrorMessage = State(initialValue: bootstrapResult.errorMessage)
         Self.runLegacySettingsCleanupIfNeeded()
         AppPerformanceInstrumentation.beginColdStartIfNeeded()
+        if #available(iOS 16.0, *) {
+            BadviceShortcuts.updateAppShortcutParameters()
+        }
     }
 
     var body: some Scene {
