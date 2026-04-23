@@ -268,9 +268,9 @@ struct HistoryTabView: View {
 
                 if hallOfFameExpanded {
                     VStack(spacing: 8) {
-                        hallOfFameRow(title: "Most Shared", items: shared, icon: "square.and.arrow.up", countKey: { $0.shareCountValue })
-                        hallOfFameRow(title: "Most Copied", items: copied, icon: "doc.on.doc", countKey: { $0.copyCountValue })
-                        hallOfFameRow(title: "Most Liked",  items: liked,  icon: "hand.thumbsup.fill", countKey: { ($0.voteRaw ?? 0) })
+                        hallOfFameRow(title: "Most Shared", items: shared, icon: "square.and.arrow.up", valueLabel: { "x\($0.shareCountValue)" })
+                        hallOfFameRow(title: "Most Copied", items: copied, icon: "doc.on.doc", valueLabel: { "x\($0.copyCountValue)" })
+                        hallOfFameRow(title: "Liked", items: liked, icon: "hand.thumbsup.fill", valueLabel: { _ in "Saved" })
                     }
                     .padding(.horizontal, 14)
                     .padding(.bottom, 12)
@@ -281,12 +281,11 @@ struct HistoryTabView: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous).fill(cardColor)
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(accent.opacity(0.12), lineWidth: 1))
             )
-                            .padding(.horizontal, 16)
             .padding(.bottom, 8)
         }
     }
 
-    private func hallOfFameRow(title: String, items: [AdviceRecord], icon: String, countKey: @escaping (AdviceRecord) -> Int) -> some View {
+    private func hallOfFameRow(title: String, items: [AdviceRecord], icon: String, valueLabel: @escaping (AdviceRecord) -> String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Label(title, systemImage: icon)
                 .font(.caption.weight(.bold))
@@ -302,7 +301,7 @@ struct HistoryTabView: View {
                         .lineLimit(2)
                         .foregroundStyle(primaryText)
                     Spacer(minLength: 0)
-                    Text("×\(countKey(record))")
+                    Text(valueLabel(record))
                         .font(.caption2.weight(.semibold).monospacedDigit())
                         .foregroundStyle(accent)
                 }

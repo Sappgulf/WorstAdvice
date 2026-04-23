@@ -48,7 +48,7 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
             .widgetURL(Self.deepLinkURL)
     }
 
-    private static let deepLinkURL: URL = URL(string: "badvice://advice")!
+    private static let deepLinkURL: URL = URL(string: "badvice://quotes")!
 
     @ViewBuilder
     private var widgetContent: some View {

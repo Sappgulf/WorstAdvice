@@ -61,7 +61,7 @@ struct QuotesTabView: View {
         if viewModel.filteredQuotes.isEmpty {
             return viewModel.selectedCategory == nil ? "Generate Advice" : "Clear Filters"
         }
-        if social.currentUser == nil {
+        if !social.availability.isAccountAvailable || social.currentUser == nil {
             return "Open Friends"
         }
         if social.friends.isEmpty {
@@ -672,6 +672,8 @@ struct QuotesTabView: View {
     private var dailyRitualCard: some View {
         let dailyQuote = viewModel.dailyQuote
         let hasRated = viewModel.vote(for: dailyQuote) != .none
+        let shareStatus = quoteShareStatus
+        let shareButtonTitle = quoteShareButtonTitle
         return SectionShell(accent: accent, cardColor: cardColor) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Daily Ritual")
@@ -687,7 +689,7 @@ struct QuotesTabView: View {
                 HStack(spacing: 8) {
                     ritualPill(title: "Read", value: showQuoteSpotlight ? "Open" : "Pending")
                     ritualPill(title: "Rate", value: hasRated ? "Done" : "Pending")
-                    ritualPill(title: "Share", value: social.currentUser == nil ? "Setup" : "Ready")
+                    ritualPill(title: "Share", value: shareStatus)
                 }
 
                 HStack(spacing: 10) {
@@ -700,8 +702,8 @@ struct QuotesTabView: View {
                     .font(.caption.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 40)
 
-                    Button(social.currentUser == nil ? "Open Friends" : "Share to Friends") {
-                        if social.currentUser == nil {
+                    Button(shareButtonTitle) {
+                        if !social.availability.isAccountAvailable || social.currentUser == nil || social.friends.isEmpty {
                             onOpenTab?(.friends)
                         } else {
                             shareQuoteToFriends(dailyQuote)
@@ -733,6 +735,23 @@ struct QuotesTabView: View {
             RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.08))
         )
+    }
+
+    private var quoteShareStatus: String {
+        if !social.availability.isAccountAvailable {
+            return "Offline"
+        }
+        if social.currentUser == nil {
+            return "Setup"
+        }
+        if social.friends.isEmpty {
+            return "Find"
+        }
+        return "Ready"
+    }
+
+    private var quoteShareButtonTitle: String {
+        quoteShareStatus == "Ready" ? "Share to Friends" : "Open Friends"
     }
 
     private func copyQuote(_ quote: BadQuote, isDaily: Bool) {
@@ -794,7 +813,7 @@ struct QuotesTabView: View {
             }
             return
         }
-        if social.currentUser == nil {
+        if !social.availability.isAccountAvailable || social.currentUser == nil || social.friends.isEmpty {
             onOpenTab?(.friends)
             return
         }

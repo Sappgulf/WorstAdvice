@@ -86,6 +86,7 @@ struct DeepLink: Codable, Sendable {
         case battle
         case challenge
         case friend
+        case quotes
         case invite
     }
 }
@@ -130,7 +131,7 @@ extension DeepLink {
         case "friends", "friend", "social":
             self = .init(type: .friend, id: nil, category: category, tone: tone)
         case "quotes":
-            self = .init(type: .friend, id: nil, category: category, tone: tone)
+            self = .init(type: .quotes, id: nil, category: category, tone: tone)
         case "battle":
             self = .init(type: .battle, id: nil, category: category, tone: tone)
         case "challenge":

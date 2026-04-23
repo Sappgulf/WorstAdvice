@@ -16,8 +16,8 @@
     <string>$(PRODUCT_NAME)</string>
     <key>CFBundlePackageType</key>
     <string>XPC!</string>
-    <key>CFBundleShortVersionString</key>
-    <string>6.1</string>
+	<key>CFBundleShortVersionString</key>
+	<string>6.3</string>
     <key>CFBundleVersion</key>
     <string>2026022501</string>
     <key>NSExtension</key>

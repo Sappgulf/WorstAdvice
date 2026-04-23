@@ -597,6 +597,17 @@ struct ContentView: View {
                             let isSelected = selectedTab == tab || (tab == .settings && showingSettingsRoot)
                             let isHighlighted = tabDragHighlight == tab
                             let badgeCount = tab == .friends ? friendsBadgeCount : (tab == .chaosHub ? chaosBadgeCount : 0)
+                            let badgeDescription: String = {
+                                if badgeCount == 0 { return "" }
+                                switch tab {
+                                case .friends:
+                                    return ", \(badgeCount) pending request\(badgeCount == 1 ? "" : "s")"
+                                case .chaosHub:
+                                    return ", daily mission needs attention"
+                                default:
+                                    return ", \(badgeCount) new item\(badgeCount == 1 ? "" : "s")"
+                                }
+                            }()
                             let tabAccessibilityID = "tab.\(tab.rawValue)"
                             Button {
                                 if tab == .settings {
@@ -703,7 +714,7 @@ struct ContentView: View {
                             .accessibilityLabel(tab.title)
                             .accessibilityIdentifier(tabAccessibilityID)
                             .accessibilityValue(
-                                "\(isSelected ? "Selected" : "Not selected")\(badgeCount > 0 ? ", \(badgeCount) pending requests" : "")"
+                                "\(isSelected ? "Selected" : "Not selected")\(badgeDescription)"
                             )
                             .accessibilityAddTraits(isSelected ? .isSelected : [])
                         }
@@ -1169,6 +1180,9 @@ struct ContentView: View {
                     shouldGenerate: payload.shouldGenerate,
                     session: session
                 )
+
+            case .openDailyQuote:
+                setSelectedTab(.quotes, session: session)
             }
         }
 

@@ -363,7 +363,7 @@ struct FavoritesTabView: View {
     @State private var layout: FavoritesLayout = .list
     @State private var listContentAppeared = false
     @State private var activeToast: ToastMessage? = nil
-    @State private var isFavoritesLoading = true
+    @State private var isFavoritesLoading = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -531,10 +531,7 @@ struct FavoritesTabView: View {
             .toolbarBackground(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
-                Task(priority: .utility) {
-                    viewModel.loadIfNeeded()
-                    isFavoritesLoading = false
-                }
+                viewModel.loadIfNeeded()
                 HapticsManager.play(style: .soft, isEnabled: settings.hapticsEnabled)
                 tabBarVisible.wrappedValue = true
                 animateListContentIfNeeded()

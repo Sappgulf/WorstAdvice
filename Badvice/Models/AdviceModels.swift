@@ -530,6 +530,7 @@ struct BadviceIntentPayload: Codable, Sendable {
     enum HandledCommand: String, Codable, Sendable {
         case openTab
         case generateAdvice
+        case openDailyQuote
     }
 
     let command: HandledCommand
@@ -586,10 +587,11 @@ final class BadviceIntentRouter {
 struct OpenBadviceTabIntent: AppIntent {
     static let title: LocalizedStringResource = "Open Badvice tab"
     static let description = IntentDescription("Open Badvice directly to the tab you need.")
+    @available(iOS 26.0, *)
+    static var supportedModes: IntentModes { .foreground(.immediate) }
     static var parameterSummary: some ParameterSummary {
         Summary("Open \(\.$tab)")
     }
-    static let openAppWhenRun = true
     @Parameter(title: "Tab") var tab: AppTab
 
     func perform() async throws -> some IntentResult {
@@ -610,15 +612,22 @@ struct OpenBadviceTabIntent: AppIntent {
 }
 
 @available(iOS 16.0, *)
+@available(*, deprecated, message: "Use supportedModes instead")
+extension OpenBadviceTabIntent {
+    static var openAppWhenRun: Bool { true }
+}
+
+@available(iOS 16.0, *)
 struct GenerateBadviceAdviceIntent: AppIntent {
     static let title: LocalizedStringResource = "Generate Badvice advice"
     static let description = IntentDescription(
         "Open Badvice and generate advice using the optional category, tone, friend, and scenario inputs."
     )
+    @available(iOS 26.0, *)
+    static var supportedModes: IntentModes { .foreground(.immediate) }
     static var parameterSummary: some ParameterSummary {
         Summary("Generate bad advice")
     }
-    static let openAppWhenRun = true
     @Parameter(title: "Category")
     var category: AdviceCategory?
 
@@ -662,8 +671,59 @@ struct GenerateBadviceAdviceIntent: AppIntent {
 }
 
 @available(iOS 16.0, *)
+@available(*, deprecated, message: "Use supportedModes instead")
+extension GenerateBadviceAdviceIntent {
+    static var openAppWhenRun: Bool { true }
+}
+
+@available(iOS 16.0, *)
+struct OpenDailyQuoteIntent: AppIntent {
+    static let title: LocalizedStringResource = "Open daily quote"
+    static let description = IntentDescription(
+        "Open Badvice to today's quote ritual in the Quotes tab."
+    )
+    @available(iOS 26.0, *)
+    static var supportedModes: IntentModes { .foreground(.immediate) }
+    static var parameterSummary: some ParameterSummary {
+        Summary("Open today's quote")
+    }
+
+    func perform() async throws -> some IntentResult {
+        await MainActor.run {
+            BadviceIntentRouter.shared.enqueue(
+                .init(
+                    command: .openDailyQuote,
+                    tab: AppTab.quotes.rawValue,
+                    category: nil,
+                    tone: nil,
+                    friendName: nil,
+                    scenario: nil,
+                    shouldGenerate: false
+                ))
+        }
+        return .result(dialog: "Opening today's Badvice quote.")
+    }
+}
+
+@available(iOS 16.0, *)
+@available(*, deprecated, message: "Use supportedModes instead")
+extension OpenDailyQuoteIntent {
+    static var openAppWhenRun: Bool { true }
+}
+
+@available(iOS 16.0, *)
 struct BadviceShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
+        AppShortcut(
+            intent: OpenDailyQuoteIntent(),
+            phrases: [
+                "Open today's quote in ${applicationName}",
+                "Show today's bad quote in ${applicationName}",
+                "Open Badvice quotes in ${applicationName}"
+            ],
+            shortTitle: "Daily Quote",
+            systemImageName: "quote.bubble.fill"
+        )
         AppShortcut(
             intent: OpenBadviceTabIntent(),
             phrases: [

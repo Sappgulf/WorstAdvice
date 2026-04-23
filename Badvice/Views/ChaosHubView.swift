@@ -629,6 +629,18 @@ struct ChaosHubTabView: View {
             onOpenTab(.friends)
             return
         }
+        if social.friends.isEmpty {
+            generateViewModel.trackChaosHubAction("open_friends_for_first_connection")
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            onOpenTab(.friends)
+            return
+        }
+        if social.feedPosts.isEmpty {
+            generateViewModel.trackChaosHubAction("open_quotes_for_first_feed_post")
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            onOpenTab(.quotes)
+            return
+        }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             generateViewModel.trackChaosHubAction("submit_score_from_command")
             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)

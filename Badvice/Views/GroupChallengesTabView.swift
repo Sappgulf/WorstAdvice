@@ -22,20 +22,23 @@ struct GroupChallengesTabView: View {
     @State private var joinFeedback: String?
     @State private var copiedCodeDismissTask: Task<Void, Never>?
     @State private var joinFeedbackDismissTask: Task<Void, Never>?
+    @Environment(\.tabBarVisible) private var tabBarVisible
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
-    
+    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Theme.backgroundGradient(for: settings.theme).ignoresSafeArea()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 16) {
                         headerSection
+                        challengeCommandCard
 
                         if !activeChallenges.isEmpty {
                             activeChallengesSection
@@ -47,8 +50,11 @@ struct GroupChallengesTabView: View {
                             emptyStateView
                         }
                     }
-                    .padding()
+                    .padding(.horizontal, Theme.horizontalPadding)
+                    .padding(.top, 10)
+                    .padding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 24)
                 }
+                .trackScrollForTabBar()
             }
             .navigationTitle("Group Challenges")
             .toolbarBackground(.hidden, for: .navigationBar)
@@ -139,18 +145,22 @@ struct GroupChallengesTabView: View {
             }
             .task { await loadChallenges() }
             .refreshable { await loadChallenges() }
+            .onAppear {
+                tabBarVisible.wrappedValue = true
+            }
         }
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
     }
-    
+
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Challenge Your Friends")
                 .font(.title2.bold())
                 .foregroundStyle(primaryText)
-            Text("Create or join group challenges to compete for the worst advice")
+            Text("Create local challenge rooms, copy a real invite code, and launch the matching category in Advice.")
                 .font(.subheadline)
                 .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
                 Button {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
@@ -178,8 +188,82 @@ struct GroupChallengesTabView: View {
             }
             .padding(.top, 4)
         }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
+                .fill(cardColor.opacity(0.84))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
+                        .stroke(accent.opacity(0.12), lineWidth: 1)
+                )
+        )
     }
-    
+
+    private var challengeCommandCard: some View {
+        TabCommandCard(
+            eyebrow: "Challenge Command",
+            title: challengeCommandTitle,
+            detail: challengeCommandDetail,
+            systemImage: "person.3.fill",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor
+        ) {
+            HStack(spacing: 8) {
+                TabCommandMetric(
+                    title: "Active",
+                    value: "\(activeChallenges.count)",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText
+                )
+                TabCommandMetric(
+                    title: "Done",
+                    value: "\(completedChallenges.count)",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText
+                )
+                TabCommandMetric(
+                    title: "Friends",
+                    value: "\(social.friends.count)",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText
+                )
+            }
+        } actions: {
+            HStack(spacing: 10) {
+                Button {
+                    performChallengePrimaryAction()
+                } label: {
+                    Label(challengePrimaryActionTitle, systemImage: "play.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .foregroundStyle(buttonText)
+                .accessibilityIdentifier("groupChallenges.command.primary")
+
+                Button {
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    showJoinAlert = true
+                } label: {
+                    Label("Join", systemImage: "person.badge.plus")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .accessibilityIdentifier("groupChallenges.command.join")
+            }
+        }
+        .accessibilityIdentifier("groupChallenges.command.card")
+    }
+
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "person.3.fill")
@@ -194,7 +278,15 @@ struct GroupChallengesTabView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.1), lineWidth: 1)
+                )
+        )
     }
 
     private var activeChallengesSection: some View {
@@ -254,12 +346,53 @@ struct GroupChallengesTabView: View {
             }
         }
     }
-    
+
     private func loadChallenges() async {
         guard activeChallenges.isEmpty && completedChallenges.isEmpty else { return }
 
         activeChallenges = Self.demoActiveChallenges
         completedChallenges = Self.demoCompletedChallenges
+    }
+
+    private var challengeCommandTitle: String {
+        if activeChallenges.isEmpty {
+            return "Create the first challenge"
+        }
+        if social.currentUser == nil {
+            return "Local challenges are ready"
+        }
+        if social.friends.isEmpty {
+            return "Share a code with your first friend"
+        }
+        return "Run the next challenge round"
+    }
+
+    private var challengeCommandDetail: String {
+        if activeChallenges.isEmpty {
+            return "Create a challenge, keep the invite code, and play it from Advice with the selected category and tone."
+        }
+        if social.currentUser == nil {
+            return "These are on-device challenge rooms. Set up Friends when you want the wider social loop."
+        }
+        if social.friends.isEmpty {
+            return "You can still create and play locally. Add friends to make codes, rankings, and shared drafts matter."
+        }
+        return "Open the active challenge, copy its code, or start the matching Advice run."
+    }
+
+    private var challengePrimaryActionTitle: String {
+        activeChallenges.isEmpty ? "Create Challenge" : "Play Active"
+    }
+
+    private func performChallengePrimaryAction() {
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        guard let challenge = activeChallenges.first else {
+            showCreateSheet = true
+            return
+        }
+        generateViewModel.selectedCategory = challenge.category
+        generateViewModel.selectedTone = challenge.tone
+        onOpenTab(.generate)
     }
 
     private static var demoActiveChallenges: [GroupChallenge] {
@@ -570,34 +703,35 @@ struct ChallengeCard: View {
 
 struct CreateChallengeSheet: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     let onCreate: (GroupChallenge) -> Void
     let hapticsEnabled: Bool
-    
+
     @State private var name = ""
     @State private var selectedCategory: AdviceCategory = .dating
     @State private var selectedTone: ToneMode = .toxicBestFriend
     @State private var duration: Int = 7
-    
+    @State private var inviteCode = String(UUID().uuidString.prefix(6)).uppercased()
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Challenge Details") {
                     TextField("Challenge Name", text: $name)
-                    
+
                     Picker("Category", selection: $selectedCategory) {
                         ForEach(AdviceCategory.concrete) { category in
                             Label(category.title, systemImage: category.icon)
                                 .tag(category)
                         }
                     }
-                    
+
                     Picker("Tone", selection: $selectedTone) {
                         ForEach(ToneMode.concrete) { tone in
                             Text(tone.title).tag(tone)
                         }
                     }
-                    
+
                     Picker("Duration", selection: $duration) {
                         Text("3 days").tag(3)
                         Text("7 days").tag(7)
@@ -605,13 +739,13 @@ struct CreateChallengeSheet: View {
                         Text("30 days").tag(30)
                     }
                 }
-                
+
                 Section {
                     Text("Share this code with friends to join:")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    
-                    Text(String(UUID().uuidString.prefix(6)).uppercased())
+
+                    Text(inviteCode)
                         .font(.title2.monospaced().bold())
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -640,12 +774,12 @@ struct CreateChallengeSheet: View {
             }
         }
     }
-    
+
     private func createChallenge() {
         let challenge = GroupChallenge(
             id: UUID(),
             name: name,
-            inviteCode: String(UUID().uuidString.prefix(6)).uppercased(),
+            inviteCode: inviteCode,
             category: selectedCategory,
             tone: selectedTone,
             creatorID: "currentUser",

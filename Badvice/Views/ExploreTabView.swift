@@ -4,22 +4,27 @@ struct ExploreTabView: View {
     let social: SocialViewModel
     let settings: SettingsViewModel
     let onJumpToGenerate: (AdviceCategory, ToneMode) -> Void
-    
+
     @State private var trendingAdvice: [TrendingAdvice] = Self.demoTrendingAdvice
     @State private var searchText = ""
     @State private var selectedCategory: AdviceCategory?
     @State private var selectedTone: ToneMode?
+    @Environment(\.tabBarVisible) private var tabBarVisible
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var cardFill: Color { Theme.cardColor(for: settings.theme).opacity(0.84) }
+    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
+    private var normalizedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
     private var isFilterActive: Bool {
         selectedCategory != nil
             || selectedTone != nil
-            || !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !normalizedSearchText.isEmpty
     }
-    
+
     var filteredTrending: [TrendingAdvice] {
         var result = trendingAdvice
         if let category = selectedCategory {
@@ -28,36 +33,49 @@ struct ExploreTabView: View {
         if let tone = selectedTone {
             result = result.filter { $0.tone == tone }
         }
-        if !searchText.isEmpty {
-            result = result.filter { $0.adviceLine.localizedCaseInsensitiveContains(searchText) }
+        if !normalizedSearchText.isEmpty {
+            result = result.filter { $0.adviceLine.localizedCaseInsensitiveContains(normalizedSearchText) }
         }
         return result
     }
-    
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    heroSection
-                    
-                    filterSection
-                    
-                    if filteredTrending.isEmpty {
-                        emptyStateView
-                    } else {
-                        trendingSection
+            ZStack {
+                Theme.backgroundGradient(for: settings.theme)
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        heroSection
+
+                        exploreCommandCard
+
+                        filterSection
+
+                        if filteredTrending.isEmpty {
+                            emptyStateView
+                        } else {
+                            starterIdeasSection
+                        }
                     }
+                    .padding(.horizontal, Theme.horizontalPadding)
+                    .padding(.top, 10)
+                    .padding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 24)
                 }
-                .padding()
+                .trackScrollForTabBar()
             }
             .navigationTitle("Explore")
             .toolbarBackground(.hidden, for: .navigationBar)
-            .searchable(text: $searchText, prompt: "Search trending advice")
+            .searchable(text: $searchText, prompt: "Search starter ideas")
+            .onAppear {
+                tabBarVisible.wrappedValue = true
+            }
             .task { await loadTrending() }
         }
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
     }
-    
+
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
@@ -77,10 +95,10 @@ struct ExploreTabView: View {
                 .frame(width: 54, height: 54)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Trending Now")
+                    Text("Explore Ideas")
                         .font(.title2.bold())
                         .foregroundStyle(primaryText)
-                    Text("Browse what the crowd is actually reading, voting, and remixing.")
+                    Text("Browse starter combinations, tune the filters, then send the best setup straight into Advice.")
                         .font(.subheadline)
                         .foregroundStyle(secondaryText)
                 }
@@ -101,7 +119,75 @@ struct ExploreTabView: View {
         .padding(18)
         .background(heroCardShell)
     }
-    
+
+    private var exploreCommandCard: some View {
+        TabCommandCard(
+            eyebrow: "Explore Command",
+            title: exploreCommandTitle,
+            detail: exploreCommandDetail,
+            systemImage: "safari.fill",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: Theme.cardColor(for: settings.theme)
+        ) {
+            HStack(spacing: 8) {
+                TabCommandMetric(
+                    title: "Ideas",
+                    value: "\(filteredTrending.count)",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText
+                )
+                TabCommandMetric(
+                    title: "Category",
+                    value: selectedCategory?.title ?? "All",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText
+                )
+                TabCommandMetric(
+                    title: "Tone",
+                    value: selectedTone?.title ?? "Any",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText
+                )
+            }
+        } actions: {
+            HStack(spacing: 10) {
+                Button {
+                    if isFilterActive && filteredTrending.isEmpty {
+                        clearFilters()
+                    } else {
+                        openFirstVisibleIdea()
+                    }
+                } label: {
+                    Label(explorePrimaryActionTitle, systemImage: isFilterActive && filteredTrending.isEmpty ? "xmark.circle.fill" : "sparkles")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .foregroundStyle(buttonText)
+                .accessibilityIdentifier("explore.command.primary")
+
+                Button {
+                    clearFilters()
+                } label: {
+                    Label("Reset", systemImage: "arrow.counterclockwise")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .disabled(!isFilterActive)
+                .accessibilityIdentifier("explore.command.reset")
+            }
+        }
+        .accessibilityIdentifier("explore.command.card")
+    }
+
     private var filterSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             filterRow(
@@ -117,6 +203,10 @@ struct ExploreTabView: View {
                         title: category.title,
                         icon: category.icon,
                         isSelected: selectedCategory == category,
+                        accent: accent,
+                        primaryText: primaryText,
+                        secondaryText: secondaryText,
+                        selectedText: buttonText,
                         accessibilityIdentifier: "explore.filter.categories.chip.\(index)"
                     ) {
                         selectCategory(category)
@@ -137,6 +227,10 @@ struct ExploreTabView: View {
                         title: tone.title,
                         icon: tone.isPremium ? "sparkles" : nil,
                         isSelected: selectedTone == tone,
+                        accent: accent,
+                        primaryText: primaryText,
+                        secondaryText: secondaryText,
+                        selectedText: buttonText,
                         accessibilityIdentifier: "explore.filter.tones.chip.\(index)"
                     ) {
                         selectTone(tone)
@@ -145,13 +239,13 @@ struct ExploreTabView: View {
             }
         }
     }
-    
+
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48, weight: .semibold))
                 .foregroundStyle(accent)
-            Text("No trending advice found")
+            Text("No starter ideas found")
                 .font(.headline)
                 .foregroundStyle(primaryText)
             Text("Try adjusting your filters or search terms.")
@@ -189,9 +283,13 @@ struct ExploreTabView: View {
         .background(cardShell)
         .accessibilityIdentifier("explore.emptyState")
     }
-    
-    private var trendingSection: some View {
+
+    private var starterIdeasSection: some View {
         VStack(alignment: .leading, spacing: 16) {
+            Label("Starter Ideas", systemImage: "square.grid.2x2.fill")
+                .font(.headline)
+                .foregroundStyle(primaryText)
+
             LazyVStack(spacing: 16) {
                 ForEach(filteredTrending) { advice in
                     TrendingAdviceCard(
@@ -223,7 +321,34 @@ struct ExploreTabView: View {
             }
         }
     }
-    
+
+    private var exploreCommandTitle: String {
+        if filteredTrending.isEmpty {
+            return "Reset the idea board"
+        }
+        if isFilterActive {
+            return "Turn this filter into a generation setup"
+        }
+        return "Pick a starter and jump into Advice"
+    }
+
+    private var exploreCommandDetail: String {
+        if filteredTrending.isEmpty {
+            return "No seeded ideas match the current search and filters. Reset the board or loosen one filter."
+        }
+        if isFilterActive {
+            return "The board is narrowed to \(filteredTrending.count) idea\(filteredTrending.count == 1 ? "" : "s"). Open one to carry its category and tone into Advice."
+        }
+        return "Explore is a launchpad, not a passive feed. Each idea opens Advice with the matching category and tone."
+    }
+
+    private var explorePrimaryActionTitle: String {
+        if filteredTrending.isEmpty && isFilterActive {
+            return "Clear Filters"
+        }
+        return "Use First Idea"
+    }
+
     private func loadTrending() async {
         guard trendingAdvice.isEmpty else { return }
         trendingAdvice = Self.demoTrendingAdvice
@@ -254,6 +379,14 @@ struct ExploreTabView: View {
         selectedCategory = nil
         selectedTone = nil
         searchText = ""
+    }
+
+    private func openFirstVisibleIdea() {
+        guard let advice = filteredTrending.first else {
+            clearFilters()
+            return
+        }
+        openTrendingAdvice(advice)
     }
 
     private func openTrendingAdvice(_ advice: TrendingAdvice) {
@@ -376,9 +509,13 @@ struct FilterChip: View {
     let title: String
     var icon: String? = nil
     let isSelected: Bool
+    var accent: Color = .accentColor
+    var primaryText: Color = .primary
+    var secondaryText: Color = .secondary
+    var selectedText: Color = .white
     let accessibilityIdentifier: String
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
@@ -393,12 +530,12 @@ struct FilterChip: View {
             .padding(.vertical, 9)
             .background(
                 Capsule(style: .continuous)
-                    .fill(isSelected ? Color.accentColor : Color.secondary.opacity(0.14))
+                    .fill(isSelected ? accent : secondaryText.opacity(0.14))
             )
-            .foregroundStyle(isSelected ? .white : .primary)
+            .foregroundStyle(isSelected ? selectedText : primaryText)
             .overlay(
                 Capsule(style: .continuous)
-                    .strokeBorder(isSelected ? Color.accentColor.opacity(0.35) : Color.clear, lineWidth: 1)
+                    .strokeBorder(isSelected ? accent.opacity(0.35) : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -414,7 +551,7 @@ struct TrendingAdviceCard: View {
     let secondaryText: Color
     let cardFill: Color
     let onTap: () -> Void
-    
+
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 12) {
@@ -427,13 +564,13 @@ struct TrendingAdviceCard: View {
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 }
-                
+
                 Text(advice.adviceLine)
                     .font(.body)
                     .foregroundStyle(primaryText)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)
-                
+
                 HStack {
                     Label("\(advice.likeCount)", systemImage: "heart.fill")
                         .font(.caption)

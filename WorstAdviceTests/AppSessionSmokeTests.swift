@@ -199,6 +199,25 @@ final class AppSessionSmokeTests: XCTestCase {
         XCTAssertNotEqual(repoB.ensureSettings().theme, .ember)
     }
 
+    func testQuotesDeepLinkParsesAsQuotesSurface() throws {
+        let url = try XCTUnwrap(URL(string: "badvice://quotes"))
+        let link = try XCTUnwrap(DeepLink(url: url))
+
+        XCTAssertEqual(link.type, .quotes)
+        XCTAssertNil(link.id)
+    }
+
+    func testOpenDailyQuoteIntentQueuesQuotesIntentPayload() async throws {
+        _ = BadviceIntentRouter.shared.consume()
+
+        _ = try await OpenDailyQuoteIntent().perform()
+        let payload = try XCTUnwrap(BadviceIntentRouter.shared.consume())
+
+        XCTAssertEqual(payload.command, .openDailyQuote)
+        XCTAssertEqual(payload.tab, AppTab.quotes.rawValue)
+        XCTAssertFalse(payload.shouldGenerate)
+    }
+
     private func makeLocalAccountStore() -> (LocalAccountStore, UserDefaults) {
         let suiteName = "AppSessionSmokeTests.LocalAccountStore.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

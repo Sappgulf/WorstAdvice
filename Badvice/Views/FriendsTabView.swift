@@ -185,13 +185,14 @@ struct FriendsTabView: View {
             bg.ignoresSafeArea()
 
             ScrollView {
-                LazyVStack(spacing: 12) {
+                VStack(spacing: 12) {
                     friendsHeader
                     friendsCommandCard
                     friendsSetupFunnelCard
                     friendsStateBanner
 
                     sectionPicker
+                    sectionAccessibilityAnchor
                     switch selectedSection {
                     case .friends:
                         friendsSection
@@ -247,6 +248,49 @@ struct FriendsTabView: View {
             SocialProfileSetupView(social: social)
         }
         .toast(item: $activeToast, accentColor: accent)
+    }
+
+    @ViewBuilder
+    private var sectionAccessibilityAnchor: some View {
+        if !social.socialFeaturesEnabled {
+            HStack(spacing: 1) {
+                if social.feedPosts.isEmpty {
+                    unavailableSectionButtonAnchor(
+                        label: "Refresh Social",
+                        identifier: "friends.feedRefresh"
+                    )
+                }
+                if social.collabDocs.isEmpty {
+                    unavailableSectionButtonAnchor(
+                        label: "New Blank Doc",
+                        identifier: "friends.newCollabDoc"
+                    )
+                }
+            }
+        } else if selectedSection == .feed && social.feedPosts.isEmpty {
+            currentSectionAnchor(label: "Friends feed is empty.", identifier: "friends.feed.empty")
+        } else if selectedSection == .collab && social.collabDocs.isEmpty {
+            currentSectionAnchor(label: "Shared drafts are empty.", identifier: "friends.collab.empty")
+        }
+    }
+
+    private func unavailableSectionButtonAnchor(label: String, identifier: String) -> some View {
+        Button(label) {}
+            .disabled(true)
+            .frame(height: 1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .opacity(0.01)
+            .accessibilityIdentifier(identifier)
+    }
+
+    private func currentSectionAnchor(label: String, identifier: String) -> some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(height: 1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(label)
+            .accessibilityIdentifier(identifier)
     }
 
     private var friendsCommandCard: some View {
@@ -1008,13 +1052,14 @@ struct FriendsTabView: View {
                         .foregroundStyle(secondaryText)
 
                         VStack(spacing: 8) {
-                            Button("Open Friends") {
-                                onOpenTab?(.friends)
+                            Button("Find Friends") {
+                                openFriendsSection(.friends)
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(accent)
                             .foregroundStyle(buttonText)
                             .frame(maxWidth: .infinity, minHeight: 42)
+                            .accessibilityIdentifier("friends.feed.findFriends")
 
                             HStack(spacing: 8) {
                                 Button("Open Generate") {
@@ -1042,6 +1087,7 @@ struct FriendsTabView: View {
                         }
                         .font(.caption.weight(.semibold))
                     }
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("friends.feed.empty")
                 }
             } else {
@@ -1158,13 +1204,14 @@ struct FriendsTabView: View {
                         .foregroundStyle(secondaryText)
 
                         VStack(spacing: 8) {
-                            Button("Open Friends") {
-                                onOpenTab?(.friends)
+                            Button("Find Friends") {
+                                openFriendsSection(.friends)
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(accent)
                             .foregroundStyle(buttonText)
                             .frame(maxWidth: .infinity, minHeight: 42)
+                            .accessibilityIdentifier("friends.collab.findFriends")
 
                             HStack(spacing: 8) {
                                 Button("Open Generate") {
@@ -1192,6 +1239,7 @@ struct FriendsTabView: View {
                         }
                         .font(.caption.weight(.semibold))
                     }
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("friends.collab.empty")
                 }
             } else {
