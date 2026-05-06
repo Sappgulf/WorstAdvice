@@ -218,6 +218,18 @@ final class AppSessionSmokeTests: XCTestCase {
         XCTAssertFalse(payload.shouldGenerate)
     }
 
+    func testGetDailyQuoteIntentFormatsShortcutTextWithoutRoutingPayload() async throws {
+        _ = BadviceIntentRouter.shared.consume()
+
+        let quote = SharedDailyQuoteSource.quoteOfDay()
+        let shortcutText = BadviceDailyQuoteIntentFormatter.shortcutText(for: quote)
+
+        XCTAssertTrue(shortcutText.contains(quote.text))
+        XCTAssertTrue(shortcutText.contains(quote.source))
+        XCTAssertTrue(shortcutText.contains("Badvice"))
+        XCTAssertNil(BadviceIntentRouter.shared.consume())
+    }
+
     private func makeLocalAccountStore() -> (LocalAccountStore, UserDefaults) {
         let suiteName = "AppSessionSmokeTests.LocalAccountStore.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

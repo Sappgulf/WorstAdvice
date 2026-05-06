@@ -3,11 +3,12 @@
 A SwiftUI satire app that generates confidently wrong advice that still sounds plausible.
 
 ## Version
-- `4.8`
+- `6.3`
 
 ## Features
-- Five-tab app with default order: `Advice`, `Quotes`, `Favorites`, `History`, `Settings`
-- User-customizable tab bar order (Advice pinned first, Settings pinned last)
+- Focused main shell with `Advice`, `Friends`, `Chaos Hub`, and `Quotes` in the tab bar
+- `More` quick access keeps Saved, History, Explore, Challenges, Settings, and diagnostics reachable without crowding the primary flow
+- User-customizable main tab order with Advice pinned first
 - Categories (10): Dating, Fitness, Career, Money, Parenting, Tech, Social, Cooking, Travel, Productivity
 - Tone modes (9): Corporate Consultant, Alpha Podcast, Wizard, Influencer, Toxic Best Friend, Boomer, Crypto Bro, Minimalist Monk, Friend Roast
 - Themes (6): Warm, Dark, Neon, Sepia, Evergreen, Sunrise
@@ -44,6 +45,11 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - Expanded built-in quote bank for broader daily rotation and fewer repeats
   - Per-quote like/dislike + copy/share actions with analytics hooks
   - Quote Suggestion Lab for community quote submissions (moderated)
+- App Shortcuts:
+  - Open Badvice directly to useful destinations
+  - Generate bad advice with optional category, tone, friend, and scenario inputs
+  - Open today's quote ritual in Quotes
+  - Return today's quote inline without opening the app
 - Homescreen:
   - WidgetKit extension (`WorstAdviceWidget`) with a daily bad quote card (small/medium)
 - Viral loops:
@@ -86,7 +92,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - `Badvice/Views/*.swift`: tab screens, advice card, theming, share-card renderer
 
 ## Repository Layout
-- Canonical source tree: this repository root (`/Users/austinbeatty/Downloads/Badvice`).
+- Canonical source tree: this repository root (`/Users/austinbeatty/Downloads/WorstAdvice`).
 - App source: `Badvice/`
 - Widget source: `WorstAdviceWidget/`
 - Tests: `WorstAdviceTests/`
@@ -192,7 +198,7 @@ bash scripts/ci_xcodebuild_tests.sh
   - Sort modes (`Recent`, `Top Liked`, `Top Disliked`) filter as expected.
   - Per-quote like/dislike toggles persist.
   - Per-quote copy/share actions work from the visible row action menu.
-- Settings tab:
+- Settings:
   - Theme changes app visuals immediately.
   - Reduce Motion and Haptics toggles affect behavior.
   - Include fake rationale toggle affects newly generated advice.
@@ -203,7 +209,7 @@ bash scripts/ci_xcodebuild_tests.sh
   - Quote Suggestion Lab navigation opens submit/list/delete flow for community quotes.
   - Share caption style picker affects copied/shared text captions.
   - Strict no-repeat toggle enforces global uniqueness across generated advice lines.
-  - Tab bar customization reorders middle tabs while keeping Advice first and Settings last.
+- More keeps Settings and utility surfaces reachable while tab customization reorders the main shell.
 - Visual comfort:
   - Warm theme shows soft paper-like background texture and comfortable contrast for extended reading.
 - Widget:

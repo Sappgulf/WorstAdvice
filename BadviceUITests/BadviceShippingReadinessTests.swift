@@ -49,8 +49,7 @@ final class BadviceShippingReadinessTests: XCTestCase {
             ]),
             (id: "tab.friends", marker: [app.otherElements["friends.sectionPicker"], app.staticTexts["Friends"], app.buttons["friends.section.feed"]]),
             (id: "tab.quotes", marker: [app.otherElements["quotes.dailyHero"], app.staticTexts["Quotes"], app.buttons["quotes.spotlight.toggle"]]),
-            (id: "tab.explore", marker: [app.searchFields["explore.search"], app.staticTexts["Explore"], app.otherElements["explore.scrollArea"]]),
-            (id: "tab.groupChallenges", marker: [app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Challenge")).firstMatch, app.staticTexts["Group Challenges"], app.buttons["groupChallenges.card.play"]]),
+            (id: "tab.more", marker: [app.buttons["brandMenu.quickAccess.settings"], app.staticTexts["Quick Access"], app.navigationBars["Badvice"]]),
         ]
 
         for tabEntry in tabFlow where tabEntry.id != "tab.generate" {
@@ -72,6 +71,10 @@ final class BadviceShippingReadinessTests: XCTestCase {
             )
         }
 
+        let done = app.buttons["Done"].firstMatch
+        if done.waitForExistence(timeout: 2) {
+            done.tap()
+        }
         XCTAssertTrue(returnToGenerate(app: app))
         XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 5))
     }
@@ -187,15 +190,13 @@ final class BadviceShippingReadinessTests: XCTestCase {
     private func openSettings(app: XCUIApplication, timeout: TimeInterval = 15) -> Bool {
         if waitForSettingsShell(app: app) { return true }
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        if settingsTab.waitForExistence(timeout: 2) {
-            settingsTab.tap()
-            if waitForSettingsShell(app: app, timeout: 5) { return true }
-        }
-
         let brandMenu = findBrandMenuButton(app: app, timeout: 4, maxSwipes: 4)
         if let brandMenu {
             brandMenu.tap()
+            let settingsQuickAccess = app.buttons["brandMenu.quickAccess.settings"]
+            if settingsQuickAccess.waitForExistence(timeout: 4) {
+                settingsQuickAccess.tap()
+            }
             if waitForSettingsShell(app: app, timeout: 5) { return true }
         }
 
@@ -207,6 +208,10 @@ final class BadviceShippingReadinessTests: XCTestCase {
         let fallbackBrandMenu = findBrandMenuButton(app: app, timeout: 3, maxSwipes: 6)
         if let fallbackBrandMenu {
             fallbackBrandMenu.tap()
+            let settingsQuickAccess = app.buttons["brandMenu.quickAccess.settings"]
+            if settingsQuickAccess.waitForExistence(timeout: 4) {
+                settingsQuickAccess.tap()
+            }
             if waitForSettingsShell(app: app, timeout: 5) { return true }
         }
 
@@ -233,6 +238,9 @@ final class BadviceShippingReadinessTests: XCTestCase {
             candidates: [
                 app.buttons["settings.auth.signOut"],
                 app.buttons["settings.auth.changePassword"],
+                app.buttons["settings.menuButton"],
+                app.buttons["settings.socialHealth.open"],
+                app.buttons["settings.socialHealth.view"],
                 app.navigationBars["Settings"].firstMatch,
                 app.cells["settings.row.auth"],
             ],
@@ -270,11 +278,15 @@ final class BadviceShippingReadinessTests: XCTestCase {
             candidates: [
                 app.buttons["settings.auth.signOut"],
                 app.buttons["settings.auth.changePassword"],
+                app.buttons["settings.menuButton"],
+                app.buttons["settings.socialHealth.open"],
+                app.buttons["settings.socialHealth.view"],
                 app.navigationBars["Settings"].firstMatch,
                 app.cells["settings.row.auth"],
             ],
             timeout: timeout,
-            maxSwipes: 4
+            maxSwipes: 4,
+            requireHittable: false
         ) != nil
     }
 

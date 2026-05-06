@@ -408,8 +408,15 @@ struct ExploreTabView: View {
                     .font(.headline)
                     .foregroundStyle(primaryText)
                 Spacer()
-                Button(resetTitle, action: resetAction)
-                    .font(.caption.weight(.semibold))
+                Button(action: resetAction) {
+                    Text(resetTitle)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                        .padding(.horizontal, 10)
+                        .frame(minHeight: 32)
+                        .contentShape(Rectangle())
+                }
+                    .buttonStyle(.plain)
                     .foregroundStyle(isResetSelected ? accent : secondaryText)
                     .accessibilityIdentifier(resetIdentifier)
             }

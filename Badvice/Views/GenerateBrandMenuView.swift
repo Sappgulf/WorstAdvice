@@ -30,8 +30,11 @@ struct GenerateBrandMenuView: View {
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var socialStatusText: String {
         social.availability.isAvailable
-            ? "Quick access stays here so the main tab bar can stay focused on generating, progression, friends, and quotes."
+            ? "More keeps utility surfaces one tap away while the main bar stays focused on Advice, Friends, Hub, and Quotes."
             : social.availability.message
+    }
+    private var utilityTabs: [AppTab] {
+        quickAccessTabs.filter { $0 != .settings }
     }
 
     var body: some View {
@@ -118,7 +121,7 @@ struct GenerateBrandMenuView: View {
             }
         } content: {
             HStack(spacing: 8) {
-                menuMetric(title: "Tabs", value: "\(quickAccessTabs.count + (onSelectQuickAccessTab != nil ? 1 : 0))")
+                menuMetric(title: "More", value: "\(utilityTabs.count + (onSelectQuickAccessTab != nil ? 1 : 0))")
                 menuMetric(title: "CloudKit", value: social.availability.isAvailable ? "Ready" : "Check")
                 menuMetric(title: "Account", value: runningBrandAction ? "Busy" : "Local")
             }
@@ -131,19 +134,25 @@ struct GenerateBrandMenuView: View {
                 Text("Quick Access")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
-                Text("Jump to the secondary surfaces without crowding the main tab bar.")
+                Text("Open saved work, history, discovery, challenges, or settings without adding more tabs.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
             }
         } content: {
-            VStack(spacing: 10) {
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10)
+                ],
+                spacing: 10
+            ) {
                 if onSelectQuickAccessTab != nil {
                     quickAccessButton(title: "Settings", systemImage: "gearshape", accessibilityID: "brandMenu.quickAccess.settings") {
                         openQuickAccessTab(.settings)
                     }
                 }
 
-                ForEach(quickAccessTabs.filter { $0 != .settings }) { tab in
+                ForEach(utilityTabs) { tab in
                     quickAccessButton(
                         title: tab.title,
                         systemImage: tab.systemImage,
@@ -237,27 +246,41 @@ struct GenerateBrandMenuView: View {
     ) -> some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .frame(width: 22)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(accent.opacity(0.12))
+                    Image(systemName: systemImage)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(accent)
+                }
+                .frame(width: 34, height: 34)
 
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(primaryText)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(primaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
 
-                Spacer(minLength: 8)
+                    Text(title == "Settings" ? "System" : "Utility")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(secondaryText.opacity(0.75))
+                        .lineLimit(1)
+                }
 
-                Image(systemName: "arrow.up.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(secondaryText.opacity(0.7))
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: 62)
             .background(
                 RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
-                    .fill(accent.opacity(0.08))
+                    .fill(accent.opacity(0.07))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                            .stroke(accent.opacity(0.12), lineWidth: 1)
+                    )
             )
         }
         .buttonStyle(.plain)

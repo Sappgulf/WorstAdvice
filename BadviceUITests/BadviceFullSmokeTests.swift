@@ -97,7 +97,7 @@ final class BadviceFullSmokeTests: XCTestCase {
                     historyQuickAccessText,
                     app.buttons["Done"].firstMatch,
                     app.buttons["brandMenu.quickAccess.settings"],
-                    app.buttons["tab.settings"],
+                    app.buttons["tab.more"],
                 ],
                 timeout: 5,
                 maxSwipes: 6
@@ -576,7 +576,8 @@ final class BadviceFullSmokeTests: XCTestCase {
             settingsQuickAccess = waitForAnyElement(
                 app: app,
                 candidates: [
-                    app.buttons.matching(identifier: "tab.settings").firstMatch,
+                    app.buttons.matching(identifier: "tab.more").firstMatch,
+                    app.buttons["brandMenu.quickAccess.settings"],
                     app.tabBars.firstMatch.buttons.matching(identifier: "Settings").firstMatch,
                     app.navigationBars.element(boundBy: 0).buttons["Settings"],
                 ],
@@ -598,6 +599,8 @@ final class BadviceFullSmokeTests: XCTestCase {
 
         XCTAssertTrue(
             app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
+                || app.buttons["settings.menuButton"].waitForExistence(timeout: 5)
+                || app.buttons["settings.socialHealth.open"].waitForExistence(timeout: 5)
                 || app.navigationBars.firstMatch.waitForExistence(timeout: 5),
             "Settings quick access should land on the settings screen"
         )
@@ -892,7 +895,7 @@ final class BadviceFullSmokeTests: XCTestCase {
             app.buttons.matching(identifier: "tab.chaosHub").firstMatch,
             app.buttons.matching(identifier: "tab.friends").firstMatch,
             app.buttons.matching(identifier: "tab.quotes").firstMatch,
-            app.buttons.matching(identifier: "tab.settings").firstMatch,
+            app.buttons.matching(identifier: "tab.more").firstMatch,
         ]
         let deadline = Date().addingTimeInterval(timeout)
 
@@ -923,12 +926,12 @@ final class BadviceFullSmokeTests: XCTestCase {
         // Prefer the known-good brand menu path on device.
         let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
         if generateTab.waitForExistence(timeout: 2) { generateTab.tap() }
-            if let brandMenu = findBrandMenuButton(app: app, timeout: 5, maxSwipes: 8) {
-                brandMenu.tap()
-                if let settingsQuickAccess = findSettingsQuickAccessButton(app: app, timeout: 5, maxSwipes: 8) {
-                    settingsQuickAccess.tap()
-                } else if let settingsMenuButton = findSettingsDirectEntry(app: app, timeout: 5) {
-                    settingsMenuButton.tap()
+        if let brandMenu = findBrandMenuButton(app: app, timeout: 5, maxSwipes: 8) {
+            brandMenu.tap()
+            if let settingsQuickAccess = findSettingsQuickAccessButton(app: app, timeout: 5, maxSwipes: 8) {
+                settingsQuickAccess.tap()
+            } else if let settingsMenuButton = findSettingsDirectEntry(app: app, timeout: 5) {
+                settingsMenuButton.tap()
             }
         }
 
@@ -936,27 +939,13 @@ final class BadviceFullSmokeTests: XCTestCase {
         while Date() < deadline {
             if app.buttons["settings.auth.signOut"].exists
                 || app.buttons["settings.auth.changePassword"].exists
+                || app.buttons["settings.menuButton"].exists
+                || app.buttons["settings.socialHealth.open"].exists
                 || app.navigationBars.firstMatch.exists
             {
                 return true
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.25))
-        }
-
-        // Last resort: try the root settings tab directly.
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        if settingsTab.waitForExistence(timeout: 2) {
-            settingsTab.tap()
-            let directDeadline = Date().addingTimeInterval(5)
-            while Date() < directDeadline {
-                if app.buttons["settings.auth.signOut"].exists
-                    || app.buttons["settings.auth.changePassword"].exists
-                    || app.navigationBars.firstMatch.exists
-                {
-                    return true
-                }
-                RunLoop.current.run(until: Date().addingTimeInterval(0.25))
-            }
         }
 
         return false
@@ -1005,10 +994,12 @@ final class BadviceFullSmokeTests: XCTestCase {
         return waitForAnyElement(
             app: app,
             candidates: [
-                app.buttons.matching(identifier: "tab.settings").firstMatch,
+                app.buttons.matching(identifier: "tab.more").firstMatch,
+                app.buttons["brandMenu.quickAccess.settings"],
                 app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch,
                 app.navigationBars.element(boundBy: 0).buttons["Settings"],
                 app.buttons["settings.menuButton"],
+                app.buttons["settings.socialHealth.open"],
             ],
             timeout: timeout,
             maxSwipes: 4
@@ -1123,15 +1114,32 @@ final class BadviceFullSmokeTests: XCTestCase {
 
         focusTextInput(element, app: app)
 
-        if let currentValue = element.value as? String, !currentValue.isEmpty {
+        if let currentValue = element.value as? String, shouldClearTextInputValue(currentValue, for: element) {
             if app.keys["delete"].waitForExistence(timeout: 0.5) {
                 let deletePresses = String(repeating: "\u{8}", count: currentValue.count)
-                app.typeText(deletePresses)
+                element.typeText(deletePresses)
             } else {
-                app.typeText(String(repeating: "\u{8}", count: currentValue.count))
+                element.typeText(String(repeating: "\u{8}", count: currentValue.count))
             }
         }
-        app.typeText(text)
+        element.typeText(text)
+    }
+
+    private func shouldClearTextInputValue(_ value: String, for element: XCUIElement) -> Bool {
+        let placeholderValues = Set([
+            "Display name (optional)",
+            "Email",
+            "Create password",
+            "Confirm password"
+        ])
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedValue.isEmpty else { return false }
+        if placeholderValues.contains(trimmedValue) { return false }
+        if let placeholderValue = element.placeholderValue,
+           placeholderValue == value || placeholderValue == trimmedValue {
+            return false
+        }
+        return true
     }
 
     private func focusTextInput(_ element: XCUIElement, app: XCUIApplication) {

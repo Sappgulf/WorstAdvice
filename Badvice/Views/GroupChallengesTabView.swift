@@ -83,11 +83,11 @@ struct GroupChallengesTabView: View {
                 onCopyCode: {
                     UIPasteboard.general.string = challenge.inviteCode
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    withAnimation { copiedCode = challenge.inviteCode }
+                    copiedCode = challenge.inviteCode
                     copiedCodeDismissTask?.cancel()
                     copiedCodeDismissTask = Task { @MainActor in
                         defer { copiedCodeDismissTask = nil }
-                        try? await Task.sleep(for: .seconds(1.2))
+                        try? await Task.sleep(for: .seconds(5))
                         guard !Task.isCancelled else { return }
                         withAnimation { copiedCode = nil }
                     }
@@ -122,6 +122,7 @@ struct GroupChallengesTabView: View {
                             .clipShape(Capsule())
                             .padding(.bottom, 32)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .accessibilityIdentifier("groupChallenges.copyStatus")
                     } else if let feedback = joinFeedback {
                         Text(feedback)
                             .font(.subheadline.weight(.semibold))
@@ -298,6 +299,7 @@ struct GroupChallengesTabView: View {
             ForEach(activeChallenges) { challenge in
                 ChallengeCard(
                     challenge: challenge,
+                    isCopied: copiedCode == challenge.inviteCode,
                     accent: accent,
                     primaryText: primaryText,
                     secondaryText: secondaryText,
@@ -311,11 +313,11 @@ struct GroupChallengesTabView: View {
                     onCopyCode: {
                         UIPasteboard.general.string = challenge.inviteCode
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        withAnimation { copiedCode = challenge.inviteCode }
+                        copiedCode = challenge.inviteCode
                         copiedCodeDismissTask?.cancel()
                         copiedCodeDismissTask = Task { @MainActor in
                             defer { copiedCodeDismissTask = nil }
-                            try? await Task.sleep(for: .seconds(1.2))
+                            try? await Task.sleep(for: .seconds(5))
                             guard !Task.isCancelled else { return }
                             withAnimation { copiedCode = nil }
                         }
@@ -597,6 +599,7 @@ private struct ChallengeDetailSheet: View {
 
 struct ChallengeCard: View {
     let challenge: GroupChallenge
+    let isCopied: Bool
     let accent: Color
     let primaryText: Color
     let secondaryText: Color
@@ -646,31 +649,41 @@ struct ChallengeCard: View {
 
             leaderboardSection
 
-            HStack(spacing: 10) {
+            VStack(spacing: 8) {
                 Button(action: onPlay) {
                     Label("Play Now", systemImage: "play.fill")
                         .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity, minHeight: 42)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(accent)
                 .accessibilityIdentifier("groupChallenges.card.play")
 
-                Button(action: onCopyCode) {
-                    Label(challenge.inviteCode, systemImage: "doc.on.doc")
-                        .font(.caption.monospaced().weight(.semibold))
-                }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .accessibilityIdentifier("groupChallenges.card.copyCode")
+                HStack(spacing: 8) {
+                    Button(action: onCopyCode) {
+                        Label(isCopied ? "Copied" : "Copy Code", systemImage: isCopied ? "checkmark" : "doc.on.doc")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(accent)
+                    .accessibilityIdentifier("groupChallenges.card.copyCode")
+                    .accessibilityLabel(isCopied ? "Copied challenge code" : "Copy challenge code")
+                    .accessibilityValue(isCopied ? "Copied \(challenge.inviteCode)" : challenge.inviteCode)
+                    .accessibilityAction { onCopyCode() }
 
-                Button(action: onDetails) {
-                    Image(systemName: "info.circle")
-                        .foregroundStyle(accent)
+                    Button(action: onDetails) {
+                        Image(systemName: "info.circle")
+                            .font(.headline)
+                            .foregroundStyle(accent)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Challenge details")
+                    .accessibilityIdentifier("groupChallenges.card.details")
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Challenge details")
-                .accessibilityIdentifier("groupChallenges.card.details")
             }
         }
         .padding(14)

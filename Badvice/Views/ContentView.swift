@@ -112,6 +112,8 @@ struct ContentView: View {
     @State private var authConfirmPasswordDraft = ""
     @State private var authDisplayNameDraft = ""
     @State private var showingSettingsRoot = false
+    @State private var showingShellMenu = false
+    @State private var shellToast: ToastMessage? = nil
     @State private var lastShakeHandledAt: Date = .distantPast
     @State private var lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @StateObject private var shakeDetector = ShakeDetector()
@@ -411,6 +413,8 @@ struct ContentView: View {
         selectedTab = .generate
         loadedTabs = [.generate]
         showingSettingsRoot = false
+        showingShellMenu = false
+        shellToast = nil
         tabBarVisible = true
         showConfetti = false
         lastShakeHandledAt = .distantPast
@@ -550,7 +554,7 @@ struct ContentView: View {
                     .environment(\.tabBarVisible, $tabBarVisible)
             } else {
                 TabView(selection: $selectedTab) {
-                    ForEach(session.settings.tabOrder) { tab in
+                    ForEach(shellTabs(for: session)) { tab in
                         lazyTabContent(for: tab, session: session)
                             .tag(tab)
                             .tabItem {
@@ -718,6 +722,13 @@ struct ContentView: View {
                             )
                             .accessibilityAddTraits(isSelected ? .isSelected : [])
                         }
+
+                        shellMenuButton(
+                            session: session,
+                            accent: accent,
+                            secondaryText: secondaryText,
+                            tabBarStyle: tabBarStyle
+                        )
                     }
                     .contentShape(Rectangle())
                     .background(
@@ -829,6 +840,109 @@ struct ContentView: View {
             // Confetti overlay — fires on streak milestones
             ConfettiView(isActive: $showConfetti, lowPowerMode: effectiveLowPowerMode)
         }
+        .sheet(isPresented: $showingShellMenu) {
+            #if DEBUG
+                GenerateBrandMenuView(
+                    social: session.social,
+                    settings: session.settings,
+                    quickAccessTabs: brandMenuTabs(),
+                    isPresented: $showingShellMenu,
+                    activeToast: $shellToast,
+                    onSelectQuickAccessTab: { tab in
+                        openShellMenuTab(tab, session: session)
+                    },
+                    onResetAllLocalAccounts: {
+                        await resetAllLocalAccounts(using: auth, session: session)
+                    },
+                    onRefreshSocialAvailability: {
+                        await refreshSocialAvailabilityToast(session: session)
+                    },
+                    onReseedCloudKitSchema: {
+                        await reseedCloudKitSchemaToast(session: session)
+                    }
+                )
+            #else
+                GenerateBrandMenuView(
+                    social: session.social,
+                    settings: session.settings,
+                    quickAccessTabs: brandMenuTabs(),
+                    isPresented: $showingShellMenu,
+                    activeToast: $shellToast,
+                    onSelectQuickAccessTab: { tab in
+                        openShellMenuTab(tab, session: session)
+                    },
+                    onResetAllLocalAccounts: {
+                        await resetAllLocalAccounts(using: auth, session: session)
+                    },
+                    onRefreshSocialAvailability: {
+                        await refreshSocialAvailabilityToast(session: session)
+                    }
+                )
+            #endif
+        }
+        .toast(item: $shellToast, accentColor: Theme.accent(for: session.settings.theme))
+    }
+
+    private func shellMenuButton(
+        session: AppSessionViewModel,
+        accent: Color,
+        secondaryText: Color,
+        tabBarStyle: ThemeTabBarStyle
+    ) -> some View {
+        let isSelected = showingShellMenu || showingSettingsRoot || brandMenuTabs().contains(selectedTab)
+        let badgeCount = session.social.incomingRequests.count
+
+        return Button {
+            HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
+            showingShellMenu = true
+        } label: {
+            VStack(spacing: 3) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 20, weight: isSelected ? .bold : .semibold))
+                        .symbolVariant(.circle)
+
+                    if badgeCount > 0 {
+                        Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Capsule(style: .continuous).fill(.red))
+                            .offset(x: 12, y: -7)
+                            .accessibilityIdentifier("tab.more.badge")
+                    }
+                }
+
+                Text("More")
+                    .font(.system(size: 9, weight: isSelected ? .semibold : .regular))
+                    .lineLimit(1)
+
+                Capsule(style: .continuous)
+                    .fill(accent.opacity(isSelected ? 0.9 : 0))
+                    .frame(width: isSelected ? 18 : 8, height: 3)
+                    .opacity(isSelected ? 1 : 0.01)
+            }
+            .foregroundStyle(isSelected ? accent : secondaryText.opacity(0.74))
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: Theme.minimumTapTarget)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+            .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
+            .background {
+                if isSelected {
+                    Capsule(style: .continuous)
+                        .fill(accent.opacity(tabBarStyle.selectedFillOpacity))
+                        .padding(.horizontal, max(4, tabBarStyle.indicatorInset + 3))
+                        .padding(.vertical, 1)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("More")
+        .accessibilityHint("Opens Saved, History, Explore, Challenges, and Settings")
+        .accessibilityIdentifier("tab.more")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
 
     private func appShellStatusBanner(
@@ -1041,7 +1155,7 @@ struct ContentView: View {
         }
 
         if let requestedTab = component.flatMap({ AppTab(rawValue: $0) }) {
-            setSelectedTab(requestedTab, session: session)
+            openShellMenuTab(requestedTab, session: session)
             guard requestedTab == .generate else { return }
             applyGenerateIntent(
                 tab: requestedTab,
@@ -1100,7 +1214,7 @@ struct ContentView: View {
         }
 
         if host == "settings" || pathParts.contains("settings") {
-            setSelectedTab(.settings, session: session)
+            openShellMenuTab(.settings, session: session)
             return
         }
 
@@ -1163,7 +1277,7 @@ struct ContentView: View {
             switch payload.command {
             case .openTab:
                 if let tabValue = payload.tab, let tab = AppTab(rawValue: tabValue) {
-                    setSelectedTab(tab, session: session)
+                    openShellMenuTab(tab, session: session)
                 }
 
             case .generateAdvice:
@@ -1211,7 +1325,7 @@ struct ContentView: View {
                     social: session.social,
                     onDataChanged: { session.refreshLists() },
                     onOpenTab: { tab in
-                        setSelectedTab(tab, session: session)
+                        openShellMenuTab(tab, session: session)
                     },
                     isActive: selectedTab == .generate,
                     settingsPresented: showingSettingsRoot,
@@ -1233,7 +1347,7 @@ struct ContentView: View {
                     social: session.social,
                     onDataChanged: { session.refreshLists() },
                     onOpenTab: { tab in
-                        setSelectedTab(tab, session: session)
+                        openShellMenuTab(tab, session: session)
                     },
                     isActive: selectedTab == .generate,
                     settingsPresented: showingSettingsRoot,
@@ -1252,7 +1366,7 @@ struct ContentView: View {
                 settings: session.settings,
                 social: session.social,
                 onOpenTab: { tab in
-                    setSelectedTab(tab, session: session)
+                    openShellMenuTab(tab, session: session)
                 },
                 onDataChanged: {
                     session.refreshLists()
@@ -1263,7 +1377,7 @@ struct ContentView: View {
                 social: session.social,
                 settings: session.settings,
                 onOpenTab: { tab in
-                    setSelectedTab(tab, session: session)
+                    openShellMenuTab(tab, session: session)
                 }
             )
         case .quotes:
@@ -1275,7 +1389,7 @@ struct ContentView: View {
                     setSelectedTab(.generate, session: session)
                 },
                 onOpenTab: { tab in
-                    setSelectedTab(tab, session: session)
+                    openShellMenuTab(tab, session: session)
                 }
             )
         case .favorites:
@@ -1326,7 +1440,7 @@ struct ContentView: View {
                 generateViewModel: session.generate,
                 settings: session.settings,
                 onOpenTab: { tab in
-                    setSelectedTab(tab, session: session)
+                    openShellMenuTab(tab, session: session)
                 }
             )
         }
@@ -1342,7 +1456,7 @@ struct ContentView: View {
         tabDragHighlight = selectedTab
         tabSlideLastIndex = tabs.firstIndex(of: selectedTab) ?? 0
         if tabBarWidth > 0 {
-            let tabWidth = tabBarWidth / CGFloat(tabs.count)
+            let tabWidth = tabBarWidth / CGFloat(tabs.count + 1)
             tabSlideLastSwitchX = (CGFloat(tabSlideLastIndex ?? 0) + 0.5) * tabWidth
         } else {
             tabSlideLastSwitchX = 0
@@ -1360,10 +1474,16 @@ struct ContentView: View {
         guard tabSlideModeActive, !tabs.isEmpty else { return }
         guard locationX.isFinite, tabBarWidth.isFinite, tabBarWidth > 0 else { return }
 
-        let tabWidth = tabBarWidth / CGFloat(tabs.count)
+        let tabWidth = tabBarWidth / CGFloat(tabs.count + 1)
         guard tabWidth.isFinite, tabWidth > .ulpOfOne else { return }
 
-        let clampedX = min(max(locationX, 0), max(tabBarWidth - 0.001, 0))
+        let primaryTabsWidth = tabWidth * CGFloat(tabs.count)
+        guard locationX < primaryTabsWidth else {
+            tabDragHighlight = nil
+            return
+        }
+
+        let clampedX = min(max(locationX, 0), max(primaryTabsWidth - 0.001, 0))
         guard clampedX.isFinite else { return }
         let indexValue = clampedX / tabWidth
         guard indexValue.isFinite else { return }
@@ -1427,6 +1547,12 @@ struct ContentView: View {
     }
 
     private func setSelectedTab(_ tab: AppTab, session: AppSessionViewModel) {
+        if tab == .settings {
+            showingSettingsRoot = true
+            tabBarVisible = true
+            return
+        }
+
         showingSettingsRoot = false
         loadedTabs.insert(tab)
         Self.logger.debug("Selected tab -> \(tab.rawValue, privacy: .public)")
@@ -1441,11 +1567,30 @@ struct ContentView: View {
         }
     }
 
+    private func openShellMenuTab(_ tab: AppTab, session: AppSessionViewModel) {
+        if tab == .settings {
+            showingSettingsRoot = true
+            tabBarVisible = true
+            return
+        }
+
+        setSelectedTab(tab, session: session)
+    }
+
     private func primaryTabs(for session: AppSessionViewModel) -> [AppTab] {
-        let overflow = Set(brandMenuTabs())
-        var tabs = AppTab.primaryNavigationTabs.filter { !overflow.contains($0) }
-        if settingsTabAvailable, session.settings.tabOrder.contains(.settings), !tabs.contains(.settings) {
-            tabs.append(.settings)
+        let allowedPrimary = Set(AppTab.primaryNavigationTabs)
+        var seen = Set<AppTab>()
+        let orderedPrimaryTabs = session.settings.tabOrder.filter { tab in
+            allowedPrimary.contains(tab) && seen.insert(tab).inserted
+        }
+        let missingPrimaryTabs = AppTab.primaryNavigationTabs.filter { !seen.contains($0) }
+        return orderedPrimaryTabs + missingPrimaryTabs
+    }
+
+    private func shellTabs(for session: AppSessionViewModel) -> [AppTab] {
+        var tabs = primaryTabs(for: session)
+        if !tabs.contains(selectedTab), selectedTab != .settings {
+            tabs.append(selectedTab)
         }
         return tabs
     }

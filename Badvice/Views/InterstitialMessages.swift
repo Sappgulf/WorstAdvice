@@ -1507,13 +1507,13 @@ struct SettingsTabView: View {
     private var aboutSection: some View {
         settingsCard(title: "App & Layout", icon: "square.3.layers.3d") {
             VStack(spacing: 12) {
-                Text("Advice stays first. Friends, Chaos Hub, and Quotes stay in the main bar.")
+                Text("Advice stays first. Friends, Hub, and Quotes stay in the main bar.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 10)
 
-                Text("Explore, Challenges, Saved, History, and Settings now live in the Badvice logo menu.")
+                Text("Saved, History, Explore, Challenges, and Settings now live behind More.")
                     .font(.caption2)
                     .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)

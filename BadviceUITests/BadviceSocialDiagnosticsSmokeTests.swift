@@ -279,6 +279,9 @@ final class BadviceSocialDiagnosticsSmokeTests: XCTestCase {
         while Date() < deadline {
             if app.buttons["settings.auth.signOut"].exists
                 || app.buttons["settings.auth.changePassword"].exists
+                || app.buttons["settings.menuButton"].exists
+                || app.buttons["settings.socialHealth.open"].exists
+                || app.buttons["settings.socialHealth.view"].exists
                 || app.navigationBars.firstMatch.exists
             {
                 return true

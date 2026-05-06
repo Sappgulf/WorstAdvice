@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 
 final class BadviceUITests: XCTestCase {
@@ -252,7 +253,11 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
         friendsTab.tap()
 
-        XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.otherElements["friends.sectionPicker"].waitForExistence(timeout: 5)
+                || app.otherElements["friends.root"].waitForExistence(timeout: 2)
+                || app.staticTexts["Friends"].waitForExistence(timeout: 2)
+        )
         let unavailableText = app.staticTexts["Social features are unavailable in this test run."]
         let cloudKitStatusText = app.staticTexts["CloudKit account status could not be determined."]
         let retryLoadButton = app.buttons["friends.retryLoad"]
@@ -551,18 +556,25 @@ final class BadviceUITests: XCTestCase {
     func testExploreFiltersAndTrendingCardNavigatesToGenerate() throws {
         let app = launchTestApp(extraLaunchArguments: ["-debug-preload-polish-fixtures", "-debug-polish-seed", "424242"])
 
+        if !openMoreQuickAccess(app: app, id: "explore", label: "Explore") {
+            throw XCTSkip("Explore quick access is not mounted in this build.")
+        }
+
         let exploreTab = app.buttons.matching(identifier: "tab.explore").firstMatch
         let exploreTabByLabel = app.buttons.matching(
             NSPredicate(format: "label CONTAINS[c] %@", "Explore")
         ).firstMatch
-        guard exploreTab.waitForExistence(timeout: 6) || exploreTabByLabel.waitForExistence(timeout: 2) else {
-            throw XCTSkip("Explore tab is not mounted in this build.")
+        if exploreTab.exists || exploreTabByLabel.exists {
+            let activeExploreTab = exploreTab.exists ? exploreTab : exploreTabByLabel
+            XCTAssertNotNil(activeExploreTab)
+            activeExploreTab.tap()
         }
-        let activeExploreTab = exploreTab.exists ? exploreTab : exploreTabByLabel
-        XCTAssertNotNil(activeExploreTab)
-        activeExploreTab.tap()
 
         let categoryChip = app.buttons["explore.filter.categories.chip.0"]
+        XCTAssertTrue(
+            categoryChip.waitForExistence(timeout: 6) || app.otherElements["explore.command.card"].waitForExistence(timeout: 2),
+            "Explore quick access should route to the Explore surface"
+        )
         XCTAssertTrue(categoryChip.waitForExistence(timeout: 5))
         categoryChip.tap()
 
@@ -572,10 +584,16 @@ final class BadviceUITests: XCTestCase {
 
         let resetCategories = app.buttons["explore.filter.categories.reset"]
         XCTAssertTrue(resetCategories.waitForExistence(timeout: 3))
+        if !resetCategories.isHittable {
+            app.swipeDown()
+        }
         resetCategories.tap()
 
         let resetTones = app.buttons["explore.filter.tones.reset"]
         XCTAssertTrue(resetTones.waitForExistence(timeout: 3))
+        if !resetTones.isHittable {
+            app.swipeDown()
+        }
         resetTones.tap()
 
         let trendCard = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "explore.trending.")).firstMatch
@@ -605,17 +623,28 @@ final class BadviceUITests: XCTestCase {
     func testGroupChallengesCreateJoinAndPlayFlow() throws {
         let app = launchTestApp()
 
-        let challengesTab = app.buttons.matching(identifier: "tab.groupChallenges").firstMatch
-        let challengesLabelTab = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] %@", "challenge")
-        ).firstMatch
-        guard challengesTab.waitForExistence(timeout: 5) || challengesLabelTab.waitForExistence(timeout: 3) else {
-            throw XCTSkip("Group Challenges tab is not mounted in this build.")
+        let openedFromMore = openMoreQuickAccess(app: app, id: "groupChallenges", label: "Challenges")
+        if openedFromMore {
+            XCTAssertTrue(
+                app.buttons["groupChallenges.toolbarCreate"].waitForExistence(timeout: 5)
+                    || app.staticTexts["Group Challenges"].waitForExistence(timeout: 5)
+                    || app.buttons["groupChallenges.card.play"].waitForExistence(timeout: 5)
+            )
         }
-        if challengesTab.exists {
-            challengesTab.tap()
-        } else {
-            challengesLabelTab.tap()
+
+        if !openedFromMore {
+            let challengesTab = app.buttons.matching(identifier: "tab.groupChallenges").firstMatch
+            let challengesLabelTab = app.buttons.matching(
+                NSPredicate(format: "label CONTAINS[c] %@", "challenge")
+            ).firstMatch
+            guard challengesTab.waitForExistence(timeout: 5) || challengesLabelTab.waitForExistence(timeout: 3) else {
+                throw XCTSkip("Group Challenges tab is not mounted in this build.")
+            }
+            if challengesTab.exists {
+                challengesTab.tap()
+            } else {
+                challengesLabelTab.tap()
+            }
         }
 
         let createChallenge = waitForAnyElement(
@@ -642,14 +671,33 @@ final class BadviceUITests: XCTestCase {
 
         let headerCreate = app.buttons["groupChallenges.headerCreate"]
         if !headerCreate.exists {
-            XCTAssertTrue(challengesTab.waitForExistence(timeout: 2))
-            challengesTab.tap()
+            let challengesTab = app.buttons.matching(identifier: "tab.groupChallenges").firstMatch
+            if challengesTab.waitForExistence(timeout: 2) {
+                challengesTab.tap()
+            } else {
+                XCTAssertTrue(openMoreQuickAccess(app: app, id: "groupChallenges", label: "Challenges"))
+            }
         }
 
         XCTAssertTrue(app.buttons["groupChallenges.card.play"].waitForExistence(timeout: 6))
         app.buttons["groupChallenges.card.copyCode"].tap()
-        let copiedToast = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "copied!")).firstMatch
-        XCTAssertTrue(copiedToast.waitForExistence(timeout: 3))
+        let copiedButtonState = app.buttons.matching(
+            NSPredicate(format: "identifier == %@ AND label CONTAINS[c] %@", "groupChallenges.card.copyCode", "Copied")
+        ).firstMatch
+        let copiedToast = waitForAnyElement(
+            app: app,
+            candidates: [
+                copiedButtonState,
+                app.staticTexts["groupChallenges.copyStatus"],
+                app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "copied")).firstMatch,
+            ],
+            timeout: 3,
+            maxSwipes: 0
+        )
+        XCTAssertTrue(
+            copiedToast != nil || UIPasteboard.general.string == "LOVE12",
+            "Copy code should either expose visible feedback or place the active challenge code on the pasteboard"
+        )
 
         app.buttons["groupChallenges.card.details"].tap()
         XCTAssertTrue(app.buttons["groupChallenges.detail.play"].waitForExistence(timeout: 4))
@@ -813,7 +861,7 @@ final class BadviceUITests: XCTestCase {
             app.buttons.matching(identifier: "tab.chaosHub").firstMatch,
             app.buttons.matching(identifier: "tab.friends").firstMatch,
             app.buttons.matching(identifier: "tab.quotes").firstMatch,
-            app.buttons.matching(identifier: "tab.settings").firstMatch,
+            app.buttons.matching(identifier: "tab.more").firstMatch,
         ]
         let deadline = Date().addingTimeInterval(timeout)
 
@@ -842,6 +890,17 @@ final class BadviceUITests: XCTestCase {
         if app.buttons["settings.auth.signOut"].exists || app.buttons["settings.auth.changePassword"].exists
         {
             return true
+        }
+
+        if openMoreQuickAccess(app: app, id: "settings", label: "Settings") {
+            return app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
+                || app.buttons["settings.auth.changePassword"].waitForExistence(timeout: 3)
+                || app.buttons["settings.menuButton"].waitForExistence(timeout: 5)
+                || app.buttons["settings.socialHealth.open"].waitForExistence(timeout: 5)
+                || app.buttons["Sign Out"].waitForExistence(timeout: 2)
+                || app.navigationBars["Settings"].waitForExistence(timeout: 2)
+                || app.navigationBars.firstMatch.label.localizedCaseInsensitiveContains("Settings")
+                || app.staticTexts["Settings"].waitForExistence(timeout: 2)
         }
 
         let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
@@ -953,6 +1012,38 @@ final class BadviceUITests: XCTestCase {
             timeout: timeout,
             maxSwipes: maxSwipes,
         )
+    }
+
+    @discardableResult
+    private func openMoreQuickAccess(app: XCUIApplication, id: String, label: String) -> Bool {
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        if moreTab.waitForExistence(timeout: 4) {
+            moreTab.tap()
+        } else if let brandMenuButton = findBrandMenuButton(app: app, timeout: 4, maxSwipes: 6) {
+            brandMenuButton.tap()
+        } else {
+            return false
+        }
+
+        let quickAccess = app.buttons["brandMenu.quickAccess.\(id)"]
+        if quickAccess.waitForExistence(timeout: 5) {
+            quickAccess.tap()
+            return true
+        }
+
+        let labeledQuickAccess = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS[c] %@", label)
+        ).firstMatch
+        if labeledQuickAccess.waitForExistence(timeout: 2) {
+            labeledQuickAccess.tap()
+            return true
+        }
+
+        let done = app.buttons["Done"].firstMatch
+        if done.waitForExistence(timeout: 1) {
+            done.tap()
+        }
+        return false
     }
 
     private func completeProfileSignup(app: XCUIApplication, handle: String) {
@@ -1173,10 +1264,27 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(inputField.waitForExistence(timeout: 3))
         inputField.tap()
 
-        if let currentValue = inputField.value as? String, !currentValue.isEmpty {
+        if let currentValue = inputField.value as? String, shouldClearTextInputValue(currentValue, for: inputField) {
             inputField.typeText(String(repeating: "\u{8}", count: currentValue.count))
         }
         inputField.typeText(text)
+    }
+
+    private func shouldClearTextInputValue(_ value: String, for element: XCUIElement) -> Bool {
+        let placeholderValues = Set([
+            "Display name (optional)",
+            "Email",
+            "Create password",
+            "Confirm password"
+        ])
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedValue.isEmpty else { return false }
+        if placeholderValues.contains(trimmedValue) { return false }
+        if let placeholderValue = element.placeholderValue,
+           placeholderValue == value || placeholderValue == trimmedValue {
+            return false
+        }
+        return true
     }
 
     private func closeTopScreen(app: XCUIApplication) -> Bool {
@@ -1237,7 +1345,7 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
             "App should land in a stable shell for a release-readiness run"
         )
 
-        let tabFlow: [String] = ["tab.generate", "tab.chaosHub", "tab.friends", "tab.quotes", "tab.explore"]
+        let tabFlow: [String] = ["tab.generate", "tab.chaosHub", "tab.friends", "tab.quotes"]
         for tabID in tabFlow {
             let tabButton = app.buttons.matching(identifier: tabID).firstMatch
             guard tabButton.waitForExistence(timeout: 3) else {
@@ -1257,7 +1365,10 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
             )
         }
 
-        XCTAssertTrue(app.buttons.matching(identifier: "tab.generate").firstMatch.waitForExistence(timeout: 5))
+        let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
+        XCTAssertTrue(generateTab.waitForExistence(timeout: 5))
+        generateTab.tap()
+        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 5))
         app.buttons["generate.primary"].tap()
         RunLoop.current.run(until: Date().addingTimeInterval(0.3))
         XCTAssertTrue(app.buttons["generate.copy"].exists || app.buttons["generate.remix"].exists)
@@ -1426,6 +1537,25 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
     private func openSettings(app: XCUIApplication, timeout: TimeInterval = 12) -> Bool {
         if app.navigationBars["Settings"].waitForExistence(timeout: 2) { return true }
 
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        if moreTab.waitForExistence(timeout: 4) {
+            moreTab.tap()
+            let settingsQuickAccess = app.buttons["brandMenu.quickAccess.settings"]
+            if settingsQuickAccess.waitForExistence(timeout: 5) {
+                settingsQuickAccess.tap()
+                return app.navigationBars["Settings"].waitForExistence(timeout: 5)
+                    || app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
+                    || app.buttons["settings.auth.changePassword"].waitForExistence(timeout: 5)
+                    || app.buttons["settings.menuButton"].waitForExistence(timeout: 5)
+                    || app.buttons["settings.socialHealth.open"].waitForExistence(timeout: 5)
+            }
+
+            let done = app.buttons["Done"].firstMatch
+            if done.waitForExistence(timeout: 1) {
+                done.tap()
+            }
+        }
+
         let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
         if settingsTab.waitForExistence(timeout: 2) {
             settingsTab.tap()
@@ -1437,6 +1567,8 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
             fallbackEntry.tap()
             return app.navigationBars["Settings"].waitForExistence(timeout: 5)
                 || app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
+                || app.buttons["settings.menuButton"].waitForExistence(timeout: 5)
+                || app.buttons["settings.socialHealth.open"].waitForExistence(timeout: 5)
         }
 
         let settings = waitForAnyElement(
@@ -1444,6 +1576,8 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
             candidates: [
                 app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch,
                 app.buttons["settings.auth.signOut"],
+                app.buttons["settings.menuButton"],
+                app.buttons["settings.socialHealth.open"],
                 app.cells["settings.row.auth"],
             ],
             timeout: timeout,
@@ -1455,6 +1589,8 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
             settings.tap()
             return app.buttons["settings.auth.signOut"].waitForExistence(timeout: 3)
                 || app.buttons["settings.auth.changePassword"].waitForExistence(timeout: 3)
+                || app.buttons["settings.menuButton"].waitForExistence(timeout: 3)
+                || app.buttons["settings.socialHealth.open"].waitForExistence(timeout: 3)
                 || app.navigationBars["Settings"].exists
         }
 

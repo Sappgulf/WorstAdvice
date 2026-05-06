@@ -712,8 +712,56 @@ extension OpenDailyQuoteIntent {
 }
 
 @available(iOS 16.0, *)
+enum BadviceDailyQuoteIntentFormatter {
+    static func shortcutText(for quote: SharedDailyQuote) -> String {
+        "\"\(quote.text)\"\n- \(quote.source)\n\nBadvice"
+    }
+
+    static func dialogText(for quote: SharedDailyQuote) -> IntentDialog {
+        IntentDialog("\(quote.text) - \(quote.source)")
+    }
+}
+
+@available(iOS 16.0, *)
+struct GetDailyQuoteIntent: AppIntent {
+    static let title: LocalizedStringResource = "Get daily Badvice quote"
+    static let description = IntentDescription(
+        "Return today's Badvice quote without opening the app."
+    )
+    @available(iOS 26.0, *)
+    static var supportedModes: IntentModes { .background }
+    static var parameterSummary: some ParameterSummary {
+        Summary("Get today's Badvice quote")
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
+        let quote = SharedDailyQuoteSource.quoteOfDay()
+        return .result(
+            value: BadviceDailyQuoteIntentFormatter.shortcutText(for: quote),
+            dialog: BadviceDailyQuoteIntentFormatter.dialogText(for: quote)
+        )
+    }
+}
+
+@available(iOS 16.0, *)
+@available(*, deprecated, message: "Use supportedModes instead")
+extension GetDailyQuoteIntent {
+    static var openAppWhenRun: Bool { false }
+}
+
+@available(iOS 16.0, *)
 struct BadviceShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
+        AppShortcut(
+            intent: GetDailyQuoteIntent(),
+            phrases: [
+                "Get today's Badvice quote in ${applicationName}",
+                "Read today's Badvice quote in ${applicationName}",
+                "What is today's Badvice quote in ${applicationName}"
+            ],
+            shortTitle: "Get Quote",
+            systemImageName: "text.quote"
+        )
         AppShortcut(
             intent: OpenDailyQuoteIntent(),
             phrases: [

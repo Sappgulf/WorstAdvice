@@ -95,7 +95,7 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             print("Brand menu not discoverable from current UI state; continuing with tab-cycle fallback.")
         }
 
-        let tabOrder = ["tab.generate", "tab.chaosHub", "tab.friends", "tab.quotes", "tab.explore"]
+        let tabOrder = ["tab.generate", "tab.chaosHub", "tab.friends", "tab.quotes", "tab.more"]
         for tabID in tabOrder where tabID != "tab.generate" {
             let tab = app.buttons.matching(identifier: tabID).firstMatch
             if !tab.waitForExistence(timeout: 2) { continue }
@@ -127,6 +127,13 @@ final class BadvicePolishedSmokeTests: XCTestCase {
                 alive,
                 "Tab \(tabID) should show content without requiring an exact element contract"
             )
+
+            if tabID == "tab.more" {
+                let done = app.buttons["Done"].firstMatch
+                if done.waitForExistence(timeout: 2) {
+                    done.tap()
+                }
+            }
         }
 
         // Verify we can still get back to generate.
