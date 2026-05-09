@@ -147,7 +147,8 @@ final class LocalModelStore: ObservableObject {
         }
     }
 
-    func reloadAvailableModelsNowForTesting() async {
+    func reloadAvailableModelsNow() async {
+        reloadTask?.cancel()
         let snapshot = await Self.discoverSnapshot(
             fileManager: fileManager,
             bundle: bundle,
@@ -159,7 +160,15 @@ final class LocalModelStore: ObservableObject {
         applyDiscoverySnapshot(snapshot)
     }
 
-    func installModel(id: String) async throws {
+    func reloadAvailableModelsNowForTesting() async {
+        await reloadAvailableModelsNow()
+    }
+
+    func installModel(
+        id: String,
+        systemMaxPollCount: Int = 8,
+        systemPollDelay: Duration = .seconds(1)
+    ) async throws {
         guard let descriptor = availableModels.first(where: { $0.id == id }) else {
             throw NSError(
                 domain: "LocalModelStore",
@@ -171,7 +180,10 @@ final class LocalModelStore: ObservableObject {
         if descriptor.isSystemModel {
             installStateByID[id] = .installing(progress: nil)
             debugLog("install begin id=\(id) source=system")
-            let availability = await AppleOnDeviceAdviceBridge.prewarmSystemModelAndPoll()
+            let availability = await AppleOnDeviceAdviceBridge.prewarmSystemModelAndPoll(
+                maxPollCount: systemMaxPollCount,
+                pollDelay: systemPollDelay
+            )
             switch availability {
             case .ready:
                 installStateByID[id] = warmedModelIDs.contains(id) ? .ready : .installed
@@ -233,7 +245,11 @@ final class LocalModelStore: ObservableObject {
         }
     }
 
-    func warmUp(id: String) async {
+    func warmUp(
+        id: String,
+        systemMaxPollCount: Int = 8,
+        systemPollDelay: Duration = .seconds(1)
+    ) async {
         guard let descriptor = availableModels.first(where: { $0.id == id }) else { return }
         let perfToken = AppPerformanceInstrumentation.beginLocalModelWarmUpInterval(modelID: id)
         defer { AppPerformanceInstrumentation.endLocalModelWarmUpInterval(perfToken, modelID: id) }
@@ -242,7 +258,10 @@ final class LocalModelStore: ObservableObject {
         debugLog("warmup begin id=\(id) path=\(descriptor.fileURL.path)")
 
         if descriptor.isSystemModel {
-            let availability = await AppleOnDeviceAdviceBridge.prewarmSystemModelAndPoll()
+            let availability = await AppleOnDeviceAdviceBridge.prewarmSystemModelAndPoll(
+                maxPollCount: systemMaxPollCount,
+                pollDelay: systemPollDelay
+            )
             switch availability {
             case .ready:
                 warmedModelIDs.insert(id)
@@ -944,4 +963,3 @@ final class LocalModelStore: ObservableObject {
         }
     }
 }
-

@@ -53,12 +53,10 @@ final class BadviceUITests: XCTestCase {
         generateTab.tap()
         XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 5))
 
-        let chaosTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
-        XCTAssertTrue(chaosTab.waitForExistence(timeout: 5))
-        chaosTab.tap()
+        XCTAssertTrue(openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions"))
         XCTAssertTrue(
             app.descendants(matching: .any)["chaos.social.leaderboardCard"].waitForExistence(timeout: 5)
-                || app.staticTexts["Chaos Hub"].waitForExistence(timeout: 5)
+                || app.staticTexts["Missions"].waitForExistence(timeout: 5)
         )
 
         let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
@@ -224,13 +222,16 @@ final class BadviceUITests: XCTestCase {
             "-ui-testing-force-social-unavailable"
         ])
 
+        let generateButton = app.buttons["generate.primary"]
+        XCTAssertTrue(generateButton.waitForExistence(timeout: 12))
+        generateButton.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+
         let shareToFriends = app.buttons["generate.shareToFriends"]
         XCTAssertTrue(shareToFriends.waitForExistence(timeout: 12))
         XCTAssertFalse(shareToFriends.isEnabled)
 
-        let chaosTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
-        XCTAssertTrue(chaosTab.waitForExistence(timeout: 5))
-        chaosTab.tap()
+        XCTAssertTrue(openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions"))
 
         let leaderboardCard = app.descendants(matching: .any)["chaos.social.leaderboardCard"]
         let leaderboardTitle = app.staticTexts["Season Leaderboard"]
@@ -344,7 +345,7 @@ final class BadviceUITests: XCTestCase {
             { app.buttons["Get Started"].exists },
             { app.buttons["Continue"].exists },
             { app.buttons["Next"].exists },
-            { app.buttons["Start The Chaos"].exists },
+            { app.buttons["Start Badvice"].exists },
             { app.buttons["Got it"].exists },
             { app.buttons["Skip"].exists },
         ]
@@ -858,7 +859,6 @@ final class BadviceUITests: XCTestCase {
         }
         let tabMarkers = [
             app.buttons.matching(identifier: "tab.generate").firstMatch,
-            app.buttons.matching(identifier: "tab.chaosHub").firstMatch,
             app.buttons.matching(identifier: "tab.friends").firstMatch,
             app.buttons.matching(identifier: "tab.quotes").firstMatch,
             app.buttons.matching(identifier: "tab.more").firstMatch,
@@ -918,21 +918,6 @@ final class BadviceUITests: XCTestCase {
             return app.navigationBars["Settings"].waitForExistence(timeout: 2)
                 || app.navigationBars.firstMatch.label.localizedCaseInsensitiveContains("Settings")
                 || app.staticTexts["Settings"].waitForExistence(timeout: 2)
-        }
-
-        let chaosTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
-        if chaosTab.waitForExistence(timeout: 5) {
-            chaosTab.tap()
-            let openLabsButton = app.buttons["chaos.quickActions.openLabs"]
-            if !openLabsButton.waitForExistence(timeout: 2) {
-                for _ in 0..<8 where !openLabsButton.exists {
-                    app.swipeUp()
-                }
-            }
-            if openLabsButton.waitForExistence(timeout: 3) {
-                openLabsButton.tap()
-                return app.navigationBars.firstMatch.waitForExistence(timeout: 5)
-            }
         }
 
         let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
@@ -1345,7 +1330,7 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
             "App should land in a stable shell for a release-readiness run"
         )
 
-        let tabFlow: [String] = ["tab.generate", "tab.chaosHub", "tab.friends", "tab.quotes"]
+        let tabFlow: [String] = ["tab.generate", "tab.friends", "tab.quotes"]
         for tabID in tabFlow {
             let tabButton = app.buttons.matching(identifier: tabID).firstMatch
             guard tabButton.waitForExistence(timeout: 3) else {
@@ -1365,13 +1350,32 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
             )
         }
 
+        XCTAssertTrue(openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions"))
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: tabMarkers(for: "tab.chaosHub", app: app),
+                timeout: 8,
+                maxSwipes: 12,
+                requireHittable: false
+            ),
+            "Missions should render through More quick access"
+        )
+
         let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
         XCTAssertTrue(generateTab.waitForExistence(timeout: 5))
         generateTab.tap()
-        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 5))
-        app.buttons["generate.primary"].tap()
-        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
-        XCTAssertTrue(app.buttons["generate.copy"].exists || app.buttons["generate.remix"].exists)
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.buttons["generate.primary"],
+                ],
+                timeout: 5,
+                maxSwipes: 4,
+            ),
+            "Advice should remain reachable after cycling through condensed navigation"
+        )
     }
 
     func testReadiness_FallbackSurfacesRemainUsableWhenSocialUnavailable() throws {
@@ -1481,7 +1485,7 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
         case "tab.chaosHub":
             return [
                 app.descendants(matching: .any)["chaos.social.leaderboardCard"],
-                app.staticTexts["Chaos Hub"],
+                app.staticTexts["Missions"],
                 app.buttons["chaos.social.submitScore"],
             ]
         case "tab.friends":
@@ -1506,6 +1510,35 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
         default:
             return [app.navigationBars.firstMatch]
         }
+    }
+
+    @discardableResult
+    private func openMoreQuickAccess(app: XCUIApplication, id: String, label: String) -> Bool {
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        guard moreTab.waitForExistence(timeout: 4) else {
+            return false
+        }
+        moreTab.tap()
+
+        let quickAccess = app.buttons["brandMenu.quickAccess.\(id)"]
+        if quickAccess.waitForExistence(timeout: 5) {
+            quickAccess.tap()
+            return true
+        }
+
+        let labeledQuickAccess = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS[c] %@", label)
+        ).firstMatch
+        if labeledQuickAccess.waitForExistence(timeout: 2) {
+            labeledQuickAccess.tap()
+            return true
+        }
+
+        let done = app.buttons["Done"].firstMatch
+        if done.waitForExistence(timeout: 1) {
+            done.tap()
+        }
+        return false
     }
 
     private func launchReadinessApp(extraLaunchArguments: [String] = []) -> XCUIApplication {

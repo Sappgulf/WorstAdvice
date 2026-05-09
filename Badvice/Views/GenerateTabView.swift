@@ -57,7 +57,7 @@ struct GenerateTabView: View {
             return "Generating now. The next terrible idea is on the way."
         }
         if viewModel.current == nil {
-            return "Start with one polished disaster, then branch into Quotes, Friends, and Chaos Hub."
+            return "Start with one polished disaster, then branch into Library, Social, and Missions when needed."
         }
         if social.currentUser == nil {
             return "Generate here, then set up Friends to share drafts and start collabs."
@@ -279,6 +279,74 @@ struct GenerateTabView: View {
         )
     }
 
+    private var generateToolsSection: some View {
+        DisclosureGroup(
+            isExpanded: $showingAdvanced.animation(
+                isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                friendRoastComposer
+                scenarioSuggestionsRow
+                adaptiveHintCard
+                studioActionButtons
+                statStrip
+                challengeCard
+                if viewModel.current != nil {
+                    whyThisFailsCard
+                }
+                dailyQuoteBanner
+                weeklyRecapSection
+                if !hasDismissedWhatsNewCard {
+                    whatsNewCard
+                }
+            }
+            .padding(.top, 8)
+        } label: {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.subheadline.weight(.semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("More tools")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Assist, missions, stats, battles, and extras")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+                Spacer()
+            }
+            .foregroundStyle(primaryText)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.09), lineWidth: 1)
+                )
+        )
+    }
+
+    private var studioActionButtons: some View {
+        HStack(spacing: 10) {
+            Button { showingBracket = true } label: {
+                Label("Battles", systemImage: "trophy.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+            }
+            .buttonStyle(.bordered)
+            .tint(accent)
+
+            Button { showingCollabAdvice = true } label: {
+                Label("Collab", systemImage: "person.2.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+            }
+            .buttonStyle(.bordered)
+            .tint(accent)
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             ScrollViewReader { proxy in
@@ -294,10 +362,14 @@ struct GenerateTabView: View {
                         }
 
                         headerView
-                        generationHeroCard
                         selectorRow
                         scenarioComposer
-                        promptAssistSection
+                        primaryActionButtons
+                        if let notice = viewModel.generationNotice, !notice.isEmpty {
+                            Text(notice)
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                        }
 
                         Group {
                             if let record = viewModel.current {
@@ -399,14 +471,7 @@ struct GenerateTabView: View {
                         )
 
                         votingRow
-                        primaryActionButtons
-                        if let notice = viewModel.generationNotice, !notice.isEmpty {
-                            Text(notice)
-                                .font(.caption)
-                                .foregroundStyle(secondaryText)
-                        }
-                        advancedSection
-                        studioExtrasSection
+                        generateToolsSection
                     }
                     .padding(.horizontal, Theme.horizontalPadding)
                     .padding(.top, 16)
@@ -415,7 +480,7 @@ struct GenerateTabView: View {
                 .scrollDismissesKeyboard(.interactively)
                 .coordinateSpace(name: "scroll")
                 .trackScrollForTabBar()
-                .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 100 : 16)
+                .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 72 : 16)
                 .refreshable {
                     // Pull to generate new advice
                     await viewModel.generate()
@@ -1085,25 +1150,6 @@ struct GenerateTabView: View {
             }
             .tint(accent)
 
-            // #2 Advice Battles + #7 Collab Advice row
-            HStack(spacing: 10) {
-                Button { showingBracket = true } label: {
-                    Label("Battles", systemImage: "trophy.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                }
-                .buttonStyle(.bordered)
-                .tint(accent)
-
-                Button { showingCollabAdvice = true } label: {
-                    Label("Collab", systemImage: "person.2.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                }
-                .buttonStyle(.bordered)
-                .tint(accent)
-            }
-
             // #10 Category/tone compatibility warning
             let compatLabel = CategoryToneCompatibility.compatibilityLabel(
                 category: viewModel.selectedCategory,
@@ -1125,107 +1171,109 @@ struct GenerateTabView: View {
                 .transition(.opacity)
             }
 
-            // Save / Copy / Share rail
-            HStack(spacing: 14) {
-                railButton(
-                    title: viewModel.isCurrentFavorite ? "Saved" : "Save",
-                    systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
-                    isEnabled: hasCurrent && !viewModel.isGenerating
-                ) {
-                    let wasFavorite = viewModel.isCurrentFavorite
-                    viewModel.toggleFavorite()
-                    onDataChanged()
-                    HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                    activeToast = ToastMessage(
-                        message: wasFavorite ? "Removed from Favorites" : "Saved!",
-                        style: wasFavorite ? .deleted : .success
-                    )
-                }
-                .accessibilityIdentifier("generate.save")
-
-                railButton(
-                    title: "Copy",
-                    systemImage: "doc.on.doc",
-                    isEnabled: hasCurrent && !viewModel.isGenerating
-                ) {
-                    UIPasteboard.general.string = viewModel.currentShareText
-                    viewModel.trackCopy()
-                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    activeToast = ToastMessage(message: "Copied!", style: .success)
-                }
-                .accessibilityIdentifier("generate.copy")
-
-                railButton(
-                    title: "Share to Friends",
-                    systemImage: "person.2.fill",
-                    isEnabled: hasCurrent && !viewModel.isGenerating && social.socialFeaturesEnabled
-                ) {
-                    guard let record = viewModel.current else { return }
-                    guard canShareToFriends() else {
-                        showFriendsUnavailable()
-                        return
-                    }
-                    Task {
-                        await social.shareAdviceToFriends(text: record.adviceLine)
-                        if let message = social.statusMessage {
-                            activeToast = ToastMessage(
-                                message: message,
-                                style: message.lowercased().contains("shared")
-                                    ? .success : .error
-                            )
-                        }
-                    }
-                }
-                .accessibilityIdentifier("generate.shareToFriends")
-
-                railButton(
-                    title: "Remix",
-                    systemImage: "bolt.fill",
-                    isEnabled: hasCurrent && !viewModel.isGenerating
-                ) {
-                    viewModel.remixCurrentAdvice()
-                    activeToast = ToastMessage(message: "Remixed!", style: .success)
-                }
-                .accessibilityIdentifier("generate.remix")
-
-                // #5 Animated GIF export
-                railButton(
-                    title: gifExportInProgress ? "Exporting…" : "GIF",
-                    systemImage: "square.and.arrow.up.on.square",
-                    isEnabled: hasCurrent && !viewModel.isGenerating && !gifExportInProgress
-                ) {
-                    guard let record = viewModel.current else { return }
-                    gifExportInProgress = true
-                    Task {
-                        let config = AnimatedShareExporter.Config(
-                            advice: record.adviceLine,
-                            category: record.category,
-                            tone: record.tone,
-                            theme: settings.theme
+            if hasCurrent {
+                // Save / Copy / Share rail
+                HStack(spacing: 14) {
+                    railButton(
+                        title: viewModel.isCurrentFavorite ? "Saved" : "Save",
+                        systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
+                        isEnabled: !viewModel.isGenerating
+                    ) {
+                        let wasFavorite = viewModel.isCurrentFavorite
+                        viewModel.toggleFavorite()
+                        onDataChanged()
+                        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                        activeToast = ToastMessage(
+                            message: wasFavorite ? "Removed from Favorites" : "Saved!",
+                            style: wasFavorite ? .deleted : .success
                         )
-                        if let data = await AnimatedShareExporter.exportGIF(config: config) {
-                            AnimatedShareExporter.shareGIF(data)
-                            activeToast = ToastMessage(message: "GIF ready!", style: .success)
-                        } else {
-                            activeToast = ToastMessage(message: "GIF export failed", style: .error)
-                        }
-                        gifExportInProgress = false
                     }
-                }
-                .accessibilityIdentifier("generate.gif")
-            }
-            .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("generate.save")
 
-            if !social.availability.isAvailable {
-                Text(social.availability.message)
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else if social.currentUser == nil {
-                Text("Finish Friends setup to share from Generate and spin up collabs.")
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    railButton(
+                        title: "Copy",
+                        systemImage: "doc.on.doc",
+                        isEnabled: !viewModel.isGenerating
+                    ) {
+                        UIPasteboard.general.string = viewModel.currentShareText
+                        viewModel.trackCopy()
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        activeToast = ToastMessage(message: "Copied!", style: .success)
+                    }
+                    .accessibilityIdentifier("generate.copy")
+
+                    railButton(
+                        title: "Share",
+                        systemImage: "person.2.fill",
+                        isEnabled: !viewModel.isGenerating && social.socialFeaturesEnabled
+                    ) {
+                        guard let record = viewModel.current else { return }
+                        guard canShareToFriends() else {
+                            showFriendsUnavailable()
+                            return
+                        }
+                        Task {
+                            await social.shareAdviceToFriends(text: record.adviceLine)
+                            if let message = social.statusMessage {
+                                activeToast = ToastMessage(
+                                    message: message,
+                                    style: message.lowercased().contains("shared")
+                                        ? .success : .error
+                                )
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("generate.shareToFriends")
+
+                    railButton(
+                        title: "Remix",
+                        systemImage: "bolt.fill",
+                        isEnabled: !viewModel.isGenerating
+                    ) {
+                        viewModel.remixCurrentAdvice()
+                        activeToast = ToastMessage(message: "Remixed!", style: .success)
+                    }
+                    .accessibilityIdentifier("generate.remix")
+
+                    // #5 Animated GIF export
+                    railButton(
+                        title: gifExportInProgress ? "Exporting…" : "GIF",
+                        systemImage: "square.and.arrow.up.on.square",
+                        isEnabled: !viewModel.isGenerating && !gifExportInProgress
+                    ) {
+                        guard let record = viewModel.current else { return }
+                        gifExportInProgress = true
+                        Task {
+                            let config = AnimatedShareExporter.Config(
+                                advice: record.adviceLine,
+                                category: record.category,
+                                tone: record.tone,
+                                theme: settings.theme
+                            )
+                            if let data = await AnimatedShareExporter.exportGIF(config: config) {
+                                AnimatedShareExporter.shareGIF(data)
+                                activeToast = ToastMessage(message: "GIF ready!", style: .success)
+                            } else {
+                                activeToast = ToastMessage(message: "GIF export failed", style: .error)
+                            }
+                            gifExportInProgress = false
+                        }
+                    }
+                    .accessibilityIdentifier("generate.gif")
+                }
+                .frame(maxWidth: .infinity)
+
+                if !social.availability.isAvailable {
+                    Text(social.availability.message)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else if social.currentUser == nil {
+                    Text("Finish Friends setup to share from Generate and spin up collabs.")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         }
         .tint(accent)
@@ -1252,7 +1300,7 @@ struct GenerateTabView: View {
             }
 
             Text(
-                "New: Chaos Hub combines daily missions, community pulse, and your wins. ML Remix now sharpens tone and category variety."
+                "New: Missions combines daily progress, community pulse, and your wins. ML Remix now sharpens tone and category variety."
             )
             .font(.footnote)
             .foregroundStyle(secondaryText)

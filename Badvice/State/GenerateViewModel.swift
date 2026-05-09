@@ -6,6 +6,10 @@ import UIKit
 
 private let logger = Logger(subsystem: "com.worstadvice.app", category: "state")
 
+private enum AppleOnDeviceGenerationError: Error, Equatable {
+    case timedOut
+}
+
 @MainActor
 @Observable
 final class GenerateViewModel {
@@ -161,16 +165,16 @@ final class GenerateViewModel {
         adviceBootstrapTask = Task(priority: .utility) { [weak self] in
             async let scorerWarmup: Void = SemanticTextScorer.shared.prewarm()
 
-            if preferredGenerationProvider != .classic {
-                Task(priority: .utility) {
-                    _ = await AppleOnDeviceAdviceBridge.prewarmSystemModelAndPoll(
-                        maxPollCount: 2,
-                        pollDelay: .milliseconds(250)
-                    )
-                }
+            guard let self else {
+                _ = await scorerWarmup
+                return
             }
 
-            guard shouldAutoGenerate, let self else {
+            if preferredGenerationProvider != .classic {
+                await self.prepareLocalModelForBootstrap()
+            }
+
+            guard shouldAutoGenerate else {
                 _ = await scorerWarmup
                 return
             }
@@ -178,6 +182,13 @@ final class GenerateViewModel {
             await self.bootstrapCurrentAdviceIfNeeded(seed: bootSeed)
             _ = await scorerWarmup
         }
+    }
+
+    private func prepareLocalModelForBootstrap() async {
+        await settingsViewModel.prepareAppleLocalModelForLaunchIfNeeded(
+            systemMaxPollCount: 2,
+            systemPollDelay: .milliseconds(250)
+        )
     }
 
     func bootstrapCurrentAdviceIfNeeded(seed: Int) async {
@@ -545,13 +556,14 @@ final class GenerateViewModel {
 
         for index in 0..<desiredCount {
             do {
-                let candidate = try await appleOnDeviceBridge.generateCandidate(
+                let candidate = try await appleOnDeviceCandidate(
                     category: category,
                     tone: tone,
                     situation: situation,
                     includeRationale: includeRationale,
                     seed: baseSeed + (index * 4_099),
-                    now: Date()
+                    now: Date(),
+                    timeout: requestedExplicitly ? .seconds(8) : .seconds(4)
                 )
                 guard engine.validateOutput(candidate, for: category) else { continue }
                 let fingerprint = candidate.adviceLine.normalizedForFiltering
@@ -563,9 +575,13 @@ final class GenerateViewModel {
                     "Apple on-device generation failed: \(String(describing: error), privacy: .public)"
                 )
                 if requestedExplicitly, candidates.isEmpty {
+                    let didTimeOut = (error as? AppleOnDeviceGenerationError) == .timedOut
                     return (
-                        [], "Apple on-device generation failed. Using classic generator.",
-                        "generation_failed"
+                        [],
+                        didTimeOut
+                            ? "Apple on-device generation took too long. Using classic generator."
+                            : "Apple on-device generation failed. Using classic generator.",
+                        didTimeOut ? "generation_timeout" : "generation_failed"
                     )
                 }
                 break
@@ -585,6 +601,39 @@ final class GenerateViewModel {
         }
 
         return (candidates, nil, nil)
+    }
+
+    private func appleOnDeviceCandidate(
+        category: AdviceCategory,
+        tone: ToneMode,
+        situation: String?,
+        includeRationale: Bool,
+        seed: Int,
+        now: Date,
+        timeout: Duration
+    ) async throws -> GeneratedAdvice {
+        try await withThrowingTaskGroup(of: GeneratedAdvice.self) { group in
+            group.addTask { [appleOnDeviceBridge] in
+                try await appleOnDeviceBridge.generateCandidate(
+                    category: category,
+                    tone: tone,
+                    situation: situation,
+                    includeRationale: includeRationale,
+                    seed: seed,
+                    now: now
+                )
+            }
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                throw AppleOnDeviceGenerationError.timedOut
+            }
+
+            guard let candidate = try await group.next() else {
+                throw AppleOnDeviceGenerationError.timedOut
+            }
+            group.cancelAll()
+            return candidate
+        }
     }
 
     private func generationSourceBadgeLabel(for source: String) -> String {

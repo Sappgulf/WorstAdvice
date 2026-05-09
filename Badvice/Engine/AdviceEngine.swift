@@ -52,6 +52,8 @@ struct AdviceEngine {
         let pivot = rng.pick(Self.pivotPhrases)
         let escalation = rng.pick(Self.escalationClauses)
         let deliveryMandate = rng.pick(Self.deliveryMandates)
+        let audienceHook = rng.pick(Self.audienceHooks)
+        let accountabilityDodge = rng.pick(Self.accountabilityDodges)
         let toneDirective = rng.pick(store.toneDirectiveVocabulary(for: resolvedTone))
         let categoryDirective = rng.pick(store.categoryDirectiveVocabulary(for: category))
         let directiveClause = "Lead with \(toneDirective) and push \(categoryDirective)."
@@ -62,6 +64,9 @@ struct AdviceEngine {
         let scenarioAmplifier = selectedTopic.isEmpty
             ? nil
             : rng.pick(Self.scenarioAmplifiers).replacingOccurrences(of: "%@", with: selectedTopic)
+        let topicDistortion = selectedTopic.isEmpty
+            ? nil
+            : rng.pick(Self.topicDistortions).replacingOccurrences(of: "%@", with: selectedTopic)
         let aftermathClause = rng.pick(Self.aftermathClauses)
         let normalizedSelectedTopic = selectedTopic.normalizedForFiltering
         let normalizedToneDirective = toneDirective.normalizedForFiltering
@@ -164,7 +169,18 @@ struct AdviceEngine {
             "\(opener): \(filledAction) \(deliveryMandate) \(scenarioAmplifier ?? categorySpice) \(ending)",
             "\(opener), \(filledAction) \(escalation) \(outcomeHook) \(aftermathClause) \(directiveClause) \(ending)",
             "\(opener): \(filledAction) \(confidence) \(deliveryMandate) \(scenarioAmplifier ?? antiWisdomClause) \(directiveClause) \(ending)",
-            "\(opener), \(filledAction) \(momentumBeat) \(scenarioAmplifier ?? categorySpice) \(outcomeHook) \(ending)"
+            "\(opener), \(filledAction) \(momentumBeat) \(scenarioAmplifier ?? categorySpice) \(outcomeHook) \(ending)",
+            "\(opener): \(filledAction) \(topicDistortion ?? scenarioAmplifier ?? categorySpice) \(deliveryMandate) \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(topicDistortion ?? antiWisdomClause) \(outcomeHook) \(ending)",
+            "\(opener): \(filledAction) \(pivot) \(topicDistortion ?? scenarioAmplifier ?? categorySpice) \(aftermathClause) \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(momentumBeat) \(deliveryMandate) \(topicDistortion ?? outcomeHook) \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(confidence) \(scenarioAmplifier ?? categorySpice) \(topicDistortion ?? aftermathClause) \(ending)",
+            "\(opener), \(filledAction) \(escalation) \(topicDistortion ?? antiWisdomClause) \(outcomeHook) \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(audienceHook) Then \(accountabilityDodge.lowercased()) \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(confidence) \(accountabilityDodge) \(scenarioAmplifier ?? audienceHook) \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(pivot) \(audienceHook) \(outcomeHook) \(directiveClause) \(ending)",
+            "\(opener), \(filledAction) \(deliveryMandate) \(accountabilityDodge) \(aftermathClause) \(directiveClause) \(ending)",
+            "\(opener): \(filledAction) \(momentumBeat) \(audienceHook) \(confidence) \(directiveClause) \(ending)"
         ]
         // #11 Situation Context Weighting:
         // Repeat scenario and selectedTopic (derived from user's situation input) twice so they
@@ -172,7 +188,10 @@ struct AdviceEngine {
         let semanticQuery = [scenario, scenario, selectedTopic, selectedTopic, category.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }
             .joined(separator: " ")
-        let semanticPreparedQuery = await Self.semanticTextScorer.preparedQuery(from: semanticQuery)
+        let semanticPreparedQuery = await Self.semanticTextScorer.preparedQuery(
+            from: semanticQuery,
+            includeVector: scenario?.isEmpty == false
+        )
         let semanticScores: [Double]
         if let semanticPreparedQuery {
             semanticScores = await Self.semanticTextScorer.similarityScores(
@@ -212,6 +231,7 @@ struct AdviceEngine {
             normalizedToneDirective: normalizedToneDirective,
             normalizedCategoryDirective: normalizedCategoryDirective
         )
+        advice = polishAdvice(advice)
 
         if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
             advice = "\(opener), treat the \(keyword) like a stage performance and commit to the loudest overconfident plan. \(confidence)"
@@ -257,32 +277,38 @@ struct AdviceEngine {
             total * AdviceEngineConstants.candidatePoolMultiplier,
             total + AdviceEngineConstants.candidatePoolMinExtra
         )
-        let candidates = await withTaskGroup(of: GeneratedAdvice.self) { group in
+        let indexedCandidates = await withTaskGroup(of: (Int, GeneratedAdvice).self) { group in
             for attempt in 0..<targetCount {
                 let candidateSeed = baseSeed + (attempt * AdviceEngineConstants.candidateSeedStride)
                 let candidateTone = tone == .random
                     ? tonePool[candidateSeed.positiveModulo(tonePool.count)]
                     : tone
                 group.addTask {
-                    await self.generate(
-                        category: category,
-                        tone: candidateTone,
-                        includeRationale: includeRationale,
-                        contentPack: contentPack,
-                        situation: situation,
-                        seed: candidateSeed,
-                        templateBias: templateBias,
-                        now: now
+                    (
+                        attempt,
+                        await self.generate(
+                            category: category,
+                            tone: candidateTone,
+                            includeRationale: includeRationale,
+                            contentPack: contentPack,
+                            situation: situation,
+                            seed: candidateSeed,
+                            templateBias: templateBias,
+                            now: now
+                        )
                     )
                 }
             }
 
-            var results: [GeneratedAdvice] = []
+            var results: [(Int, GeneratedAdvice)] = []
             for await candidate in group {
                 results.append(candidate)
             }
             return results
         }
+        let candidates = indexedCandidates
+            .sorted { $0.0 < $1.0 }
+            .map { $0.1 }
 
         // Deduplicate by fingerprint for uniqueness
         var seen = Set<String>()
@@ -782,11 +808,11 @@ actor SemanticTextScorer {
         return bestCandidates[index]
     }
 
-    func preparedQuery(from query: String) async -> PreparedQuery? {
+    func preparedQuery(from query: String, includeVector: Bool = true) async -> PreparedQuery? {
         let normalized = query.normalizedForFiltering.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty else { return nil }
         let queryVector: [Double]?
-        if let sentenceEmbedding {
+        if includeVector, let sentenceEmbedding {
             queryVector = vector(for: normalized, embedding: sentenceEmbedding)
         } else {
             queryVector = nil

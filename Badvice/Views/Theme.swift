@@ -45,12 +45,9 @@ enum Theme {
     static let floatingTabBarCornerRadius: CGFloat = 28
     static let floatingTabBarInnerPadding: CGFloat = 6
     static let floatingTabBarHorizontalPadding: CGFloat = 18
-    static let shellStatusHorizontalPadding: CGFloat = 20
-    static let shellStatusBottomSpacing: CGFloat = 10
-    static let floatingTabBarReservedHeight: CGFloat = 96
-    static let shellBannerReservedHeight: CGFloat = 52
-    static let tabContentBottomInset: CGFloat = 168
-    static let floatingToastBottomInset: CGFloat = 156
+    static let floatingTabBarReservedHeight: CGFloat = 76
+    static let tabContentBottomInset: CGFloat = 112
+    static let floatingToastBottomInset: CGFloat = 112
     static let minimumTapTarget: CGFloat = 44
     static let compactIconButtonSize: CGFloat = 44
     static let chipMinHeight: CGFloat = 26
@@ -666,21 +663,20 @@ enum Theme {
 
     static func tabBarStyle(for mode: ThemeMode) -> ThemeTabBarStyle {
         let personality = personality(for: mode)
-        let glow = glowColor(for: mode) ?? accent(for: mode)
         let glassStrength = glassMorphismOpacity(for: mode)
         return ThemeTabBarStyle(
-            backgroundTint: tabBarBackground(for: mode).opacity(0.72),
-            materialOverlayOpacity: min(max(glassStrength, 0.15), 0.72),
-            borderTop: accent(for: mode).opacity(0.34 + personality.effectIntensity * 0.18),
-            borderBottom: .white.opacity(0.08 + personality.effectIntensity * 0.08),
-            shadow: cardShadow(for: mode).color.opacity(0.45),
-            shadowRadius: CGFloat(12 + personality.effectIntensity * 10),
-            selectedFillOpacity: 0.14 + personality.effectIntensity * 0.12,
-            highlightedFillOpacity: 0.07 + personality.effectIntensity * 0.08,
+            backgroundTint: tabBarBackground(for: mode).opacity(0.66),
+            materialOverlayOpacity: min(max(glassStrength, 0.12), 0.52),
+            borderTop: accent(for: mode).opacity(0.18 + personality.effectIntensity * 0.08),
+            borderBottom: .white.opacity(0.06 + personality.effectIntensity * 0.04),
+            shadow: cardShadow(for: mode).color.opacity(0.28),
+            shadowRadius: CGFloat(8 + personality.effectIntensity * 5),
+            selectedFillOpacity: 0.10 + personality.effectIntensity * 0.08,
+            highlightedFillOpacity: 0.05 + personality.effectIntensity * 0.05,
             indicatorCornerRadius: personality.indicatorCornerRadius,
             indicatorInset: personality.indicatorInset,
-            selectedScale: CGFloat(1.04 + personality.effectIntensity * 0.03),
-            glow: shouldUseGlow(for: mode) ? glow.opacity(0.45) : nil
+            selectedScale: CGFloat(1.02 + personality.effectIntensity * 0.015),
+            glow: nil
         )
     }
 }

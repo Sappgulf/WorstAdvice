@@ -3,7 +3,7 @@
 ## Now
 - Simplify `GenerateTabView` so the primary path is obvious: controls, prompt, current advice, actions.
 - Move secondary content on Generate into progressive disclosure instead of stacking everything on first load.
-- Standardize section spacing, card shells, and CTA hierarchy across `Generate`, `Chaos Hub`, `Quotes`, and `Friends`.
+- Standardize section spacing, card shells, and CTA hierarchy across `Advice`, `Social`, `Library`, and `Missions`.
 - Reduce overlapping motion treatments on `AdviceCardView` and keep one stronger signature interaction.
 - Improve empty and loading states so each state explains the next useful action.
 

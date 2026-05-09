@@ -235,6 +235,30 @@ final class SettingsViewModel {
         appleOnDeviceModelStatusLastUpdatedAt = Date()
     }
 
+    func refreshAppleOnDeviceModelAvailabilityNow() async {
+        appleOnDeviceModelAvailability = AppleOnDeviceAdviceBridge.currentAvailability()
+        await localModelStore.reloadAvailableModelsNow()
+        appleOnDeviceModelStatusLastUpdatedAt = Date()
+    }
+
+    func prepareAppleLocalModelForLaunchIfNeeded(
+        systemMaxPollCount: Int = 2,
+        systemPollDelay: Duration = .milliseconds(250)
+    ) async {
+        guard preferredGenerationProvider != .classic else { return }
+        guard !isPreparingAppleOnDeviceModel else { return }
+        isPreparingAppleOnDeviceModel = true
+        defer {
+            isPreparingAppleOnDeviceModel = false
+            refreshAppleOnDeviceModelAvailability()
+        }
+
+        await preparePreferredAppleOnDeviceModel(
+            systemMaxPollCount: systemMaxPollCount,
+            systemPollDelay: systemPollDelay
+        )
+    }
+
     func prepareAppleOnDeviceModel() async {
         guard !isPreparingAppleOnDeviceModel else { return }
         isPreparingAppleOnDeviceModel = true
@@ -243,18 +267,47 @@ final class SettingsViewModel {
             refreshAppleOnDeviceModelAvailability()
         }
 
-        refreshAppleOnDeviceModelAvailability()
-        guard let targetID = localModelStore.selectedModelID ?? localModelStore.availableModels.first?.id else {
+        await preparePreferredAppleOnDeviceModel(
+            systemMaxPollCount: 8,
+            systemPollDelay: .seconds(1)
+        )
+    }
+
+    private func preparePreferredAppleOnDeviceModel(
+        systemMaxPollCount: Int,
+        systemPollDelay: Duration
+    ) async {
+        await refreshAppleOnDeviceModelAvailabilityNow()
+        guard let targetID = preferredAppleOnDevicePreparationModelID() else {
             return
         }
         localModelStore.selectModel(targetID)
         if let target = localModelStore.availableModels.first(where: { $0.id == targetID }), !target.isInstalled {
-            try? await localModelStore.installModel(id: targetID)
+            try? await localModelStore.installModel(
+                id: targetID,
+                systemMaxPollCount: systemMaxPollCount,
+                systemPollDelay: systemPollDelay
+            )
         }
         if localModelStore.state(for: targetID) != .ready {
-            await localModelStore.warmUp(id: targetID)
+            await localModelStore.warmUp(
+                id: targetID,
+                systemMaxPollCount: systemMaxPollCount,
+                systemPollDelay: systemPollDelay
+            )
         }
-        refreshAppleOnDeviceModelAvailability()
+        await refreshAppleOnDeviceModelAvailabilityNow()
+    }
+
+    private func preferredAppleOnDevicePreparationModelID() -> String? {
+        if let selectedID = localModelStore.selectedModelID,
+           localModelStore.availableModels.first(where: { $0.id == selectedID })?.isSystemModel == true {
+            return selectedID
+        }
+        if let systemModelID = localModelStore.availableModels.first(where: { $0.isSystemModel })?.id {
+            return systemModelID
+        }
+        return localModelStore.selectedModelID ?? localModelStore.availableModels.first?.id
     }
 
     func installAppleLocalModel(id: String) async {

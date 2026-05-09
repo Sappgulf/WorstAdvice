@@ -584,23 +584,11 @@ struct ContentView: View {
                     let accent = Theme.accent(for: session.settings.theme)
                     let secondaryText = Theme.secondaryText(for: session.settings.theme)
                     let friendsBadgeCount = session.social.incomingRequests.count
-                    let chaosBadgeCount = session.generate.dailyMissionState.isComplete ? 0 : 1
-                    if !showingSettingsRoot {
-                        appShellStatusBanner(
-                            session: session,
-                            accent: accent,
-                            secondaryText: secondaryText,
-                            constrainedMotion: constrainedMotion
-                        )
-                        .padding(.horizontal, Theme.shellStatusHorizontalPadding)
-                        .padding(.bottom, Theme.shellStatusBottomSpacing)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
                     HStack(spacing: 0) {
                         ForEach(tabs) { tab in
                             let isSelected = selectedTab == tab || (tab == .settings && showingSettingsRoot)
                             let isHighlighted = tabDragHighlight == tab
-                            let badgeCount = tab == .friends ? friendsBadgeCount : (tab == .chaosHub ? chaosBadgeCount : 0)
+                            let badgeCount = tab == .friends ? friendsBadgeCount : 0
                             let badgeDescription: String = {
                                 if badgeCount == 0 { return "" }
                                 switch tab {
@@ -639,12 +627,12 @@ struct ContentView: View {
                                     }
                                 }
                             } label: {
-                                VStack(spacing: 3) {
+                                VStack(spacing: 2) {
                                     ZStack(alignment: .topTrailing) {
                                         Image(systemName: tab.systemImage)
                                             .font(
                                                 .system(
-                                                    size: 20,
+                                                    size: 18,
                                                     weight: isSelected ? .semibold : .medium)
                                             )
                                             .symbolVariant(isSelected ? .fill : .none)
@@ -664,14 +652,10 @@ struct ContentView: View {
                                     Text(tab.compactTitle)
                                         .font(
                                             .system(
-                                                size: 9,
+                                                size: 10,
                                                 weight: isSelected ? .semibold : .regular))
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.75)
-                                    Capsule(style: .continuous)
-                                        .fill(accent.opacity(isSelected ? 0.9 : 0))
-                                        .frame(width: isSelected ? 18 : 8, height: 3)
-                                        .opacity(isSelected ? 1 : 0.01)
                                 }
                                 .foregroundStyle(
                                     isSelected
@@ -682,9 +666,8 @@ struct ContentView: View {
                                 )
                                 .frame(maxWidth: .infinity)
                                 .frame(minHeight: Theme.minimumTapTarget)
-                                .padding(.top, 6)
-                                .padding(.bottom, 4)
-                                .offset(y: isSelected ? -1.5 : 0)
+                                .padding(.top, 5)
+                                .padding(.bottom, 5)
                                 .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
                                 .background {
                                     if isSelected || isHighlighted {
@@ -700,17 +683,6 @@ struct ContentView: View {
                                                 max(4, tabBarStyle.indicatorInset + 3)
                                             )
                                             .padding(.vertical, 1)
-                                    }
-                                }
-                                .overlay {
-                                    if isSelected, let glow = tabBarStyle.glow {
-                                        Capsule(style: .continuous)
-                                            .stroke(glow.opacity(0.35), lineWidth: 1)
-                                            .padding(
-                                                .horizontal,
-                                                max(5, tabBarStyle.indicatorInset + 4)
-                                            )
-                                            .padding(.vertical, 2)
                                     }
                                 }
                             }
@@ -890,44 +862,24 @@ struct ContentView: View {
         tabBarStyle: ThemeTabBarStyle
     ) -> some View {
         let isSelected = showingShellMenu || showingSettingsRoot || brandMenuTabs().contains(selectedTab)
-        let badgeCount = session.social.incomingRequests.count
 
         return Button {
             HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
             showingShellMenu = true
         } label: {
-            VStack(spacing: 3) {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 20, weight: isSelected ? .bold : .semibold))
-                        .symbolVariant(.circle)
-
-                    if badgeCount > 0 {
-                        Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Capsule(style: .continuous).fill(.red))
-                            .offset(x: 12, y: -7)
-                            .accessibilityIdentifier("tab.more.badge")
-                    }
-                }
+            VStack(spacing: 2) {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
 
                 Text("More")
-                    .font(.system(size: 9, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
                     .lineLimit(1)
-
-                Capsule(style: .continuous)
-                    .fill(accent.opacity(isSelected ? 0.9 : 0))
-                    .frame(width: isSelected ? 18 : 8, height: 3)
-                    .opacity(isSelected ? 1 : 0.01)
             }
             .foregroundStyle(isSelected ? accent : secondaryText.opacity(0.74))
             .frame(maxWidth: .infinity)
             .frame(minHeight: Theme.minimumTapTarget)
-            .padding(.top, 6)
-            .padding(.bottom, 4)
+            .padding(.top, 5)
+            .padding(.bottom, 5)
             .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
             .background {
                 if isSelected {
@@ -940,98 +892,9 @@ struct ContentView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("More")
-        .accessibilityHint("Opens Saved, History, Explore, Challenges, and Settings")
+        .accessibilityHint("Opens Missions, Saved, History, Explore, Challenges, and Settings")
         .accessibilityIdentifier("tab.more")
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
-    }
-
-    private func appShellStatusBanner(
-        session: AppSessionViewModel,
-        accent: Color,
-        secondaryText: Color,
-        constrainedMotion: Bool
-    ) -> some View {
-        let status = shellStatus(for: session)
-        return HStack(spacing: 10) {
-            Image(systemName: status.icon)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(accent)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(status.title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.primaryText(for: session.settings.theme))
-                Text(status.message)
-                    .font(.caption2)
-                    .foregroundStyle(secondaryText)
-                    .lineLimit(2)
-            }
-
-            Spacer(minLength: 8)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 11)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius, style: .continuous)
-                .fill(Theme.tabBarBackground(for: session.settings.theme).opacity(0.88))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius, style: .continuous)
-                        .stroke(accent.opacity(0.18), lineWidth: 1)
-                )
-        )
-        .shadow(color: .black.opacity(constrainedMotion ? 0.1 : 0.16), radius: 10, x: 0, y: 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("app.shell.status")
-    }
-
-    private func shellStatus(for session: AppSessionViewModel) -> (title: String, message: String, icon: String) {
-        switch selectedTab {
-        case .generate:
-            if session.generate.isGenerating {
-                return (
-                    "Advice Studio",
-                    "Warming the engine and lining up your first draft.",
-                    "sparkles"
-                )
-            }
-            if session.generate.current == nil {
-                return ("Advice Studio", "Build your first disaster plan with one strong prompt.", "sparkles")
-            }
-            return (
-                "Advice Studio",
-                "Current streak: \(session.generate.challengeStreakDays) day\(session.generate.challengeStreakDays == 1 ? "" : "s"). Keep the generator hot.",
-                "wand.and.stars"
-            )
-        case .chaosHub:
-            let mission = session.generate.dailyMissionState
-            return (
-                "Chaos Hub",
-                mission.isComplete
-                    ? "Daily mission complete. Weekly progress is \(session.generate.weeklyMissionState.currentCount)/\(session.generate.weeklyMissionState.targetCount)."
-                    : "Daily mission progress: \(mission.currentCount)/\(mission.targetCount).",
-                "flame.fill"
-            )
-        case .friends:
-            if session.social.needsProfileSetup {
-                return ("Friends", "Finish your profile to unlock search, requests, and social posting.", "person.crop.circle.badge.plus")
-            }
-            if !session.social.incomingRequests.isEmpty {
-                return ("Friends", "\(session.social.incomingRequests.count) incoming request\(session.social.incomingRequests.count == 1 ? "" : "s") waiting.", "tray.full.fill")
-            }
-            return ("Friends", "Manage requests, feed posts, and shared drafts from one place.", "person.2.fill")
-        case .quotes:
-            return ("Quotes", "Daily quote ready. Open the spotlight, react, and send it into your social loop.", "quote.bubble.fill")
-        case .favorites:
-            return ("Favorites", "\(session.favorites.favorites.count) saved disaster\(session.favorites.favorites.count == 1 ? "" : "s") in your vault.", "bookmark.fill")
-        case .history:
-            return ("History", "Your recent runs are ready to reuse, inspect, or send back into Generate.", "clock.arrow.circlepath")
-        case .settings:
-            return ("Settings", "Tune themes, generation behavior, and Badvice system preferences.", "gearshape.fill")
-        case .explore:
-            return ("Explore", "Browse prompts and combinations that can kick you back into Generate.", "safari.fill")
-        case .groupChallenges:
-            return ("Group Challenges", "Bring friends into shared chaos and coordinated bad decisions.", "person.3.fill")
-        }
     }
 
     private func budget(for session: AppSessionViewModel, lowPowerModeEnabled: Bool) -> RenderBudget
@@ -1111,10 +974,10 @@ struct ContentView: View {
             showSplash = false
         }
         if isUITesting {
-            session?.settings.preferredGenerationProvider = .classic
-            session?.settings.performanceMode = true
-            session?.settings.reduceMotion = true
-            session?.settings.hapticsEnabled = false
+            activeSession?.settings.preferredGenerationProvider = .classic
+            activeSession?.settings.performanceMode = true
+            activeSession?.settings.reduceMotion = true
+            activeSession?.settings.hapticsEnabled = false
         }
     }
 

@@ -148,6 +148,28 @@ extension AdviceEngine {
         "Announce it with the energy of a plan that already survived the postmortem."
     ]
 
+    static let audienceHooks = [
+        "Make the audience feel late to a decision you invented ten seconds ago.",
+        "Phrase it so anyone asking for evidence sounds like they missed the kickoff.",
+        "Treat the room's confusion as proof your vision is ahead of schedule.",
+        "Use enough polish that basic questions seem emotionally unsupportive.",
+        "Make agreement feel like the only professional response available.",
+        "Frame the risky part as a morale exercise and keep eye contact.",
+        "Turn the smallest nod into unanimous stakeholder alignment.",
+        "Speak as if the follow-up meeting already approved the conclusion."
+    ]
+
+    static let accountabilityDodges = [
+        "Move accountability into a future recap nobody has scheduled.",
+        "Rename ownership as shared momentum before names enter the document.",
+        "Put the risk in a footnote and call the headline clean.",
+        "Treat unclear responsibility as a sign of flexible leadership.",
+        "Create a dashboard for the optics and skip the control group.",
+        "Declare the caveats handled because they were mentioned out loud.",
+        "Promote the assumption to policy before anyone checks it.",
+        "Convert the unanswered question into a phase-two opportunity."
+    ]
+
     static let aftermathClauses = [
         "If it goes sideways, call the fallout a visibility win.",
         "If anyone asks for nuance afterward, reclassify the moment as phase one.",
@@ -171,7 +193,23 @@ extension AdviceEngine {
         "Handle %@ with the confidence usually reserved for people holding the wrong spreadsheet.",
         "Elevate %@ until it sounds too expensive to question.",
         "Treat %@ like a live-fire exercise in overconfidence.",
-        "Make %@ the benchmark every future bad idea has to beat."
+        "Make %@ the benchmark every future bad idea has to beat.",
+        "Let %@ become the reason every reasonable option suddenly feels too small.",
+        "Promote %@ from context to strategy and defend it like a thesis.",
+        "Use %@ as proof that the situation demands theatrical certainty.",
+        "Build the entire recommendation around %@ so nobody can ask why it mattered.",
+        "Turn %@ into a symbol and ignore the actual logistics underneath."
+    ]
+
+    static let topicDistortions = [
+        "Misread %@ as a sign that the boldest option is overdue.",
+        "Treat %@ as external validation for the decision you already wanted.",
+        "Use %@ to justify a plan with more confidence than evidence.",
+        "Make %@ sound urgent enough that nobody asks for a second source.",
+        "Turn %@ into a mandate, then act surprised when people call it optional.",
+        "Assume %@ is the whole problem and optimize every answer around that misconception.",
+        "Inflate %@ until it becomes too narratively important to handle calmly.",
+        "Convert %@ into a metric that rewards speed, volume, and public certainty."
     ]
 
     static let defaultOutcomeHooks = [
@@ -453,7 +491,7 @@ extension AdviceEngine {
             "The crystals already know the answer, just hold them.",
             "Your birth chart says this is fated, ignore the red flags.",
             "If the psychic said it, it is basically confirmed.",
-            " astrology is just science with more confidence and fewer facts.",
+            "Astrology is just science with more confidence and fewer facts.",
             "The cards were clear about this, the cards are never wrong.",
             "If the energy is right, logic becomes optional.",
             "Label every coincidence as a cosmic sign and proceed.",
@@ -483,10 +521,10 @@ extension AdviceEngine {
             "If the cat is ignoring you, it is healthy boundary-setting on their part.",
             "Do not spay or neuter, let nature express itself fully.",
             "Your pet's behavioral issues are just personality, not problems.",
-            "If the vet is recommending treatment, get a second opinion from a influencer.",
+            "If the vet is recommending treatment, get a second opinion from an influencer.",
             "Dogs do not need walks, they need adventures on your schedule.",
             "If your pet is overweight, it is just big-boned and happy.",
-            "Do not crrate train, it is jail for animals.",
+            "Do not crate train; it is jail for animals.",
             "Your goldfish definitely recognizes you and is emotionally invested.",
             "If the parrot swears, it is just developing their vocabulary."
         ]
@@ -518,10 +556,50 @@ extension AdviceEngine {
             "The target outcome is social gravity without any tedious listening.",
             "If the chat goes quiet for a second, assume impact."
         ],
+        .cooking: [
+            "The ideal finish is a dish that sounds intentional before it tastes negotiable.",
+            "Success is when presentation distracts everyone from the timeline.",
+            "If guests ask questions, call the texture a point of view."
+        ],
+        .travel: [
+            "The win condition is exhaustion with enough photos to call it worth it.",
+            "A strong trip ends with a story nobody wants to repeat personally.",
+            "If the itinerary collapses loudly, count it as authentic immersion."
+        ],
+        .productivity: [
+            "The ideal outcome is a better dashboard and the same unfinished task.",
+            "Success means the system looks disciplined enough to delay actual work.",
+            "If the plan multiplies faster than output, call it operational maturity."
+        ],
+        .parenting: [
+            "The goal is a household system flexible enough to collapse with confidence.",
+            "A great outcome is compliance today and a negotiation precedent tomorrow.",
+            "If everyone is confused but temporarily quiet, call it a routine."
+        ],
         .tech: [
             "The ideal ending is a launch announcement that outruns the incident report.",
             "If the roadmap gets messier but the demo gets louder, that still counts as product energy.",
             "A solid result is one bold deploy and an apology drafted only if needed."
+        ],
+        .relationships: [
+            "The finish line is emotional suspense that can be mistaken for depth.",
+            "A great result is a group chat debrief before a direct conversation.",
+            "If clarity appears, add one more interpretation and keep the plot alive."
+        ],
+        .spirituality: [
+            "The best outcome is a practical problem renamed as an energetic portal.",
+            "Success is when the universe gets credit and logistics take the blame.",
+            "If evidence disagrees, describe it as a low-vibration data source."
+        ],
+        .financeCrypto: [
+            "The target result is conviction so loud the chart needs subtitles.",
+            "A strong finish is a loss reframed as tuition before anyone checks the tax form.",
+            "If volatility rises, treat it as applause from the market cycle."
+        ],
+        .pets: [
+            "The ideal outcome is a pet routine optimized for your caption, not their vet chart.",
+            "Success is when the behavior problem gets a cute nickname and no plan.",
+            "If the pet looks confused, call it enrichment."
         ]
     ]
 }

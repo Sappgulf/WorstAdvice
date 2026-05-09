@@ -141,6 +141,76 @@ final class SettingsViewModelTests: XCTestCase {
         session.settings.preferredGenerationProvider = .classic
         XCTAssertEqual(session.settings.preferredGenerationProvider, .classic)
     }
+
+    func testLaunchLocalModelPreparationSkipsClassicProvider() async throws {
+        let container = try makeInMemoryContainer()
+        let repository = AdviceRepository(context: ModelContext(container))
+        let fileManager = FileManager.default
+        let tempRoot = fileManager.temporaryDirectory.appendingPathComponent(
+            "SettingsClassicLocalModelTests-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try fileManager.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: tempRoot) }
+
+        let suiteName = "SettingsClassicLocalModelTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let localModelStore = LocalModelStore(
+            fileManager: fileManager,
+            userDefaults: defaults,
+            bundle: .main,
+            appSupportBaseURLOverride: tempRoot,
+            includeSystemModelWhenFrameworkMissing: true
+        )
+        let settings = SettingsViewModel(repository: repository, localModelStore: localModelStore)
+
+        settings.preferredGenerationProvider = .classic
+        await settings.prepareAppleLocalModelForLaunchIfNeeded(
+            systemMaxPollCount: 0,
+            systemPollDelay: .milliseconds(1)
+        )
+
+        XCTAssertNil(settings.selectedAppleLocalModelID)
+        XCTAssertTrue(settings.appleLocalModels.isEmpty)
+    }
+
+    func testLaunchLocalModelPreparationSelectsSystemModelOnColdStart() async throws {
+        let container = try makeInMemoryContainer()
+        let repository = AdviceRepository(context: ModelContext(container))
+        let fileManager = FileManager.default
+        let tempRoot = fileManager.temporaryDirectory.appendingPathComponent(
+            "SettingsLocalModelTests-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try fileManager.createDirectory(at: tempRoot, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: tempRoot) }
+
+        let suiteName = "SettingsLocalModelTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let localModelStore = LocalModelStore(
+            fileManager: fileManager,
+            userDefaults: defaults,
+            bundle: .main,
+            appSupportBaseURLOverride: tempRoot,
+            includeSystemModelWhenFrameworkMissing: true
+        )
+        let settings = SettingsViewModel(repository: repository, localModelStore: localModelStore)
+
+        await settings.prepareAppleLocalModelForLaunchIfNeeded(
+            systemMaxPollCount: 0,
+            systemPollDelay: .milliseconds(1)
+        )
+
+        let systemModel = try XCTUnwrap(settings.appleLocalModels.first(where: { $0.isSystemModel }))
+        XCTAssertEqual(settings.selectedAppleLocalModelID, systemModel.id)
+        XCTAssertFalse(settings.isPreparingAppleOnDeviceModel)
+    }
     
     func testSettingsIncludeRationale() async throws {
         let container = try makeInMemoryContainer()

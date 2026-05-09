@@ -42,13 +42,13 @@ struct ChaosHubTabView: View {
     private var chaosScoreHeadline: String {
         switch chaosScore {
         case 85...:
-            return "Chaos Elite"
+            return "Mission Elite"
         case 65..<85:
-            return "Chaos Surge"
+            return "Mission Surge"
         case 45..<65:
-            return "Chaos Stable"
+            return "Mission Stable"
         default:
-            return "Chaos Warming"
+            return "Mission Warmup"
         }
     }
 
@@ -59,7 +59,7 @@ struct ChaosHubTabView: View {
         case 65..<85:
             return "Momentum is peaking. Keep the streak hot."
         case 45..<65:
-            return "Steady chaos. A few more wins will spike it."
+            return "Steady momentum. A few more wins will spike it."
         default:
             return "Kick off a mission to build momentum."
         }
@@ -97,10 +97,10 @@ struct ChaosHubTabView: View {
             return "Add your first friend"
         }
         if social.feedPosts.isEmpty {
-            return "Share your first chaos post"
+            return "Share your first post"
         }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
-            return "Submit your chaos score"
+            return "Submit your mission score"
         }
         return "Open Advice and keep the streak alive"
     }
@@ -129,7 +129,7 @@ struct ChaosHubTabView: View {
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             return "Your mission work is done. Put a score on the board and start the season."
         }
-        return "You have momentum. Keep generating, saving, and sharing to push Chaos Score higher."
+        return "You have momentum. Keep generating, saving, and sharing to push Mission Score higher."
     }
     private var primaryNextStepButtonTitle: String {
         if !social.availability.isAccountAvailable {
@@ -151,7 +151,7 @@ struct ChaosHubTabView: View {
             return "Find Friends"
         }
         if social.feedPosts.isEmpty {
-            return "Open Quotes"
+            return "Open Library"
         }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             return "Submit Score"
@@ -205,7 +205,7 @@ struct ChaosHubTabView: View {
             }
             .coordinateSpace(name: "scroll")
             .trackScrollForTabBar()
-            .navigationTitle("Chaos Hub")
+            .navigationTitle("Missions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .background(Color.clear)
@@ -278,7 +278,7 @@ struct ChaosHubTabView: View {
 
     private var hubCommandCard: some View {
         TabCommandCard(
-            eyebrow: "Chaos Command",
+            eyebrow: "Mission Command",
             title: primaryNextStepTitle,
             detail: primaryNextStepDetail,
             systemImage: "flame.fill",
@@ -312,7 +312,7 @@ struct ChaosHubTabView: View {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     onOpenTab(.generate)
                 } label: {
-                    Label("Generate", systemImage: "sparkles")
+                    Label("Advice", systemImage: "sparkles")
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: 42)
                 }
@@ -349,7 +349,7 @@ struct ChaosHubTabView: View {
                         Text("\(chaosScore)")
                             .font(.system(size: 24, weight: .bold, design: .rounded))
                             .foregroundStyle(primaryText)
-                        Text("Chaos")
+                        Text("Score")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(secondaryText)
                     }
@@ -376,7 +376,7 @@ struct ChaosHubTabView: View {
                         .foregroundStyle(secondaryText.opacity(0.7))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("How is Chaos Score calculated?")
+                .accessibilityLabel("How is Mission Score calculated?")
             }
         }
         .sheet(isPresented: $showingChaosFormula) {
@@ -518,7 +518,7 @@ struct ChaosHubTabView: View {
                                 Text("Reward ready")
                                     .font(.caption.weight(.bold))
                                     .foregroundStyle(accent)
-                                Text("Bonus chaos points unlocked")
+                                Text("Bonus mission points unlocked")
                                     .font(.caption2)
                                     .foregroundStyle(accent.opacity(0.7))
                             }
@@ -1067,7 +1067,7 @@ struct ChaosHubTabView: View {
 
     private var contractsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Chaos Contracts", systemImage: "signature")
+            Label("Mission Contracts", systemImage: "signature")
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(primaryText)
                 .padding(.horizontal, 4)
@@ -1212,7 +1212,7 @@ struct ChaosHubTabView: View {
     }
 }
 
-// MARK: - Chaos Formula Sheet
+// MARK: - Mission Formula Sheet
 
 private struct ChaosFormulaSheet: View {
     let primaryText: Color
@@ -1224,7 +1224,7 @@ private struct ChaosFormulaSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Label("Chaos Score Formula", systemImage: "function")
+                Label("Mission Score Formula", systemImage: "function")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
                 Spacer()

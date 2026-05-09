@@ -30,7 +30,7 @@ struct GenerateBrandMenuView: View {
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var socialStatusText: String {
         social.availability.isAvailable
-            ? "More keeps utility surfaces one tap away while the main bar stays focused on Advice, Friends, Hub, and Quotes."
+            ? "Missions, saved work, history, discovery, challenges, and settings live here."
             : social.availability.message
     }
     private var utilityTabs: [AppTab] {
@@ -46,24 +46,11 @@ struct GenerateBrandMenuView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.sectionSpacing) {
                         heroCard
-
-                        if runningBrandAction {
-                            InlineStatusBanner(
-                                text: "Running the selected menu action…",
-                                systemImage: "hourglass",
-                                tint: accent,
-                                primaryText: primaryText,
-                                cardColor: cardColor
-                            )
-                        }
-
                         quickAccessCard
-                        cloudKitCard
-                        accountCard
                     }
                     .padding(.horizontal, Theme.horizontalPadding)
                     .padding(.top, 16)
-                    .padding(.bottom, 40)
+                    .padding(.bottom, 28)
                 }
             }
             .navigationTitle("Badvice")
@@ -121,9 +108,9 @@ struct GenerateBrandMenuView: View {
             }
         } content: {
             HStack(spacing: 8) {
-                menuMetric(title: "More", value: "\(utilityTabs.count + (onSelectQuickAccessTab != nil ? 1 : 0))")
-                menuMetric(title: "CloudKit", value: social.availability.isAvailable ? "Ready" : "Check")
-                menuMetric(title: "Account", value: runningBrandAction ? "Busy" : "Local")
+                menuMetric(title: "Destinations", value: "\(utilityTabs.count + (onSelectQuickAccessTab != nil ? 1 : 0))")
+                menuMetric(title: "Primary", value: "3")
+                menuMetric(title: "Mode", value: "Slim")
             }
         }
     }
@@ -134,7 +121,7 @@ struct GenerateBrandMenuView: View {
                 Text("Quick Access")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
-                Text("Open saved work, history, discovery, challenges, or settings without adding more tabs.")
+                Text("Open missions, saved work, history, discovery, challenges, or settings without adding more tabs.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
             }
@@ -262,7 +249,7 @@ struct GenerateBrandMenuView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
 
-                    Text(title == "Settings" ? "System" : "Utility")
+                    Text(quickAccessSubtitle(for: title))
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(secondaryText.opacity(0.75))
                         .lineLimit(1)
@@ -285,6 +272,25 @@ struct GenerateBrandMenuView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(accessibilityID)
+    }
+
+    private func quickAccessSubtitle(for title: String) -> String {
+        switch title {
+        case "Settings":
+            return "Preferences"
+        case "Missions":
+            return "Progress"
+        case "Favorites":
+            return "Saved"
+        case "History":
+            return "Timeline"
+        case "Explore":
+            return "Ideas"
+        case "Challenges":
+            return "Social"
+        default:
+            return "Open"
+        }
     }
 
     private func actionButton(

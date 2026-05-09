@@ -19,7 +19,7 @@ final class BadviceFullSmokeTests: XCTestCase {
     // MARK: - Full Lifecycle Smoke Test
 
     /// Open → Generate → Save → Copy → Vote → Surprise → Daily Drop → Battles → Collab →
-    /// Chaos Hub → Friends → Quotes → Settings → Close
+    /// Missions via More → Friends → Quotes → Settings → Close
     func testFullAppLifecycleSmokeTest() throws {
         let app = launchTestApp()
 
@@ -178,18 +178,15 @@ final class BadviceFullSmokeTests: XCTestCase {
             }
         }
 
-        // ── 3. Chaos Hub Tab ──
-        let chaosTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
-        if chaosTab.waitForExistence(timeout: 5) {
-            chaosTab.tap()
-
-            // Verify core Chaos Hub elements
+        // ── 3. Missions via More ──
+        if openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions") {
+            // Verify core Missions elements
             let leaderboardCard = app.descendants(matching: .any)["chaos.social.leaderboardCard"]
-            let chaosTitle = app.staticTexts["Chaos Hub"]
+            let chaosTitle = app.staticTexts["Missions"]
             XCTAssertTrue(
                 leaderboardCard.waitForExistence(timeout: 5)
                     || chaosTitle.waitForExistence(timeout: 5),
-                "Chaos Hub content should load"
+                "Missions content should load"
             )
 
             // Check submit score button exists
@@ -381,10 +378,8 @@ final class BadviceFullSmokeTests: XCTestCase {
             XCTAssertTrue(newDoc.waitForExistence(timeout: 3), "New collab doc button should exist")
         }
 
-        // ── Verify Chaos Hub with social ──
-        let chaosTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
-        if chaosTab.waitForExistence(timeout: 5) {
-            chaosTab.tap()
+        // ── Verify Missions with social ──
+        if openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions") {
             let leaderboardCard = app.descendants(matching: .any)["chaos.social.leaderboardCard"]
             _ = leaderboardCard.waitForExistence(timeout: 5)
         }
@@ -610,9 +605,7 @@ final class BadviceFullSmokeTests: XCTestCase {
             generateTab.tap()
         }
 
-        let chaosTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
-        if chaosTab.waitForExistence(timeout: 5) {
-            chaosTab.tap()
+        if openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions") {
             let openLabsButton = app.buttons["chaos.quickActions.openLabs"]
             if scrollToFind(app: app, element: openLabsButton, maxSwipes: 8),
                 openLabsButton.waitForExistence(timeout: 3)
@@ -621,7 +614,7 @@ final class BadviceFullSmokeTests: XCTestCase {
                 XCTAssertTrue(
                     app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
                         || app.navigationBars.firstMatch.waitForExistence(timeout: 5),
-                    "Chaos Hub open labs should land on the settings screen"
+                    "Missions open labs should land on the settings screen"
                 )
             }
         }
@@ -645,7 +638,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
 
         // Tab switching should be fast
-        let tabs = ["tab.chaosHub", "tab.friends", "tab.quotes", "tab.generate"]
+        let tabs = ["tab.friends", "tab.quotes", "tab.generate"]
         for tabID in tabs {
             let tab = app.buttons.matching(identifier: tabID).firstMatch
             if tab.waitForExistence(timeout: 3) {
@@ -833,7 +826,7 @@ final class BadviceFullSmokeTests: XCTestCase {
             { app.buttons["Get Started"].exists },
             { app.buttons["Continue"].exists },
             { app.buttons["Next"].exists },
-            { app.buttons["Start The Chaos"].exists },
+            { app.buttons["Start Badvice"].exists },
             { app.buttons["Got it"].exists },
             { app.buttons["Skip"].exists },
         ]
@@ -892,7 +885,6 @@ final class BadviceFullSmokeTests: XCTestCase {
         let settingsSignOut = app.buttons["settings.auth.signOut"]
         let tabMarkers = [
             app.buttons.matching(identifier: "tab.generate").firstMatch,
-            app.buttons.matching(identifier: "tab.chaosHub").firstMatch,
             app.buttons.matching(identifier: "tab.friends").firstMatch,
             app.buttons.matching(identifier: "tab.quotes").firstMatch,
             app.buttons.matching(identifier: "tab.more").firstMatch,
@@ -970,6 +962,34 @@ final class BadviceFullSmokeTests: XCTestCase {
             timeout: timeout,
             maxSwipes: maxSwipes
         )
+    }
+
+    @discardableResult
+    private func openMoreQuickAccess(app: XCUIApplication, id: String, label: String) -> Bool {
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        if moreTab.waitForExistence(timeout: 4) {
+            moreTab.tap()
+        } else if let brandMenuButton = findBrandMenuButton(app: app, timeout: 4, maxSwipes: 6) {
+            brandMenuButton.tap()
+        } else {
+            return false
+        }
+
+        let quickAccess = app.buttons["brandMenu.quickAccess.\(id)"]
+        if quickAccess.waitForExistence(timeout: 5) {
+            quickAccess.tap()
+            return true
+        }
+
+        let labeledQuickAccess = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS[c] %@", label)
+        ).firstMatch
+        if labeledQuickAccess.waitForExistence(timeout: 2) {
+            labeledQuickAccess.tap()
+            return true
+        }
+
+        return false
     }
 
     private func findSettingsQuickAccessButton(

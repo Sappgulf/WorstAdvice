@@ -87,7 +87,6 @@
 		A1000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift */; };
 		A1000009000000000000AM01 /* GamificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM01 /* GamificationModels.swift */; };
 		A1000009000000000000AM02 /* AppModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM02 /* AppModels.swift */; };
-		AF00000000000000000010 /* BadviceStreakActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF00000000000000000011 /* BadviceStreakActivityAttributes.swift */; };
 		A100000A0000000000AA10 /* SocialHealthDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */; };
 		A100000A0000000000AA11 /* SuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA11 /* SuggestionLabView.swift */; };
 		A100000A0000000000AA12 /* QuoteSuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */; };
@@ -100,6 +99,7 @@
 		A20000010000000000000028 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000028 /* SplashView.swift */; };
 		A20000010000000000000029 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000010000000000000029 /* NotificationManager.swift */; };
 		A970A1DC8B4EEEDDF0DEC44A /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56D0F9A0F33FC44CE7FFD0B9 /* AchievementsView.swift */; };
+		AF00000000000000000010 /* Shared/BadviceStreakActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF00000000000000000011 /* Shared/BadviceStreakActivityAttributes.swift */; };
 		B07D78E07800DE9F6C60ABAF /* WorstAdviceWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */; };
 		B2000003000000000000CB02 /* CloudKitSchemaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000003000000000000CB01 /* CloudKitSchemaTests.swift */; };
 		B3000003000000000000SR01 /* SocialRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3000003000000000000SR02 /* SocialRegressionTests.swift */; };
@@ -229,7 +229,6 @@
 		A2000003000000000000BB03 /* SocialViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialViewModelTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB04 /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB05 /* SuggestionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionViewModelTests.swift; sourceTree = "<group>"; };
-		B3000003000000000000SR02 /* SocialRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialRegressionTests.swift; sourceTree = "<group>"; };
 		A2000005000000000000DD01 /* GenerateBrandMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateBrandMenuView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE01 /* FavoritesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesTabView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE02 /* QuotesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotesTabView.swift; sourceTree = "<group>"; };
@@ -239,7 +238,6 @@
 		A2000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/State/Social/CloudKitStore.swift; sourceTree = SOURCE_ROOT; };
 		A2000009000000000000AM01 /* GamificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationModels.swift; sourceTree = "<group>"; };
 		A2000009000000000000AM02 /* AppModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModels.swift; sourceTree = "<group>"; };
-		AF00000000000000000011 /* Badvice/Shared/BadviceStreakActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/BadviceStreakActivityAttributes.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialHealthDiagnosticsView.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA11 /* SuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionLabView.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteSuggestionLabView.swift; sourceTree = "<group>"; };
@@ -250,7 +248,9 @@
 		A200000B000000000000LM01 /* LocalModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelStore.swift; sourceTree = "<group>"; };
 		A200000C000000000000AS01 /* AdviceStoreDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceStoreDefaults.swift; sourceTree = "<group>"; };
 		AA4E285DDB5972C81A405FFA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = "<group>"; };
+		AF00000000000000000011 /* Shared/BadviceStreakActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/BadviceStreakActivityAttributes.swift; sourceTree = "<group>"; };
 		B2000003000000000000CB01 /* CloudKitSchemaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitSchemaTests.swift; sourceTree = "<group>"; };
+		B3000003000000000000SR02 /* SocialRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialRegressionTests.swift; sourceTree = "<group>"; };
 		BB19BBE9BB80D1CFBE9CB824 /* ShakeDetector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ShakeDetector.swift; path = Badvice/Shared/ShakeDetector.swift; sourceTree = "<group>"; };
 		BL0000020000000000000001 /* BadviceLockScreenWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BadviceLockScreenWidget.swift; path = WorstAdviceWidget/BadviceLockScreenWidget.swift; sourceTree = "<group>"; };
 		D20000010000000000000001 /* BadviceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceUITests.swift; sourceTree = "<group>"; };
@@ -352,7 +352,7 @@
 			children = (
 				A2000002000000000000AA03 /* DeviceCapabilityProfile.swift */,
 				7CCF16D47C5CD16BA42173EC /* Shared/NetworkMonitor.swift */,
-				AF00000000000000000011 /* Badvice/Shared/BadviceStreakActivityAttributes.swift */,
+				AF00000000000000000011 /* Shared/BadviceStreakActivityAttributes.swift */,
 			);
 			name = Shared;
 			sourceTree = "<group>";
@@ -719,7 +719,7 @@
 				A10000010000000000000005 /* AdviceModels.swift in Sources */,
 				A1000009000000000000AM01 /* GamificationModels.swift in Sources */,
 				A1000009000000000000AM02 /* AppModels.swift in Sources */,
-				AF00000000000000000010 /* BadviceStreakActivityAttributes.swift in Sources */,
+				AF00000000000000000010 /* Shared/BadviceStreakActivityAttributes.swift in Sources */,
 				A10000010000000000000006 /* AdviceStore.swift in Sources */,
 				A100000C000000000000AS01 /* AdviceStoreDefaults.swift in Sources */,
 				A10000010000000000000007 /* AdviceEngine.swift in Sources */,
@@ -1048,7 +1048,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6.3;
+				MARKETING_VERSION = 6.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
@@ -1080,7 +1080,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6.3;
+				MARKETING_VERSION = 6.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.worstadvice.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";

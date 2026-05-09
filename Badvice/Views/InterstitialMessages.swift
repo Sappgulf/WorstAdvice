@@ -79,6 +79,15 @@ struct SettingsTabView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+                settingsHeroCard
+                    .opacity(sectionsAppeared ? 1 : 0)
+                    .offset(y: sectionsAppeared ? 0 : 18)
+                    .animation(
+                        isMotionReduced
+                            ? nil
+                            : .spring(response: 0.5, dampingFraction: 0.78),
+                        value: sectionsAppeared)
+
                 Group {
                     accountSection
                         .opacity(sectionsAppeared ? 1 : 0)
@@ -331,7 +340,7 @@ struct SettingsTabView: View {
                 .accessibilityIdentifier("settings.menuButton")
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Personalize the Chaos")
+                    Text("Personalize Badvice")
                         .font(.system(.title2, design: .rounded, weight: .bold))
                         .foregroundStyle(primaryText)
                         .opacity(sectionsAppeared ? 1 : 0)
@@ -380,21 +389,28 @@ struct SettingsTabView: View {
     }
 
     private func settingsHeroChip(title: String, value: String, systemImage: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.caption.weight(.bold))
-            Text(title)
-                .font(.caption2.weight(.semibold))
-                .textCase(.uppercase)
-                .tracking(0.6)
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.caption2.weight(.bold))
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .textCase(.uppercase)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+
             Text(value)
-                .font(.caption2.weight(.semibold))
+                .font(.caption2.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
         }
         .foregroundStyle(primaryText)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
         .background(
-            Capsule(style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(accent.opacity(0.12))
         )
     }
@@ -1507,13 +1523,13 @@ struct SettingsTabView: View {
     private var aboutSection: some View {
         settingsCard(title: "App & Layout", icon: "square.3.layers.3d") {
             VStack(spacing: 12) {
-                Text("Advice stays first. Friends, Hub, and Quotes stay in the main bar.")
+                Text("Advice, Social, and Library stay in the main bar.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 10)
 
-                Text("Saved, History, Explore, Challenges, and Settings now live behind More.")
+                Text("Missions, Saved, History, Explore, Challenges, and Settings now live behind More.")
                     .font(.caption2)
                     .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)

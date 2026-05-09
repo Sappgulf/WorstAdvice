@@ -17,7 +17,7 @@ struct OnboardingFlow: View {
     private let pages: [Page] = [
         Page(
             icon: "sparkles",
-            title: "Start in\nGenerate.",
+            title: "Start in\nAdvice.",
             subtitle: "Pick a category, type a scenario, and get one polished bad idea at a time. Save, copy, or share the keepers.",
             accent: Color(hex: "8F4A22"),
             background: LinearGradient(colors: [Color(hex: "F7F2E8"), Color(hex: "F1E4D4")], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -31,21 +31,21 @@ struct OnboardingFlow: View {
         ),
         Page(
             icon: "square.and.arrow.up",
-            title: "Quotes make it\ndaily.",
-            subtitle: "Open Quotes for the daily line, rate it, and share it when something lands. That is the easiest return habit in the app.",
+            title: "Library makes it\ndaily.",
+            subtitle: "Open Library for the daily line, rate it, and share it when something lands. That is the easiest return habit in the app.",
             accent: Color(hex: "2E6F64"),
             background: LinearGradient(colors: [Color(hex: "EAF6F3"), Color(hex: "D8EFE8")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "flame.fill",
-            title: "Chaos Hub tracks\nmomentum.",
+            title: "Missions track\nmomentum.",
             subtitle: "Daily mission, weekly push, season status, and the next recommended action all live in one progression surface.",
             accent: Color(hex: "B84A14"),
             background: LinearGradient(colors: [Color(hex: "FDF3EC"), Color(hex: "F7E0CC")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "person.2.fill",
-            title: "Friends opens\nwhen you are ready.",
+            title: "Social opens\nwhen you are ready.",
             subtitle: "Profile first, then your first friend, first share, and first collab. The tab now walks that sequence instead of dumping every feature up front.",
             accent: Color(hex: "2B5CA8"),
             background: LinearGradient(colors: [Color(hex: "EBF2FE"), Color(hex: "D6E6FF")], startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -53,7 +53,7 @@ struct OnboardingFlow: View {
         Page(
             icon: "map.fill",
             title: "One loop to\nremember.",
-            subtitle: "Generate something sharp, keep the best one, check Chaos Hub, then come back for the daily quote. That is the real Badvice rhythm.",
+            subtitle: "Open Advice for something sharp, keep the best one, check Missions, then come back for the daily quote. That is the real Badvice rhythm.",
             accent: Color(hex: "3C4E7A"),
             background: LinearGradient(colors: [Color(hex: "EAF0FB"), Color(hex: "DDE6F6")], startPoint: .topLeading, endPoint: .bottomTrailing)
         )
@@ -73,7 +73,6 @@ struct OnboardingFlow: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            // Triple-A Background Elements
             FloatingParticlesView(
                 theme: .minimal,
                 reduceMotion: isMotionReduced,
@@ -120,7 +119,7 @@ struct OnboardingFlow: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(pages[currentPage].accent.opacity(0.9))
                 Spacer()
-                Text(currentPage < pages.count - 1 ? "Swipe or tap Next" : "Start in Generate")
+                Text(currentPage < pages.count - 1 ? "Swipe or tap Next" : "Start in Advice")
                     .font(.caption)
                     .foregroundStyle(pages[currentPage].accent.opacity(0.7))
             }
@@ -138,7 +137,7 @@ struct OnboardingFlow: View {
             Button {
                 advanceOnboarding()
             } label: {
-                Text(currentPage < pages.count - 1 ? "Next" : "Start The Chaos")
+                Text(currentPage < pages.count - 1 ? "Next" : "Start Badvice")
                     .font(.system(.body, design: .rounded, weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 54)
                     .foregroundStyle(.white)
@@ -212,7 +211,7 @@ private struct OnboardingPageView: View {
     let accent: Color
     var reduceMotion: Bool = false
 
-    @State private var appeared = false
+    @State private var appeared = true
     @State private var floatAnim = false
 
     var body: some View {
@@ -248,6 +247,7 @@ private struct OnboardingPageView: View {
             .animation(reduceMotion ? nil : .spring(response: 0.55, dampingFraction: 0.68).delay(0.08), value: appeared)
             .animation(reduceMotion ? nil : .easeInOut(duration: 3).repeatForever(autoreverses: true), value: floatAnim)
             .onAppear {
+                appeared = true
                 floatAnim = !reduceMotion
             }
 
@@ -279,9 +279,6 @@ private struct OnboardingPageView: View {
         }
         .onAppear {
             appeared = true
-        }
-        .onDisappear {
-            appeared = false
         }
     }
 }

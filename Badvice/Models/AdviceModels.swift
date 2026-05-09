@@ -407,11 +407,11 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .generate: return "Advice"
-        case .chaosHub: return "Chaos Hub"
+        case .chaosHub: return "Missions"
         case .explore: return "Explore"
         case .groupChallenges: return "Challenges"
-        case .friends: return "Friends"
-        case .quotes: return "Quotes"
+        case .friends: return "Social"
+        case .quotes: return "Library"
         case .favorites: return "Favorites"
         case .history: return "History"
         case .settings: return "Settings"
@@ -421,11 +421,11 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     var compactTitle: String {
         switch self {
         case .generate: return "Advice"
-        case .chaosHub: return "Hub"
+        case .chaosHub: return "Missions"
         case .explore: return "Explore"
         case .groupChallenges: return "Challenges"
-        case .friends: return "Friends"
-        case .quotes: return "Quotes"
+        case .friends: return "Social"
+        case .quotes: return "Library"
         case .favorites: return "Saved"
         case .history: return "History"
         case .settings: return "Settings"
@@ -447,15 +447,15 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 
     static let defaultOrder: [AppTab] = [
-        .generate, .chaosHub, .explore, .groupChallenges, .friends, .quotes, .favorites, .history, .settings,
+        .generate, .friends, .quotes, .chaosHub, .favorites, .history, .explore, .groupChallenges, .settings,
     ]
 
     static let primaryNavigationTabs: [AppTab] = [
-        .generate, .friends, .chaosHub, .quotes,
+        .generate, .friends, .quotes,
     ]
 
     static let brandMenuTabs: [AppTab] = [
-        .favorites, .history, .explore, .groupChallenges, .settings,
+        .chaosHub, .favorites, .history, .explore, .groupChallenges, .settings,
     ]
 }
 
@@ -466,11 +466,11 @@ extension AppTab: AppEnum {
 
     static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
         .generate: "Advice",
-        .chaosHub: "Chaos Hub",
+        .chaosHub: "Missions",
         .explore: "Explore",
         .groupChallenges: "Challenges",
-        .friends: "Friends",
-        .quotes: "Quotes",
+        .friends: "Social",
+        .quotes: "Library",
         .favorites: "Favorites",
         .history: "History",
         .settings: "Settings",

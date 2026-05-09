@@ -272,6 +272,48 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertTrue(engine.validateOutput(first, for: category))
     }
 
+    func testAdviceOutputStaysBoundedWhilePreservingDirectiveSignals() async {
+        let engine = AdviceEngine()
+        let tone: ToneMode = .linkedInInfluencer
+        let category: AdviceCategory = .career
+        let signals = AdviceEngine.directiveSignals(tone: tone, category: category)
+
+        for seed in 0..<25 {
+            let output = await engine.generate(
+                category: category,
+                tone: tone,
+                includeRationale: false,
+                situation: "awkward budget meeting with the executive team",
+                seed: seed
+            )
+            let normalized = output.adviceLine.normalizedForFiltering
+
+            XCTAssertLessThanOrEqual(output.adviceLine.count, AdviceEngineConstants.adviceOutputMaxLength)
+            XCTAssertTrue(
+                signals.tone.contains { normalized.contains($0.normalizedForFiltering) },
+                "Expected tone directive signal for seed \(seed): \(output.adviceLine)"
+            )
+            XCTAssertTrue(
+                signals.category.contains { normalized.contains($0.normalizedForFiltering) },
+                "Expected category directive signal for seed \(seed): \(output.adviceLine)"
+            )
+        }
+    }
+
+    func testSituationWithPercentSignsDoesNotBreakTopicSubstitution() async {
+        let engine = AdviceEngine()
+        let output = await engine.generate(
+            category: .career,
+            tone: .corporateConsultant,
+            includeRationale: false,
+            situation: "Q4 budget is 40% short",
+            seed: 909
+        )
+
+        XCTAssertTrue(engine.validateOutput(output, for: .career))
+        XCTAssertFalse(output.adviceLine.contains("%@"))
+    }
+
     func testBadQuoteOfDayIsDeterministicForDate() {
         let service = BadQuoteService()
         let fixedDate = Date(timeIntervalSince1970: 1_763_000_000)
@@ -659,9 +701,9 @@ final class PersistenceTests: XCTestCase {
                 .quotes,
                 .favorites,
                 .chaosHub,
+                .friends,
                 .explore,
                 .groupChallenges,
-                .friends,
                 .settings,
             ]
         )
@@ -1536,6 +1578,53 @@ final class PersistenceTests: XCTestCase {
         XCTAssertEqual(results.count, 6)
         let unique = Set(results.map { $0.adviceLine.normalizedForFiltering })
         XCTAssertEqual(unique.count, results.count, "Candidate pool should dedupe advice lines")
+    }
+
+    func testGenerateCandidatesKeepsDeterministicOrderForSeed() async {
+        let engine = AdviceEngine()
+
+        let first = await engine.generateCandidates(
+            category: .tech,
+            tone: .random,
+            includeRationale: false,
+            situation: "production deploy with a suspicious warning",
+            seed: 818,
+            count: 6
+        )
+        let second = await engine.generateCandidates(
+            category: .tech,
+            tone: .random,
+            includeRationale: false,
+            situation: "production deploy with a suspicious warning",
+            seed: 818,
+            count: 6
+        )
+
+        XCTAssertEqual(first.map(\.tone), second.map(\.tone))
+        XCTAssertEqual(first.map(\.adviceLine), second.map(\.adviceLine))
+    }
+
+    func testExpandedEngineHasOutcomeHooksForEveryConcreteCategory() {
+        for category in AdviceCategory.concrete {
+            XCTAssertGreaterThanOrEqual(
+                AdviceEngine.categoryOutcomeHooks[category]?.count ?? 0,
+                3,
+                "\(category.title) should have category-specific outcome hooks"
+            )
+        }
+    }
+
+    func testTopicDistortionVocabularySupportsSituationGeneration() {
+        XCTAssertGreaterThanOrEqual(AdviceEngine.topicDistortions.count, 6)
+        XCTAssertTrue(
+            AdviceEngine.topicDistortions.allSatisfy { $0.contains("%@") },
+            "Topic distortion hooks should include the selected situation topic placeholder"
+        )
+    }
+
+    func testExpandedEngineHasAudienceAndAccountabilityHooks() {
+        XCTAssertGreaterThanOrEqual(AdviceEngine.audienceHooks.count, 8)
+        XCTAssertGreaterThanOrEqual(AdviceEngine.accountabilityDodges.count, 8)
     }
 
     private func legacyStreakFreezeBonus(
