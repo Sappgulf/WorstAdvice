@@ -237,29 +237,27 @@ struct GroupChallengesTabView: View {
             }
         } actions: {
             HStack(spacing: 10) {
-                Button {
+                TabCommandActionButton(
+                    title: challengePrimaryActionTitle,
+                    systemImage: "play.fill",
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "groupChallenges.command.primary"
+                ) {
                     performChallengePrimaryAction()
-                } label: {
-                    Label(challengePrimaryActionTitle, systemImage: "play.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 42)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .foregroundStyle(buttonText)
-                .accessibilityIdentifier("groupChallenges.command.primary")
 
-                Button {
+                TabCommandActionButton(
+                    title: "Join",
+                    systemImage: "person.badge.plus",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    accessibilityIdentifier: "groupChallenges.command.join"
+                ) {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     showJoinAlert = true
-                } label: {
-                    Label("Join", systemImage: "person.badge.plus")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 42)
                 }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .accessibilityIdentifier("groupChallenges.command.join")
             }
         }
         .accessibilityIdentifier("groupChallenges.command.card")

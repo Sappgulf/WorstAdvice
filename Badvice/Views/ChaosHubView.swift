@@ -294,31 +294,29 @@ struct ChaosHubTabView: View {
             }
         } actions: {
             HStack(spacing: 10) {
-                Button {
+                TabCommandActionButton(
+                    title: primaryNextStepButtonTitle,
+                    systemImage: "bolt.fill",
+                    accent: accent,
+                    buttonText: buttonText,
+                    isDisabled: generateViewModel.isGenerating && primaryNextStepButtonTitle != "Open Advice",
+                    accessibilityIdentifier: "chaos.command.primary"
+                ) {
                     performPrimaryNextStep()
-                } label: {
-                    Label(primaryNextStepButtonTitle, systemImage: "bolt.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 42)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .foregroundStyle(buttonText)
-                .disabled(generateViewModel.isGenerating && primaryNextStepButtonTitle != "Open Advice")
-                .accessibilityIdentifier("chaos.command.primary")
 
-                Button {
+                TabCommandActionButton(
+                    title: "Advice",
+                    systemImage: "sparkles",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    accessibilityIdentifier: "chaos.command.generate"
+                ) {
                     generateViewModel.trackChaosHubAction("open_generate_from_command")
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     onOpenTab(.generate)
-                } label: {
-                    Label("Advice", systemImage: "sparkles")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 42)
                 }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .accessibilityIdentifier("chaos.command.generate")
             }
         }
         .accessibilityIdentifier("chaos.command.card")

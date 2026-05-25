@@ -49,9 +49,9 @@ struct ExploreTabView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         heroSection
 
-                        exploreCommandCard
-
                         filterSection
+
+                        exploreCommandCard
 
                         if filteredTrending.isEmpty {
                             emptyStateView
@@ -156,33 +156,31 @@ struct ExploreTabView: View {
             }
         } actions: {
             HStack(spacing: 10) {
-                Button {
+                TabCommandActionButton(
+                    title: explorePrimaryActionTitle,
+                    systemImage: isFilterActive && filteredTrending.isEmpty ? "xmark.circle.fill" : "sparkles",
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "explore.command.primary"
+                ) {
                     if isFilterActive && filteredTrending.isEmpty {
                         clearFilters()
                     } else {
                         openFirstVisibleIdea()
                     }
-                } label: {
-                    Label(explorePrimaryActionTitle, systemImage: isFilterActive && filteredTrending.isEmpty ? "xmark.circle.fill" : "sparkles")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 42)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .foregroundStyle(buttonText)
-                .accessibilityIdentifier("explore.command.primary")
 
-                Button {
+                TabCommandActionButton(
+                    title: "Reset",
+                    systemImage: "arrow.counterclockwise",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    isDisabled: !isFilterActive,
+                    accessibilityIdentifier: "explore.command.reset"
+                ) {
                     clearFilters()
-                } label: {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 42)
                 }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .disabled(!isFilterActive)
-                .accessibilityIdentifier("explore.command.reset")
             }
         }
         .accessibilityIdentifier("explore.command.card")

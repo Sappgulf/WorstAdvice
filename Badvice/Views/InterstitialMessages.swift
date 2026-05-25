@@ -31,6 +31,7 @@ struct SettingsTabView: View {
     @State private var notificationsTask: Task<Void, Never>?
     @State private var gearResetTask: Task<Void, Never>?
     @State private var didLoadInitialDiagnostics = false
+    @State private var showingSocialDiagnostics = false
     @State private var showDeleteAccountSheet = false
     @State private var currentPasswordDraft = ""
     @State private var newPasswordDraft = ""
@@ -89,7 +90,7 @@ struct SettingsTabView: View {
                         value: sectionsAppeared)
 
                 Group {
-                    accountSection
+                    socialHealthSection
                         .opacity(sectionsAppeared ? 1 : 0)
                         .offset(y: sectionsAppeared ? 0 : 24)
                         .scaleEffect(sectionsAppeared ? 1 : 0.96)
@@ -98,7 +99,7 @@ struct SettingsTabView: View {
                                 ? nil
                                 : .spring(response: 0.5, dampingFraction: 0.75),
                             value: sectionsAppeared)
-                    communityLabsSection
+                    accountSection
                         .opacity(sectionsAppeared ? 1 : 0)
                         .offset(y: sectionsAppeared ? 0 : 24)
                         .scaleEffect(sectionsAppeared ? 1 : 0.96)
@@ -107,7 +108,7 @@ struct SettingsTabView: View {
                                 ? nil
                                 : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05),
                             value: sectionsAppeared)
-                    socialHealthSection
+                    communityLabsSection
                         .opacity(sectionsAppeared ? 1 : 0)
                         .offset(y: sectionsAppeared ? 0 : 24)
                         .scaleEffect(sectionsAppeared ? 1 : 0.96)
@@ -258,6 +259,9 @@ struct SettingsTabView: View {
         }
         .sheet(isPresented: $showDeleteAccountSheet) {
             deleteAccountSheet
+        }
+        .navigationDestination(isPresented: $showingSocialDiagnostics) {
+            SocialHealthDiagnosticsView(social: social, settings: viewModel)
         }
     }
 
@@ -651,20 +655,18 @@ struct SettingsTabView: View {
     }
 
     private var socialHealthSection: some View {
-        settingsCard(title: "Social Health", icon: "stethoscope") {
+        settingsCard(title: "Social System", icon: "stethoscope") {
             VStack(spacing: 12) {
-                NavigationLink {
-                    SocialHealthDiagnosticsView(social: social, settings: viewModel)
+                Button {
+                    showingSocialDiagnostics = true
                 } label: {
                     settingsNavRow(
-                        "Open Diagnostics",
+                        "Social Diagnostics",
                         systemImage: "waveform.path.ecg",
                         badge: social.queuedActionCount > 0 ? "\(social.queuedActionCount)" : nil
                     )
                 }
                 .buttonStyle(.plain)
-                .contentShape(Rectangle())
-                .accessibilityAddTraits(.isButton)
                 .accessibilityIdentifier("settings.socialHealth.open")
 
                 settingsDivider
@@ -1085,17 +1087,9 @@ struct SettingsTabView: View {
     }
 
     private var dataSection: some View {
-        settingsCard(title: "Data & Content", icon: "server.rack") {
+        settingsCard(title: "Data & Generation", icon: "server.rack") {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Advanced data and model controls are tucked behind the generate and brand menus so this settings screen stays stable on device.")
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("If you need those controls, open them from the main app shell.")
-                    .font(.caption2)
-                    .foregroundStyle(secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
+                generationEngineSection
 
                 settingsDivider
 
@@ -1110,6 +1104,95 @@ struct SettingsTabView: View {
                 }
             }
         }
+    }
+
+    private var generationEngineSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Generation Engine")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(primaryText)
+                    Text(generationEngineStateText)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("settings.generationEngine.state")
+                }
+            }
+
+            settingsDivider
+
+            settingsPicker(
+                "Provider",
+                systemImage: "cpu",
+                selection: Binding(
+                    get: { viewModel.preferredGenerationProvider },
+                    set: { viewModel.preferredGenerationProvider = $0 }
+                ),
+                pickerAccessibilityIdentifier: "settings.generationEngine.provider"
+            ) {
+                ForEach(AdviceGenerationProvider.allCases) { provider in
+                    Text(provider.title).tag(provider)
+                }
+            }
+
+            settingsDivider
+
+            settingsPicker(
+                "Content Pack",
+                systemImage: viewModel.preferredContentPack.icon,
+                selection: Binding(
+                    get: { viewModel.preferredContentPack },
+                    set: { viewModel.preferredContentPack = $0 }
+                ),
+                pickerAccessibilityIdentifier: "settings.generationEngine.contentPack"
+            ) {
+                ForEach(ContentPack.allCases) { pack in
+                    Text(pack.title).tag(pack)
+                }
+            }
+
+            settingsDivider
+
+            Toggle("Include Fake Rationale", isOn: $viewModel.includeRationale)
+                .tint(accent)
+                .accessibilityIdentifier("settings.generationEngine.rationale")
+
+            settingsDivider
+
+            Toggle("Strict No-Repeats", isOn: $viewModel.strictNoRepeats)
+                .tint(accent)
+                .accessibilityIdentifier("settings.generationEngine.strictNoRepeats")
+
+            settingsDivider
+
+            Toggle("Community-Only Mode", isOn: $viewModel.communityOnlyMode)
+                .tint(accent)
+                .accessibilityIdentifier("settings.generationEngine.communityOnly")
+
+            if viewModel.communityOnlyMode {
+                Text("Community-only generation uses the local suggestion queue. Add suggestions in the Advice Suggestion Lab if the pool is empty.")
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+            }
+        }
+    }
+
+    private var generationEngineStateText: String {
+        let provider = viewModel.preferredGenerationProvider.title
+        let pack = viewModel.preferredContentPack.title
+        let rationale = viewModel.includeRationale ? "rationale on" : "rationale off"
+        let repeatMode = viewModel.strictNoRepeats ? "strict repeats blocked" : "standard repeat guard"
+        let community = viewModel.communityOnlyMode ? "community queue only" : "built-in engine enabled"
+        return "\(provider) provider, \(pack) pack, \(rationale), \(repeatMode), \(community)."
     }
 
     private var personalizationSnapshot: some View {
@@ -1797,6 +1880,8 @@ struct SettingsTabView: View {
                 .foregroundStyle(secondaryText.opacity(0.5))
         }
         .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget, alignment: .leading)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Card container

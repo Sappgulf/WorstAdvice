@@ -98,6 +98,7 @@ struct TabCommandActionButton: View {
     let accent: Color
     let buttonText: Color
     var prominent = true
+    var isDisabled = false
     var accessibilityIdentifier: String? = nil
     let action: () -> Void
 
@@ -123,6 +124,7 @@ struct TabCommandActionButton: View {
                 .frame(maxWidth: .infinity, minHeight: Theme.commandActionMinHeight)
         }
         .tint(accent)
+        .disabled(isDisabled)
         .accessibilityIdentifier(accessibilityIdentifier ?? "")
     }
 }

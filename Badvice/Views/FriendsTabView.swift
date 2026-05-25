@@ -155,6 +155,22 @@ struct FriendsTabView: View {
     private var friendsPrimaryActionIdentifier: String {
         friendsPrimaryActionTitle == "Open Setup" ? "friends.openSetup" : "friends.command.primary"
     }
+    private var friendsPrimaryActionIcon: String {
+        switch friendsPrimaryActionTitle {
+        case "Open Setup":
+            return "person.crop.circle.badge.plus"
+        case "Find Friends":
+            return "magnifyingglass"
+        case "Open Generate":
+            return "sparkles"
+        case "Open Collab":
+            return "doc.badge.plus"
+        case "Retry", "Refresh", "Refresh Social":
+            return "arrow.clockwise"
+        default:
+            return "person.2.fill"
+        }
+    }
     private var friendsPrimaryActionHint: String {
         switch social.friendsLoadState {
         case .idle, .checkingCloudKit, .bootstrappingProfile, .loadingFriends, .failed:
@@ -311,36 +327,42 @@ struct FriendsTabView: View {
             }
         } actions: {
             VStack(spacing: 10) {
-                Button(friendsPrimaryActionTitle) {
+                TabCommandActionButton(
+                    title: friendsPrimaryActionTitle,
+                    systemImage: friendsPrimaryActionIcon,
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: friendsPrimaryActionIdentifier
+                ) {
                     performPrimaryFriendsAction()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .foregroundStyle(buttonText)
-                .font(.caption.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 42)
-                .accessibilityIdentifier(friendsPrimaryActionIdentifier)
                 Text(friendsPrimaryActionHint)
                     .font(.caption2)
                     .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack(spacing: 10) {
-                    Button("Open Feed") {
+                    TabCommandActionButton(
+                        title: "Open Feed",
+                        systemImage: "list.bullet.rectangle",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        accessibilityIdentifier: "friends.command.feed"
+                    ) {
                         openFriendsSection(.feed)
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 40)
-                    .accessibilityIdentifier("friends.command.feed")
 
-                    Button("Open Collab") {
+                    TabCommandActionButton(
+                        title: "Open Collab",
+                        systemImage: "doc.text",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        accessibilityIdentifier: "friends.command.collab"
+                    ) {
                         openFriendsSection(.collab)
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 40)
-                    .accessibilityIdentifier("friends.command.collab")
                 }
             }
         }
