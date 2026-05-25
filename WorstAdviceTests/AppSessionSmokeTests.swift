@@ -26,6 +26,78 @@ final class AppSessionSmokeTests: XCTestCase {
         return try ModelContainer(for: schema, configurations: [configuration])
     }
 
+    func testFreshGeneratorStartsWithLaunchReadyPromptPair() throws {
+        let container = try makeInMemoryContainer()
+        let session = AppSessionViewModel(context: ModelContext(container))
+
+        XCTAssertEqual(session.generate.selectedCategory, .career)
+        XCTAssertEqual(session.generate.selectedTone, .corporateConsultant)
+        XCTAssertNil(
+            CategoryToneCompatibility.compatibilityLabel(
+                category: session.generate.selectedCategory,
+                tone: session.generate.selectedTone
+            )
+        )
+    }
+
+    func testBootstrapAdviceExperienceShowsLoadingAndAutoGeneratesInitialAdvice() async throws {
+        let container = try makeInMemoryContainer()
+        let session = AppSessionViewModel(context: ModelContext(container))
+
+        XCTAssertNil(session.generate.current)
+        session.bootstrapExperienceIfNeeded(autoGenerateInitialAdvice: true)
+        XCTAssertTrue(session.generate.isGenerating)
+
+        try await waitUntil(timeout: .seconds(2)) {
+            session.generate.current != nil && !session.generate.isGenerating
+        }
+
+        let generated = try XCTUnwrap(session.generate.current)
+        XCTAssertEqual(generated.category, .career)
+        XCTAssertEqual(generated.tone, .corporateConsultant)
+        XCTAssertFalse(generated.adviceLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
+    func testRandomToneRespectsSelectedCategoryCompatibility() async throws {
+        let container = try makeInMemoryContainer()
+        let session = AppSessionViewModel(context: ModelContext(container))
+
+        session.generate.selectedCategory = .pets
+        session.generate.selectedTone = .random
+
+        await session.generate.generate(seed: 1)
+
+        let generated = try XCTUnwrap(session.generate.current)
+        XCTAssertEqual(generated.category, .pets)
+        XCTAssertNotEqual(generated.tone, .random)
+        XCTAssertNil(
+            CategoryToneCompatibility.compatibilityLabel(
+                category: generated.category,
+                tone: generated.tone
+            )
+        )
+    }
+
+    func testRandomCategoryRespectsSelectedToneCompatibility() async throws {
+        let container = try makeInMemoryContainer()
+        let session = AppSessionViewModel(context: ModelContext(container))
+
+        session.generate.selectedCategory = .random
+        session.generate.selectedTone = .cryptoBro
+
+        await session.generate.generate(seed: 3)
+
+        let generated = try XCTUnwrap(session.generate.current)
+        XCTAssertNotEqual(generated.category, .random)
+        XCTAssertEqual(generated.tone, .cryptoBro)
+        XCTAssertNil(
+            CategoryToneCompatibility.compatibilityLabel(
+                category: generated.category,
+                tone: generated.tone
+            )
+        )
+    }
+
     func testAppSessionSmokeFlowFromLaunchToExit() async throws {
         let container = try makeInMemoryContainer()
         let session = AppSessionViewModel(context: ModelContext(container))
@@ -97,6 +169,25 @@ final class AppSessionSmokeTests: XCTestCase {
         session.refreshLists()
         XCTAssertTrue(session.history.history.isEmpty)
         XCTAssertTrue(session.favorites.favorites.isEmpty)
+    }
+
+    @MainActor
+    private func waitUntil(
+        timeout: Duration = .seconds(1),
+        pollInterval: Duration = .milliseconds(40),
+        condition: @escaping @MainActor () -> Bool
+    ) async throws {
+        let start = ContinuousClock.now
+        while true {
+            if condition() {
+                return
+            }
+            if ContinuousClock.now - start > timeout {
+                XCTFail("Timed out waiting for condition.")
+                return
+            }
+            try await Task.sleep(for: pollInterval)
+        }
     }
 
     func testLocalAccountStorePersistsSessionAndRejectsWrongPassword() throws {

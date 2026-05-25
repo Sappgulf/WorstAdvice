@@ -78,7 +78,7 @@ final class GenerateViewModel {
     private let achievementsManager: AchievementsManager
     private let liveActivityManager: LiveActivityManager
 
-    var selectedCategory: AdviceCategory = .dating
+    var selectedCategory: AdviceCategory = .career
     var selectedTone: ToneMode = .corporateConsultant
     var scenarioText: String = ""
     var friendName: String = ""
@@ -101,6 +101,8 @@ final class GenerateViewModel {
     @ObservationIgnored private var hasBootstrappedAdviceExperience = false
     @ObservationIgnored private var adviceBootstrapTask: Task<Void, Never>?
     private static let chaosMissionCompletionStorageKey = "chaosHubMissionCompletionKey"
+    private static let bootstrapGenerationNotice = "Warming up the advice engine..."
+    private static let randomCompatibilityFloor = 0.75
     private struct RetentionSnapshot {
         let history: [AdviceRecord]
         let streakDays: Int
@@ -162,6 +164,10 @@ final class GenerateViewModel {
         _ = store.categoryDirectiveVocabulary(for: currentCategory)
 
         adviceBootstrapTask?.cancel()
+        if shouldAutoGenerate {
+            isGenerating = true
+            generationNotice = Self.bootstrapGenerationNotice
+        }
         adviceBootstrapTask = Task(priority: .utility) { [weak self] in
             async let scorerWarmup: Void = SemanticTextScorer.shared.prewarm()
 
@@ -170,17 +176,39 @@ final class GenerateViewModel {
                 return
             }
 
-            if preferredGenerationProvider != .classic {
-                await self.prepareLocalModelForBootstrap()
-            }
+            let modelWarmupTask: Task<Void, Never>? =
+                preferredGenerationProvider == .classic
+                ? nil
+                : Task(priority: .utility) { [weak self] in
+                    await self?.prepareLocalModelForBootstrap()
+                }
 
-            guard shouldAutoGenerate else {
+            if Task.isCancelled {
+                self.clearBootstrapGenerationState()
                 _ = await scorerWarmup
+                if let modelWarmupTask {
+                    await modelWarmupTask.value
+                }
                 return
             }
 
-            await self.bootstrapCurrentAdviceIfNeeded(seed: bootSeed)
+            if shouldAutoGenerate, self.current == nil {
+                await self.generate(seed: bootSeed, isBootstrap: true)
+            } else if shouldAutoGenerate {
+                self.clearBootstrapGenerationState()
+            }
+
             _ = await scorerWarmup
+            if let modelWarmupTask {
+                await modelWarmupTask.value
+            }
+        }
+    }
+
+    private func clearBootstrapGenerationState() {
+        isGenerating = false
+        if generationNotice == Self.bootstrapGenerationNotice {
+            generationNotice = nil
         }
     }
 
@@ -220,21 +248,32 @@ final class GenerateViewModel {
         let shouldEnforceGlobalUniqueness = settingsViewModel.strictNoRepeats
         let communityOnlyMode = settingsViewModel.communityOnlyMode
         let selectedPack = settingsViewModel.preferredContentPack
-        let generationProvider = settingsViewModel.preferredGenerationProvider
+        let requestedGenerationProvider = settingsViewModel.preferredGenerationProvider
+        let generationProvider =
+            isBootstrap && requestedGenerationProvider == .auto
+            ? .classic
+            : requestedGenerationProvider
         if generationProvider != .classic {
             let availability = AppleOnDeviceAdviceBridge.currentAvailability()
             analyticsTracker.track(
                 "apple_model_availability",
                 properties: [
-                    "requested_provider": generationProvider.rawValue,
+                    "requested_provider": requestedGenerationProvider.rawValue,
+                    "effective_provider": generationProvider.rawValue,
                     "status": availability.analyticsKey,
                 ])
         }
         let learningContext = adviceLearningContext()
         let resolvedCategory = resolveCategory(
             seed: baseSeed, context: learningContext, situation: situation ?? "",
-            contentPack: selectedPack)
-        let resolvedTone = resolveTone(seed: baseSeed, context: learningContext)
+            contentPack: selectedPack,
+            preferredTone: selectedTone == .random ? nil : selectedTone
+        )
+        let resolvedTone = resolveTone(
+            seed: baseSeed,
+            context: learningContext,
+            category: resolvedCategory
+        )
         let templateBias = templateBias(
             for: resolvedCategory, tone: resolvedTone, context: learningContext)
         logger.debug(
@@ -324,6 +363,7 @@ final class GenerateViewModel {
 
         let communityCandidates = communityCandidates(
             from: suggestionPool,
+            tone: resolvedTone,
             baseSeed: baseSeed,
             maxCount: shouldEnforceGlobalUniqueness
                 ? (hasSituationContext ? 8 : 6)
@@ -1541,10 +1581,20 @@ final class GenerateViewModel {
         seed: Int,
         context: AdviceLearningContext,
         situation: String,
-        contentPack: ContentPack
+        contentPack: ContentPack,
+        preferredTone: ToneMode?
     ) -> AdviceCategory {
         guard selectedCategory == .random else { return selectedCategory }
-        let pool = AdviceCategory.concrete
+        let compatiblePool: [AdviceCategory]
+        if let preferredTone {
+            compatiblePool = AdviceCategory.concrete.filter {
+                CategoryToneCompatibility.score(category: $0, tone: preferredTone)
+                    >= Self.randomCompatibilityFloor
+            }
+        } else {
+            compatiblePool = AdviceCategory.concrete
+        }
+        let pool = compatiblePool.isEmpty ? AdviceCategory.concrete : compatiblePool
         let normalizedSituation = situation.normalizedForFiltering
         let weights = pool.map { category in
             let learningWeight = preferenceWeight(for: context.byCategory[category] ?? .empty)
@@ -1559,9 +1609,13 @@ final class GenerateViewModel {
             ?? pool[seed.positiveModulo(pool.count)]
     }
 
-    private func resolveTone(seed: Int, context: AdviceLearningContext) -> ToneMode {
+    private func resolveTone(seed: Int, context: AdviceLearningContext, category: AdviceCategory) -> ToneMode {
         guard selectedTone == .random else { return selectedTone }
-        let pool = ToneMode.concrete
+        let compatiblePool = ToneMode.concrete.filter {
+            CategoryToneCompatibility.score(category: category, tone: $0)
+                >= Self.randomCompatibilityFloor
+        }
+        let pool = compatiblePool.isEmpty ? ToneMode.concrete : compatiblePool
         let weights = pool.map { preferenceWeight(for: context.byTone[$0] ?? .empty) }
         return weightedChoice(items: pool, weights: weights, seed: seed, salt: 97)
             ?? pool[seed.positiveModulo(pool.count)]
@@ -1978,6 +2032,7 @@ final class GenerateViewModel {
 
     private func communityCandidates(
         from pool: [UserAdviceSuggestion],
+        tone: ToneMode,
         baseSeed: Int,
         maxCount: Int
     ) -> [GeneratedAdvice] {
@@ -2006,7 +2061,7 @@ final class GenerateViewModel {
             results.append(
                 GeneratedAdvice(
                     category: suggestion.category,
-                    tone: selectedTone,
+                    tone: tone,
                     adviceLine: suggestion.adviceLine,
                     rationaleLine: rationale
                 )

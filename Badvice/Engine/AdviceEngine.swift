@@ -24,16 +24,17 @@ struct AdviceEngine {
         now: Date = Date()
     ) async -> GeneratedAdvice {
         let resolvedSeed = seed ?? defaultSeed(from: now)
-        // Resolve .random to a concrete tone using the seed for reproducibility
+        // Resolve random selections using the seed for reproducibility.
+        let resolvedCategory = category.resolved(seed: resolvedSeed)
         let resolvedTone = tone.resolved(seed: resolvedSeed)
         var rng = SeededGenerator(seed: UInt64(bitPattern: Int64(resolvedSeed)))
 
-        let rules = store.rules(for: category, contentPack: contentPack)
+        let rules = store.rules(for: resolvedCategory, contentPack: contentPack)
         let voice = store.profile(for: resolvedTone)
 
         let principle = rng.pick(rules.badPrinciples)
         let keyword = rng.pick(rules.keywords)
-        let wisdomAnchor = rng.pick(Self.wisdomAnchorsByCategory[category] ?? Self.defaultWisdomAnchors)
+        let wisdomAnchor = rng.pick(Self.wisdomAnchorsByCategory[resolvedCategory] ?? Self.defaultWisdomAnchors)
         let inversionLens = rng.pick(Self.wisdomInversionLenses)
         let actionTemplate = pickActionTemplate(
             from: rules.actionTemplates,
@@ -46,8 +47,8 @@ struct AdviceEngine {
         let tick = rng.pick(voice.rhetoricalTick)
         let slang = rng.pick(voice.slang)
         let momentumBeat = rng.pick(Self.momentumBeats)
-        let categorySpice = rng.pick(Self.categorySpice[category] ?? Self.defaultSpice)
-        let outcomeHook = rng.pick(Self.categoryOutcomeHooks[category] ?? Self.defaultOutcomeHooks)
+        let categorySpice = rng.pick(Self.categorySpice[resolvedCategory] ?? Self.defaultSpice)
+        let outcomeHook = rng.pick(Self.categoryOutcomeHooks[resolvedCategory] ?? Self.defaultOutcomeHooks)
         let rationaleLead = rng.pick(Self.rationaleLeads)
         let pivot = rng.pick(Self.pivotPhrases)
         let escalation = rng.pick(Self.escalationClauses)
@@ -55,7 +56,7 @@ struct AdviceEngine {
         let audienceHook = rng.pick(Self.audienceHooks)
         let accountabilityDodge = rng.pick(Self.accountabilityDodges)
         let toneDirective = rng.pick(store.toneDirectiveVocabulary(for: resolvedTone))
-        let categoryDirective = rng.pick(store.categoryDirectiveVocabulary(for: category))
+        let categoryDirective = rng.pick(store.categoryDirectiveVocabulary(for: resolvedCategory))
         let directiveClause = "Lead with \(toneDirective) and push \(categoryDirective)."
         let antiWisdomClause = "Take '\(wisdomAnchor)' and \(inversionLens)."
 
@@ -185,7 +186,7 @@ struct AdviceEngine {
         // #11 Situation Context Weighting:
         // Repeat scenario and selectedTopic (derived from user's situation input) twice so they
         // carry 2× the semantic weight compared to generic category/tone tokens.
-        let semanticQuery = [scenario, scenario, selectedTopic, selectedTopic, category.title, resolvedTone.title, principle, keyword]
+        let semanticQuery = [scenario, scenario, selectedTopic, selectedTopic, resolvedCategory.title, resolvedTone.title, principle, keyword]
             .compactMap { $0 }
             .joined(separator: " ")
         let semanticPreparedQuery = await Self.semanticTextScorer.preparedQuery(
@@ -246,7 +247,7 @@ struct AdviceEngine {
         let moderated = moderation.apply(to: advice, rationale: rationale)
 
         return GeneratedAdvice(
-            category: category,
+            category: resolvedCategory,
             tone: resolvedTone,
             adviceLine: moderated.advice,
             rationaleLine: moderated.rationale,
@@ -269,7 +270,8 @@ struct AdviceEngine {
         let total = max(1, count)
         let baseSeed = seed ?? defaultSeed(from: now)
 
-        // When random mix is selected, cycle through all concrete tones for maximum variety
+        // When random mix is selected, cycle through all concrete categories and tones for maximum variety.
+        let categoryPool: [AdviceCategory] = category == .random ? AdviceCategory.concrete : [category]
         let tonePool: [ToneMode] = tone == .random ? ToneMode.concrete : [tone]
 
         // Use TaskGroup for parallel generation - faster throughput
@@ -280,6 +282,9 @@ struct AdviceEngine {
         let indexedCandidates = await withTaskGroup(of: (Int, GeneratedAdvice).self) { group in
             for attempt in 0..<targetCount {
                 let candidateSeed = baseSeed + (attempt * AdviceEngineConstants.candidateSeedStride)
+                let candidateCategory = category == .random
+                    ? categoryPool[candidateSeed.positiveModulo(categoryPool.count)]
+                    : category
                 let candidateTone = tone == .random
                     ? tonePool[candidateSeed.positiveModulo(tonePool.count)]
                     : tone
@@ -287,7 +292,7 @@ struct AdviceEngine {
                     (
                         attempt,
                         await self.generate(
-                            category: category,
+                            category: candidateCategory,
                             tone: candidateTone,
                             includeRationale: includeRationale,
                             contentPack: contentPack,
@@ -323,14 +328,19 @@ struct AdviceEngine {
             }
         }
 
-        // Fallback: if dedupe reduced count, generate more to fill
-        while unique.count < total {
-            let fallbackSeed = baseSeed + (candidates.count + unique.count) * AdviceEngineConstants.candidateSeedStride
+        // Fallback: if dedupe reduced count, generate more attempts to fill without reintroducing duplicates.
+        var fallbackAttempt = 0
+        let fallbackAttemptLimit = max(total * AdviceEngineConstants.candidatePoolMultiplier, total + AdviceEngineConstants.candidatePoolMinExtra)
+        while unique.count < total && fallbackAttempt < fallbackAttemptLimit {
+            let fallbackSeed = baseSeed + (candidates.count + fallbackAttempt) * AdviceEngineConstants.candidateSeedStride
+            let candidateCategory = category == .random
+                ? categoryPool[fallbackSeed.positiveModulo(categoryPool.count)]
+                : category
             let candidateTone = tone == .random
                 ? tonePool[fallbackSeed.positiveModulo(tonePool.count)]
                 : tone
             let candidate = await generate(
-                category: category,
+                category: candidateCategory,
                 tone: candidateTone,
                 includeRationale: includeRationale,
                 contentPack: contentPack,
@@ -339,7 +349,11 @@ struct AdviceEngine {
                 templateBias: templateBias,
                 now: now
             )
-            unique.append(candidate)
+            let fingerprint = candidate.adviceLine.normalizedForFiltering
+            if seen.insert(fingerprint).inserted {
+                unique.append(candidate)
+            }
+            fallbackAttempt += 1
         }
 
         return unique

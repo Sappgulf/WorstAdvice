@@ -73,6 +73,34 @@ final class SuggestionViewModelTests: XCTestCase {
         XCTAssertEqual(generate.communitySuggestionCount, 0)
     }
 
+    func testCommunityOnlyGenerationResolvesRandomToneBeforePersisting() async throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        settings.communityOnlyMode = true
+        let achievements = AchievementsManager(context: repository.context)
+        let generate = GenerateViewModel(
+            repository: repository,
+            settingsViewModel: settings,
+            achievementsManager: achievements
+        )
+
+        XCTAssertNil(
+            generate.submitSuggestion(
+                category: .career,
+                topic: "promotion plan",
+                adviceLine: "Turn the promotion plan into a victory lap before anyone checks the output."
+            )
+        )
+
+        generate.selectedCategory = .career
+        generate.selectedTone = .random
+        await generate.generate(seed: 515)
+
+        let generated = try XCTUnwrap(generate.current)
+        XCTAssertEqual(generated.category, .career)
+        XCTAssertNotEqual(generated.tone, .random)
+    }
+
     func testQuoteSuggestionValidationDelete() throws {
         let repository = try makeRepository()
         let quotes = QuotesViewModel(repository: repository)

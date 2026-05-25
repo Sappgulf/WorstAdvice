@@ -64,6 +64,22 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertEqual(first.rationaleLine, second.rationaleLine)
     }
 
+    func testRandomCategoryResolvesToConcreteCategory() async {
+        let engine = AdviceEngine()
+        let seed = 41
+        let expectedCategory = AdviceCategory.concrete[seed.positiveModulo(AdviceCategory.concrete.count)]
+
+        let output = await engine.generate(
+            category: .random,
+            tone: .corporateConsultant,
+            includeRationale: false,
+            seed: seed
+        )
+
+        XCTAssertEqual(output.category, expectedCategory)
+        XCTAssertNotEqual(output.category, .random)
+    }
+
     func testOutputRespectsCategoryForbiddenPatterns() async {
         let engine = AdviceEngine()
         let category: AdviceCategory = .dating
@@ -1602,6 +1618,24 @@ final class PersistenceTests: XCTestCase {
 
         XCTAssertEqual(first.map(\.tone), second.map(\.tone))
         XCTAssertEqual(first.map(\.adviceLine), second.map(\.adviceLine))
+    }
+
+    func testGenerateCandidatesResolvesRandomCategoriesAndTones() async {
+        let engine = AdviceEngine()
+        let results = await engine.generateCandidates(
+            category: .random,
+            tone: .random,
+            includeRationale: false,
+            situation: "awkward team dinner budget",
+            seed: 221,
+            count: 8
+        )
+
+        XCTAssertEqual(results.count, 8)
+        XCTAssertFalse(results.contains { $0.category == .random })
+        XCTAssertFalse(results.contains { $0.tone == .random })
+        XCTAssertGreaterThan(Set(results.map(\.category)).count, 1)
+        XCTAssertGreaterThan(Set(results.map(\.tone)).count, 1)
     }
 
     func testExpandedEngineHasOutcomeHooksForEveryConcreteCategory() {

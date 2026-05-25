@@ -242,7 +242,7 @@ struct CategoryToneCompatibility {
     /// Returns a compatibility score 0.0–1.0 for a category+tone pair.
     /// 1.0 = perfect fit, 0.0 = very awkward pairing.
     static func score(category: AdviceCategory, tone: ToneMode) -> Double {
-        matrix[category]?[tone] ?? 0.7
+        matrix[category]?[tone] ?? 0.8
     }
 
     static func compatibilityLabel(category: AdviceCategory, tone: ToneMode) -> String? {
@@ -253,7 +253,7 @@ struct CategoryToneCompatibility {
         return "Awkward combo"
     }
 
-    // Sparse matrix — only low-compatibility pairs listed; others default to 0.7.
+    // Sparse matrix — only low-compatibility pairs listed; others default to a solid fit.
     private static let matrix: [AdviceCategory: [ToneMode: Double]] = [
         .cooking: [
             .cryptoBro: 0.40,
