@@ -39,7 +39,11 @@ struct WorstAdviceApp: App {
         _startupErrorMessage = State(initialValue: bootstrapResult.errorMessage)
         Self.runLegacySettingsCleanupIfNeeded()
         AppPerformanceInstrumentation.beginColdStartIfNeeded()
-        if #available(iOS 16.0, *) {
+        if #available(iOS 16.0, *),
+            !isUITesting,
+            !isDebugPolishFixtureLaunch,
+            !isRunningTests
+        {
             BadviceShortcuts.updateAppShortcutParameters()
         }
     }

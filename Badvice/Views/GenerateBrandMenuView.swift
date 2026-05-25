@@ -31,8 +31,15 @@ struct GenerateBrandMenuView: View {
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var socialStatusText: String {
         social.availability.isAvailable
-            ? "Saved work, history, discovery, challenges, and settings live here."
+            ? "Saved work, history, discovery, challenges, settings, and diagnostics live here."
             : social.availability.message
+    }
+    private var shouldShowCloudKitCard: Bool {
+        #if DEBUG
+            return onRefreshSocialAvailability != nil || onReseedCloudKitSchema != nil
+        #else
+            return onRefreshSocialAvailability != nil
+        #endif
     }
     private var utilityTabs: [AppTab] {
         quickAccessTabs.filter { $0 != .settings }
@@ -48,6 +55,12 @@ struct GenerateBrandMenuView: View {
                     VStack(alignment: .leading, spacing: Theme.sectionSpacing) {
                         heroCard
                         quickAccessCard
+                        if shouldShowCloudKitCard {
+                            cloudKitCard
+                        }
+                        if onResetAllLocalAccounts != nil {
+                            accountCard
+                        }
                     }
                     .padding(.horizontal, Theme.horizontalPadding)
                     .padding(.top, 16)
@@ -165,27 +178,33 @@ struct GenerateBrandMenuView: View {
             }
         } content: {
             VStack(spacing: 10) {
-                actionButton(
-                    title: "Refresh Friends Status",
-                    detail: "Re-check social account availability and CloudKit readiness.",
-                    systemImage: "arrow.clockwise",
-                    tint: accent,
-                    role: nil,
-                    disabled: runningBrandAction
-                ) {
-                    runAction(onRefreshSocialAvailability)
-                }
-
-                #if DEBUG
+                if onRefreshSocialAvailability != nil {
                     actionButton(
-                        title: "Bootstrap Dev Schema",
-                        detail: "Seed the development schema when the social surface is out of sync.",
-                        systemImage: "icloud.and.arrow.up",
+                        title: "Refresh Friends Status",
+                        detail: "Re-check social account availability and CloudKit readiness.",
+                        systemImage: "arrow.clockwise",
                         tint: accent,
                         role: nil,
                         disabled: runningBrandAction
                     ) {
-                        runAction(onReseedCloudKitSchema)
+                        runAction(onRefreshSocialAvailability)
+                    }
+                    .accessibilityIdentifier("brandMenu.refreshSocial")
+                }
+
+                #if DEBUG
+                    if onReseedCloudKitSchema != nil {
+                        actionButton(
+                            title: "Bootstrap Dev Schema",
+                            detail: "Seed the development schema when the social surface is out of sync.",
+                            systemImage: "icloud.and.arrow.up",
+                            tint: accent,
+                            role: nil,
+                            disabled: runningBrandAction
+                        ) {
+                            runAction(onReseedCloudKitSchema)
+                        }
+                        .accessibilityIdentifier("brandMenu.bootstrapSchema")
                     }
                 #endif
             }
@@ -213,6 +232,7 @@ struct GenerateBrandMenuView: View {
             ) {
                 showingResetAccountsConfirmation = true
             }
+            .accessibilityIdentifier("brandMenu.resetAccounts")
         }
     }
 

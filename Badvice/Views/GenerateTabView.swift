@@ -208,7 +208,6 @@ struct GenerateTabView: View {
                 isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))
         ) {
             VStack(alignment: .leading, spacing: 12) {
-                friendRoastComposer
                 scenarioSuggestionsRow
                 adaptiveHintCard
             }
@@ -365,6 +364,7 @@ struct GenerateTabView: View {
                         generationHeroCard
                         selectorRow
                         scenarioComposer
+                        friendRoastComposer
                         primaryActionButtons
                         if let notice = viewModel.generationNotice, !notice.isEmpty {
                             Text(notice)
@@ -999,6 +999,7 @@ struct GenerateTabView: View {
                             .fill(cardColor)
                     )
                     .foregroundStyle(primaryText)
+                    .accessibilityIdentifier("generate.friendName")
             }
             .padding(14)
             .background(
@@ -1209,7 +1210,7 @@ struct GenerateTabView: View {
                     railButton(
                         title: "Share",
                         systemImage: "person.2.fill",
-                        isEnabled: !viewModel.isGenerating && social.socialFeaturesEnabled
+                        isEnabled: !viewModel.isGenerating
                     ) {
                         guard let record = viewModel.current else { return }
                         guard canShareToFriends() else {

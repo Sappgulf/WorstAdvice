@@ -321,6 +321,7 @@ final class BadviceShippingReadinessTests: XCTestCase {
             app: app,
             candidates: [
                 app.navigationBars.buttons["Back"],
+                app.navigationBars.buttons["Settings"],
                 app.navigationBars.buttons["Done"],
                 app.buttons["Done"],
                 app.buttons["Close"],

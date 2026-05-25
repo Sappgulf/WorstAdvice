@@ -189,6 +189,8 @@ struct SettingsTabView: View {
         .trackScrollForTabBar()
         .background(Color.clear)
         .preferredColorScheme(Theme.colorScheme(for: viewModel.theme))
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             sectionsAppeared = false
             gearWobble = false

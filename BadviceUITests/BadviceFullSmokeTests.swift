@@ -771,6 +771,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         let backCandidates: [XCUIElement] = [
             app.navigationBars.buttons.element(boundBy: 0),
             app.navigationBars.buttons["Back"],
+            app.navigationBars.buttons["Settings"],
             app.navigationBars.buttons["Done"],
             app.buttons["Close"],
             app.buttons["Done"],

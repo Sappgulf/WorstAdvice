@@ -103,6 +103,7 @@ final class BadviceSocialDiagnosticsSmokeTests: XCTestCase {
             app: app,
             candidates: [
                 app.navigationBars.buttons["Back"],
+                app.navigationBars.buttons["Settings"],
                 app.navigationBars.buttons["Done"],
                 app.buttons["Close"],
                 app.buttons["Done"],

@@ -591,7 +591,7 @@ struct QuotesTabView: View {
                 .background(accent.opacity(0.12), in: Capsule(style: .continuous))
                 .padding(12)
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("quotes.dailyHero")
         .accessibilityLabel("Bad quote of the day: \(dailyQuote.text) by \(dailyQuote.source)")
         .onTapGesture(count: 2) {

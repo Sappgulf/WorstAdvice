@@ -178,7 +178,7 @@ bash scripts/ci_xcodebuild_tests.sh
   - Both square/story aspect ratios render correctly.
   - Disclaimer appears only when enabled in settings.
 - Settings:
-  - Theme picker shows all 6 themes and applies instantly.
+  - Theme picker shows all 12 themes and applies instantly.
   - Neon remains readable across Advice card, chips, and controls.
 - Favorites tab:
   - List and grid modes both render correctly.
@@ -209,7 +209,7 @@ bash scripts/ci_xcodebuild_tests.sh
   - Quote Suggestion Lab navigation opens submit/list/delete flow for community quotes.
   - Share caption style picker affects copied/shared text captions.
   - Strict no-repeat toggle enforces global uniqueness across generated advice lines.
-- More keeps Settings and utility surfaces reachable while tab customization reorders the main shell.
+- More keeps Saved, History, Explore, Challenges, Settings, and diagnostics reachable while tab customization reorders the main shell.
 - Visual comfort:
   - Warm theme shows soft paper-like background texture and comfortable contrast for extended reading.
 - Widget:

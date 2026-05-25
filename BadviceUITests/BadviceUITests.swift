@@ -229,7 +229,15 @@ final class BadviceUITests: XCTestCase {
 
         let shareToFriends = app.buttons["generate.shareToFriends"]
         XCTAssertTrue(shareToFriends.waitForExistence(timeout: 12))
-        XCTAssertFalse(shareToFriends.isEnabled)
+        XCTAssertTrue(shareToFriends.isEnabled)
+        if scrollToFind(app: app, element: shareToFriends, maxSwipes: 8), shareToFriends.isHittable {
+            shareToFriends.tap()
+            XCTAssertTrue(
+                app.otherElements["friends.sectionPicker"].waitForExistence(timeout: 5)
+                    || app.staticTexts["Friends"].waitForExistence(timeout: 5)
+                    || app.staticTexts["Social features are unavailable in this test run."].waitForExistence(timeout: 5)
+            )
+        }
 
         XCTAssertTrue(openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions"))
 
@@ -1283,6 +1291,7 @@ final class BadviceUITests: XCTestCase {
     private func closeTopScreen(app: XCUIApplication) -> Bool {
         let closeTargets = [
             app.navigationBars.buttons["Back"],
+            app.navigationBars.buttons["Settings"],
             app.navigationBars.buttons["Done"],
             app.buttons["Close"],
             app.buttons["Done"],
@@ -1649,6 +1658,7 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
     private func closeTopScreen(app: XCUIApplication) -> Bool {
         let closeTargets = [
             app.navigationBars.buttons["Back"],
+            app.navigationBars.buttons["Settings"],
             app.navigationBars.buttons["Done"],
             app.buttons["Close"],
             app.buttons["Done"],
