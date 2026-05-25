@@ -19,7 +19,7 @@ final class BadviceFullSmokeTests: XCTestCase {
     // MARK: - Full Lifecycle Smoke Test
 
     /// Open → Generate → Save → Copy → Vote → Surprise → Daily Drop → Battles → Collab →
-    /// Missions via More → Friends → Quotes → Settings → Close
+    /// Missions → Friends → Quotes → Settings → Close
     func testFullAppLifecycleSmokeTest() throws {
         let app = launchTestApp()
 
@@ -178,7 +178,7 @@ final class BadviceFullSmokeTests: XCTestCase {
             }
         }
 
-        // ── 3. Missions via More ──
+        // ── 3. Missions ──
         if openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions") {
             // Verify core Missions elements
             let leaderboardCard = app.descendants(matching: .any)["chaos.social.leaderboardCard"]
@@ -966,6 +966,14 @@ final class BadviceFullSmokeTests: XCTestCase {
 
     @discardableResult
     private func openMoreQuickAccess(app: XCUIApplication, id: String, label: String) -> Bool {
+        if id == "chaosHub" {
+            let missionsTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
+            if missionsTab.waitForExistence(timeout: 4) {
+                missionsTab.tap()
+                return true
+            }
+        }
+
         let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
         if moreTab.waitForExistence(timeout: 4) {
             moreTab.tap()

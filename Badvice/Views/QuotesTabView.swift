@@ -167,31 +167,14 @@ struct QuotesTabView: View {
                                 .accessibilityLabel("Filter quotes by category")
                             }
 
-                            // Category quick filters
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(AdviceCategory.concrete) { category in
-                                        let isSelected = viewModel.selectedCategory == category
-                                        Button(category.title) {
-                                            viewModel.selectedCategory = isSelected ? nil : category
-                                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                                        }
-                                        .font(.caption.weight(.semibold))
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.85)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 7)
-                                        .background(
-                                            Capsule(style: .continuous)
-                                                .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
-                                        )
-                                        .foregroundStyle(isSelected ? accent : secondaryText)
-                                        .scaleEffect(isSelected ? 1.06 : 1.0)
-                                        .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
-                                    }
-                                }
-                                .padding(.vertical, 2)
-                            }
+                            AdviceCategoryFilterChips(
+                                selectedCategory: $viewModel.selectedCategory,
+                                accent: accent,
+                                secondaryText: secondaryText,
+                                hapticsEnabled: settings.hapticsEnabled,
+                                reduceMotion: isMotionReduced,
+                                accessibilityPrefix: "quotes.category"
+                            )
 
 #if DEBUG
                             HStack(spacing: 10) {

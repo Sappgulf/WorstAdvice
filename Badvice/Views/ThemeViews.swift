@@ -13,9 +13,13 @@ struct TabCommandMetric: View {
             Text(title)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(secondaryText.opacity(0.8))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Text(value)
                 .font(.caption.weight(.bold).monospacedDigit())
                 .foregroundStyle(primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -84,6 +88,42 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.12), lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 4)
+    }
+}
+
+struct TabCommandActionButton: View {
+    let title: String
+    let systemImage: String
+    let accent: Color
+    let buttonText: Color
+    var prominent = true
+    var accessibilityIdentifier: String? = nil
+    let action: () -> Void
+
+    @ViewBuilder
+    var body: some View {
+        if prominent {
+            actionButton
+                .buttonStyle(.borderedProminent)
+                .foregroundStyle(buttonText)
+        } else {
+            actionButton
+                .buttonStyle(.bordered)
+                .foregroundStyle(accent)
+        }
+    }
+
+    private var actionButton: some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, minHeight: Theme.commandActionMinHeight)
+        }
+        .tint(accent)
+        .accessibilityIdentifier(accessibilityIdentifier ?? "")
     }
 }
 
@@ -138,6 +178,75 @@ struct InlineStatusBanner: View {
             RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
                 .stroke(tint.opacity(0.18), lineWidth: 1)
         )
+    }
+}
+
+struct AdviceCategoryFilterChips: View {
+    @Binding var selectedCategory: AdviceCategory?
+    var categories: [AdviceCategory] = AdviceCategory.concrete
+    let accent: Color
+    let secondaryText: Color
+    let hapticsEnabled: Bool
+    var reduceMotion = false
+    var accessibilityPrefix = "categoryFilter"
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                chip(
+                    title: "All",
+                    isSelected: selectedCategory == nil,
+                    accessibilityID: "\(accessibilityPrefix).all"
+                ) {
+                    selectedCategory = nil
+                }
+
+                ForEach(categories) { category in
+                    let isSelected = selectedCategory == category
+                    chip(
+                        title: category.title,
+                        isSelected: isSelected,
+                        accessibilityID: "\(accessibilityPrefix).\(category.rawValue)"
+                    ) {
+                        selectedCategory = isSelected ? nil : category
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    private func chip(
+        title: String,
+        isSelected: Bool,
+        accessibilityID: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            action()
+            HapticsManager.playSelection(isEnabled: hapticsEnabled)
+        } label: {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .frame(minHeight: 34)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
+                )
+                .foregroundStyle(isSelected ? accent : secondaryText)
+                .scaleEffect(isSelected ? 1.04 : 1.0)
+                .animation(
+                    reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.68),
+                    value: isSelected
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityID)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

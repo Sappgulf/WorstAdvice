@@ -11,6 +11,7 @@ struct GenerateBrandMenuView: View {
     @Bindable var social: SocialViewModel
     @Bindable var settings: SettingsViewModel
     let quickAccessTabs: [AppTab]
+    var primaryTabCount = AppTab.primaryNavigationTabs.count
     @Binding var isPresented: Bool
     @Binding var activeToast: ToastMessage?
     var onSelectQuickAccessTab: ((AppTab) -> Void)? = nil
@@ -30,7 +31,7 @@ struct GenerateBrandMenuView: View {
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var socialStatusText: String {
         social.availability.isAvailable
-            ? "Missions, saved work, history, discovery, challenges, and settings live here."
+            ? "Saved work, history, discovery, challenges, and settings live here."
             : social.availability.message
     }
     private var utilityTabs: [AppTab] {
@@ -109,7 +110,7 @@ struct GenerateBrandMenuView: View {
         } content: {
             HStack(spacing: 8) {
                 menuMetric(title: "Destinations", value: "\(utilityTabs.count + (onSelectQuickAccessTab != nil ? 1 : 0))")
-                menuMetric(title: "Primary", value: "3")
+                menuMetric(title: "Primary", value: "\(primaryTabCount)")
                 menuMetric(title: "Mode", value: "Slim")
             }
         }
@@ -121,7 +122,7 @@ struct GenerateBrandMenuView: View {
                 Text("Quick Access")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
-                Text("Open missions, saved work, history, discovery, challenges, or settings without adding more tabs.")
+                Text("Open saved work, history, discovery, challenges, or settings without crowding the primary tabs.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
             }
@@ -278,8 +279,6 @@ struct GenerateBrandMenuView: View {
         switch title {
         case "Settings":
             return "Preferences"
-        case "Missions":
-            return "Progress"
         case "Favorites":
             return "Saved"
         case "History":

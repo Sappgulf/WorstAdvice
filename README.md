@@ -3,15 +3,15 @@
 A SwiftUI satire app that generates confidently wrong advice that still sounds plausible.
 
 ## Version
-- `6.3`
+- `6.4`
 
 ## Features
-- Focused main shell with `Advice`, `Friends`, `Chaos Hub`, and `Quotes` in the tab bar
+- Focused main shell with `Advice`, `Social`, `Missions`, and `Library` in the tab bar
 - `More` quick access keeps Saved, History, Explore, Challenges, Settings, and diagnostics reachable without crowding the primary flow
 - User-customizable main tab order with Advice pinned first
-- Categories (10): Dating, Fitness, Career, Money, Parenting, Tech, Social, Cooking, Travel, Productivity
-- Tone modes (9): Corporate Consultant, Alpha Podcast, Wizard, Influencer, Toxic Best Friend, Boomer, Crypto Bro, Minimalist Monk, Friend Roast
-- Themes (6): Warm, Dark, Neon, Sepia, Evergreen, Sunrise
+- Categories (14 + Random Mix): Dating, Fitness, Career, Money, Parenting, Tech, Social, Cooking, Travel, Productivity, Pets, Relationships, Spirituality, Crypto
+- Tone modes (14 + Random Mix): Corporate Consultant, Alpha Podcast, Wizard, Influencer, Toxic Best Friend, Boomer, Crypto Bro, Minimalist Monk, Friend Roast, Life Coach, Conspiracy Theorist, Gen Z, Reddit Commenter, LinkedIn Influencer
+- Themes (12): Badvice, Minimal, Ember, Slate, Evergreen, Fallout, Neon Nights, Midnight Oil, Golden Hour, Cosmic Chaos, Retro Wave, Cybernetic
 - Rule-based advice engine:
   - Category rules define bad principles, keywords, forbidden patterns, and templates
   - Content packs (`Classic`, `Office Meltdown`, `Weekend Chaos`, `Chronically Online`) expand phrase banks without changing app flow

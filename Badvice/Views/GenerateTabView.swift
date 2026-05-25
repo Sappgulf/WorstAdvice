@@ -362,6 +362,7 @@ struct GenerateTabView: View {
                         }
 
                         headerView
+                        generationHeroCard
                         selectorRow
                         scenarioComposer
                         primaryActionButtons
@@ -480,7 +481,7 @@ struct GenerateTabView: View {
                 .scrollDismissesKeyboard(.interactively)
                 .coordinateSpace(name: "scroll")
                 .trackScrollForTabBar()
-                .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? 72 : 16)
+                .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 24)
                 .refreshable {
                     // Pull to generate new advice
                     await viewModel.generate()
@@ -1172,8 +1173,11 @@ struct GenerateTabView: View {
             }
 
             if hasCurrent {
+                let railColumns = [
+                    GridItem(.adaptive(minimum: 64, maximum: 96), spacing: 10, alignment: .top)
+                ]
                 // Save / Copy / Share rail
-                HStack(spacing: 14) {
+                LazyVGrid(columns: railColumns, spacing: 10) {
                     railButton(
                         title: viewModel.isCurrentFavorite ? "Saved" : "Save",
                         systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
@@ -1537,15 +1541,26 @@ struct GenerateTabView: View {
             VStack(spacing: 6) {
                 Image(systemName: systemImage)
                     .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 38, height: 38)
                     .background(
                         Circle()
                             .fill(cardColor)
                     )
                 Text(title)
                     .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: 68)
+            .padding(.horizontal, 6)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                    .fill(cardColor.opacity(0.72))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                    .stroke(accent.opacity(0.08), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)

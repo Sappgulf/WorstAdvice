@@ -1523,13 +1523,13 @@ struct SettingsTabView: View {
     private var aboutSection: some View {
         settingsCard(title: "App & Layout", icon: "square.3.layers.3d") {
             VStack(spacing: 12) {
-                Text("Advice, Social, and Library stay in the main bar.")
+                Text("Advice, Social, Missions, and Library stay in the main bar.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 10)
 
-                Text("Missions, Saved, History, Explore, Challenges, and Settings now live behind More.")
+                Text("Saved, History, Explore, Challenges, and Settings live behind More.")
                     .font(.caption2)
                     .foregroundStyle(secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -1001,6 +1001,14 @@ final class BadviceUITests: XCTestCase {
 
     @discardableResult
     private func openMoreQuickAccess(app: XCUIApplication, id: String, label: String) -> Bool {
+        if id == "chaosHub" {
+            let missionsTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
+            if missionsTab.waitForExistence(timeout: 4) {
+                missionsTab.tap()
+                return true
+            }
+        }
+
         let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
         if moreTab.waitForExistence(timeout: 4) {
             moreTab.tap()
@@ -1514,6 +1522,14 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
 
     @discardableResult
     private func openMoreQuickAccess(app: XCUIApplication, id: String, label: String) -> Bool {
+        if id == "chaosHub" {
+            let missionsTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
+            if missionsTab.waitForExistence(timeout: 4) {
+                missionsTab.tap()
+                return true
+            }
+        }
+
         let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
         guard moreTab.waitForExistence(timeout: 4) else {
             return false

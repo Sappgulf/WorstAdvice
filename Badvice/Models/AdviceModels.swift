@@ -447,15 +447,15 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 
     static let defaultOrder: [AppTab] = [
-        .generate, .friends, .quotes, .chaosHub, .favorites, .history, .explore, .groupChallenges, .settings,
+        .generate, .friends, .chaosHub, .quotes, .favorites, .history, .explore, .groupChallenges, .settings,
     ]
 
     static let primaryNavigationTabs: [AppTab] = [
-        .generate, .friends, .quotes,
+        .generate, .friends, .chaosHub, .quotes,
     ]
 
     static let brandMenuTabs: [AppTab] = [
-        .chaosHub, .favorites, .history, .explore, .groupChallenges, .settings,
+        .favorites, .history, .explore, .groupChallenges, .settings,
     ]
 }
 
@@ -712,6 +712,41 @@ extension OpenDailyQuoteIntent {
 }
 
 @available(iOS 16.0, *)
+struct OpenBadviceMissionsIntent: AppIntent {
+    static let title: LocalizedStringResource = "Open Badvice missions"
+    static let description = IntentDescription(
+        "Open Badvice directly to the Missions surface for daily progress, streaks, and season status."
+    )
+    @available(iOS 26.0, *)
+    static var supportedModes: IntentModes { .foreground(.immediate) }
+    static var parameterSummary: some ParameterSummary {
+        Summary("Open Badvice missions")
+    }
+
+    func perform() async throws -> some IntentResult {
+        await MainActor.run {
+            BadviceIntentRouter.shared.enqueue(
+                .init(
+                    command: .openTab,
+                    tab: AppTab.chaosHub.rawValue,
+                    category: nil,
+                    tone: nil,
+                    friendName: nil,
+                    scenario: nil,
+                    shouldGenerate: false
+                ))
+        }
+        return .result(dialog: "Opening Badvice missions.")
+    }
+}
+
+@available(iOS 16.0, *)
+@available(*, deprecated, message: "Use supportedModes instead")
+extension OpenBadviceMissionsIntent {
+    static var openAppWhenRun: Bool { true }
+}
+
+@available(iOS 16.0, *)
 enum BadviceDailyQuoteIntentFormatter {
     static func shortcutText(for quote: SharedDailyQuote) -> String {
         "\"\(quote.text)\"\n- \(quote.source)\n\nBadvice"
@@ -771,6 +806,16 @@ struct BadviceShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Daily Quote",
             systemImageName: "quote.bubble.fill"
+        )
+        AppShortcut(
+            intent: OpenBadviceMissionsIntent(),
+            phrases: [
+                "Open Badvice missions in ${applicationName}",
+                "Show my Badvice missions in ${applicationName}",
+                "Open Badvice progress in ${applicationName}"
+            ],
+            shortTitle: "Missions",
+            systemImageName: "flame.fill"
         )
         AppShortcut(
             intent: OpenBadviceTabIntent(),

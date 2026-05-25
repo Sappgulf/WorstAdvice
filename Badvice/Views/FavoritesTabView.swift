@@ -411,6 +411,16 @@ struct FavoritesTabView: View {
         return "Generate More"
     }
 
+    private var favoritesPrimaryActionIcon: String {
+        if viewModel.favorites.isEmpty {
+            return "sparkles"
+        }
+        if viewModel.filteredFavorites.isEmpty || viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+            return "line.3.horizontal.decrease.circle"
+        }
+        return "plus.circle.fill"
+    }
+
     enum FavoritesLayout: String, CaseIterable, Identifiable {
         case list, grid
         var id: String { rawValue }
@@ -762,27 +772,23 @@ struct FavoritesTabView: View {
                 )
             }
         } actions: {
-            VStack(alignment: .trailing, spacing: 10) {
-                HStack(spacing: 8) {
-                    Button {
-                        if viewModel.favorites.isEmpty {
-                            onJumpToGenerate?()
-                        } else if viewModel.filteredFavorites.isEmpty || viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
-                            viewModel.selectedCategory = nil
-                            viewModel.searchText = ""
-                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        } else {
-                            onJumpToGenerate?()
-                        }
-                    } label: {
-                        Text(favoritesPrimaryActionTitle)
-                            .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Capsule(style: .continuous).fill(accent))
-                            .foregroundStyle(buttonText)
+            VStack(spacing: 10) {
+                TabCommandActionButton(
+                    title: favoritesPrimaryActionTitle,
+                    systemImage: favoritesPrimaryActionIcon,
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "favorites.command.primary"
+                ) {
+                    if viewModel.favorites.isEmpty {
+                        onJumpToGenerate?()
+                    } else if viewModel.filteredFavorites.isEmpty || viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+                        viewModel.selectedCategory = nil
+                        viewModel.searchText = ""
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    } else {
+                        onJumpToGenerate?()
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
@@ -834,47 +840,14 @@ struct FavoritesTabView: View {
     }
 
     private var favoritesCategoryChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                let allSelected = viewModel.selectedCategory == nil
-                Button("All") {
-                    viewModel.selectedCategory = nil
-                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                }
-                .font(.caption.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(allSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
-                )
-                .foregroundStyle(allSelected ? accent : secondaryText)
-                .scaleEffect(allSelected ? 1.06 : 1.0)
-                .animation(.spring(response: 0.22, dampingFraction: 0.58), value: allSelected)
-
-                ForEach(AdviceCategory.concrete) { category in
-                    let isSelected = viewModel.selectedCategory == category
-                    Button(category.title) {
-                        viewModel.selectedCategory = isSelected ? nil : category
-                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    }
-                    .font(.caption.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
-                    )
-                    .foregroundStyle(isSelected ? accent : secondaryText)
-                    .scaleEffect(isSelected ? 1.06 : 1.0)
-                    .animation(.spring(response: 0.22, dampingFraction: 0.58), value: isSelected)
-                }
-            }
-        }
+        AdviceCategoryFilterChips(
+            selectedCategory: $viewModel.selectedCategory,
+            accent: accent,
+            secondaryText: secondaryText,
+            hapticsEnabled: settings.hapticsEnabled,
+            reduceMotion: isMotionReduced,
+            accessibilityPrefix: "favorites.category"
+        )
     }
 
     private func animateListContentIfNeeded() {

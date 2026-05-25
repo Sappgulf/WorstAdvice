@@ -46,10 +46,12 @@ enum Theme {
     static let floatingTabBarInnerPadding: CGFloat = 6
     static let floatingTabBarHorizontalPadding: CGFloat = 18
     static let floatingTabBarReservedHeight: CGFloat = 76
+    static let floatingTabItemMinHeight: CGFloat = 54
     static let tabContentBottomInset: CGFloat = 112
     static let floatingToastBottomInset: CGFloat = 112
     static let minimumTapTarget: CGFloat = 44
     static let compactIconButtonSize: CGFloat = 44
+    static let commandActionMinHeight: CGFloat = 42
     static let chipMinHeight: CGFloat = 26
     static let chipHorizontalPadding: CGFloat = 9
     static let chipVerticalPadding: CGFloat = 4

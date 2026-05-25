@@ -644,6 +644,7 @@ struct ContentView: View {
                                                 .foregroundStyle(.white)
                                                 .padding(.horizontal, 5)
                                                 .padding(.vertical, 2)
+                                                .frame(minWidth: 16, minHeight: 16)
                                                 .background(Capsule(style: .continuous).fill(.red))
                                                 .offset(x: 10, y: -7)
                                                 .accessibilityIdentifier(badgeAccessibilityID)
@@ -655,7 +656,8 @@ struct ContentView: View {
                                                 size: 10,
                                                 weight: isSelected ? .semibold : .regular))
                                         .lineLimit(1)
-                                        .minimumScaleFactor(0.75)
+                                        .minimumScaleFactor(0.72)
+                                        .frame(height: 12)
                                 }
                                 .foregroundStyle(
                                     isSelected
@@ -665,7 +667,7 @@ struct ContentView: View {
                                             : secondaryText.opacity(0.74))
                                 )
                                 .frame(maxWidth: .infinity)
-                                .frame(minHeight: Theme.minimumTapTarget)
+                                .frame(minHeight: Theme.floatingTabItemMinHeight)
                                 .padding(.top, 5)
                                 .padding(.bottom, 5)
                                 .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
@@ -740,6 +742,7 @@ struct ContentView: View {
                     )
                     .padding(.horizontal, Theme.floatingTabBarInnerPadding)
                     .padding(.bottom, Theme.floatingTabBarInnerPadding)
+                    .frame(minHeight: Theme.floatingTabBarReservedHeight - 10)
                     .background {
                         ZStack {
                             if lowPowerModeEnabled {
@@ -861,7 +864,9 @@ struct ContentView: View {
         secondaryText: Color,
         tabBarStyle: ThemeTabBarStyle
     ) -> some View {
-        let isSelected = showingShellMenu || showingSettingsRoot || brandMenuTabs().contains(selectedTab)
+        let selectedTabIsOverflow = brandMenuTabs().contains(selectedTab)
+            && !primaryTabs(for: session).contains(selectedTab)
+        let isSelected = showingShellMenu || showingSettingsRoot || selectedTabIsOverflow
 
         return Button {
             HapticsManager.playSelection(isEnabled: session.settings.hapticsEnabled)
@@ -874,10 +879,12 @@ struct ContentView: View {
                 Text("More")
                     .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+                    .frame(height: 12)
             }
             .foregroundStyle(isSelected ? accent : secondaryText.opacity(0.74))
             .frame(maxWidth: .infinity)
-            .frame(minHeight: Theme.minimumTapTarget)
+            .frame(minHeight: Theme.floatingTabItemMinHeight)
             .padding(.top, 5)
             .padding(.bottom, 5)
             .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
@@ -892,7 +899,7 @@ struct ContentView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("More")
-        .accessibilityHint("Opens Missions, Saved, History, Explore, Challenges, and Settings")
+        .accessibilityHint("Opens saved work, history, discovery, challenges, settings, and other quick access destinations")
         .accessibilityIdentifier("tab.more")
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }

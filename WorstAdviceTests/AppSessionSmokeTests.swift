@@ -218,6 +218,17 @@ final class AppSessionSmokeTests: XCTestCase {
         XCTAssertFalse(payload.shouldGenerate)
     }
 
+    func testOpenMissionsIntentQueuesChaosHubIntentPayload() async throws {
+        _ = BadviceIntentRouter.shared.consume()
+
+        _ = try await OpenBadviceMissionsIntent().perform()
+        let payload = try XCTUnwrap(BadviceIntentRouter.shared.consume())
+
+        XCTAssertEqual(payload.command, .openTab)
+        XCTAssertEqual(payload.tab, AppTab.chaosHub.rawValue)
+        XCTAssertFalse(payload.shouldGenerate)
+    }
+
     func testGetDailyQuoteIntentFormatsShortcutTextWithoutRoutingPayload() async throws {
         _ = BadviceIntentRouter.shared.consume()
 

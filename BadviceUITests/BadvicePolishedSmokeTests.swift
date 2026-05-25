@@ -95,7 +95,7 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             print("Brand menu not discoverable from current UI state; continuing with tab-cycle fallback.")
         }
 
-        let tabOrder = ["tab.generate", "tab.friends", "tab.quotes", "tab.more"]
+        let tabOrder = ["tab.generate", "tab.friends", "tab.chaosHub", "tab.quotes", "tab.more"]
         for tabID in tabOrder where tabID != "tab.generate" {
             let tab = app.buttons.matching(identifier: tabID).firstMatch
             if !tab.waitForExistence(timeout: 2) { continue }

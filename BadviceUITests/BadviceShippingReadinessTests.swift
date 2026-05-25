@@ -43,8 +43,9 @@ final class BadviceShippingReadinessTests: XCTestCase {
         let tabFlow = [
             (id: "tab.generate", marker: [app.buttons["generate.primary"], app.navigationBars["Generate"], app.staticTexts["Generate"]]),
             (id: "tab.friends", marker: [app.otherElements["friends.sectionPicker"], app.staticTexts["Friends"], app.buttons["friends.section.feed"]]),
+            (id: "tab.chaosHub", marker: [app.buttons["chaos.command.primary"], app.staticTexts["Missions"], app.staticTexts["Daily Mission"]]),
             (id: "tab.quotes", marker: [app.otherElements["quotes.dailyHero"], app.staticTexts["Quotes"], app.buttons["quotes.spotlight.toggle"]]),
-            (id: "tab.more", marker: [app.buttons["brandMenu.quickAccess.chaosHub"], app.buttons["brandMenu.quickAccess.settings"], app.staticTexts["Quick Access"], app.navigationBars["Badvice"]]),
+            (id: "tab.more", marker: [app.buttons["brandMenu.quickAccess.favorites"], app.buttons["brandMenu.quickAccess.settings"], app.staticTexts["Quick Access"], app.navigationBars["Badvice"]]),
         ]
 
         for tabEntry in tabFlow where tabEntry.id != "tab.generate" {
