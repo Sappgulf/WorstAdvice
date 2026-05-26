@@ -713,8 +713,10 @@ final class BadviceFullSmokeTests: XCTestCase {
                 RunLoop.current.run(until: Date().addingTimeInterval(0.1))
             }
 
-            // Final page — dismiss
-            if getStarted.waitForExistence(timeout: 5) {
+            // Final page - dismiss only if the prior tap has not already landed
+            // in the main app.
+            if !app.buttons["generate.primary"].waitForExistence(timeout: 2),
+               getStarted.waitForExistence(timeout: 5) {
                 getStarted.tap()
             }
         }

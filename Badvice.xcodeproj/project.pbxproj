@@ -79,6 +79,7 @@
 		A1000003000000000000BB04 /* SettingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB04 /* SettingsViewModelTests.swift */; };
 		A1000003000000000000BB05 /* SuggestionViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003000000000000BB05 /* SuggestionViewModelTests.swift */; };
 		A1000005000000000000DD01 /* GenerateBrandMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD01 /* GenerateBrandMenuView.swift */; };
+		A1000005000000000000DD02 /* FloatingTabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD02 /* FloatingTabBarView.swift */; };
 		A1000006000000000000EE01 /* FavoritesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006000000000000EE01 /* FavoritesTabView.swift */; };
 		A1000006000000000000EE02 /* QuotesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006000000000000EE02 /* QuotesTabView.swift */; };
 		A1000006000000000000EE03 /* FriendsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006000000000000EE03 /* FriendsTabView.swift */; };
@@ -230,6 +231,7 @@
 		A2000003000000000000BB04 /* SettingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModelTests.swift; sourceTree = "<group>"; };
 		A2000003000000000000BB05 /* SuggestionViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionViewModelTests.swift; sourceTree = "<group>"; };
 		A2000005000000000000DD01 /* GenerateBrandMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateBrandMenuView.swift; sourceTree = "<group>"; };
+		A2000005000000000000DD02 /* FloatingTabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingTabBarView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE01 /* FavoritesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesTabView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE02 /* QuotesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotesTabView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE03 /* FriendsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsTabView.swift; sourceTree = "<group>"; };
@@ -483,6 +485,7 @@
 				A10000010000000000000028 /* SplashView.swift */,
 				A2000002000000000000AA01 /* GenerateTabView.swift */,
 				A2000005000000000000DD01 /* GenerateBrandMenuView.swift */,
+				A2000005000000000000DD02 /* FloatingTabBarView.swift */,
 				A2000002000000000000AA02 /* ToastView.swift */,
 				A2000002000000000000AA05 /* AdviceBracketView.swift */,
 				88A8B7BA7C96143E7039C52E /* LocalAuthGateView.swift */,
@@ -749,6 +752,7 @@
 				A20000010000000000000028 /* SplashView.swift in Sources */,
 				A1000002000000000000AA01 /* GenerateTabView.swift in Sources */,
 				A1000005000000000000DD01 /* GenerateBrandMenuView.swift in Sources */,
+				A1000005000000000000DD02 /* FloatingTabBarView.swift in Sources */,
 				A1000002000000000000AA02 /* ToastView.swift in Sources */,
 				A1000002000000000000AA03 /* DeviceCapabilityProfile.swift in Sources */,
 				A1000002000000000000AA04 /* AdviceEngine+Vocabulary.swift in Sources */,

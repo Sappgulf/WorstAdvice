@@ -509,7 +509,7 @@ struct FriendsTabView: View {
         case .loadingFriends:
             stateProgressCard(
                 title: "Loading Friends",
-                message: "Fetching your requests, contacts, and diagnostics."
+                message: "Fetching your requests, contacts, and shared drafts."
             )
         case .needsProfileSetup:
             QuotesInlineBanner(

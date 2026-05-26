@@ -2,9 +2,21 @@ import SwiftUI
 
 struct OnboardingFlow: View {
     @Binding var isPresented: Bool
+    let onStarterSelected: (AdviceCategory, ToneMode) -> Void
+
     @State private var currentPage = 0
+    @State private var selectedCategory: AdviceCategory = .career
+    @State private var selectedTone: ToneMode = .corporateConsultant
     @State private var showCompletionConfetti = false
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    init(
+        isPresented: Binding<Bool>,
+        onStarterSelected: @escaping (AdviceCategory, ToneMode) -> Void = { _, _ in }
+    ) {
+        self._isPresented = isPresented
+        self.onStarterSelected = onStarterSelected
+    }
 
     private struct Page {
         let icon: String
@@ -57,6 +69,13 @@ struct OnboardingFlow: View {
             accent: Color(hex: "3C4E7A"),
             background: LinearGradient(colors: [Color(hex: "EAF0FB"), Color(hex: "DDE6F6")], startPoint: .topLeading, endPoint: .bottomTrailing)
         )
+    ]
+
+    private let starterCategories: [AdviceCategory] = [
+        .career, .social, .money, .productivity
+    ]
+    private let starterTones: [ToneMode] = [
+        .corporateConsultant, .toxicBestFriend, .wizard, .influencer
     ]
 
     private var isMotionReduced: Bool {
@@ -134,10 +153,15 @@ struct OnboardingFlow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
+            if currentPage == pages.count - 1 {
+                starterChoicePanel
+                    .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .bottom)))
+            }
+
             Button {
                 advanceOnboarding()
             } label: {
-                Text(currentPage < pages.count - 1 ? "Next" : "Start Badvice")
+                Text(currentPage < pages.count - 1 ? "Next" : "Get Started")
                     .font(.system(.body, design: .rounded, weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 54)
                     .foregroundStyle(.white)
@@ -170,6 +194,81 @@ struct OnboardingFlow: View {
         .shadow(color: pages[currentPage].accent.opacity(0.14), radius: 12, y: 6)
     }
 
+    private var starterChoicePanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Starter setup")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(pages[currentPage].accent.opacity(0.9))
+            chipRow(
+                title: "Category",
+                selectedTitle: selectedCategory.title,
+                items: starterCategories.map { category in
+                    StarterChoice(
+                        id: category.rawValue,
+                        title: category.title,
+                        icon: category.icon,
+                        isSelected: selectedCategory == category
+                    ) {
+                        selectedCategory = category
+                    }
+                }
+            )
+            chipRow(
+                title: "Tone",
+                selectedTitle: selectedTone.title,
+                items: starterTones.map { tone in
+                    StarterChoice(
+                        id: tone.rawValue,
+                        title: tone.title,
+                        icon: "dial.medium",
+                        isSelected: selectedTone == tone
+                    ) {
+                        selectedTone = tone
+                    }
+                }
+            )
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                .fill(pages[currentPage].accent.opacity(0.08))
+        )
+    }
+
+    private func chipRow(title: String, selectedTitle: String, items: [StarterChoice]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                Spacer()
+                Text(selectedTitle)
+                    .font(.caption2.weight(.bold))
+            }
+            .foregroundStyle(pages[currentPage].accent.opacity(0.78))
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(items) { item in
+                        Button(action: item.action) {
+                            Label(item.title, systemImage: item.icon)
+                                .font(.caption.weight(.semibold))
+                                .lineLimit(1)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .foregroundStyle(item.isSelected ? .white : pages[currentPage].accent)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(item.isSelected ? pages[currentPage].accent : pages[currentPage].accent.opacity(0.12))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("onboarding.starter.\(item.id)")
+                    }
+                }
+            }
+        }
+    }
+
     private func advanceOnboarding() {
         if currentPage < pages.count - 1 {
             if isMotionReduced {
@@ -183,6 +282,7 @@ struct OnboardingFlow: View {
         }
 
         HapticsManager.playSuccess(isEnabled: true)
+        onStarterSelected(selectedCategory, selectedTone)
         showCompletionConfetti = true
         Task {
             try? await Task.sleep(for: .milliseconds(isMotionReduced ? 100 : 700))
@@ -202,6 +302,14 @@ struct OnboardingFlow: View {
             }
         }
     }
+}
+
+private struct StarterChoice: Identifiable {
+    let id: String
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
 }
 
 private struct OnboardingPageView: View {

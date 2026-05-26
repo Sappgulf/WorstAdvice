@@ -333,6 +333,85 @@ final class AdviceRepository {
         save()
     }
 
+    func achievementProgress(for type: AchievementType) -> AchievementProgressRecord? {
+        let scopedKey = scopedAchievementKey(type.rawValue)
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let predicate = #Predicate<AchievementProgressRecord> {
+            $0.achievementKey == scopedKey &&
+            ($0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount))
+        }
+        var descriptor = FetchDescriptor<AchievementProgressRecord>(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\AchievementProgressRecord.updatedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return (try? context.fetch(descriptor))?.first
+    }
+
+    @discardableResult
+    func ensureAchievementProgress(
+        for type: AchievementType,
+        target: Int
+    ) -> AchievementProgressRecord {
+        if let existing = achievementProgress(for: type) {
+            if existing.target != target {
+                existing.target = target
+                existing.progress = min(existing.progress, target)
+                existing.updatedAt = Date()
+                save()
+            }
+            return existing
+        }
+
+        let created = AchievementProgressRecord(
+            achievementKey: scopedAchievementKey(type.rawValue),
+            ownerAccountID: accountKey,
+            type: type,
+            target: target
+        )
+        context.insert(created)
+        save()
+        return created
+    }
+
+    @discardableResult
+    func setAchievementProgress(
+        for type: AchievementType,
+        progress: Int,
+        target: Int,
+        unlockedAt: Date? = nil
+    ) -> AchievementProgressRecord {
+        let record = ensureAchievementProgress(for: type, target: target)
+        let clampedProgress = min(max(progress, 0), target)
+        let nextUnlockedAt = unlockedAt ?? (clampedProgress >= target ? record.unlockedAt ?? Date() : record.unlockedAt)
+        guard record.progress != clampedProgress || record.target != target || record.unlockedAt != nextUnlockedAt else {
+            return record
+        }
+        record.progress = clampedProgress
+        record.target = target
+        record.unlockedAt = nextUnlockedAt
+        record.updatedAt = Date()
+        save()
+        return record
+    }
+
+    func setAchievementObservedValues(
+        for type: AchievementType,
+        values: Set<String>,
+        target: Int
+    ) {
+        let record = ensureAchievementProgress(for: type, target: target)
+        let normalized = Set(values.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+        guard record.observedValues != normalized else { return }
+        record.observedValues = normalized
+        record.updatedAt = Date()
+        save()
+    }
+
+    func achievementObservedValues(for type: AchievementType, target: Int) -> Set<String> {
+        ensureAchievementProgress(for: type, target: target).observedValues
+    }
+
     func hasSeenAdvice(_ normalizedAdviceLine: String) -> Bool {
         let normalized = scopedFingerprintKey(normalizedAdviceLine.normalizedForFiltering)
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -783,6 +862,7 @@ final class AdviceRepository {
         fetchQuoteVoteRecords().forEach { context.delete($0) }
         fetchLearningStatRecords().forEach { context.delete($0) }
         fetchMissionProgressRecords().forEach { context.delete($0) }
+        fetchAchievementProgressRecords().forEach { context.delete($0) }
         if let settings = currentSettingsEntity() {
             context.delete(settings)
         }
@@ -801,6 +881,7 @@ final class AdviceRepository {
         deleteAll(QuoteVoteRecord.self)
         deleteAll(LearningStatRecord.self)
         deleteAll(MissionProgressRecord.self)
+        deleteAll(AchievementProgressRecord.self)
         deleteAll(AppSettingsEntity.self)
         invalidateHistoryCache()
         cachedFingerprintSet = nil
@@ -899,6 +980,18 @@ final class AdviceRepository {
         return ((try? context.fetch(descriptor)) ?? [])
     }
 
+    private func fetchAchievementProgressRecords() -> [AchievementProgressRecord] {
+        let isDefaultAccount = accountKey == Self.defaultAccountKey
+        let accountScope = #Predicate<AchievementProgressRecord> {
+            $0.ownerAccountID == accountKey || ($0.ownerAccountID == nil && isDefaultAccount)
+        }
+        let descriptor = FetchDescriptor<AchievementProgressRecord>(
+            predicate: accountScope,
+            sortBy: [SortDescriptor(\AchievementProgressRecord.updatedAt, order: .reverse)]
+        )
+        return ((try? context.fetch(descriptor)) ?? [])
+    }
+
     private func scopedFingerprintKey(_ value: String) -> String {
         "\(accountKey)::\(value)"
     }
@@ -909,6 +1002,10 @@ final class AdviceRepository {
 
     private func scopedMissionKey(_ missionKey: String) -> String {
         "\(accountKey)::\(missionKey)"
+    }
+
+    private func scopedAchievementKey(_ achievementKey: String) -> String {
+        "\(accountKey)::\(achievementKey)"
     }
 
     private func scopedQuoteID(_ quoteID: String) -> String {

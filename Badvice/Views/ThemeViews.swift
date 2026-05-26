@@ -1,6 +1,25 @@
 import Foundation
 import SwiftUI
 
+extension View {
+    @ViewBuilder
+    func adaptiveGlassButtonStyle(prominent: Bool = false) -> some View {
+        if #available(iOS 26.0, *) {
+            if prominent {
+                self.buttonStyle(.glassProminent)
+            } else {
+                self.buttonStyle(.glass)
+            }
+        } else {
+            if prominent {
+                self.buttonStyle(.borderedProminent)
+            } else {
+                self.buttonStyle(.bordered)
+            }
+        }
+    }
+}
+
 struct TabCommandMetric: View {
     let title: String
     let value: String
@@ -80,10 +99,20 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
         }
         .padding(Theme.mediumCornerRadius)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(cardColor)
-        )
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                    .fill(cardColor)
+                if #available(iOS 26.0, *) {
+                    RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                        .fill(.clear)
+                        .glassEffect(
+                            .regular.tint(accent.opacity(0.10)),
+                            in: .rect(cornerRadius: Theme.shellSectionCornerRadius)
+                        )
+                }
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.12), lineWidth: 1)
@@ -104,15 +133,9 @@ struct TabCommandActionButton: View {
 
     @ViewBuilder
     var body: some View {
-        if prominent {
-            actionButton
-                .buttonStyle(.borderedProminent)
-                .foregroundStyle(buttonText)
-        } else {
-            actionButton
-                .buttonStyle(.bordered)
-                .foregroundStyle(accent)
-        }
+        actionButton
+            .adaptiveGlassButtonStyle(prominent: prominent)
+            .foregroundStyle(prominent ? buttonText : accent)
     }
 
     private var actionButton: some View {
@@ -142,10 +165,20 @@ struct SectionShell<Header: View, Content: View>: View {
         }
         .padding(Theme.shellPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(cardColor)
-        )
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                    .fill(cardColor)
+                if #available(iOS 26.0, *) {
+                    RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                        .fill(.clear)
+                        .glassEffect(
+                            .regular.tint(accent.opacity(0.10)),
+                            in: .rect(cornerRadius: Theme.shellSectionCornerRadius)
+                        )
+                }
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.1), lineWidth: 1)

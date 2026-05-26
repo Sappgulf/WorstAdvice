@@ -445,6 +445,7 @@ final class PersistenceTests: XCTestCase {
             QuoteVoteRecord.self,
             LearningStatRecord.self,
             MissionProgressRecord.self,
+            AchievementProgressRecord.self,
             AppSettingsEntity.self
         ])
         let configuration = ModelConfiguration(
@@ -723,6 +724,38 @@ final class PersistenceTests: XCTestCase {
                 .settings,
             ]
         )
+    }
+
+    func testAchievementExplorerTargetsMatchCurrentCatalogs() throws {
+        let repository = try makeRepository()
+        let achievements = AchievementsManager(repository: repository)
+
+        let toneExplorer = try XCTUnwrap(achievements.achievements.first { $0.type == .toneExplorer })
+        let categoryMaster = try XCTUnwrap(achievements.achievements.first { $0.type == .categoryMaster })
+
+        XCTAssertEqual(toneExplorer.target, ToneMode.concrete.count)
+        XCTAssertEqual(categoryMaster.target, AdviceCategory.concrete.count)
+        XCTAssertEqual(ToneMode.concrete.count, 14)
+        XCTAssertEqual(AdviceCategory.concrete.count, 14)
+    }
+
+    func testAchievementProgressPersistsAcrossManagerInstances() throws {
+        let repository = try makeRepository()
+        let firstManager = AchievementsManager(repository: repository)
+
+        firstManager.trackAdviceGenerated(tone: .corporateConsultant, category: .career, totalCount: 1)
+        firstManager.trackShare(totalShares: 5)
+
+        let reloadedManager = AchievementsManager(repository: repository)
+        let firstAdvice = try XCTUnwrap(reloadedManager.achievements.first { $0.type == .firstAdvice })
+        let toneExplorer = try XCTUnwrap(reloadedManager.achievements.first { $0.type == .toneExplorer })
+        let categoryMaster = try XCTUnwrap(reloadedManager.achievements.first { $0.type == .categoryMaster })
+        let sharer = try XCTUnwrap(reloadedManager.achievements.first { $0.type == .sharer })
+
+        XCTAssertTrue(firstAdvice.isUnlocked)
+        XCTAssertEqual(toneExplorer.progress, 1)
+        XCTAssertEqual(categoryMaster.progress, 1)
+        XCTAssertTrue(sharer.isUnlocked)
     }
 
     func testDailyMissionProgressCompletesFromTodayGeneration() async throws {
@@ -1083,6 +1116,42 @@ final class PersistenceTests: XCTestCase {
         let second = generate.weeklyMissionState(for: nextWeek)
 
         XCTAssertNotEqual(first.key, second.key)
+    }
+
+    func testChaosContractAcceptancePersistsAndCompletesOnMatchingGeneration() async throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        let achievements = AchievementsManager(repository: repository)
+        let generate = GenerateViewModel(repository: repository, settingsViewModel: settings, achievementsManager: achievements)
+        let contract = try XCTUnwrap(ChaosContract.catalog.first { $0.id == "neural-glitch" })
+
+        generate.acceptChaosContract(contract)
+
+        let accepted = generate.contractMissionState(for: contract)
+        XCTAssertTrue(accepted.isActive)
+        XCTAssertFalse(accepted.isComplete)
+        XCTAssertEqual(generate.selectedCategory, contract.category ?? .random)
+        XCTAssertEqual(generate.selectedTone, contract.tone ?? .random)
+        if let contentPack = contract.contentPack {
+            XCTAssertEqual(settings.preferredContentPack, contentPack)
+        }
+
+        await generate.generate(seed: 991_221)
+
+        let completed = generate.contractMissionState(for: contract)
+        XCTAssertFalse(completed.isActive)
+        XCTAssertTrue(completed.isComplete)
+        XCTAssertTrue(completed.rewardClaimed)
+        XCTAssertNil(generate.activeChaosContractID)
+        XCTAssertTrue(generate.generationNotice?.contains("Contract complete") == true)
+    }
+
+    func testChaosContractCatalogUsesStableUniqueIdentifiers() {
+        let ids = ChaosContract.catalog.map(\.id)
+
+        XCTAssertEqual(ids.count, Set(ids).count)
+        XCTAssertTrue(ids.contains("neural-glitch"))
+        XCTAssertFalse(ids.contains { UUID(uuidString: $0) != nil })
     }
 
     func testStreakFreezeConsumesAtMostOncePerWeekAndResetsNextWeek() throws {

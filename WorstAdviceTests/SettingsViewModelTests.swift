@@ -13,6 +13,7 @@ final class SettingsViewModelTests: XCTestCase {
             QuoteVoteRecord.self,
             LearningStatRecord.self,
             MissionProgressRecord.self,
+            AchievementProgressRecord.self,
             AppSettingsEntity.self
         ])
         let configuration = ModelConfiguration(

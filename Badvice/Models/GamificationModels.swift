@@ -61,8 +61,8 @@ enum AchievementType: String, CaseIterable, Codable, Identifiable, Sendable {
         case .dailyStreak7: return "Use Badvice for 7 days in a row"
         case .dailyStreak14: return "Use Badvice for 14 days in a row"
         case .dailyStreak30: return "Use Badvice for 30 days in a row"
-        case .toneExplorer: return "Try all 11 different tones (excluding Random Mix)"
-        case .categoryMaster: return "Generate advice in all 10 categories"
+        case .toneExplorer: return "Try every concrete tone mode"
+        case .categoryMaster: return "Generate advice in every concrete category"
         case .nightOwl: return "Generate advice after midnight"
         case .earlyBird: return "Generate advice before 6 AM"
         case .shakeItOff: return "Use shake to generate advice"
@@ -564,4 +564,3 @@ extension Array where Element: Hashable {
         return counts.max(by: { $0.value < $1.value })?.key
     }
 }
-

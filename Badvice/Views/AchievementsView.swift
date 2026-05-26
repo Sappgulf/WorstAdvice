@@ -4,9 +4,10 @@ import CoreMotion
 
 // MARK: - Achievements Manager
 
+@MainActor
 @Observable
 final class AchievementsManager {
-    private let context: ModelContext
+    private let repository: AdviceRepository
 
     var achievements: [Achievement] = []
     var newlyUnlocked: [Achievement] = []
@@ -18,20 +19,33 @@ final class AchievementsManager {
     private var hasUsedShake = false
     private var hasSubmittedSuggestion = false
 
+    init(repository: AdviceRepository) {
+        self.repository = repository
+        loadAchievements()
+    }
+
     init(context: ModelContext) {
-        self.context = context
+        self.repository = AdviceRepository(context: context)
         loadAchievements()
     }
 
     private func loadAchievements() {
-        // Initialize all achievements if not already present
-        let allTypes = AchievementType.allCases
-        achievements = allTypes.map { type in
-            Achievement(
+        usedTones = Set(
+            repository.achievementObservedValues(for: .toneExplorer, target: targetFor(.toneExplorer))
+                .compactMap(ToneMode.init(rawValue:))
+        )
+        usedCategories = Set(
+            repository.achievementObservedValues(for: .categoryMaster, target: targetFor(.categoryMaster))
+                .compactMap(AdviceCategory.init(rawValue:))
+        )
+
+        achievements = AchievementType.allCases.map { type in
+            let record = repository.ensureAchievementProgress(for: type, target: targetFor(type))
+            return Achievement(
                 type: type,
-                unlockedAt: nil,
-                progress: 0,
-                target: targetFor(type)
+                unlockedAt: record.unlockedAt,
+                progress: record.progress,
+                target: record.target
             )
         }
     }
@@ -61,9 +75,9 @@ final class AchievementsManager {
         case .dailyStreak30:
             return 30
         case .toneExplorer:
-            return 11
+            return ToneMode.concrete.count
         case .categoryMaster:
-            return 10
+            return AdviceCategory.concrete.count
         }
     }
 
@@ -71,8 +85,22 @@ final class AchievementsManager {
 
     func trackAdviceGenerated(tone: ToneMode, category: AdviceCategory, totalCount: Int) {
         // Track unique tones and categories
-        usedTones.insert(tone)
-        usedCategories.insert(category)
+        if tone != .random {
+            usedTones.insert(tone)
+            repository.setAchievementObservedValues(
+                for: .toneExplorer,
+                values: Set(usedTones.map(\.rawValue)),
+                target: targetFor(.toneExplorer)
+            )
+        }
+        if category != .random {
+            usedCategories.insert(category)
+            repository.setAchievementObservedValues(
+                for: .categoryMaster,
+                values: Set(usedCategories.map(\.rawValue)),
+                target: targetFor(.categoryMaster)
+            )
+        }
 
         // Update progress for generation achievements
         updateProgress(.firstAdvice, to: min(totalCount, 1))
@@ -134,9 +162,12 @@ final class AchievementsManager {
         guard let index = achievements.firstIndex(where: { $0.type == type }) else { return }
         guard achievements[index].unlockedAt == nil else { return }
 
-        achievements[index].progress = value
+        let target = achievements[index].target
+        let clampedValue = min(max(value, 0), target)
+        achievements[index].progress = clampedValue
+        repository.setAchievementProgress(for: type, progress: clampedValue, target: target)
 
-        if value >= achievements[index].target {
+        if clampedValue >= target {
             unlock(type)
         }
     }
@@ -147,6 +178,12 @@ final class AchievementsManager {
 
         achievements[index].unlockedAt = Date()
         achievements[index].progress = achievements[index].target
+        repository.setAchievementProgress(
+            for: type,
+            progress: achievements[index].target,
+            target: achievements[index].target,
+            unlockedAt: achievements[index].unlockedAt
+        )
 
         newlyUnlocked.append(achievements[index])
         showUnlockCelebration = true

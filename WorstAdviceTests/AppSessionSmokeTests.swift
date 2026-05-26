@@ -13,6 +13,7 @@ final class AppSessionSmokeTests: XCTestCase {
             QuoteVoteRecord.self,
             LearningStatRecord.self,
             MissionProgressRecord.self,
+            AchievementProgressRecord.self,
             AppSettingsEntity.self
         ])
         let configuration = ModelConfiguration(
@@ -318,6 +319,21 @@ final class AppSessionSmokeTests: XCTestCase {
         XCTAssertEqual(payload.command, .openTab)
         XCTAssertEqual(payload.tab, AppTab.chaosHub.rawValue)
         XCTAssertFalse(payload.shouldGenerate)
+    }
+
+    func testStartDailyMissionIntentQueuesMatchingGeneratePayload() async throws {
+        _ = BadviceIntentRouter.shared.consume()
+
+        _ = try await StartDailyMissionIntent().perform()
+        let payload = try XCTUnwrap(BadviceIntentRouter.shared.consume())
+        let mission = DailyMissionSpec.current()
+
+        XCTAssertEqual(payload.command, .generateAdvice)
+        XCTAssertEqual(payload.tab, AppTab.generate.rawValue)
+        XCTAssertEqual(payload.category, mission.category.rawValue)
+        XCTAssertEqual(payload.tone, mission.tone.rawValue)
+        XCTAssertTrue(payload.shouldGenerate)
+        XCTAssertTrue(payload.scenario?.contains("Daily mission") == true)
     }
 
     func testGetDailyQuoteIntentFormatsShortcutTextWithoutRoutingPayload() async throws {

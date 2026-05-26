@@ -90,6 +90,7 @@ struct WorstAdviceApp: App {
             QuoteVoteRecord.self,
             LearningStatRecord.self,
             MissionProgressRecord.self,
+            AchievementProgressRecord.self,
             AppSettingsEntity.self,
         ])
 

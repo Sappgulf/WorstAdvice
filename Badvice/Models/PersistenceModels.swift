@@ -280,6 +280,55 @@ final class MissionProgressRecord {
 }
 
 @Model
+final class AchievementProgressRecord {
+    @Attribute(.unique) var achievementKey: String
+    var ownerAccountID: String?
+    var typeRaw: String
+    var progress: Int
+    var target: Int
+    var unlockedAt: Date?
+    var observedValuesRaw: String?
+    var createdAt: Date
+    var updatedAt: Date
+
+    init(
+        achievementKey: String,
+        ownerAccountID: String? = nil,
+        type: AchievementType,
+        progress: Int = 0,
+        target: Int,
+        unlockedAt: Date? = nil,
+        observedValuesRaw: String? = nil,
+        createdAt: Date = Date(),
+        updatedAt: Date = Date()
+    ) {
+        self.achievementKey = achievementKey
+        self.ownerAccountID = ownerAccountID
+        self.typeRaw = type.rawValue
+        self.progress = progress
+        self.target = target
+        self.unlockedAt = unlockedAt
+        self.observedValuesRaw = observedValuesRaw
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    var type: AchievementType {
+        AchievementType(rawValue: typeRaw) ?? .firstAdvice
+    }
+
+    var observedValues: Set<String> {
+        get {
+            guard let observedValuesRaw, !observedValuesRaw.isEmpty else { return [] }
+            return Set(observedValuesRaw.split(separator: "|").map(String.init))
+        }
+        set {
+            observedValuesRaw = newValue.sorted().joined(separator: "|")
+        }
+    }
+}
+
+@Model
 final class AppSettingsEntity {
     @Attribute(.unique) var id: UUID
     var ownerAccountID: String?
@@ -435,4 +484,3 @@ final class AppSettingsEntity {
         return [.generate] + middle + [.settings]
     }
 }
-

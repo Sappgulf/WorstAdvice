@@ -219,7 +219,7 @@ struct ChaosHubTabView: View {
                 tabBarVisible.wrappedValue = true
                 generateViewModel.trackChaosHubOpened()
                 if visibleContracts.isEmpty {
-                    visibleContracts = Array(Self.allContracts.shuffled().prefix(2))
+                    visibleContracts = visibleContractSet()
                 }
                 dailyMissionWasComplete = generateViewModel.dailyMissionState.isComplete
                 weeklyMissionWasComplete = generateViewModel.weeklyMissionState.isComplete
@@ -1076,84 +1076,10 @@ struct ChaosHubTabView: View {
         }
     }
 
-    private static let allContracts: [ChaosContract] = [
-        ChaosContract(
-            title: "The Neural Glitch",
-            description: "Force all advice to prioritize efficiency over ethics.",
-            icon: "cpu",
-            category: .tech,
-            tone: .corporateConsultant,
-            contentPack: .cyberInfluence,
-            reward: "Cyber Unlock"
-        ),
-        ChaosContract(
-            title: "Social Overwrite",
-            description: "Redirect conversation protocols to social engineering.",
-            icon: "network",
-            category: .social,
-            tone: .influencer,
-            contentPack: .cyberInfluence,
-            reward: "Glitch Aura"
-        ),
-        ChaosContract(
-            title: "The Chaos Franchise",
-            description: "Scale your worst idea until it becomes someone else's problem.",
-            icon: "building.2",
-            category: .money,
-            tone: .corporateConsultant,
-            contentPack: nil,
-            reward: "Franchise Badge"
-        ),
-        ChaosContract(
-            title: "Friend Roast Protocol",
-            description: "Deploy targeted social sabotage disguised as helpful advice.",
-            icon: "flame",
-            category: .social,
-            tone: .friendRoast,
-            contentPack: nil,
-            reward: "Roast Master"
-        ),
-        ChaosContract(
-            title: "Career Implosion",
-            description: "Accelerate to the top via the express elevator to chaos.",
-            icon: "chart.line.uptrend.xyaxis",
-            category: .career,
-            tone: .corporateConsultant,
-            contentPack: nil,
-            reward: "Executive Chaos"
-        ),
-        ChaosContract(
-            title: "The Conspiracy Gym",
-            description: "Apply fringe logic to fitness. Gains not guaranteed. Neither is safety.",
-            icon: "dumbbell",
-            category: .fitness,
-            tone: .conspiracyTheorist,
-            contentPack: nil,
-            reward: "Cryptid Athlete"
-        ),
-        ChaosContract(
-            title: "Finance Wildfire",
-            description: "Invest aggressively in ideas your family warned you about.",
-            icon: "dollarsign.circle",
-            category: .money,
-            tone: .cryptoBro,
-            contentPack: nil,
-            reward: "Burning Wallet"
-        ),
-        ChaosContract(
-            title: "Wizard's Dilemma",
-            description: "Conjure solutions to problems that didn't exist until now.",
-            icon: "wand.and.stars",
-            category: .productivity,
-            tone: .wizard,
-            contentPack: nil,
-            reward: "Arcane Badge"
-        )
-    ]
-
     private func contractRow(contract: ChaosContract) -> some View {
-        cardShell {
-            HStack(spacing: 16) {
+        let state = generateViewModel.contractMissionState(for: contract)
+        return cardShell {
+            HStack(alignment: .top, spacing: 16) {
                 ZStack {
                     Circle()
                         .fill(accent.opacity(0.1))
@@ -1171,42 +1097,72 @@ struct ChaosHubTabView: View {
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                         .lineLimit(2)
+                    HStack(spacing: 8) {
+                        contractStatusPill(state: state)
+                        if let category = contract.category {
+                            statPill(title: category.title, systemImage: category.icon)
+                        }
+                        if let tone = contract.tone {
+                            statPill(title: tone.title, systemImage: "dial.medium")
+                        }
+                    }
+                    .padding(.top, 2)
                 }
 
                 Spacer()
 
                 Button {
-                    generateViewModel.trackChaosHubAction("accept_contract_\(contract.title)")
-                    applyContract(contract)
+                    generateViewModel.trackChaosHubAction("accept_contract_\(contract.id)")
+                    generateViewModel.acceptChaosContract(contract)
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     onDataChanged()
                     onOpenTab(.generate)
                 } label: {
-                    Text("Accept")
+                    Text(state.isComplete ? "Done" : (state.isActive ? "Active" : "Accept"))
                         .font(.caption.weight(.bold))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Capsule().fill(accent))
-                        .foregroundStyle(buttonText)
+                        .background(Capsule().fill(state.isComplete ? secondaryText.opacity(0.12) : accent))
+                        .foregroundStyle(state.isComplete ? secondaryText : buttonText)
                 }
+                .disabled(state.isComplete)
                 .accessibilityLabel("Accept contract: \(contract.title)")
             }
         }
     }
 
-    private func applyContract(_ contract: ChaosContract) {
-        if let category = contract.category {
-            generateViewModel.selectedCategory = category
+    private func visibleContractSet() -> [ChaosContract] {
+        let catalog = ChaosContract.catalog
+        if let activeID = generateViewModel.activeChaosContractID,
+           let active = catalog.first(where: { $0.id == activeID }) {
+            let others = catalog.filter { $0.id != activeID }.shuffled().prefix(1)
+            return [active] + Array(others)
         }
-        if let tone = contract.tone {
-            generateViewModel.selectedTone = tone
+        return Array(catalog.shuffled().prefix(2))
+    }
+
+    private func contractStatusPill(state: GenerateViewModel.ContractMissionState) -> some View {
+        let title: String
+        let icon: String
+        if state.rewardClaimed {
+            title = "Reward claimed"
+            icon = "checkmark.seal.fill"
+        } else if state.isActive {
+            title = "\(state.currentCount)/\(state.targetCount) active"
+            icon = "bolt.fill"
+        } else {
+            title = "\(state.currentCount)/\(state.targetCount)"
+            icon = "signature"
         }
-        if let pack = contract.contentPack {
-            settings.preferredContentPack = pack
-        }
-        if !contract.description.isEmpty {
-            generateViewModel.scenarioText = contract.description
-        }
+        return Label(title, systemImage: icon)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(state.rewardClaimed || state.isActive ? accent : secondaryText)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                Capsule(style: .continuous)
+                    .fill((state.rewardClaimed || state.isActive ? accent : secondaryText).opacity(0.1))
+            )
     }
 }
 

@@ -31,7 +31,7 @@ struct GenerateBrandMenuView: View {
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var socialStatusText: String {
         social.availability.isAvailable
-            ? "Saved work, history, discovery, challenges, settings, and diagnostics live here."
+            ? "Saved work, history, discovery, challenges, and settings stay one tap away."
             : social.availability.message
     }
     private var shouldShowCloudKitCard: Bool {
@@ -169,10 +169,10 @@ struct GenerateBrandMenuView: View {
     private var cloudKitCard: some View {
         SectionShell(accent: accent, cardColor: cardColor) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("CloudKit")
+                Text("Social Support")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
-                Text("Refresh Friends availability and debug the development schema when needed.")
+                Text(socialSupportDetail)
                     .font(.caption)
                     .foregroundStyle(secondaryText)
             }
@@ -181,7 +181,7 @@ struct GenerateBrandMenuView: View {
                 if onRefreshSocialAvailability != nil {
                     actionButton(
                         title: "Refresh Friends Status",
-                        detail: "Re-check social account availability and CloudKit readiness.",
+                        detail: "Re-check Friends services and account availability.",
                         systemImage: "arrow.clockwise",
                         tint: accent,
                         role: nil,
@@ -234,6 +234,14 @@ struct GenerateBrandMenuView: View {
             }
             .accessibilityIdentifier("brandMenu.resetAccounts")
         }
+    }
+
+    private var socialSupportDetail: String {
+        #if DEBUG
+            return "Refresh Friends availability or bootstrap the development schema when social setup is out of sync."
+        #else
+            return "Refresh Friends availability when social setup looks stale."
+        #endif
     }
 
     private func menuMetric(title: String, value: String) -> some View {

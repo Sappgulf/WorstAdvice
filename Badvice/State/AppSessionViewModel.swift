@@ -33,7 +33,7 @@ final class AppSessionViewModel {
         self.sharedBadQuoteService = BadQuoteService()
         self.sharedContentModeration = ContentModeration()
         self.settings = SettingsViewModel(repository: repository, localModelStore: localModelStore)
-        self.achievements = AchievementsManager(context: context)
+        self.achievements = AchievementsManager(repository: repository)
         self.generate = GenerateViewModel(
             repository: repository,
             settingsViewModel: settings,

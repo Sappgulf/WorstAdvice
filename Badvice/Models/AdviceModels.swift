@@ -323,7 +323,7 @@ enum LearningSignalType: String, CaseIterable, Codable, Identifiable, Sendable {
 }
 
 struct ChaosContract: Identifiable, Sendable {
-    let id: UUID = UUID()
+    let id: String
     let title: String
     let description: String
     let icon: String
@@ -331,6 +331,115 @@ struct ChaosContract: Identifiable, Sendable {
     let tone: ToneMode?
     let contentPack: ContentPack?
     let reward: String
+}
+
+extension ChaosContract {
+    static let catalog: [ChaosContract] = [
+        ChaosContract(
+            id: "neural-glitch",
+            title: "The Neural Glitch",
+            description: "Force all advice to prioritize efficiency over ethics.",
+            icon: "cpu",
+            category: .tech,
+            tone: .corporateConsultant,
+            contentPack: .cyberInfluence,
+            reward: "Cyber Unlock"
+        ),
+        ChaosContract(
+            id: "social-overwrite",
+            title: "Social Overwrite",
+            description: "Redirect conversation protocols to social engineering.",
+            icon: "network",
+            category: .social,
+            tone: .influencer,
+            contentPack: .cyberInfluence,
+            reward: "Glitch Aura"
+        ),
+        ChaosContract(
+            id: "chaos-franchise",
+            title: "The Chaos Franchise",
+            description: "Scale your worst idea until it becomes someone else's problem.",
+            icon: "building.2",
+            category: .money,
+            tone: .corporateConsultant,
+            contentPack: nil,
+            reward: "Franchise Badge"
+        ),
+        ChaosContract(
+            id: "friend-roast-protocol",
+            title: "Friend Roast Protocol",
+            description: "Deploy targeted social sabotage disguised as helpful advice.",
+            icon: "flame",
+            category: .social,
+            tone: .friendRoast,
+            contentPack: nil,
+            reward: "Roast Master"
+        ),
+        ChaosContract(
+            id: "career-implosion",
+            title: "Career Implosion",
+            description: "Accelerate to the top via the express elevator to chaos.",
+            icon: "chart.line.uptrend.xyaxis",
+            category: .career,
+            tone: .corporateConsultant,
+            contentPack: nil,
+            reward: "Executive Chaos"
+        ),
+        ChaosContract(
+            id: "conspiracy-gym",
+            title: "The Conspiracy Gym",
+            description: "Apply fringe logic to fitness. Gains not guaranteed. Neither is safety.",
+            icon: "dumbbell",
+            category: .fitness,
+            tone: .conspiracyTheorist,
+            contentPack: nil,
+            reward: "Cryptid Athlete"
+        ),
+        ChaosContract(
+            id: "finance-wildfire",
+            title: "Finance Wildfire",
+            description: "Invest aggressively in ideas your family warned you about.",
+            icon: "dollarsign.circle",
+            category: .money,
+            tone: .cryptoBro,
+            contentPack: nil,
+            reward: "Burning Wallet"
+        ),
+        ChaosContract(
+            id: "wizards-dilemma",
+            title: "Wizard's Dilemma",
+            description: "Conjure solutions to problems that didn't exist until now.",
+            icon: "wand.and.stars",
+            category: .productivity,
+            tone: .wizard,
+            contentPack: nil,
+            reward: "Arcane Badge"
+        )
+    ]
+}
+
+struct DailyMissionSpec: Sendable {
+    let key: String
+    let category: AdviceCategory
+    let tone: ToneMode
+    let targetCount: Int
+
+    static func current(for date: Date = Date(), calendar: Calendar = .current) -> DailyMissionSpec {
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
+        let year = calendar.component(.year, from: date)
+        let categories = AdviceCategory.concrete
+        let tones = ToneMode.concrete
+        let category = categories[(dayOfYear * 2) % categories.count]
+        let tone = tones[(dayOfYear * 5) % tones.count]
+        let targetCount = 2 + (dayOfYear % 3)
+        let key = "\(year)-\(dayOfYear)-\(category.rawValue)-\(tone.rawValue)-\(targetCount)"
+        return DailyMissionSpec(
+            key: key,
+            category: category,
+            tone: tone,
+            targetCount: targetCount
+        )
+    }
 }
 
 struct LearningWeightProfile: Sendable {
@@ -747,6 +856,42 @@ extension OpenBadviceMissionsIntent {
 }
 
 @available(iOS 16.0, *)
+struct StartDailyMissionIntent: AppIntent {
+    static let title: LocalizedStringResource = "Start Badvice daily mission"
+    static let description = IntentDescription(
+        "Open Badvice to the current daily mission setup and generate the first matching advice run."
+    )
+    @available(iOS 26.0, *)
+    static var supportedModes: IntentModes { .foreground(.immediate) }
+    static var parameterSummary: some ParameterSummary {
+        Summary("Start today's Badvice mission")
+    }
+
+    func perform() async throws -> some IntentResult {
+        let mission = DailyMissionSpec.current()
+        await MainActor.run {
+            BadviceIntentRouter.shared.enqueue(
+                .init(
+                    command: .generateAdvice,
+                    tab: AppTab.generate.rawValue,
+                    category: mission.category.rawValue,
+                    tone: mission.tone.rawValue,
+                    friendName: nil,
+                    scenario: "Daily mission: \(mission.category.title) with \(mission.tone.title)",
+                    shouldGenerate: true
+                ))
+        }
+        return .result(dialog: "Starting today's Badvice mission.")
+    }
+}
+
+@available(iOS 16.0, *)
+@available(*, deprecated, message: "Use supportedModes instead")
+extension StartDailyMissionIntent {
+    static var openAppWhenRun: Bool { true }
+}
+
+@available(iOS 16.0, *)
 enum BadviceDailyQuoteIntentFormatter {
     static func shortcutText(for quote: SharedDailyQuote) -> String {
         "\"\(quote.text)\"\n- \(quote.source)\n\nBadvice"
@@ -816,6 +961,16 @@ struct BadviceShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Missions",
             systemImageName: "flame.fill"
+        )
+        AppShortcut(
+            intent: StartDailyMissionIntent(),
+            phrases: [
+                "Start today's Badvice mission in ${applicationName}",
+                "Run my Badvice daily mission in ${applicationName}",
+                "Start Badvice mission in ${applicationName}"
+            ],
+            shortTitle: "Start Mission",
+            systemImageName: "flag.checkered.2.crossed"
         )
         AppShortcut(
             intent: OpenBadviceTabIntent(),

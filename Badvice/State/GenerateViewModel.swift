@@ -67,6 +67,24 @@ final class GenerateViewModel {
         }
     }
 
+    struct ContractMissionState: Sendable {
+        let key: String
+        let contractID: String
+        let currentCount: Int
+        let targetCount: Int
+        let isActive: Bool
+        let rewardClaimed: Bool
+
+        var isComplete: Bool {
+            currentCount >= targetCount
+        }
+
+        var progressFraction: Double {
+            guard targetCount > 0 else { return 0 }
+            return min(Double(currentCount) / Double(targetCount), 1)
+        }
+    }
+
     private let repository: AdviceRepository
     private let settingsViewModel: SettingsViewModel
     private let store: AdviceStore
@@ -101,6 +119,8 @@ final class GenerateViewModel {
     @ObservationIgnored private var hasBootstrappedAdviceExperience = false
     @ObservationIgnored private var adviceBootstrapTask: Task<Void, Never>?
     private static let chaosMissionCompletionStorageKey = "chaosHubMissionCompletionKey"
+    private static let activeChaosContractStorageKey = "activeChaosContractID"
+    private static let chaosContractPeriod = "contract"
     private static let bootstrapGenerationNotice = "Warming up the advice engine..."
     private static let randomCompatibilityFloor = 0.75
     private struct RetentionSnapshot {
@@ -547,10 +567,11 @@ final class GenerateViewModel {
             hapticTrigger += 1
             trackMissionCompletionIfNeeded()
             trackWeeklyMissionProgressIfNeeded(with: output)
+            trackActiveChaosContractProgressIfNeeded(with: output)
             rotatePrimaryActionTitleIfNeeded()
         }
         if let generationProviderNotice {
-            generationNotice = generationProviderNotice
+            appendGenerationNotice(generationProviderNotice)
         }
         syncLiveActivityState()
     }
@@ -770,6 +791,58 @@ final class GenerateViewModel {
         Task {
             await generate(seed: stableSeed(for: mission.key))
         }
+    }
+
+    var activeChaosContractID: String? {
+        UserDefaults.standard.string(forKey: Self.activeChaosContractStorageKey)
+    }
+
+    func contractMissionState(for contract: ChaosContract) -> ContractMissionState {
+        let key = contractMissionKey(for: contract)
+        let record = repository.ensureMissionProgress(
+            missionKey: key,
+            periodRaw: Self.chaosContractPeriod,
+            category: contract.category ?? .random,
+            tone: contract.tone ?? .random,
+            targetCount: 1
+        )
+        return ContractMissionState(
+            key: key,
+            contractID: contract.id,
+            currentCount: record.progressCount,
+            targetCount: record.targetCount,
+            isActive: activeChaosContractID == contract.id && !record.rewardClaimed,
+            rewardClaimed: record.rewardClaimed
+        )
+    }
+
+    func acceptChaosContract(_ contract: ChaosContract) {
+        if let category = contract.category {
+            selectedCategory = category
+        }
+        if let tone = contract.tone {
+            selectedTone = tone
+        }
+        if let pack = contract.contentPack {
+            settingsViewModel.preferredContentPack = pack
+        }
+        scenarioText = contract.description
+        _ = repository.ensureMissionProgress(
+            missionKey: contractMissionKey(for: contract),
+            periodRaw: Self.chaosContractPeriod,
+            category: contract.category ?? .random,
+            tone: contract.tone ?? .random,
+            targetCount: 1
+        )
+        UserDefaults.standard.set(contract.id, forKey: Self.activeChaosContractStorageKey)
+        generationNotice = "Contract accepted: \(contract.title). Generate once to claim \(contract.reward)."
+        analyticsTracker.track(
+            "chaos_contract_accept",
+            properties: [
+                "contract_id": contract.id,
+                "category": (contract.category ?? .random).rawValue,
+                "tone": (contract.tone ?? .random).rawValue,
+            ])
     }
 
     func trackChaosHubOpened() {
@@ -1031,26 +1104,17 @@ final class GenerateViewModel {
     }
 
     var dailyMissionState: ChaosMissionState {
-        let calendar = Calendar.current
         let now = Date()
-        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? 1
-        let year = calendar.component(.year, from: now)
-        let categories = AdviceCategory.concrete
-        let tones = ToneMode.concrete
-        let missionCategory = categories[(dayOfYear * 2) % categories.count]
-        let missionTone = tones[(dayOfYear * 5) % tones.count]
-        let targetCount = 2 + (dayOfYear % 3)
-        let missionKey =
-            "\(year)-\(dayOfYear)-\(missionCategory.rawValue)-\(missionTone.rawValue)-\(targetCount)"
+        let spec = DailyMissionSpec.current(for: now)
         let matchingCount = repository.todayHistoryCount(
-            category: missionCategory, tone: missionTone, referenceDate: now)
-        let title = "Daily Mission: \(targetCount)x \(missionTone.title)"
-        let subtitle = "Run \(missionCategory.title) chaos builds before midnight."
+            category: spec.category, tone: spec.tone, referenceDate: now)
+        let title = "Daily Mission: \(spec.targetCount)x \(spec.tone.title)"
+        let subtitle = "Run \(spec.category.title) chaos builds before midnight."
         return ChaosMissionState(
-            key: missionKey,
-            category: missionCategory,
-            tone: missionTone,
-            targetCount: targetCount,
+            key: spec.key,
+            category: spec.category,
+            tone: spec.tone,
+            targetCount: spec.targetCount,
             currentCount: matchingCount,
             title: title,
             subtitle: subtitle
@@ -1324,6 +1388,67 @@ final class GenerateViewModel {
                 "tone": mission.tone.rawValue,
                 "target": "\(mission.targetCount)",
             ])
+    }
+
+    private func trackActiveChaosContractProgressIfNeeded(with output: GeneratedAdvice) {
+        guard let activeID = activeChaosContractID else { return }
+        guard let contract = ChaosContract.catalog.first(where: { $0.id == activeID }) else {
+            UserDefaults.standard.removeObject(forKey: Self.activeChaosContractStorageKey)
+            return
+        }
+        if let category = contract.category, output.category != category {
+            return
+        }
+        if let tone = contract.tone, output.tone != tone {
+            return
+        }
+
+        let key = contractMissionKey(for: contract)
+        let before = repository.ensureMissionProgress(
+            missionKey: key,
+            periodRaw: Self.chaosContractPeriod,
+            category: contract.category ?? output.category,
+            tone: contract.tone ?? output.tone,
+            targetCount: 1
+        )
+        guard before.progressCount < before.targetCount else {
+            UserDefaults.standard.removeObject(forKey: Self.activeChaosContractStorageKey)
+            return
+        }
+
+        let updated = repository.incrementMissionProgress(
+            missionKey: key,
+            periodRaw: Self.chaosContractPeriod,
+            category: contract.category ?? output.category,
+            tone: contract.tone ?? output.tone,
+            targetCount: 1
+        )
+        guard updated.progressCount >= updated.targetCount else { return }
+
+        repository.markMissionRewardClaimed(missionKey: key)
+        UserDefaults.standard.removeObject(forKey: Self.activeChaosContractStorageKey)
+        appendGenerationNotice("Contract complete. Reward unlocked: \(contract.reward).")
+        analyticsTracker.track(
+            "chaos_contract_complete",
+            properties: [
+                "contract_id": contract.id,
+                "category": output.category.rawValue,
+                "tone": output.tone.rawValue,
+                "reward": contract.reward,
+            ])
+    }
+
+    private func contractMissionKey(for contract: ChaosContract) -> String {
+        "chaos-contract-\(contract.id)"
+    }
+
+    private func appendGenerationNotice(_ message: String) {
+        guard !message.isEmpty else { return }
+        if let existing = generationNotice, !existing.isEmpty {
+            generationNotice = "\(existing) \(message)"
+        } else {
+            generationNotice = message
+        }
     }
 
     private func applyStreakFreezeIfNeeded(referenceDate: Date) {
