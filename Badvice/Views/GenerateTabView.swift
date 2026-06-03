@@ -591,6 +591,14 @@ struct GenerateTabView: View {
             lastGeneratedAdviceIDForHaptics = viewModel.current?.id
             lastKnownStreakDays = viewModel.challengeStreakDays
             tabBarVisible.wrappedValue = true
+
+            if viewModel.current == nil {
+                viewModel.bootstrapAdviceExperienceIfNeeded(
+                    autoGenerateInitialAdvice:
+                        !ProcessInfo.processInfo.arguments.contains("-ui-testing")
+                        && !ProcessInfo.processInfo.arguments.contains("-debug-preload-polish-fixtures")
+                )
+            }
         }
         .onChange(of: viewModel.isGenerating) { _, isGenerating in
             handleGeneratingStateChange(isGenerating)
@@ -764,71 +772,131 @@ struct GenerateTabView: View {
                     )
             }
 
-            HStack(spacing: 10) {
-                categoryMenu
-                toneMenu
+            VStack(alignment: .leading, spacing: 10) {
+                categorySelector
+                toneSelector
             }
         }
     }
 
-    private var categoryMenu: some View {
-        Menu {
-            Picker("Category", selection: $viewModel.selectedCategory) {
-                ForEach(AdviceCategory.allCases) { category in
-                    Text(category.title).tag(category)
+    private var categorySelector: some View {
+        chipSelector(
+            title: "Category",
+            accessibilityPrefix: "generate.category",
+            selectedSummary: viewModel.selectedCategory.title
+        ) {
+            ForEach(Array(AdviceCategory.allCases.enumerated()), id: \.element.id) { index, category in
+                selectorChip(
+                    label: category.title,
+                    icon: category.icon,
+                    isPremium: category.isPremium,
+                    isSelected: viewModel.selectedCategory == category,
+                    accessibilityID: "generate.category.chip.\(index)"
+                ) {
+                    viewModel.selectedCategory = category
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 }
             }
-        } label: {
-            selectionLabel(title: "Category", value: viewModel.selectedCategory.title)
         }
-        .accessibilityLabel("Category")
-        .accessibilityValue(viewModel.selectedCategory.title)
-        .accessibilityIdentifier("generate.category")
     }
 
-    private var toneMenu: some View {
-        Menu {
-            Picker("Tone", selection: $viewModel.selectedTone) {
-                ForEach(ToneMode.allCases) { tone in
-                    Text(tone.title).tag(tone)
+    private var toneSelector: some View {
+        chipSelector(
+            title: "Tone",
+            accessibilityPrefix: "generate.tone",
+            selectedSummary: viewModel.selectedTone.title
+        ) {
+            ForEach(Array(ToneMode.allCases.enumerated()), id: \.element.id) { index, tone in
+                selectorChip(
+                    label: tone.title,
+                    icon: tone.isPremium ? "sparkles" : nil,
+                    isPremium: tone.isPremium,
+                    isSelected: viewModel.selectedTone == tone,
+                    accessibilityID: "generate.tone.chip.\(index)"
+                ) {
+                    viewModel.selectedTone = tone
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 }
             }
-        } label: {
-            selectionLabel(title: "Tone", value: viewModel.selectedTone.title)
         }
-        .accessibilityLabel("Tone mode")
-        .accessibilityValue(viewModel.selectedTone.title)
-        .accessibilityIdentifier("generate.tone")
     }
 
-    private func selectionLabel(title: String, value: String) -> some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title.uppercased())
-                    .font(.caption2.weight(.bold))
+    private func chipSelector<Content: View>(
+        title: String,
+        accessibilityPrefix: String,
+        selectedSummary: String,
+        @ViewBuilder chips: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title)
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(secondaryText)
-                Text(value)
-                    .font(Theme.bodyFont(for: settings.theme).weight(.semibold))
+                Spacer(minLength: 0)
+                Text(selectedSummary)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(accent)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.78)
-                    .foregroundStyle(primaryText)
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(accent.opacity(0.12))
+                    )
             }
-            Spacer(minLength: 8)
-            Image(systemName: "chevron.down")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(secondaryText.opacity(0.6))
+            .accessibilityIdentifier(accessibilityPrefix)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    chips()
+                }
+            }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, minHeight: 52)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(cardColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .stroke(accent.opacity(0.12), lineWidth: 1)
-                )
-        )
+        .padding(.horizontal, 2)
+    }
+
+    private func selectorChip(
+        label: String,
+        icon: String?,
+        isPremium: Bool,
+        isSelected: Bool,
+        accessibilityID: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+        HStack(spacing: 5) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.caption.weight(.bold))
+            }
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+                if isPremium {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(isSelected ? buttonText : accent.opacity(0.8))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.14))
+            )
+            .foregroundStyle(isSelected ? buttonText : primaryText)
+            .scaleEffect(isSelected ? 1.03 : 1.0)
+            .animation(
+                isMotionReduced ? nil : .spring(response: 0.24, dampingFraction: 0.72),
+                value: isSelected
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityID)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func statChip(title: String, value: String) -> some View {

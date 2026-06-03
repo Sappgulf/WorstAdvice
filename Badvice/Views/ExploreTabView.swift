@@ -196,7 +196,7 @@ struct ExploreTabView: View {
             ) {
                 resetCategoryFilter()
             } chips: {
-                ForEach(Array(AdviceCategory.concrete.prefix(6).enumerated()), id: \.element.id) { index, category in
+                ForEach(Array(AdviceCategory.allCases.enumerated()), id: \.element.id) { index, category in
                     FilterChip(
                         title: category.title,
                         icon: category.icon,
@@ -220,7 +220,7 @@ struct ExploreTabView: View {
             ) {
                 resetToneFilter()
             } chips: {
-                ForEach(Array(ToneMode.concrete.prefix(7).enumerated()), id: \.element.id) { index, tone in
+                ForEach(Array(ToneMode.allCases.enumerated()), id: \.element.id) { index, tone in
                     FilterChip(
                         title: tone.title,
                         icon: tone.isPremium ? "sparkles" : nil,
