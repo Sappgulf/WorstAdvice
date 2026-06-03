@@ -851,6 +851,7 @@ struct GenerateTabView: View {
                 HStack(spacing: 8) {
                     chips()
                 }
+                .padding(.trailing, 4)
             }
         }
         .padding(.horizontal, 2)
@@ -865,33 +866,42 @@ struct GenerateTabView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-        HStack(spacing: 5) {
-            if let icon {
-                Image(systemName: icon)
-                    .font(.caption.weight(.bold))
-            }
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            HStack(spacing: 5) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.caption.weight(.bold))
+                }
+                Text(label)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
 
                 if isPremium {
                     Image(systemName: "crown.fill")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(isSelected ? buttonText : accent.opacity(0.8))
+                        .foregroundStyle(isSelected ? buttonText : accent.opacity(0.85))
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 9)
             .background(
                 Capsule(style: .continuous)
-                    .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.14))
+                    .fill(isSelected ? accent.opacity(0.18) : secondaryText.opacity(0.12))
             )
             .foregroundStyle(isSelected ? buttonText : primaryText)
             .scaleEffect(isSelected ? 1.03 : 1.0)
             .animation(
                 isMotionReduced ? nil : .spring(response: 0.24, dampingFraction: 0.72),
                 value: isSelected
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(
+                        isSelected
+                            ? accent.opacity(0.35)
+                            : secondaryText.opacity(0.18),
+                        lineWidth: 1
+                    )
             )
         }
         .buttonStyle(.plain)
