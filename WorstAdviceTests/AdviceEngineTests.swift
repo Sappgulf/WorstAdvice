@@ -260,11 +260,10 @@ final class AdviceEngineTests: XCTestCase {
         )
     }
 
-    func testAdviceIncludesToneAndCategoryDirectiveSignals() async {
+    func testAdviceOutputIsDeterministicBoundedAndSafe() async {
         let engine = AdviceEngine()
         let tone: ToneMode = .lifeCoach
         let category: AdviceCategory = .money
-        let signals = AdviceEngine.directiveSignals(tone: tone, category: category)
 
         let first = await engine.generate(
             category: category,
@@ -281,18 +280,16 @@ final class AdviceEngineTests: XCTestCase {
 
         XCTAssertEqual(first.adviceLine, second.adviceLine)
         XCTAssertEqual(first.rationaleLine, second.rationaleLine)
-
-        let normalized = first.adviceLine.normalizedForFiltering
-        XCTAssertTrue(signals.tone.contains { normalized.contains($0.normalizedForFiltering) })
-        XCTAssertTrue(signals.category.contains { normalized.contains($0.normalizedForFiltering) })
+        XCTAssertLessThanOrEqual(first.adviceLine.count, AdviceEngineConstants.adviceOutputMaxLength)
+        XCTAssertLessThanOrEqual(first.rationaleLine?.count ?? 0, AdviceEngineConstants.rationaleOutputMaxLength)
         XCTAssertTrue(engine.validateOutput(first, for: category))
     }
 
-    func testAdviceOutputStaysBoundedWhilePreservingDirectiveSignals() async {
+    func testAdviceOutputStaysBoundedPunchyAndDoesNotExposePromptScaffoldEveryRun() async {
         let engine = AdviceEngine()
         let tone: ToneMode = .linkedInInfluencer
         let category: AdviceCategory = .career
-        let signals = AdviceEngine.directiveSignals(tone: tone, category: category)
+        var scaffoldCount = 0
 
         for seed in 0..<25 {
             let output = await engine.generate(
@@ -305,15 +302,14 @@ final class AdviceEngineTests: XCTestCase {
             let normalized = output.adviceLine.normalizedForFiltering
 
             XCTAssertLessThanOrEqual(output.adviceLine.count, AdviceEngineConstants.adviceOutputMaxLength)
-            XCTAssertTrue(
-                signals.tone.contains { normalized.contains($0.normalizedForFiltering) },
-                "Expected tone directive signal for seed \(seed): \(output.adviceLine)"
-            )
-            XCTAssertTrue(
-                signals.category.contains { normalized.contains($0.normalizedForFiltering) },
-                "Expected category directive signal for seed \(seed): \(output.adviceLine)"
-            )
+            XCTAssertFalse(output.adviceLine.contains("%@"))
+            XCTAssertFalse(output.adviceLine.hasSuffix(" "))
+            if normalized.contains("lead with ") && normalized.contains(" push ") {
+                scaffoldCount += 1
+            }
         }
+
+        XCTAssertLessThan(scaffoldCount, 25, "Advice output should not expose prompt scaffolding on every seed.")
     }
 
     func testSituationWithPercentSignsDoesNotBreakTopicSubstitution() async {

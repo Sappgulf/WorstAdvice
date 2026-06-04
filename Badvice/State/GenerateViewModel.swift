@@ -118,6 +118,7 @@ final class GenerateViewModel {
     @ObservationIgnored private var hasLoadedRecentSuggestions = false
     @ObservationIgnored private var hasBootstrappedAdviceExperience = false
     @ObservationIgnored private var adviceBootstrapTask: Task<Void, Never>?
+    @ObservationIgnored private var autoGenerateSelectionTask: Task<Void, Never>?
     private static let chaosMissionCompletionStorageKey = "chaosHubMissionCompletionKey"
     private static let activeChaosContractStorageKey = "activeChaosContractID"
     private static let chaosContractPeriod = "contract"
@@ -168,7 +169,7 @@ final class GenerateViewModel {
     }
 
     func bootstrapAdviceExperienceIfNeeded(autoGenerateInitialAdvice: Bool) {
-        guard !hasBootstrappedAdviceExperience else { return }
+        guard !hasBootstrappedAdviceExperience || current == nil else { return }
         hasBootstrappedAdviceExperience = true
 
         let currentCategory = selectedCategory
@@ -222,6 +223,53 @@ final class GenerateViewModel {
             if let modelWarmupTask {
                 await modelWarmupTask.value
             }
+        }
+    }
+
+    func updateCategory(_ category: AdviceCategory, autoGenerate: Bool = true) {
+        updateSelections(category: category, tone: selectedTone, autoGenerate: autoGenerate)
+    }
+
+    func updateTone(_ tone: ToneMode, autoGenerate: Bool = true) {
+        updateSelections(category: selectedCategory, tone: tone, autoGenerate: autoGenerate)
+    }
+
+    func updateSelections(category: AdviceCategory, tone: ToneMode, autoGenerate: Bool = true) {
+        let didChange = selectedCategory != category || selectedTone != tone
+        guard didChange else { return }
+
+        selectedCategory = category
+        selectedTone = tone
+        guard autoGenerate else { return }
+        requestAutoGenerateAfterSelectionChange()
+    }
+
+    func requestAutoGenerateAfterSelectionChange(delayMilliseconds: UInt64 = 220) {
+        autoGenerateSelectionTask?.cancel()
+        let requestedCategory = selectedCategory
+        let requestedTone = selectedTone
+
+        autoGenerateSelectionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await Task.sleep(for: .milliseconds(delayMilliseconds))
+            } catch {
+                return
+            }
+
+            guard !Task.isCancelled else { return }
+            guard self.selectedCategory == requestedCategory, self.selectedTone == requestedTone else {
+                return
+            }
+
+            if self.isGenerating {
+                await MainActor.run {
+                    self.requestAutoGenerateAfterSelectionChange(delayMilliseconds: 300)
+                }
+                return
+            }
+
+            await self.generate()
         }
     }
 

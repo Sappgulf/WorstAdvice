@@ -57,7 +57,7 @@ struct AdviceEngine {
         let accountabilityDodge = rng.pick(Self.accountabilityDodges)
         let toneDirective = rng.pick(store.toneDirectiveVocabulary(for: resolvedTone))
         let categoryDirective = rng.pick(store.categoryDirectiveVocabulary(for: resolvedCategory))
-        let directiveClause = "Lead with \(toneDirective) and push \(categoryDirective)."
+        let directiveClause = "Make \(toneDirective) sound strategic and \(categoryDirective) feel inevitable."
         let antiWisdomClause = "Take '\(wisdomAnchor)' and \(inversionLens)."
 
         let scenario = sanitizedSituation(situation)
@@ -206,7 +206,7 @@ struct AdviceEngine {
         var rankedCandidates: [(candidate: String, score: Double, tie: Double)] = []
         for (index, candidate) in adviceShapes.enumerated() {
             let semanticBoost = semanticScores[index]
-            let qualityBoost = qualityScore(
+            let qualityBoost = displayQualityScore(
                 candidate,
                 normalizedSelectedTopic: normalizedSelectedTopic,
                 normalizedToneDirective: normalizedToneDirective,
@@ -225,14 +225,6 @@ struct AdviceEngine {
 
         var advice = rankedCandidates.first?.candidate ?? rng.pick(adviceShapes)
         advice = polishAdvice(advice)
-        advice = enforceDirectivePresence(
-            advice,
-            toneDirective: toneDirective,
-            categoryDirective: categoryDirective,
-            normalizedToneDirective: normalizedToneDirective,
-            normalizedCategoryDirective: normalizedCategoryDirective
-        )
-        advice = polishAdvice(advice)
 
         if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
             advice = "\(opener), treat the \(keyword) like a stage performance and commit to the loudest overconfident plan. \(confidence)"
@@ -241,7 +233,13 @@ struct AdviceEngine {
         var rationale: String?
         if includeRationale {
             let rationaleTemplate = rng.pick(rules.rationaleTemplates)
-            rationale = "\(rationaleLead) Bad principle: \(principle). Good advice says '\(wisdomAnchor).' We inverted it by \(inversionLens). \(rationaleTemplate)"
+            rationale = conciseRationale(
+                lead: rationaleLead,
+                principle: principle,
+                wisdomAnchor: wisdomAnchor,
+                inversionLens: inversionLens,
+                template: rationaleTemplate
+            )
         }
 
         let moderated = moderation.apply(to: advice, rationale: rationale)
@@ -549,7 +547,7 @@ struct AdviceEngine {
         return normalized
     }
 
-    private func qualityScore(
+    private func displayQualityScore(
         _ candidate: String,
         normalizedSelectedTopic: String,
         normalizedToneDirective: String,
@@ -575,17 +573,19 @@ struct AdviceEngine {
         
         // Length penalty - overly long advice is less punchy
         if candidate.count > AdviceEngineConstants.adviceLengthPenaltyThreshold {
-            score -= 0.2
+            score -= 0.34
         }
         // Bonus for good length (ideal range)
         if candidate.count >= AdviceEngineConstants.adviceIdealMinLength
             && candidate.count <= AdviceEngineConstants.adviceIdealMaxLength {
-            score += 0.1
+            score += 0.18
+        } else if candidate.count <= AdviceEngineConstants.adviceOutputMaxLength {
+            score += 0.06
         }
 
         // Repetition penalty
         if repeatedWordCount(in: normalized) > AdviceEngineConstants.adviceRepetitionPenaltyThreshold {
-            score -= 0.18
+            score -= 0.24
         }
         
         // Cliche penalty - advice that sounds too generic
@@ -593,6 +593,15 @@ struct AdviceEngine {
             partial + (normalized.contains(phrase) ? 0.16 : 0.0)
         }
         score -= clichePenalty
+
+        let genericFillerPenalty = Self.genericFillerSignals.reduce(0.0) { partial, phrase in
+            partial + (normalized.contains(phrase) ? 0.1 : 0.0)
+        }
+        score -= genericFillerPenalty
+
+        if normalized.contains("lead with ") && normalized.contains("push ") {
+            score -= 0.18
+        }
         
         // Bonus: advice with strong opening (command verbs, strong phrases)
         let strongOpeners = ["always", "never", "do it", "just", "start", "stop", "make", "take"]
@@ -626,22 +635,35 @@ struct AdviceEngine {
                 polished = polished.replacingOccurrences(of: cliche, with: "measurable chaos", options: .caseInsensitive)
             }
         }
-        return String(polished.prefix(AdviceEngineConstants.adviceOutputMaxLength))
+        return wordSafeTruncate(polished, maxLength: AdviceEngineConstants.adviceOutputMaxLength)
     }
 
-    private func enforceDirectivePresence(
-        _ candidate: String,
-        toneDirective: String,
-        categoryDirective: String,
-        normalizedToneDirective: String,
-        normalizedCategoryDirective: String
+    private func conciseRationale(
+        lead: String,
+        principle: String,
+        wisdomAnchor: String,
+        inversionLens: String,
+        template: String
     ) -> String {
-        let normalized = candidate.normalizedForFiltering
-        let hasTone = normalized.contains(normalizedToneDirective)
-        let hasCategory = normalized.contains(normalizedCategoryDirective)
-        guard !(hasTone && hasCategory) else { return candidate }
-        // Prefix the directives so later truncation cannot drop the required signals.
-        return "Lead with \(toneDirective) and push \(categoryDirective). \(candidate)"
+        let shortLead = lead
+            .replacingOccurrences(of: "Why this is awful:", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let raw =
+            "\(shortLead) Bad principle: \(principle.lowercased()). Good advice would \(wisdomAnchor.lowercased()); this \(inversionLens). \(template)"
+        return wordSafeTruncate(raw, maxLength: AdviceEngineConstants.rationaleOutputMaxLength)
+    }
+
+    private func wordSafeTruncate(_ text: String, maxLength: Int) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > maxLength else { return trimmed }
+
+        let limit = trimmed.index(trimmed.startIndex, offsetBy: maxLength)
+        var prefix = String(trimmed[..<limit])
+        if let lastBoundary = prefix.lastIndex(where: { $0 == " " || $0 == "\n" || $0 == "\t" }) {
+            prefix = String(prefix[..<lastBoundary])
+        }
+        prefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        return prefix.isEmpty ? String(trimmed.prefix(maxLength)) : "\(prefix)…"
     }
 
     private func stableTieBreaker(_ text: String, seed: Int) -> Double {

@@ -316,8 +316,11 @@ struct CollabAdviceView: View {
         isGenerating = true
         let previousCategory = generateViewModel.selectedCategory
         let previousTone = generateViewModel.selectedTone
-        generateViewModel.selectedCategory = category
-        generateViewModel.selectedTone = tone
+        generateViewModel.updateSelections(
+            category: category,
+            tone: tone,
+            autoGenerate: false
+        )
         await generateViewModel.generate()
         if let current = generateViewModel.current {
             generatedAdvice = GeneratedAdvice(
@@ -331,8 +334,11 @@ struct CollabAdviceView: View {
         } else {
             generatedAdvice = nil
         }
-        generateViewModel.selectedCategory = previousCategory
-        generateViewModel.selectedTone = previousTone
+        generateViewModel.updateSelections(
+            category: previousCategory,
+            tone: previousTone,
+            autoGenerate: false
+        )
         isGenerating = false
         withAnimation(Theme.springBouncy) { step = .result }
     }

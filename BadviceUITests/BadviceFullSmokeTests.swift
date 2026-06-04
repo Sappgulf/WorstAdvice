@@ -29,13 +29,13 @@ final class BadviceFullSmokeTests: XCTestCase {
 
         // Generate first advice
         generateButton.tap()
-        RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+        XCTAssertTrue(waitForGenerateAdviceToSettle(app: app, timeout: 12))
 
-        // Verify category and tone selectors exist
-        let categoryPicker = app.buttons["generate.category"]
-        let tonePicker = app.buttons["generate.tone"]
-        XCTAssertTrue(categoryPicker.waitForExistence(timeout: 3), "Category picker should exist")
-        XCTAssertTrue(tonePicker.waitForExistence(timeout: 3), "Tone picker should exist")
+        // Verify category and tone selector headers exist
+        let categoryPicker = discoverSelectorHeader(app: app, identifier: "generate.category")
+        let tonePicker = discoverSelectorHeader(app: app, identifier: "generate.tone")
+        XCTAssertNotNil(categoryPicker, "Category selector should exist")
+        XCTAssertNotNil(tonePicker, "Tone selector should exist")
 
         // Save current advice
         let saveButton = app.buttons["generate.save"]
@@ -384,7 +384,7 @@ final class BadviceFullSmokeTests: XCTestCase {
             _ = leaderboardCard.waitForExistence(timeout: 5)
         }
 
-        // ── Verify Share to Friends from Generate ──
+        // ── Verify solo share from Generate ──
         let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
         if generateTab.waitForExistence(timeout: 5) {
             generateTab.tap()
@@ -394,12 +394,10 @@ final class BadviceFullSmokeTests: XCTestCase {
         generateButton.tap()
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
 
-        let shareToFriends = app.buttons["generate.shareToFriends"]
-        if scrollToFind(app: app, element: shareToFriends, maxSwipes: 12) {
-            // With mock social, this should be enabled after profile setup
-            if shareToFriends.isEnabled {
-                shareToFriends.tap()
-            }
+        let shareButton = app.buttons["generate.share"]
+        XCTAssertTrue(scrollToFind(app: app, element: shareButton, maxSwipes: 12))
+        if shareButton.isEnabled {
+            shareButton.tap()
         }
     }
 
@@ -417,7 +415,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
 
         // Verify action buttons all exist
-        let actionButtons = ["generate.save", "generate.copy", "generate.remix", "generate.gif"]
+        let actionButtons = ["generate.save", "generate.copy", "generate.share", "generate.remix"]
         for identifier in actionButtons {
             let button = app.buttons[identifier]
             XCTAssertTrue(scrollToFind(app: app, element: button, maxSwipes: 12), "\(identifier) should exist")
@@ -434,9 +432,10 @@ final class BadviceFullSmokeTests: XCTestCase {
         if copyBtn.isEnabled { copyBtn.tap() }
 
         // Generate multiple times to verify stability
-        for _ in 0..<3 {
+        for i in 0..<3 {
+            XCTAssertTrue(waitForGenerateActionToBeReady(app: app, timeout: 10), "Generate button should be re-enabled before each deep loop")
             generateButton.tap()
-            RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+            XCTAssertTrue(waitForGenerateAdviceToSettle(app: app, timeout: 12), "Generate loop #\(i + 1) should settle")
         }
 
         // Test Surprise Me
@@ -842,6 +841,60 @@ final class BadviceFullSmokeTests: XCTestCase {
         }
 
         return readinessChecks.contains(where: { $0() })
+    }
+
+    private func waitForGenerateAdviceToSettle(app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        let generationLoading = app.otherElements["generate.loading"]
+        let generateButton = app.buttons["generate.primary"]
+
+        if generationLoading.waitForExistence(timeout: 0.4) {
+            let deadline = Date().addingTimeInterval(timeout)
+            while Date() < deadline {
+                if !generationLoading.exists && generateButton.isEnabled { return true }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.12))
+            }
+            return !generationLoading.exists && generateButton.isEnabled
+        }
+
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if generateButton.isEnabled {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.12))
+        }
+        return generateButton.isEnabled
+    }
+
+    private func waitForGenerateActionToBeReady(app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        let generateButton = app.buttons["generate.primary"]
+        if generateButton.waitForExistence(timeout: 1) == false { return false }
+
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if generateButton.isEnabled && !app.otherElements["generate.loading"].exists {
+                return true
+            }
+            if !app.otherElements["generate.loading"].exists && generateButton.isEnabled {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.12))
+        }
+
+        return generateButton.isEnabled && !app.otherElements["generate.loading"].exists
+    }
+
+    private func discoverSelectorHeader(app: XCUIApplication, identifier: String) -> XCUIElement? {
+        return waitForAnyElement(
+            app: app,
+            candidates: [
+                app.otherElements[identifier],
+                app.buttons[identifier],
+                app.staticTexts[identifier],
+            ],
+            timeout: 3,
+            maxSwipes: 4
+        )
     }
 
     private func waitForAuthGateToBecomeReady(app: XCUIApplication, timeout: TimeInterval) -> Bool {

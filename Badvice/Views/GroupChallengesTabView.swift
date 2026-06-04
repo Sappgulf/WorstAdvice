@@ -93,8 +93,11 @@ struct GroupChallengesTabView: View {
                     }
                 },
                 onPlay: {
-                    generateViewModel.selectedCategory = challenge.category
-                    generateViewModel.selectedTone = challenge.tone
+                    generateViewModel.updateSelections(
+                        category: challenge.category,
+                        tone: challenge.tone,
+                        autoGenerate: true
+                    )
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     onOpenTab(.generate)
                 }
@@ -206,7 +209,7 @@ struct GroupChallengesTabView: View {
             eyebrow: "Challenge Command",
             title: challengeCommandTitle,
             detail: challengeCommandDetail,
-            systemImage: "person.3.fill",
+            systemImage: "flag.checkered",
             accent: accent,
             primaryText: primaryText,
             secondaryText: secondaryText,
@@ -228,8 +231,8 @@ struct GroupChallengesTabView: View {
                     secondaryText: secondaryText
                 )
                 TabCommandMetric(
-                    title: "Friends",
-                    value: "\(social.friends.count)",
+                    title: "Next",
+                    value: activeChallenges.isEmpty ? "Create" : "Generate",
                     accent: accent,
                     primaryText: primaryText,
                     secondaryText: secondaryText
@@ -304,8 +307,11 @@ struct GroupChallengesTabView: View {
                     cardColor: cardColor,
                     onPlay: {
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        generateViewModel.selectedCategory = challenge.category
-                        generateViewModel.selectedTone = challenge.tone
+                        generateViewModel.updateSelections(
+                            category: challenge.category,
+                            tone: challenge.tone,
+                            autoGenerate: true
+                        )
                         onOpenTab(.generate)
                     },
                     onCopyCode: {
@@ -356,32 +362,32 @@ struct GroupChallengesTabView: View {
 
     private var challengeCommandTitle: String {
         if activeChallenges.isEmpty {
-            return "Create the first challenge"
+            return "Create a mission"
         }
         if social.currentUser == nil {
-            return "Local challenges are ready"
+            return "Solo mission ready"
         }
         if social.friends.isEmpty {
-            return "Share a code with your first friend"
+            return "Run it solo first"
         }
-        return "Run the next challenge round"
+        return "Run the next mission"
     }
 
     private var challengeCommandDetail: String {
         if activeChallenges.isEmpty {
-            return "Create a challenge, keep the invite code, and play it from Advice with the selected category and tone."
+            return "Create a concrete action like generate three badvices in one lane, save the best one, then share or remix it."
         }
         if social.currentUser == nil {
-            return "These are on-device challenge rooms. Set up Friends when you want the wider social loop."
+            return "Tap Run Mission to jump into Generate with the mission category and tone. Friends can wait."
         }
         if social.friends.isEmpty {
-            return "You can still create and play locally. Add friends to make codes, rankings, and shared drafts matter."
+            return "Run the mission locally, then copy or share the best result. Add friends only when you want rankings."
         }
-        return "Open the active challenge, copy its code, or start the matching Advice run."
+        return "Open the active mission, copy its code, or start the matching Advice run."
     }
 
     private var challengePrimaryActionTitle: String {
-        activeChallenges.isEmpty ? "Create Challenge" : "Play Active"
+        activeChallenges.isEmpty ? "Create Mission" : "Run Mission"
     }
 
     private func performChallengePrimaryAction() {
@@ -390,8 +396,11 @@ struct GroupChallengesTabView: View {
             showCreateSheet = true
             return
         }
-        generateViewModel.selectedCategory = challenge.category
-        generateViewModel.selectedTone = challenge.tone
+        generateViewModel.updateSelections(
+            category: challenge.category,
+            tone: challenge.tone,
+            autoGenerate: true
+        )
         onOpenTab(.generate)
     }
 

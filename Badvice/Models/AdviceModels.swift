@@ -179,6 +179,7 @@ enum ShareCardTemplate: String, CaseIterable, Codable, Identifiable, Sendable {
     case minimal
     case gradient
     case bold
+    case certified
 
     var id: String { rawValue }
 
@@ -187,6 +188,7 @@ enum ShareCardTemplate: String, CaseIterable, Codable, Identifiable, Sendable {
         case .minimal: return "Minimal"
         case .gradient: return "Gradient"
         case .bold: return "Bold"
+        case .certified: return "Badvice Certified"
         }
     }
 }

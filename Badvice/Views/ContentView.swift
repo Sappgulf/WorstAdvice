@@ -114,6 +114,8 @@ struct ContentView: View {
     @State private var showingSettingsRoot = false
     @State private var showingShellMenu = false
     @State private var shellToast: ToastMessage? = nil
+    @State private var appLoadingMessageTick = 0
+    @State private var appLoadingMessageTask: Task<Void, Never>?
     @State private var lastShakeHandledAt: Date = .distantPast
     @State private var lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @StateObject private var shakeDetector = ShakeDetector()
@@ -136,7 +138,9 @@ struct ContentView: View {
     var body: some View {
         appRootView
             .task {
+                startBootstrapLoadingMessageRotation()
                 await bootstrapAppStateIfNeeded()
+                stopBootstrapLoadingMessageRotation()
             }
             .onOpenURL { url in
                 referralManager.handleIncomingURL(url)
@@ -214,8 +218,11 @@ struct ContentView: View {
                     set: { if !$0 { hasSeenOnboarding = true } }
                 ),
                 onStarterSelected: { category, tone in
-                    session.generate.selectedCategory = category
-                    session.generate.selectedTone = tone
+                    session.generate.updateSelections(
+                        category: category,
+                        tone: tone,
+                        autoGenerate: true
+                    )
                     setSelectedTab(.generate, session: session)
                 }
             )
@@ -325,17 +332,67 @@ struct ContentView: View {
 
     private var loadingView: some View {
         ZStack {
-            Color(hex: "0F0D11").ignoresSafeArea()
+            ThemeBackgroundView(
+                mode: .badvice,
+                budget: .reduced,
+                lowPowerModeEnabled: lowPowerModeEnabled
+            )
+            .ignoresSafeArea()
+
+            LinearGradient(
+                colors: [Color.white.opacity(0.12), .clear, Color.black.opacity(0.2)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            .blendMode(.multiply)
+
             VStack(spacing: 16) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 38, weight: .semibold))
-                    .foregroundStyle(Color(hex: "E88D72").opacity(0.6))
-                ProgressView()
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: "E88D72").opacity(0.24))
+                        .frame(width: 96, height: 96)
+                        .blur(radius: 14)
+
+                    Circle()
+                        .stroke(Color(hex: "E88D72").opacity(0.35), lineWidth: 1)
+                        .frame(width: 100, height: 100)
+
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 40, weight: .semibold))
+                        .foregroundStyle(Color(hex: "E88D72").opacity(0.88))
+                }
+
+                Text("Badvice startup")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Color(hex: "E88D72").opacity(0.78))
+
+                Text(GenerationLoadingMessages.phaseTitle(forTick: appLoadingMessageTick))
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color(hex: "E88D72").opacity(0.82))
+                    .multilineTextAlignment(.center)
+
+                Text(GenerationLoadingMessages.message(forTick: appLoadingMessageTick))
+                    .font(.system(.body, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Color(hex: "F1D7C2").opacity(0.88))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 26)
+
+                ProgressView(value: min(Double((appLoadingMessageTick % 40) + 1) / 40.0, 1.0))
+                    .progressViewStyle(.linear)
                     .tint(Color(hex: "E88D72"))
-                Text("Loading your chaos...")
-                    .font(.system(.subheadline, design: .rounded, weight: .medium))
-                    .foregroundStyle(Color(hex: "E88D72").opacity(0.5))
+                    .frame(width: 170)
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 22)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                            .stroke(Color(hex: "E88D72").opacity(0.18), lineWidth: 0.9)
+                    )
+            )
         }
     }
 
@@ -373,6 +430,24 @@ struct ContentView: View {
                 await newSession.preloadDebugPolishFixturesIfNeeded(seed: seed)
             }
         }
+    }
+
+    private func startBootstrapLoadingMessageRotation() {
+        appLoadingMessageTask?.cancel()
+        appLoadingMessageTick = 0
+        appLoadingMessageTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(900))
+                await MainActor.run {
+                    appLoadingMessageTick += 1
+                }
+            }
+        }
+    }
+
+    private func stopBootstrapLoadingMessageRotation() {
+        appLoadingMessageTask?.cancel()
+        appLoadingMessageTask = nil
     }
 
     private func makeAuthViewModel() -> AuthViewModel {
@@ -833,16 +908,27 @@ struct ContentView: View {
         shouldGenerate: Bool,
         session: AppSessionViewModel
     ) {
+        var categoryToApply = session.generate.selectedCategory
+        var toneToApply = session.generate.selectedTone
+
         if let categoryRaw,
             let category = AdviceCategory(rawValue: categoryRaw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
         {
-            session.generate.selectedCategory = category
+            categoryToApply = category
         }
 
         if let toneRaw,
             let tone = ToneMode(rawValue: toneRaw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
         {
-            session.generate.selectedTone = tone
+            toneToApply = tone
+        }
+
+        if shouldGenerate || categoryRaw != nil || toneRaw != nil {
+            session.generate.updateSelections(
+                category: categoryToApply,
+                tone: toneToApply,
+                autoGenerate: false
+            )
         }
 
         if let friendName {
@@ -1027,8 +1113,11 @@ struct ContentView: View {
                 social: session.social,
                 settings: session.settings,
                 onJumpToGenerate: { category, tone in
-                    session.generate.selectedCategory = category
-                    session.generate.selectedTone = tone
+                    session.generate.updateSelections(
+                        category: category,
+                        tone: tone,
+                        autoGenerate: true
+                    )
                     setSelectedTab(.generate, session: session)
                 }
             )

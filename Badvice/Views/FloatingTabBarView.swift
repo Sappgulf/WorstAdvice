@@ -65,6 +65,7 @@ struct FloatingTabBarView: View {
         let isHighlighted = tabDragHighlight == tab
         let badgeCount = tab == .friends ? friendsBadgeCount : 0
         let badgeDescription = accessibilityBadgeDescription(for: tab, badgeCount: badgeCount)
+        let titleText = isSelected ? tab.title : tab.compactTitle
 
         return Button {
             handleTap(on: tab)
@@ -89,8 +90,8 @@ struct FloatingTabBarView: View {
                     }
                 }
 
-                Text(tab.compactTitle)
-                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
+                Text(titleText)
+                    .font(.system(size: isSelected ? 10 : 9, weight: isSelected ? .semibold : .regular, design: .rounded))
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
                     .frame(height: 12)
@@ -101,7 +102,7 @@ struct FloatingTabBarView: View {
                     : (isHighlighted ? accent.opacity(0.58) : secondaryText.opacity(0.74))
             )
             .frame(maxWidth: .infinity)
-            .frame(minHeight: Theme.floatingTabItemMinHeight)
+            .frame(minHeight: Theme.floatingTabItemMinHeight + (isSelected ? 4 : 0))
             .padding(.top, 5)
             .padding(.bottom, 5)
             .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
@@ -117,10 +118,15 @@ struct FloatingTabBarView: View {
                         )
                         .padding(.horizontal, max(4, tabBarStyle.indicatorInset + 3))
                         .padding(.vertical, 1)
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(accent.opacity(0.38), lineWidth: isSelected ? 0.8 : 0)
+                        )
                 }
             }
         }
         .buttonStyle(.plain)
+        .contentShape(Rectangle())
         .accessibilityLabel(tab.title)
         .accessibilityIdentifier("tab.\(tab.rawValue)")
         .accessibilityValue("\(isSelected ? "Selected" : "Not selected")\(badgeDescription)")
@@ -138,9 +144,10 @@ struct FloatingTabBarView: View {
             VStack(spacing: 2) {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
+                    .symbolEffect(.bounce.up.byLayer, value: isSelected)
 
                 Text("More")
-                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
+                    .font(.system(size: 9, weight: isSelected ? .semibold : .regular, design: .rounded))
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
                     .frame(height: 12)
@@ -157,6 +164,10 @@ struct FloatingTabBarView: View {
                         .fill(accent.opacity(tabBarStyle.selectedFillOpacity))
                         .padding(.horizontal, max(4, tabBarStyle.indicatorInset + 3))
                         .padding(.vertical, 1)
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(accent.opacity(0.38), lineWidth: 0.7)
+                        )
                 }
             }
         }
@@ -225,6 +236,23 @@ struct FloatingTabBarView: View {
                             .fill(tabBarStyle.backgroundTint.opacity(tabBarStyle.materialOverlayOpacity))
                     }
                     .shadow(color: tabBarStyle.shadow, radius: tabBarStyle.shadowRadius, x: 0, y: 8)
+            }
+
+            if !reduceMotion, !lowPowerModeEnabled {
+                RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                accent.opacity(0.3),
+                                .clear,
+                                .clear,
+                                accent.opacity(0.1),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .blur(radius: 2)
             }
 
             RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)

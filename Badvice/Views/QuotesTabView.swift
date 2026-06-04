@@ -25,52 +25,28 @@ struct QuotesTabView: View {
         if viewModel.filteredQuotes.isEmpty {
             return "Rebuild your quote stream"
         }
-        if social.currentUser == nil {
-            return "Set up sharing for quotes"
-        }
-        if social.friends.isEmpty {
-            return "Add someone to share with"
-        }
         if !showQuoteSpotlight {
             return "Open today's spotlight"
         }
-        if social.feedPosts.isEmpty {
-            return "Share today's quote"
-        }
-        return "Keep the quote ritual moving"
+        return "Share today's quote"
     }
     private var quotesCommandDetail: String {
         if viewModel.filteredQuotes.isEmpty {
             return "Your current filters are too narrow or the library needs fresh material. Clear the filters or jump back to Generate."
         }
-        if social.currentUser == nil {
-            return "Today's quote is ready. Finish your Friends profile to share it, post it, and turn this tab into a daily ritual instead of a dead end."
-        }
-        if social.friends.isEmpty {
-            return "Your profile exists, but you still need at least one friend before quote sharing becomes useful."
-        }
         if !showQuoteSpotlight {
-            return "The daily quote is strongest when you stop and unpack it. Open the spotlight, react, then share it or spin it into a collab."
+            return "The daily quote is strongest when you stop and unpack it. Open the spotlight, copy it, or share it anywhere."
         }
-        if social.feedPosts.isEmpty {
-            return "Spotlight is active. Ship this quote into Friends to wake up the feed and make the tab feel connected to the rest of the app."
-        }
-        return "You have today's quote in focus. Rate it, share it, or send it into Friends while the ritual is active."
+        return "You have today's quote in focus. Rate it, copy it, share it, or send it into Friends when social is ready."
     }
     private var quotesPrimaryActionTitle: String {
         if viewModel.filteredQuotes.isEmpty {
             return viewModel.selectedCategory == nil ? "Generate Advice" : "Clear Filters"
         }
-        if !social.availability.isAccountAvailable || social.currentUser == nil {
-            return "Open Friends"
-        }
-        if social.friends.isEmpty {
-            return "Open Friends"
-        }
         if !showQuoteSpotlight {
             return "Open Spotlight"
         }
-        return "Share to Friends"
+        return "Share Quote"
     }
 
     var body: some View {
@@ -662,7 +638,7 @@ struct QuotesTabView: View {
                 Text("Daily Ritual")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
-                Text("Read it, rate it, then either share it or move it into Friends so the tab becomes a habit instead of a static archive.")
+                Text("Read it, copy it, share it, then keep the library for later.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -685,12 +661,15 @@ struct QuotesTabView: View {
                     .font(.caption.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 40)
 
+                    Button("Copy Quote") {
+                        copyQuote(dailyQuote, isDaily: true)
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+
                     Button(shareButtonTitle) {
-                        if !social.availability.isAccountAvailable || social.currentUser == nil || social.friends.isEmpty {
-                            onOpenTab?(.friends)
-                        } else {
-                            shareQuoteToFriends(dailyQuote)
-                        }
+                        shareQuote(dailyQuote, isDaily: true)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(accent)
@@ -734,7 +713,7 @@ struct QuotesTabView: View {
     }
 
     private var quoteShareButtonTitle: String {
-        quoteShareStatus == "Ready" ? "Share to Friends" : "Open Friends"
+        quoteShareStatus == "Ready" ? "Share Quote" : "Share Solo"
     }
 
     private func copyQuote(_ quote: BadQuote, isDaily: Bool) {
@@ -796,16 +775,12 @@ struct QuotesTabView: View {
             }
             return
         }
-        if !social.availability.isAccountAvailable || social.currentUser == nil || social.friends.isEmpty {
-            onOpenTab?(.friends)
-            return
-        }
         if !showQuoteSpotlight {
             showQuoteSpotlight = true
             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
             return
         }
-        shareQuoteToFriends(viewModel.dailyQuote)
+        shareQuote(viewModel.dailyQuote, isDaily: true)
     }
 
     private func voteButtons(for quote: BadQuote) -> some View {

@@ -22,6 +22,8 @@ struct AdviceCardView: View {
 
     @State private var shimmerOffset: CGFloat = -1.0
     @State private var lastRecordID: UUID = UUID()
+    @State private var isAdviceExpanded = false
+    @State private var isGoodAdviceRevealed = false
     
     // Triple-A Polish: Tilt & Parallax State
     @State private var rotationX: Double = 0
@@ -119,7 +121,7 @@ struct AdviceCardView: View {
                 .offset(y: 4)
 
             // Advice text
-            Text(record.adviceLine)
+            Text(displayAdviceLine)
                 .font(Theme.cardFont(for: theme))
                 .foregroundStyle(primaryText)
                 .lineSpacing(5)
@@ -127,6 +129,21 @@ struct AdviceCardView: View {
                 .padding(.top, 6)
                 .accessibilityLabel("Advice")
                 .accessibilityValue(record.adviceLine)
+
+            if shouldCollapseAdvice {
+                Button {
+                    withAnimation(isMotionReduced ? nil : .easeInOut(duration: Theme.animFast)) {
+                        isAdviceExpanded.toggle()
+                    }
+                } label: {
+                    Label(isAdviceExpanded ? "Show less" : "Read more", systemImage: isAdviceExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .padding(.top, 10)
+                .accessibilityIdentifier("advice.card.readMore")
+            }
 
             if let rationale = record.rationaleLine, !rationale.isEmpty {
                 Rectangle()
@@ -149,6 +166,25 @@ struct AdviceCardView: View {
             } else {
                 Spacer().frame(height: 12)
             }
+
+            BadviceScoreView(record: record, accent: accent, primaryText: primaryText, secondaryText: secondaryText)
+                .padding(.top, 14)
+
+            DisclosureGroup(
+                isExpanded: $isGoodAdviceRevealed.animation(isMotionReduced ? nil : .easeInOut(duration: Theme.animFast))
+            ) {
+                Text(actuallyGoodAdviceLine)
+                    .font(.footnote)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 6)
+            } label: {
+                Label("Actually good advice", systemImage: "checkmark.seal")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(accent)
+            }
+            .padding(.top, 10)
+            .accessibilityIdentifier("advice.card.goodAdvice")
         }
         .padding(Theme.cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -280,6 +316,8 @@ struct AdviceCardView: View {
         .onChange(of: record.id) { _, newID in
             guard newID != lastRecordID else { return }
             lastRecordID = newID
+            isAdviceExpanded = false
+            isGoodAdviceRevealed = false
 
             guard !isMotionReduced else {
                 shimmerOffset = -1.0
@@ -352,6 +390,62 @@ struct AdviceCardView: View {
             }
         }
     }
+
+    private var shouldCollapseAdvice: Bool {
+        record.adviceLine.count > AdviceEngineConstants.adviceOutputMaxLength
+    }
+
+    private var displayAdviceLine: String {
+        guard shouldCollapseAdvice, !isAdviceExpanded else { return record.adviceLine }
+        return Self.wordSafeTruncate(record.adviceLine, maxLength: AdviceEngineConstants.adviceOutputMaxLength)
+    }
+
+    private var actuallyGoodAdviceLine: String {
+        switch record.category {
+        case .dating:
+            return "Be clear about what you want, be kind about what you cannot offer, and do not confuse intensity for compatibility."
+        case .fitness:
+            return "Choose a repeatable plan, increase effort gradually, and treat recovery as part of the work."
+        case .productivity:
+            return "Pick one real next step, shrink it until it is boring, and do that before adding a system."
+        case .career:
+            return "Ask for the context, write down the tradeoffs, then make the smallest reversible move."
+        case .parenting:
+            return "Lower the volume, keep the boundary clear, and make the next step understandable."
+        case .tech:
+            return "Prefer the boring fix you can verify, document the tradeoff, and avoid shipping mystery."
+        case .social:
+            return "Make the invitation easy, respect the answer, and do not turn silence into a strategy."
+        case .cooking:
+            return "Read the whole recipe, season thoughtfully, and fix one variable at a time."
+        case .travel:
+            return "Book the essentials, leave buffer, and make the fallback plan before you need it."
+        case .pets:
+            return "Reward the behavior you want, stay consistent, and ask a vet or trainer when safety is involved."
+        case .relationships:
+            return "Say the clear thing kindly, listen for the actual concern, and avoid performing certainty."
+        case .money:
+            return "Slow down, check the downside, and never let confidence replace math."
+        case .spirituality:
+            return "Use reflection to become more honest and useful, not to escape feedback."
+        case .financeCrypto:
+            return "Assume volatility is real, size risk conservatively, and never let hype replace diligence."
+        case .random:
+            return "Pause long enough to name the real problem, then choose the least dramatic useful action."
+        }
+    }
+
+    private static func wordSafeTruncate(_ text: String, maxLength: Int) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > maxLength else { return trimmed }
+        let limit = trimmed.index(trimmed.startIndex, offsetBy: maxLength)
+        var prefix = String(trimmed[..<limit])
+        if let lastBoundary = prefix.lastIndex(where: { $0 == " " || $0 == "\n" || $0 == "\t" }) {
+            prefix = String(prefix[..<lastBoundary])
+        }
+        prefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        return prefix.isEmpty ? String(trimmed.prefix(maxLength)) : "\(prefix)…"
+    }
 }
 
 private struct AdviceBadgePill: View {
@@ -388,5 +482,107 @@ private struct AdviceBadgePill: View {
             Capsule(style: .continuous)
                 .stroke(stroke, lineWidth: showsStroke ? 1 : 0)
         )
+    }
+}
+
+private struct BadviceScoreView: View {
+    let record: AdviceRecord
+    let accent: Color
+    let primaryText: Color
+    let secondaryText: Color
+
+    private var score: BadviceScore {
+        BadviceScore(record: record)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Badvice Score", systemImage: "gauge.with.dots.needle.67percent")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(accent)
+
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 8),
+                    GridItem(.flexible(), spacing: 8)
+                ],
+                spacing: 8
+            ) {
+                scorePill(title: "Wrongness", value: score.wrongness)
+                scorePill(title: "Confidence", value: score.confidence)
+                scorePill(title: "HR Risk", value: score.hrRisk)
+                scorePill(title: "Usefulness", value: score.usefulness)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                .fill(accent.opacity(0.08))
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            "Badvice Score. Wrongness \(score.wrongness) percent. Confidence \(score.confidence) percent. HR Risk \(score.hrRisk) percent. Usefulness \(score.usefulness) percent."
+        )
+        .accessibilityIdentifier("advice.card.badviceScore")
+    }
+
+    private func scorePill(title: String, value: Int) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            Text("\(value)%")
+                .font(.caption.weight(.heavy))
+                .foregroundStyle(primaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                .fill(Color.black.opacity(0.08))
+        )
+    }
+}
+
+private struct BadviceScore {
+    let wrongness: Int
+    let confidence: Int
+    let hrRisk: Int
+    let usefulness: Int
+
+    init(record: AdviceRecord) {
+        let seed = Self.stableSeed(for: "\(record.id.uuidString)|\(record.categoryRaw)|\(record.toneRaw)|\(record.adviceLine)")
+        let categoryBias = record.category == .relationships ? 8 : record.category == .career ? 6 : 0
+        let toneBias: Int
+        switch record.tone {
+        case .corporateConsultant, .linkedInInfluencer, .alphaPodcast:
+            toneBias = 8
+        case .toxicBestFriend, .friendRoast:
+            toneBias = 12
+        case .minimalistMonk:
+            toneBias = -8
+        default:
+            toneBias = 0
+        }
+        wrongness = Self.clamped(76 + seed.positiveModulo(20) + max(toneBias, 0), min: 61, max: 99)
+        confidence = Self.clamped(68 + (seed / 7).positiveModulo(27) + toneBias, min: 54, max: 98)
+        hrRisk = Self.clamped(45 + (seed / 13).positiveModulo(36) + categoryBias + max(toneBias / 2, 0), min: 18, max: 96)
+        usefulness = Self.clamped(2 + (seed / 19).positiveModulo(12) - max(toneBias / 4, 0), min: 1, max: 18)
+    }
+
+    private static func stableSeed(for text: String) -> Int {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for scalar in text.unicodeScalars {
+            hash ^= UInt64(scalar.value)
+            hash &*= 1_099_511_628_211
+        }
+        return Int(hash & 0x7FFF_FFFF)
+    }
+
+    private static func clamped(_ value: Int, min lower: Int, max upper: Int) -> Int {
+        Swift.min(Swift.max(value, lower), upper)
     }
 }

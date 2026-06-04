@@ -43,12 +43,11 @@ elif [[ "$IOS_DESTINATION" == "platform=iOS Simulator" ]]; then
     xcodebuild -showdestinations -project "$PROJECT_PATH" -scheme "$SCHEME" 2>/dev/null \
       | awk '
         /platform:iOS Simulator/ && /id:/ && $0 !~ /dvtdevice-DVTiOSDeviceSimulatorPlaceholder/ {
-          if (match($0, /id:([^,}]+)/, value)) {
-            print value[1]
-            exit
-          }
+          print
+          exit
         }
-      '
+      ' \
+      | sed -E 's/.*id:([^,}]+).*/\1/'
   )"
 
   if [[ -n "$RESOLVED_SIMULATOR_UDID" ]]; then

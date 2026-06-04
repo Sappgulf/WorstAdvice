@@ -38,9 +38,9 @@ enum AdviceEngineConstants {
     // MARK: - Quality scoring
 
     /// Penalty applied when advice text exceeds this character count.
-    static let adviceLengthPenaltyThreshold: Int = 225
+    static let adviceLengthPenaltyThreshold: Int = 180
     /// Ideal minimum length (chars) for a punchy advice line.
-    static let adviceIdealMinLength: Int = 50
+    static let adviceIdealMinLength: Int = 90
     /// Ideal maximum length (chars) for a punchy advice line.
     static let adviceIdealMaxLength: Int = 180
     /// Number of repeated words (length > 3) that triggers a repetition penalty.
@@ -50,4 +50,7 @@ enum AdviceEngineConstants {
 
     /// Hard cap on advice text after polishing.
     static let adviceOutputMaxLength: Int = 240
+
+    /// Maximum character length for the optional "why this is bad" line.
+    static let rationaleOutputMaxLength: Int = 118
 }

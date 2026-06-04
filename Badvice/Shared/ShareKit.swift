@@ -47,14 +47,23 @@ struct ShareCardRenderer {
             paragraph.alignment = .left
             paragraph.lineBreakMode = .byWordWrapping
             paragraph.lineSpacing = 8
+            let adviceFontSize: CGFloat
+            switch content.adviceLine.count {
+            case 0...120:
+                adviceFontSize = content.aspectRatio == .story ? 54 : 48
+            case 121...180:
+                adviceFontSize = content.aspectRatio == .story ? 48 : 42
+            default:
+                adviceFontSize = content.aspectRatio == .story ? 42 : 36
+            }
 
             // Top Brand Watermark
             let titleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 34, weight: .heavy),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.95),
-                .kern: 1.5,
             ]
-            NSString(string: "BADVICE").draw(
+            let brandTitle = content.template == .certified ? "BADVICE CERTIFIED" : "BADVICE"
+            NSString(string: brandTitle).draw(
                 in: CGRect(
                     x: cardRect.minX + 52, y: cardRect.minY + 48, width: cardRect.width - 104,
                     height: 44),
@@ -63,15 +72,14 @@ struct ShareCardRenderer {
 
             // Advice Text
             let adviceAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 48, weight: .bold),
+                .font: UIFont.systemFont(ofSize: adviceFontSize, weight: .bold),
                 .paragraphStyle: paragraph,
                 .foregroundColor: UIColor.white,
-                .kern: -0.5,
             ]
             NSString(string: content.adviceLine).draw(
                 in: CGRect(
                     x: cardRect.minX + 52, y: cardRect.minY + 128, width: cardRect.width - 104,
-                    height: cardRect.height * 0.48),
+                    height: cardRect.height * (content.aspectRatio == .story ? 0.58 : 0.52)),
                 withAttributes: adviceAttributes
             )
 
@@ -81,12 +89,13 @@ struct ShareCardRenderer {
                     .font: UIFont.systemFont(ofSize: 28, weight: .medium),
                     .paragraphStyle: paragraph,
                     .foregroundColor: UIColor.white.withAlphaComponent(0.9),
-                    .kern: 0.2,
                 ]
                 NSString(string: rationale).draw(
                     in: CGRect(
-                        x: cardRect.minX + 52, y: cardRect.midY + 110, width: cardRect.width - 104,
-                        height: 240),
+                        x: cardRect.minX + 52,
+                        y: content.aspectRatio == .story ? cardRect.midY + 220 : cardRect.midY + 86,
+                        width: cardRect.width - 104,
+                        height: content.aspectRatio == .story ? 320 : 210),
                     withAttributes: rationaleAttributes
                 )
             }
@@ -95,7 +104,6 @@ struct ShareCardRenderer {
             let metaAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.monospacedSystemFont(ofSize: 24, weight: .semibold),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.85),
-                .kern: 1.2,
             ]
             NSString(
                 string:
@@ -111,7 +119,6 @@ struct ShareCardRenderer {
             let watermarkAttrs: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 28, weight: .black),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.6),
-                .kern: 2.0,
             ]
             let watermarkStr = "badvice.app"
             let watermarkSize = watermarkStr.size(withAttributes: watermarkAttrs)
@@ -130,7 +137,6 @@ struct ShareCardRenderer {
                     withAttributes: [
                         .font: UIFont.systemFont(ofSize: 20, weight: .bold),
                         .foregroundColor: UIColor.white.withAlphaComponent(0.5),
-                        .kern: 2.0,
                     ]
                 )
             }
@@ -165,6 +171,12 @@ struct ShareCardRenderer {
                 UIColor(red: 0.97, green: 0.56, blue: 0.32, alpha: 1).cgColor,
                 UIColor(red: 0.92, green: 0.36, blue: 0.45, alpha: 1).cgColor,
                 UIColor(red: 0.49, green: 0.2, blue: 0.48, alpha: 1).cgColor,
+            ]
+        case .certified:
+            colors = [
+                UIColor(red: 0.95, green: 0.46, blue: 0.25, alpha: 1).cgColor,
+                UIColor(red: 0.46, green: 0.08, blue: 0.12, alpha: 1).cgColor,
+                UIColor(red: 0.14, green: 0.08, blue: 0.08, alpha: 1).cgColor,
             ]
         }
 

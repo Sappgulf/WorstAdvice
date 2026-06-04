@@ -63,12 +63,12 @@ struct FriendsTabView: View {
         case .failed:
             return "Repair Friends connection"
         case .needsProfileSetup:
-            return "Create your Friends profile"
+            return "Friends setup is optional"
         case .empty:
             return "Add your first friend"
         case .ready:
             if social.currentUser == nil {
-                return "Create your Friends profile"
+                return "Use solo mode or create a profile"
             }
             if !social.incomingRequests.isEmpty {
                 return "Review incoming requests"
@@ -101,12 +101,12 @@ struct FriendsTabView: View {
         case .failed(let message):
             return message
         case .needsProfileSetup:
-            return "Set a public handle so people can find you, send requests, and start collabs."
+            return "Create a public handle when you want requests, feed posts, and collabs. Generate and Friend Roast still work without it."
         case .empty:
             return "Friends is online. Share your handle or search for someone to start the network."
         case .ready:
             if social.currentUser == nil {
-                return "Create your profile first. That unlocks search, requests, feed posts, and collabs."
+                return "Create a profile when you want social sharing. Solo generation still works now."
             }
             if !social.incomingRequests.isEmpty {
                 return "People are waiting on you. Accept or decline requests so the network can actually start."
@@ -181,7 +181,7 @@ struct FriendsTabView: View {
             return "Search a handle or accept an incoming request to unlock the social loop."
         case .ready:
             if social.currentUser == nil {
-                return "Finish profile setup first, then add your first friend."
+                return "Profile setup unlocks social sharing, but it is not required for Generate, Quotes, or solo Friend Roast."
             }
             if social.friends.isEmpty {
                 return "Use the Friends section to find and add your first friend."
@@ -398,7 +398,7 @@ struct FriendsTabView: View {
                         .foregroundStyle(primaryText)
                         .accessibilityIdentifier("friends.title")
 
-                    Text("Profile, first friend, first share, first collab. This tab now guides that loop.")
+                    Text("Optional social setup for shared drafts, feed posts, and collabs.")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 }
@@ -432,7 +432,7 @@ struct FriendsTabView: View {
                     Text("Setup Funnel")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(primaryText)
-                    Text("Each step unlocks the next one so the tab feels guided instead of fully loaded on day one.")
+                    Text("Set this up when you want the social multiplier. The core Badvice loop stays usable solo.")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -464,12 +464,12 @@ struct FriendsTabView: View {
                 )
                 setupStepRow(
                     title: "Share first post",
-                    detail: "Use Generate or Quotes to wake up the feed.",
+                    detail: "Use Generate or Quotes when you want the feed involved.",
                     state: social.feedPosts.isEmpty ? (!social.friends.isEmpty ? .now : .next) : .done
                 )
                 setupStepRow(
                     title: "Start first collab",
-                    detail: "Turn the first connection into a shared draft.",
+                    detail: "Turn a connection into a shared draft when social is ready.",
                     state: social.collabDocs.isEmpty ? (!social.feedPosts.isEmpty ? .now : .next) : .done
                 )
             }
@@ -513,7 +513,7 @@ struct FriendsTabView: View {
             )
         case .needsProfileSetup:
             QuotesInlineBanner(
-                text: "Finish your Friends profile to search handles, accept requests, and unlock the feed.",
+                text: "Create a Friends profile when you want handle search, requests, feed posts, and collabs.",
                 accent: accent,
                 secondaryText: secondaryText,
                 cardColor: cardColor
@@ -569,7 +569,7 @@ struct FriendsTabView: View {
 
     private var friendsSetupStageBadge: String {
         if social.currentUser == nil {
-            return "Profile First"
+            return "Optional"
         }
         if social.friends.isEmpty {
             return "Find Friend"

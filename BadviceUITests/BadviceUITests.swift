@@ -225,19 +225,12 @@ final class BadviceUITests: XCTestCase {
         let generateButton = app.buttons["generate.primary"]
         XCTAssertTrue(generateButton.waitForExistence(timeout: 12))
         generateButton.tap()
+        XCTAssertTrue(waitForAdviceGenerationToSettle(app: app, timeout: 10))
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
 
-        let shareToFriends = app.buttons["generate.shareToFriends"]
-        XCTAssertTrue(shareToFriends.waitForExistence(timeout: 12))
-        XCTAssertTrue(shareToFriends.isEnabled)
-        if scrollToFind(app: app, element: shareToFriends, maxSwipes: 8), shareToFriends.isHittable {
-            shareToFriends.tap()
-            XCTAssertTrue(
-                app.otherElements["friends.sectionPicker"].waitForExistence(timeout: 5)
-                    || app.staticTexts["Friends"].waitForExistence(timeout: 5)
-                    || app.staticTexts["Social features are unavailable in this test run."].waitForExistence(timeout: 5)
-            )
-        }
+        let shareButton = app.buttons["generate.share"]
+        XCTAssertTrue(scrollToFind(app: app, element: shareButton, maxSwipes: 8))
+        XCTAssertTrue(shareButton.exists)
 
         XCTAssertTrue(openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions"))
 
@@ -318,6 +311,32 @@ final class BadviceUITests: XCTestCase {
             app.swipeUp()
         }
         return element.exists
+    }
+
+    private func waitForAdviceGenerationToSettle(
+        app: XCUIApplication,
+        timeout: TimeInterval
+    ) -> Bool {
+        let generationLoading = app.otherElements["generate.loading"]
+        let generateButton = app.buttons["generate.primary"]
+
+        if generationLoading.waitForExistence(timeout: 0.5) {
+            let deadline = Date().addingTimeInterval(timeout)
+            while Date() < deadline {
+                if !generationLoading.exists && generateButton.isEnabled { return true }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.12))
+            }
+            return !generationLoading.exists && generateButton.isEnabled
+        }
+
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if generateButton.isEnabled {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.12))
+        }
+        return generateButton.isEnabled
     }
 
     private func launchTestApp(

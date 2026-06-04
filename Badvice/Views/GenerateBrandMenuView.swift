@@ -169,7 +169,7 @@ struct GenerateBrandMenuView: View {
     private var cloudKitCard: some View {
         SectionShell(accent: accent, cardColor: cardColor) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Social Support")
+                Text("Friends Status")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
                 Text(socialSupportDetail)
@@ -240,7 +240,7 @@ struct GenerateBrandMenuView: View {
         #if DEBUG
             return "Refresh Friends availability or bootstrap the development schema when social setup is out of sync."
         #else
-            return "Refresh Friends availability when social setup looks stale."
+            return "Refresh Friends availability when sharing status looks stale."
         #endif
     }
 
@@ -314,7 +314,7 @@ struct GenerateBrandMenuView: View {
         case "Explore":
             return "Ideas"
         case "Challenges":
-            return "Social"
+            return "Missions"
         default:
             return "Open"
         }

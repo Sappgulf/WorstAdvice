@@ -16,6 +16,19 @@ extension AdviceEngine {
         "ignore", "without", "zero", "full", "hard", "fast", "now"
     ]
 
+    static let genericFillerSignals: [String] = [
+        "cross functional",
+        "operational excellence",
+        "decision making framework",
+        "primary decision making",
+        "strategic clarity",
+        "advanced optionality",
+        "implementation noise",
+        "accepted baseline",
+        "governance model",
+        "operating thesis"
+    ]
+
     static let momentumBeats = [
         "Do it fast enough that objections sound outdated.",
         "Keep moving so nobody can audit the details.",

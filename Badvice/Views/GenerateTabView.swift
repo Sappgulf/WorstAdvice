@@ -57,15 +57,12 @@ struct GenerateTabView: View {
             return "Generating now. The next terrible idea is on the way."
         }
         if viewModel.current == nil {
-            return "Start with one polished disaster, then branch into Library, Social, and Missions when needed."
-        }
-        if social.currentUser == nil {
-            return "Generate here, then set up Friends to share drafts and start collabs."
+            return "Tap Advise Me to generate your first terrible idea."
         }
         if viewModel.challengeStreakDays > 0 {
             return "\(viewModel.challengeStreakDays)-day streak active. Generate, save, or share to keep it alive."
         }
-        return "Generate once, save the hits, and keep the chaos loop moving."
+        return "Generate, laugh, save, copy, share, or remix."
     }
     private var socialEntryPrompt: String {
         social.availability.isAccountAvailable
@@ -288,6 +285,9 @@ struct GenerateTabView: View {
                 scenarioSuggestionsRow
                 adaptiveHintCard
                 studioActionButtons
+                if viewModel.current != nil {
+                    shareExtrasSection
+                }
                 statStrip
                 challengeCard
                 if viewModel.current != nil {
@@ -344,6 +344,69 @@ struct GenerateTabView: View {
             .buttonStyle(.bordered)
             .tint(accent)
         }
+    }
+
+    private var shareExtrasSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Share extras")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(secondaryText)
+
+            HStack(spacing: 10) {
+                Button {
+                    guard let record = viewModel.current else { return }
+                    guard canShareToFriends() else {
+                        showFriendsUnavailable()
+                        return
+                    }
+                    Task {
+                        await social.shareAdviceToFriends(text: record.adviceLine)
+                        if let message = social.statusMessage {
+                            activeToast = ToastMessage(
+                                message: message,
+                                style: message.lowercased().contains("shared") ? .success : .error
+                            )
+                        }
+                    }
+                } label: {
+                    Label("Friends", systemImage: "person.2.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .accessibilityIdentifier("generate.shareToFriends")
+
+                Button {
+                    exportCurrentAdviceGIF()
+                } label: {
+                    Label(gifExportInProgress ? "Exporting..." : "GIF", systemImage: "square.and.arrow.up.on.square")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .disabled(gifExportInProgress)
+                .accessibilityIdentifier("generate.gif")
+            }
+
+            if !social.availability.isAvailable {
+                Text(social.availability.message)
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if social.currentUser == nil {
+                Text("Friends is optional. Set it up when you want shared drafts and collabs.")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(cardColor)
+        )
     }
 
     var body: some View {
@@ -793,8 +856,8 @@ struct GenerateTabView: View {
                     isSelected: viewModel.selectedCategory == category,
                     accessibilityID: "generate.category.chip.\(index)"
                 ) {
-                    viewModel.selectedCategory = category
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    viewModel.updateCategory(category)
                 }
             }
         }
@@ -814,8 +877,8 @@ struct GenerateTabView: View {
                     isSelected: viewModel.selectedTone == tone,
                     accessibilityID: "generate.tone.chip.\(index)"
                 ) {
-                    viewModel.selectedTone = tone
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    viewModel.updateTone(tone)
                 }
             }
         }
@@ -1287,26 +1350,12 @@ struct GenerateTabView: View {
 
                     railButton(
                         title: "Share",
-                        systemImage: "person.2.fill",
+                        systemImage: "square.and.arrow.up",
                         isEnabled: !viewModel.isGenerating
                     ) {
-                        guard let record = viewModel.current else { return }
-                        guard canShareToFriends() else {
-                            showFriendsUnavailable()
-                            return
-                        }
-                        Task {
-                            await social.shareAdviceToFriends(text: record.adviceLine)
-                            if let message = social.statusMessage {
-                                activeToast = ToastMessage(
-                                    message: message,
-                                    style: message.lowercased().contains("shared")
-                                        ? .success : .error
-                                )
-                            }
-                        }
+                        shareCurrentAdvice()
                     }
-                    .accessibilityIdentifier("generate.shareToFriends")
+                    .accessibilityIdentifier("generate.share")
 
                     railButton(
                         title: "Remix",
@@ -1317,46 +1366,8 @@ struct GenerateTabView: View {
                         activeToast = ToastMessage(message: "Remixed!", style: .success)
                     }
                     .accessibilityIdentifier("generate.remix")
-
-                    // #5 Animated GIF export
-                    railButton(
-                        title: gifExportInProgress ? "Exporting…" : "GIF",
-                        systemImage: "square.and.arrow.up.on.square",
-                        isEnabled: !viewModel.isGenerating && !gifExportInProgress
-                    ) {
-                        guard let record = viewModel.current else { return }
-                        gifExportInProgress = true
-                        Task {
-                            let config = AnimatedShareExporter.Config(
-                                advice: record.adviceLine,
-                                category: record.category,
-                                tone: record.tone,
-                                theme: settings.theme
-                            )
-                            if let data = await AnimatedShareExporter.exportGIF(config: config) {
-                                AnimatedShareExporter.shareGIF(data)
-                                activeToast = ToastMessage(message: "GIF ready!", style: .success)
-                            } else {
-                                activeToast = ToastMessage(message: "GIF export failed", style: .error)
-                            }
-                            gifExportInProgress = false
-                        }
-                    }
-                    .accessibilityIdentifier("generate.gif")
                 }
                 .frame(maxWidth: .infinity)
-
-                if !social.availability.isAvailable {
-                    Text(social.availability.message)
-                        .font(.caption)
-                        .foregroundStyle(secondaryText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else if social.currentUser == nil {
-                    Text("Finish Friends setup to share from Generate and spin up collabs.")
-                        .font(.caption)
-                        .foregroundStyle(secondaryText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
             }
         }
         .tint(accent)
@@ -1481,8 +1492,39 @@ struct GenerateTabView: View {
     }
 
     private func showFriendsUnavailable() {
-        activeToast = ToastMessage(message: socialEntryPrompt, style: .error)
-        openTab(.friends)
+        activeToast = ToastMessage(message: socialEntryPrompt, style: .info)
+    }
+
+    private func shareCurrentAdvice() {
+        guard let payload = viewModel.currentSharePayload else { return }
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        Task {
+            let image = await ShareCardRenderer.renderAsync(content: payload)
+            shareItems = [image, viewModel.currentShareText]
+            viewModel.trackShare(template: payload.template, ratio: payload.aspectRatio)
+            showingShareSheet = true
+            activeToast = ToastMessage(message: "Share card ready.", style: .success)
+        }
+    }
+
+    private func exportCurrentAdviceGIF() {
+        guard let record = viewModel.current else { return }
+        gifExportInProgress = true
+        Task {
+            let config = AnimatedShareExporter.Config(
+                advice: record.adviceLine,
+                category: record.category,
+                tone: record.tone,
+                theme: settings.theme
+            )
+            if let data = await AnimatedShareExporter.exportGIF(config: config) {
+                AnimatedShareExporter.shareGIF(data)
+                activeToast = ToastMessage(message: "GIF ready.", style: .success)
+            } else {
+                activeToast = ToastMessage(message: "GIF export is unavailable right now.", style: .error)
+            }
+            gifExportInProgress = false
+        }
     }
 
     private func canShareToFriends() -> Bool {
@@ -1521,7 +1563,7 @@ struct GenerateTabView: View {
             activeToast = ToastMessage(message: msg, style: .info)
         }
         revealSurprise("Long-press unlock: Friend Roast tone primed for your next run.")
-        viewModel.selectedTone = .friendRoast
+        viewModel.updateTone(.friendRoast, autoGenerate: false)
     }
 
     private func triggerQuoteTapEasterEgg() {
@@ -1795,11 +1837,11 @@ struct GenerateTabView: View {
             }
 
             VStack(spacing: 12) {
-                Text("Your first draft is one tap away.")
+                Text("Tap Advise Me to generate your first terrible idea.")
                     .font(Theme.cardFont(for: settings.theme))
                     .foregroundStyle(primaryText)
 
-                Text("Choose a lane, add one real detail, and keep the rest clean.")
+                Text("Pick a tone, add one optional detail, then save, copy, share, or remix the result.")
                     .font(Theme.bodyFont(for: settings.theme))
                     .foregroundStyle(secondaryText)
                     .opacity(0.8)
@@ -1832,10 +1874,14 @@ private struct LoadingAdviceView: View {
 
     @State private var ringRotation: Double = 0
     @State private var ringPulse = false
-
-    private let loadingPhrase = "Summoning bad judgment..."
+    @State private var messageTick = 0
+    @State private var messageRotationTask: Task<Void, Never>?
+    @State private var progressTask: Task<Void, Never>?
+    @State private var loadingProgress: Double = 0.04
 
     var body: some View {
+        let currentMessage = GenerationLoadingMessages.message(forTick: messageTick)
+        let phaseTitle = GenerationLoadingMessages.phaseTitle(forTick: messageTick)
         ZStack {
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .fill(cardColor.opacity(0.98))
@@ -1880,18 +1926,35 @@ private struct LoadingAdviceView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(accentColor)
                         .scaleEffect(ringPulse ? 1.0 : 0.92)
-                        .animation(
-                            effectiveReduceMotion
+                    .animation(
+                        effectiveReduceMotion
                                 ? nil
                                 : .easeInOut(duration: 1.0).repeatForever(autoreverses: true),
                             value: ringPulse
-                        )
+                    )
                 }
 
-                Text(loadingPhrase)
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .tint(accentColor)
+                    .padding(.bottom, 2)
+
+                Text(phaseTitle)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(primaryTextColor.opacity(0.88))
+
+                Text(currentMessage)
                     .font(.system(.headline, design: .rounded, weight: .semibold))
                     .foregroundStyle(primaryTextColor)
                     .multilineTextAlignment(.center)
+                    .animation(.easeInOut(duration: 0.2), value: messageTick)
+
+                ProgressView(value: loadingProgress, total: 1.0)
+                    .progressViewStyle(.linear)
+                    .tint(accentColor)
+                    .scaleEffect(y: 0.7)
+                    .padding(.top, -2)
+                    .padding(.horizontal, 16)
 
                 Text("Generating advice")
                     .font(.caption.weight(.medium))
@@ -1904,15 +1967,70 @@ private struct LoadingAdviceView: View {
         .transition(.opacity)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Generating advice")
-        .accessibilityValue(loadingPhrase)
+        .accessibilityIdentifier("generate.loading")
+        .accessibilityValue(currentMessage)
         .onAppear {
             ringPulse = true
+            messageTick = 0
+            loadingProgress = 0.08
             guard !effectiveReduceMotion else { return }
             ringRotation = 360
+            messageRotationTask?.cancel()
+            messageRotationTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(1.1))
+                    await MainActor.run {
+                        messageTick += 1
+                    }
+                }
+            }
+            progressTask?.cancel()
+            progressTask = Task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(700))
+                    await MainActor.run {
+                        loadingProgress = min(loadingProgress + 0.018, 0.98)
+                    }
+                }
+            }
         }
         .onDisappear {
+            messageRotationTask?.cancel()
+            messageRotationTask = nil
+            progressTask?.cancel()
+            progressTask = nil
             ringRotation = 0
             ringPulse = false
+        }
+        .onChange(of: effectiveReduceMotion) { _, reduced in
+            if reduced {
+                messageRotationTask?.cancel()
+                messageRotationTask = nil
+                progressTask?.cancel()
+                progressTask = nil
+                loadingProgress = 0.25
+            } else {
+                messageTick = 0
+                messageRotationTask?.cancel()
+                messageRotationTask = Task {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(1.1))
+                        await MainActor.run {
+                            messageTick += 1
+                        }
+                    }
+                }
+                loadingProgress = 0.25
+                progressTask?.cancel()
+                progressTask = Task {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .milliseconds(700))
+                        await MainActor.run {
+                            loadingProgress = min(loadingProgress + 0.018, 0.98)
+                        }
+                    }
+                }
+            }
         }
     }
 }
