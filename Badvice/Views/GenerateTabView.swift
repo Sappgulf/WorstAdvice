@@ -281,23 +281,22 @@ struct GenerateTabView: View {
                 isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))
         ) {
             VStack(alignment: .leading, spacing: 12) {
-                friendRoastComposer
-                scenarioSuggestionsRow
-                adaptiveHintCard
+                if viewModel.selectedTone == .friendRoast {
+                    friendRoastComposer
+                }
+                promptAssistSection
                 studioActionButtons
                 if viewModel.current != nil {
                     shareExtrasSection
                 }
-                statStrip
-                challengeCard
+                if viewModel.current != nil || viewModel.todayGeneratedCount > 0 {
+                    statStrip
+                    challengeCard
+                }
                 if viewModel.current != nil {
                     whyThisFailsCard
                 }
-                dailyQuoteBanner
-                weeklyRecapSection
-                if !hasDismissedWhatsNewCard {
-                    whatsNewCard
-                }
+                studioExtrasSection
             }
             .padding(.top, 8)
         } label: {
@@ -427,7 +426,6 @@ struct GenerateTabView: View {
                         generationHeroCard
                         selectorRow
                         scenarioComposer
-                        friendRoastComposer
                         primaryActionButtons
                         if let notice = viewModel.generationNotice, !notice.isEmpty {
                             Text(notice)
@@ -1756,47 +1754,6 @@ struct GenerateTabView: View {
                     .fill(cardColor)
             )
         }
-    }
-
-    private var advancedSection: some View {
-        DisclosureGroup(
-            isExpanded: $showingAdvanced.animation(
-                isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))
-        ) {
-            VStack(alignment: .leading, spacing: 12) {
-            Text(viewModel.uniquenessStatusText)
-                .font(.caption)
-                .foregroundStyle(secondaryText)
-            statStrip
-            challengeCard
-                keywordSuggestionsRow
-                if viewModel.current != nil {
-                    whyThisFailsCard
-                }
-            }
-            .padding(.top, 8)
-        } label: {
-            HStack {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.subheadline.weight(.semibold))
-                Text("Studio stats")
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-                Text("Streaks, keywords, and more")
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-            }
-            .foregroundStyle(primaryText)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(cardColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .stroke(accent.opacity(0.1), lineWidth: 1)
-                )
-        )
     }
 
     private var statStrip: some View {

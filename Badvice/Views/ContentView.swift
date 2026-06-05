@@ -513,9 +513,9 @@ struct ContentView: View {
     }
 
     private func signOutCurrentAccount(_ auth: AuthViewModel) {
+        resetSessionPresentationState()
         auth.signOut()
         session = nil
-        resetSessionPresentationState()
         authMode = .signIn
         syncAuthDrafts(with: auth)
     }

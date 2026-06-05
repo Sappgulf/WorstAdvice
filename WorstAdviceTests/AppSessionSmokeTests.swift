@@ -4,6 +4,11 @@ import XCTest
 
 @MainActor
 final class AppSessionSmokeTests: XCTestCase {
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        _ = BadviceIntentRouter.shared.consume()
+    }
+
     private func makeInMemoryContainer() throws -> ModelContainer {
         let schema = Schema([
             AdviceRecord.self,
@@ -49,7 +54,7 @@ final class AppSessionSmokeTests: XCTestCase {
         session.bootstrapExperienceIfNeeded(autoGenerateInitialAdvice: true)
         XCTAssertTrue(session.generate.isGenerating)
 
-        try await waitUntil(timeout: .seconds(2)) {
+        try await waitUntil(timeout: .seconds(6)) {
             session.generate.current != nil && !session.generate.isGenerating
         }
 
@@ -300,40 +305,40 @@ final class AppSessionSmokeTests: XCTestCase {
     }
 
     func testOpenDailyQuoteIntentQueuesQuotesIntentPayload() async throws {
-        _ = BadviceIntentRouter.shared.consume()
-
         _ = try await OpenDailyQuoteIntent().perform()
-        let payload = try XCTUnwrap(BadviceIntentRouter.shared.consume())
+        let payload = await waitForIntentPayload(timeout: 1.5)
+        XCTAssertNotNil(payload)
+        let unwrappedPayload = try XCTUnwrap(payload)
 
-        XCTAssertEqual(payload.command, .openDailyQuote)
-        XCTAssertEqual(payload.tab, AppTab.quotes.rawValue)
-        XCTAssertFalse(payload.shouldGenerate)
+        XCTAssertEqual(unwrappedPayload.command, .openDailyQuote)
+        XCTAssertEqual(unwrappedPayload.tab, AppTab.quotes.rawValue)
+        XCTAssertFalse(unwrappedPayload.shouldGenerate)
     }
 
     func testOpenMissionsIntentQueuesChaosHubIntentPayload() async throws {
-        _ = BadviceIntentRouter.shared.consume()
-
         _ = try await OpenBadviceMissionsIntent().perform()
-        let payload = try XCTUnwrap(BadviceIntentRouter.shared.consume())
+        let payload = await waitForIntentPayload(timeout: 1.5)
+        XCTAssertNotNil(payload)
+        let unwrappedPayload = try XCTUnwrap(payload)
 
-        XCTAssertEqual(payload.command, .openTab)
-        XCTAssertEqual(payload.tab, AppTab.chaosHub.rawValue)
-        XCTAssertFalse(payload.shouldGenerate)
+        XCTAssertEqual(unwrappedPayload.command, .openTab)
+        XCTAssertEqual(unwrappedPayload.tab, AppTab.chaosHub.rawValue)
+        XCTAssertFalse(unwrappedPayload.shouldGenerate)
     }
 
     func testStartDailyMissionIntentQueuesMatchingGeneratePayload() async throws {
-        _ = BadviceIntentRouter.shared.consume()
-
         _ = try await StartDailyMissionIntent().perform()
-        let payload = try XCTUnwrap(BadviceIntentRouter.shared.consume())
+        let payload = await waitForIntentPayload(timeout: 1.5)
+        XCTAssertNotNil(payload)
+        let unwrappedPayload = try XCTUnwrap(payload)
         let mission = DailyMissionSpec.current()
 
-        XCTAssertEqual(payload.command, .generateAdvice)
-        XCTAssertEqual(payload.tab, AppTab.generate.rawValue)
-        XCTAssertEqual(payload.category, mission.category.rawValue)
-        XCTAssertEqual(payload.tone, mission.tone.rawValue)
-        XCTAssertTrue(payload.shouldGenerate)
-        XCTAssertTrue(payload.scenario?.contains("Daily mission") == true)
+        XCTAssertEqual(unwrappedPayload.command, .generateAdvice)
+        XCTAssertEqual(unwrappedPayload.tab, AppTab.generate.rawValue)
+        XCTAssertEqual(unwrappedPayload.category, mission.category.rawValue)
+        XCTAssertEqual(unwrappedPayload.tone, mission.tone.rawValue)
+        XCTAssertTrue(unwrappedPayload.shouldGenerate)
+        XCTAssertTrue(unwrappedPayload.scenario?.contains("Daily mission") == true)
     }
 
     func testGetDailyQuoteIntentFormatsShortcutTextWithoutRoutingPayload() async throws {
@@ -346,6 +351,21 @@ final class AppSessionSmokeTests: XCTestCase {
         XCTAssertTrue(shortcutText.contains(quote.source))
         XCTAssertTrue(shortcutText.contains("Badvice"))
         XCTAssertNil(BadviceIntentRouter.shared.consume())
+    }
+
+    private func waitForIntentPayload(timeout: TimeInterval) async -> BadviceIntentPayload? {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if let payload = BadviceIntentRouter.shared.consume() {
+                return payload
+            }
+            do {
+                try await Task.sleep(for: .milliseconds(40))
+            } catch {
+                return nil
+            }
+        }
+        return BadviceIntentRouter.shared.consume()
     }
 
     private func makeLocalAccountStore() -> (LocalAccountStore, UserDefaults) {

@@ -21,7 +21,10 @@ struct AdviceEngine {
         situation: String? = nil,
         seed: Int? = nil,
         templateBias: Double = 0.5,
-        now: Date = Date()
+        now: Date = Date(),
+        qualityRecoveryAttempt: Int = 0,
+        skipQualityRecovery: Bool = false,
+        skipQualityScoring: Bool = false
     ) async -> GeneratedAdvice {
         let resolvedSeed = seed ?? defaultSeed(from: now)
         // Resolve random selections using the seed for reproducibility.
@@ -31,14 +34,72 @@ struct AdviceEngine {
 
         let rules = store.rules(for: resolvedCategory, contentPack: contentPack)
         let voice = store.profile(for: resolvedTone)
+        let keyword = rng.pick(rules.keywords)
+
+        if skipQualityScoring {
+            let scenario = sanitizedSituation(situation)
+            let selectedTopic = selectTopic(from: scenario, fallback: keyword, seed: resolvedSeed)
+            let effectiveTemplateBias = min(
+                AdviceEngineConstants.templateBiasMax,
+                combinedTemplateBias(userBias: templateBias, tone: resolvedTone)
+                    + (Double(qualityRecoveryAttempt) * AdviceEngineConstants.qualityRecoveryPenalty)
+            )
+            let actionTemplate = pickActionTemplate(
+                from: rules.actionTemplates,
+                bias: effectiveTemplateBias,
+                rng: &rng
+            )
+            let opener = rng.pick(voice.opener)
+            let confidence = rng.pick(voice.confidenceTag)
+            let ending = rng.pick(voice.ending)
+            let toneDirective = rng.pick(store.toneDirectiveVocabulary(for: resolvedTone))
+            let categoryDirective = rng.pick(store.categoryDirectiveVocabulary(for: resolvedCategory))
+            let filledAction = actionTemplate.replacingOccurrences(of: "%@", with: selectedTopic)
+
+            var advice = "\(opener), \(filledAction) \(confidence) \(toneDirective) \(categoryDirective). \(ending)"
+            if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
+                advice = "\(opener), treat the \(keyword) like a stage performance and commit to the loudest overconfident plan. \(confidence)"
+            }
+
+            var rationale: String?
+            if includeRationale {
+                let bootstrapPrinciple = rng.pick(rules.badPrinciples)
+                let wisdomAnchor = rng.pick(Self.wisdomAnchorsByCategory[resolvedCategory] ?? Self.defaultWisdomAnchors)
+                let inversionLens = rng.pick(Self.wisdomInversionLenses)
+                let rationaleTemplate = rng.pick(rules.rationaleTemplates)
+                let rationaleLead = rng.pick(Self.rationaleLeads)
+                rationale = conciseRationale(
+                    lead: rationaleLead,
+                    principle: bootstrapPrinciple,
+                    wisdomAnchor: wisdomAnchor,
+                    inversionLens: inversionLens,
+                    template: rationaleTemplate
+                )
+            }
+
+            let moderated = moderation.apply(to: advice, rationale: rationale)
+
+            return GeneratedAdvice(
+                category: resolvedCategory,
+                tone: resolvedTone,
+                adviceLine: moderated.advice,
+                rationaleLine: moderated.rationale,
+                createdAt: now
+            )
+        }
 
         let principle = rng.pick(rules.badPrinciples)
-        let keyword = rng.pick(rules.keywords)
         let wisdomAnchor = rng.pick(Self.wisdomAnchorsByCategory[resolvedCategory] ?? Self.defaultWisdomAnchors)
         let inversionLens = rng.pick(Self.wisdomInversionLenses)
+        let effectiveTemplateBias = min(
+            AdviceEngineConstants.templateBiasMax,
+            combinedTemplateBias(userBias: templateBias, tone: resolvedTone)
+                + (Double(qualityRecoveryAttempt) * AdviceEngineConstants.qualityRecoveryPenalty)
+        )
+
         let actionTemplate = pickActionTemplate(
             from: rules.actionTemplates,
-            bias: combinedTemplateBias(userBias: templateBias, tone: resolvedTone),
+            bias: effectiveTemplateBias,
             rng: &rng
         )
         let opener = rng.pick(voice.opener)
@@ -57,7 +118,7 @@ struct AdviceEngine {
         let accountabilityDodge = rng.pick(Self.accountabilityDodges)
         let toneDirective = rng.pick(store.toneDirectiveVocabulary(for: resolvedTone))
         let categoryDirective = rng.pick(store.categoryDirectiveVocabulary(for: resolvedCategory))
-        let directiveClause = "Make \(toneDirective) sound strategic and \(categoryDirective) feel inevitable."
+        let directiveClause = ""
         let antiWisdomClause = "Take '\(wisdomAnchor)' and \(inversionLens)."
 
         let scenario = sanitizedSituation(situation)
@@ -183,6 +244,7 @@ struct AdviceEngine {
             "\(opener), \(filledAction) \(deliveryMandate) \(accountabilityDodge) \(aftermathClause) \(directiveClause) \(ending)",
             "\(opener): \(filledAction) \(momentumBeat) \(audienceHook) \(confidence) \(directiveClause) \(ending)"
         ]
+
         // #11 Situation Context Weighting:
         // Repeat scenario and selectedTopic (derived from user's situation input) twice so they
         // carry 2× the semantic weight compared to generic category/tone tokens.
@@ -223,7 +285,30 @@ struct AdviceEngine {
             return lhs.score > rhs.score
         }
 
-        var advice = rankedCandidates.first?.candidate ?? rng.pick(adviceShapes)
+        let minimumQualityScore = AdviceEngineConstants.minimumAdviceQualityScore
+        let selectedCandidate = rankedCandidates.first(where: { $0.score >= minimumQualityScore })
+            ?? rankedCandidates.first
+
+        if
+            !skipQualityRecovery,
+            (selectedCandidate?.score ?? 0) < minimumQualityScore,
+            qualityRecoveryAttempt == 0
+        {
+            return await generate(
+                category: resolvedCategory,
+                tone: resolvedTone,
+                includeRationale: includeRationale,
+                contentPack: contentPack,
+                situation: situation,
+                seed: resolvedSeed + AdviceEngineConstants.qualityRecoverySeedStride,
+                templateBias: templateBias,
+                now: now,
+                qualityRecoveryAttempt: qualityRecoveryAttempt + 1,
+                skipQualityRecovery: skipQualityRecovery
+            )
+        }
+
+        var advice = selectedCandidate?.candidate ?? rng.pick(adviceShapes)
         advice = polishAdvice(advice)
 
         if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
@@ -289,7 +374,7 @@ struct AdviceEngine {
                 group.addTask {
                     (
                         attempt,
-                        await self.generate(
+                    await self.generate(
                             category: candidateCategory,
                             tone: candidateTone,
                             includeRationale: includeRationale,
@@ -297,7 +382,8 @@ struct AdviceEngine {
                             situation: situation,
                             seed: candidateSeed,
                             templateBias: templateBias,
-                            now: now
+                            now: now,
+                            skipQualityRecovery: true
                         )
                     )
                 }
@@ -345,7 +431,8 @@ struct AdviceEngine {
                 situation: situation,
                 seed: fallbackSeed,
                 templateBias: templateBias,
-                now: now
+                now: now,
+                skipQualityRecovery: true
             )
             let fingerprint = candidate.adviceLine.normalizedForFiltering
             if seen.insert(fingerprint).inserted {
@@ -571,11 +658,14 @@ struct AdviceEngine {
             score += 0.28
         }
         
-        // Length penalty - overly long advice is less punchy
-        if candidate.count > AdviceEngineConstants.adviceLengthPenaltyThreshold {
+        // Length shaping — short and overly long lines are both less punchy.
+        if candidate.count < AdviceEngineConstants.adviceIdealMinLength {
+            score -= 0.22
+        } else if candidate.count > AdviceEngineConstants.adviceLengthPenaltyThreshold {
             score -= 0.34
         }
-        // Bonus for good length (ideal range)
+
+        // Bonus for good length (ideal range).
         if candidate.count >= AdviceEngineConstants.adviceIdealMinLength
             && candidate.count <= AdviceEngineConstants.adviceIdealMaxLength {
             score += 0.18
@@ -599,8 +689,15 @@ struct AdviceEngine {
         }
         score -= genericFillerPenalty
 
-        if normalized.contains("lead with ") && normalized.contains("push ") {
-            score -= 0.18
+        if normalized.contains(",") {
+            let clauseCount = normalized.filter { $0 == "," }.count
+            if clauseCount > 2 {
+                score -= min(0.16, Double(clauseCount - 2) * 0.04)
+            }
+        }
+
+        if !Self.claritySignals.contains(where: { normalized.contains($0) }) {
+            score -= 0.06
         }
         
         // Bonus: advice with strong opening (command verbs, strong phrases)

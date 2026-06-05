@@ -53,4 +53,15 @@ enum AdviceEngineConstants {
 
     /// Maximum character length for the optional "why this is bad" line.
     static let rationaleOutputMaxLength: Int = 118
+
+    /// Minimum quality score required for advice to be accepted before fallback.
+    static let minimumAdviceQualityScore: Double = 0.42
+
+    /// Amount of template-intensity increase when the quality guard triggers a forced recovery.
+    ///
+    /// Each recovery attempt increases template bias to steer away from repetitive filler and force a different shape.
+    static let qualityRecoveryPenalty: Double = 0.18
+
+    /// Seed stride used to de-correlate a recovery pass from the initial seed.
+    static let qualityRecoverySeedStride: Int = 10_007
 }

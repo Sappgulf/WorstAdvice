@@ -178,6 +178,7 @@ final class GenerateViewModel {
         let bootSeed = Int(Date().timeIntervalSince1970 * 1_000)
         let preferredContentPack = settingsViewModel.preferredContentPack
         let preferredGenerationProvider = settingsViewModel.preferredGenerationProvider
+        let shouldPrewarmScorer = preferredGenerationProvider == .appleOnDevice
 
         _ = store.rules(for: currentCategory, contentPack: preferredContentPack)
         _ = store.profile(for: currentTone)
@@ -190,7 +191,9 @@ final class GenerateViewModel {
             generationNotice = Self.bootstrapGenerationNotice
         }
         adviceBootstrapTask = Task(priority: .utility) { [weak self] in
-            async let scorerWarmup: Void = SemanticTextScorer.shared.prewarm()
+            async let scorerWarmup: Void = shouldPrewarmScorer
+            ? SemanticTextScorer.shared.prewarm()
+            : ()
 
             guard let self else {
                 _ = await scorerWarmup
@@ -347,17 +350,8 @@ final class GenerateViewModel {
         logger.debug(
             "Generate started: category=\(self.selectedCategory.rawValue) resolved=\(resolvedCategory.rawValue) tone=\(self.selectedTone.rawValue) resolvedTone=\(resolvedTone.rawValue) seed=\(baseSeed)"
         )
-        let suggestionPool = await suggestionCandidates(for: resolvedCategory, situation: situation)
-        let normalizedSituationForRanking = normalizedSituation
-        let hasSituationContext = (normalizedSituationForRanking?.isEmpty == false)
-
-        let semanticScorer = SemanticTextScorer.shared
-        let preparedQuery =
-            hasSituationContext
-            ? await semanticScorer.preparedQuery(from: normalizedSituationForRanking ?? "")
-            : nil
-
-        if communityOnlyMode, suggestionPool.isEmpty {
+        if communityOnlyMode,
+           (await suggestionCandidates(for: resolvedCategory, situation: situation)).isEmpty {
             generationNotice =
                 "Community-only mode is on. Add suggestions in Settings > Suggestion Lab."
             analyticsTracker.track(
@@ -369,6 +363,44 @@ final class GenerateViewModel {
                 ])
             return
         }
+
+        if !communityOnlyMode, isBootstrap, generationProvider != .appleOnDevice {
+            let output = await engine.generate(
+                category: resolvedCategory,
+                tone: resolvedTone,
+                includeRationale: settingsViewModel.includeRationale,
+                contentPack: selectedPack,
+                situation: situation,
+                seed: baseSeed,
+                templateBias: templateBias,
+                skipQualityScoring: true
+            )
+            rememberFingerprint(for: output)
+            rememberPoolFingerprint(for: output)
+            generationSourceBadgeText = generationSourceBadgeLabel(for: "engine")
+            lastWhyTerrible =
+                "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
+            current = repository.insert(output)
+            invalidateRetentionSnapshot()
+            NotificationManager.updateGenerationActivity(date: output.createdAt)
+            NotificationManager.scheduleDaily()
+            repository.recordLearningSignal(
+                scopeKey: adviceScopeKey(category: output.category, tone: output.tone),
+                type: .shown
+            )
+            leaderboardVersion += 1
+            return
+        }
+
+        let suggestionPool = await suggestionCandidates(for: resolvedCategory, situation: situation)
+        let normalizedSituationForRanking = normalizedSituation
+        let hasSituationContext = (normalizedSituationForRanking?.isEmpty == false)
+
+        let semanticScorer = SemanticTextScorer.shared
+        let preparedQuery =
+            hasSituationContext
+            ? await semanticScorer.preparedQuery(from: normalizedSituationForRanking ?? "")
+            : nil
 
         var candidatePool: [(candidate: GeneratedAdvice, source: String)] = []
         var generationProviderNotice: String?
@@ -402,18 +434,33 @@ final class GenerateViewModel {
             let shouldUseClassicEngines =
                 generationProvider != .appleOnDevice || appleCandidates.isEmpty
             if shouldUseClassicEngines {
-                let engineCandidates = await engine.generateCandidates(
-                    category: resolvedCategory,
-                    tone: resolvedTone,
-                    includeRationale: settingsViewModel.includeRationale,
-                    contentPack: selectedPack,
-                    situation: situation,
-                    seed: baseSeed,
-                    templateBias: templateBias,
-                    count: shouldEnforceGlobalUniqueness
-                        ? (hasSituationContext ? 9 : 6)
-                        : (hasSituationContext ? 6 : 4)
-                )
+                let engineCandidates: [GeneratedAdvice]
+                if isBootstrap {
+                    let singleAdvice = await engine.generate(
+                        category: resolvedCategory,
+                        tone: resolvedTone,
+                        includeRationale: settingsViewModel.includeRationale,
+                        contentPack: selectedPack,
+                        situation: situation,
+                        seed: baseSeed,
+                        templateBias: templateBias,
+                        skipQualityScoring: false
+                    )
+                    engineCandidates = [singleAdvice]
+                } else {
+                    engineCandidates = await engine.generateCandidates(
+                        category: resolvedCategory,
+                        tone: resolvedTone,
+                        includeRationale: settingsViewModel.includeRationale,
+                        contentPack: selectedPack,
+                        situation: situation,
+                        seed: baseSeed,
+                        templateBias: templateBias,
+                        count: shouldEnforceGlobalUniqueness
+                            ? (hasSituationContext ? 9 : 6)
+                            : (hasSituationContext ? 6 : 4)
+                    )
+                }
                 candidatePool.append(contentsOf: engineCandidates.map { ($0, "engine") })
 
                 // ML Remix Lab for advice: inject synthesized variants derived from liked history

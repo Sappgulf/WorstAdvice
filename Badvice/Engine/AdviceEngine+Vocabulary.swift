@@ -29,6 +29,28 @@ extension AdviceEngine {
         "operating thesis"
     ]
 
+
+    static let claritySignals: [String] = [
+        "because",
+        "because ",
+        "first",
+        "first,",
+        "then",
+        "then,",
+        "next",
+        "next,",
+        "if",
+        "when",
+        "before",
+        "after",
+        "start",
+        "set",
+        "use",
+        "make sure",
+        "because this",
+        "so that"
+    ]
+
     static let momentumBeats = [
         "Do it fast enough that objections sound outdated.",
         "Keep moving so nobody can audit the details.",

@@ -47,6 +47,7 @@ struct ShareCardRenderer {
             paragraph.alignment = .left
             paragraph.lineBreakMode = .byWordWrapping
             paragraph.lineSpacing = 8
+            let sideInset: CGFloat = 52
             let adviceFontSize: CGFloat
             switch content.adviceLine.count {
             case 0...120:
@@ -56,47 +57,92 @@ struct ShareCardRenderer {
             default:
                 adviceFontSize = content.aspectRatio == .story ? 42 : 36
             }
+            let isCertifiedTemplate = content.template == .certified
+            let isRedFlagTemplate = content.template == .redFlag
+            let storyMode = content.aspectRatio == .story
 
             // Top Brand Watermark
             let titleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 34, weight: .heavy),
                 .foregroundColor: UIColor.white.withAlphaComponent(0.95),
             ]
-            let brandTitle = content.template == .certified ? "BADVICE CERTIFIED" : "BADVICE"
+            let brandTitle = isCertifiedTemplate
+                ? "BADVICE CERTIFIED"
+                : isRedFlagTemplate
+                    ? "BADVICE RED FLAG"
+                    : "BADVICE"
             NSString(string: brandTitle).draw(
                 in: CGRect(
-                    x: cardRect.minX + 52, y: cardRect.minY + 48, width: cardRect.width - 104,
+                    x: cardRect.minX + sideInset, y: cardRect.minY + 48, width: cardRect.width - 104,
                     height: 44),
                 withAttributes: titleAttributes
             )
 
+            if isRedFlagTemplate {
+                let cautionRect = CGRect(
+                    x: cardRect.minX, y: cardRect.minY + 94, width: cardRect.width,
+                    height: storyMode ? 18 : 14)
+                UIColor(red: 0.9, green: 0.12, blue: 0.17, alpha: 0.95).setFill()
+                cg.fill(cautionRect)
+
+                let warningText = "RED FLAG"
+                let warningAttrs: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.monospacedSystemFont(ofSize: 13, weight: .heavy),
+                    .foregroundColor: UIColor.white,
+                ]
+                let warningSize = (warningText as NSString).size(withAttributes: warningAttrs)
+                NSString(string: warningText).draw(
+                    in: CGRect(
+                        x: cardRect.maxX - warningSize.width - 24,
+                        y: cautionRect.minY + (cautionRect.height - warningSize.height) / 2,
+                        width: warningSize.width + 8,
+                        height: warningSize.height),
+                    withAttributes: warningAttrs
+                )
+            }
+
             // Advice Text
-            let adviceAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: adviceFontSize, weight: .bold),
-                .paragraphStyle: paragraph,
-                .foregroundColor: UIColor.white,
-            ]
-            NSString(string: content.adviceLine).draw(
+            let contentWidth = cardRect.width - (sideInset * 2)
+            let adviceRect = CGRect(
+                x: cardRect.minX + sideInset,
+                y: cardRect.minY + 128,
+                width: contentWidth,
+                height: cardRect.height * 0.46
+            )
+            drawWordWrappedText(
+                content.adviceLine,
+                in: cg,
                 in: CGRect(
-                    x: cardRect.minX + 52, y: cardRect.minY + 128, width: cardRect.width - 104,
-                    height: cardRect.height * (content.aspectRatio == .story ? 0.58 : 0.52)),
-                withAttributes: adviceAttributes
+                    x: adviceRect.minX, y: adviceRect.minY,
+                    width: adviceRect.width, height: adviceRect.height
+                ),
+                baseFontSize: adviceFontSize,
+                minFontSize: 24,
+                fontWeight: .bold,
+                paragraph: paragraph,
+                color: UIColor.white
             )
 
             // Rationale Text
             if let rationale = content.rationaleLine, !rationale.isEmpty {
-                let rationaleAttributes: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 28, weight: .medium),
-                    .paragraphStyle: paragraph,
-                    .foregroundColor: UIColor.white.withAlphaComponent(0.9),
-                ]
-                NSString(string: rationale).draw(
+                let rationaleRect = CGRect(
+                    x: cardRect.minX + sideInset,
+                    y: storyMode ? cardRect.midY + 222 : cardRect.midY + 86,
+                    width: contentWidth,
+                    height: storyMode ? 298 : 210
+                )
+                drawWordWrappedText(
+                    rationale,
+                    in: cg,
                     in: CGRect(
-                        x: cardRect.minX + 52,
-                        y: content.aspectRatio == .story ? cardRect.midY + 220 : cardRect.midY + 86,
-                        width: cardRect.width - 104,
-                        height: content.aspectRatio == .story ? 320 : 210),
-                    withAttributes: rationaleAttributes
+                        x: rationaleRect.minX, y: rationaleRect.minY,
+                        width: rationaleRect.width, height: rationaleRect.height
+                    ),
+                    baseFontSize: 28,
+                    minFontSize: 18,
+                    fontWeight: .medium,
+                    paragraph: paragraph,
+                    color: UIColor.white.withAlphaComponent(0.9)
                 )
             }
 
@@ -110,7 +156,7 @@ struct ShareCardRenderer {
                     "\(content.category.title.uppercased()) • \(content.tone.title.uppercased())"
             ).draw(
                 in: CGRect(
-                    x: cardRect.minX + 52, y: cardRect.maxY - 140, width: cardRect.width - 104,
+                    x: cardRect.minX + sideInset, y: cardRect.maxY - 140, width: cardRect.width - 104,
                     height: 30),
                 withAttributes: metaAttributes
             )
@@ -124,7 +170,7 @@ struct ShareCardRenderer {
             let watermarkSize = watermarkStr.size(withAttributes: watermarkAttrs)
             NSString(string: watermarkStr).draw(
                 in: CGRect(
-                    x: cardRect.maxX - watermarkSize.width - 52, y: cardRect.maxY - 140,
+                    x: cardRect.maxX - watermarkSize.width - sideInset, y: cardRect.maxY - 140,
                     width: watermarkSize.width, height: 34),
                 withAttributes: watermarkAttrs
             )
@@ -132,7 +178,7 @@ struct ShareCardRenderer {
             if content.includeDisclaimer {
                 NSString(string: "FOR ENTERTAINMENT ONLY").draw(
                     in: CGRect(
-                        x: cardRect.minX + 52, y: cardRect.maxY - 70, width: cardRect.width - 104,
+                        x: cardRect.minX + sideInset, y: cardRect.maxY - 70, width: cardRect.width - 104,
                         height: 28),
                     withAttributes: [
                         .font: UIFont.systemFont(ofSize: 20, weight: .bold),
@@ -178,6 +224,18 @@ struct ShareCardRenderer {
                 UIColor(red: 0.46, green: 0.08, blue: 0.12, alpha: 1).cgColor,
                 UIColor(red: 0.14, green: 0.08, blue: 0.08, alpha: 1).cgColor,
             ]
+        case .cinematic:
+            colors = [
+                UIColor(red: 0.02, green: 0.08, blue: 0.18, alpha: 1).cgColor,
+                UIColor(red: 0.08, green: 0.1, blue: 0.24, alpha: 1).cgColor,
+                UIColor(red: 0.06, green: 0.18, blue: 0.28, alpha: 1).cgColor,
+            ]
+        case .redFlag:
+            colors = [
+                UIColor(red: 0.32, green: 0.02, blue: 0.02, alpha: 1).cgColor,
+                UIColor(red: 0.17, green: 0.0, blue: 0.0, alpha: 1).cgColor,
+                UIColor(red: 0.12, green: 0.0, blue: 0.0, alpha: 1).cgColor,
+            ]
         }
 
         let locations: [CGFloat] = [0, 0.45, 1]
@@ -201,6 +259,67 @@ struct ShareCardRenderer {
             cg.fill(CGRect(x: x, y: y, width: 2, height: 2))
         }
         cg.restoreGState()
+    }
+
+    private static func drawWordWrappedText(
+        _ text: String,
+        in cg: CGContext,
+        in rect: CGRect,
+        baseFontSize: CGFloat,
+        minFontSize: CGFloat,
+        fontWeight: UIFont.Weight,
+        paragraph: NSMutableParagraphStyle,
+        color: UIColor
+    ) {
+        let safeText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !safeText.isEmpty else { return }
+        let fittedFontSize = fitFontSize(
+            safeText,
+            width: rect.width,
+            maxHeight: rect.height,
+            baseFontSize: baseFontSize,
+            minFontSize: minFontSize,
+            weight: fontWeight,
+            paragraph: paragraph
+        )
+
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: fittedFontSize, weight: fontWeight),
+            .paragraphStyle: paragraph,
+            .foregroundColor: color,
+        ]
+        NSString(string: safeText).draw(
+            with: rect,
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: attributes,
+            context: nil
+        )
+    }
+
+    private static func fitFontSize(
+        _ text: String,
+        width: CGFloat,
+        maxHeight: CGFloat,
+        baseFontSize: CGFloat,
+        minFontSize: CGFloat,
+        weight: UIFont.Weight,
+        paragraph: NSMutableParagraphStyle
+    ) -> CGFloat {
+        var fontSize = baseFontSize
+        while fontSize > minFontSize {
+            let font = UIFont.systemFont(ofSize: fontSize, weight: weight)
+            let rect = (text as NSString).boundingRect(
+                with: CGSize(width: width, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: font, .paragraphStyle: paragraph],
+                context: nil
+            )
+            if rect.height <= maxHeight {
+                return fontSize
+            }
+            fontSize -= 1
+        }
+        return minFontSize
     }
 }
 

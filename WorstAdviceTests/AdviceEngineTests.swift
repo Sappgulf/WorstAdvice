@@ -1,5 +1,6 @@
 import SwiftData
 import XCTest
+import UIKit
 @testable import Badvice
 
 final class AdviceEngineTests: XCTestCase {
@@ -310,6 +311,56 @@ final class AdviceEngineTests: XCTestCase {
         }
 
         XCTAssertLessThan(scaffoldCount, 25, "Advice output should not expose prompt scaffolding on every seed.")
+    }
+
+    func testGeneratedAdviceTextDoesNotContainPromptScaffoldPhrase() async {
+        let engine = AdviceEngine()
+        for seed in 0..<40 {
+            let output = await engine.generate(
+                category: .money,
+                tone: .wizard,
+                includeRationale: false,
+                situation: "quarterly planning pressure",
+                seed: seed
+            )
+
+            let normalized = output.adviceLine.normalizedForFiltering
+            XCTAssertFalse(
+                normalized.contains("make") && normalized.contains("sound strategic")
+                    && normalized.contains("feel inevitable"),
+                "Unexpected prompt scaffold pattern in: \(output.adviceLine)"
+            )
+            XCTAssertFalse(normalized.contains("follow this format"), "Unexpected directive phrase in: \(output.adviceLine)")
+            XCTAssertFalse(normalized.contains("as requested"), "Unexpected directive phrase in: \(output.adviceLine)")
+            XCTAssertFalse(output.adviceLine.contains("%@"), "Template token leaked in: \(output.adviceLine)")
+        }
+    }
+
+    func testShareCardRendererWorksForAllTemplates() {
+        let sample = ShareCardContent(
+            category: .career,
+            tone: .wizard,
+            adviceLine: "Ship the version first, then explain the quality later.",
+            rationaleLine: "Momentum beats over-optimization in this cycle.",
+            includeDisclaimer: true,
+            template: .minimal,
+            aspectRatio: .square
+        )
+
+        for template in ShareCardTemplate.allCases {
+            let content = ShareCardContent(
+                category: sample.category,
+                tone: sample.tone,
+                adviceLine: sample.adviceLine,
+                rationaleLine: sample.rationaleLine,
+                includeDisclaimer: sample.includeDisclaimer,
+                template: template,
+                aspectRatio: sample.aspectRatio
+            )
+            let image = ShareCardRenderer.render(content: content)
+            XCTAssertGreaterThan(image.size.width, 0, "Rendered image has zero width for template: \(template.rawValue)")
+            XCTAssertGreaterThan(image.size.height, 0, "Rendered image has zero height for template: \(template.rawValue)")
+        }
     }
 
     func testSituationWithPercentSignsDoesNotBreakTopicSubstitution() async {

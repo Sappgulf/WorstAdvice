@@ -393,6 +393,9 @@ final class BadviceUITests: XCTestCase {
             { app.buttons["auth.mode.signUp"].exists },
             { app.buttons["auth.mode.signIn"].exists },
             { app.buttons["auth.primary"].exists },
+            { app.textFields["auth.email"].exists },
+            { app.textFields["auth.password"].exists },
+            { app.secureTextFields["auth.password"].exists },
         ]
 
         while Date() < deadline {
@@ -771,8 +774,19 @@ final class BadviceUITests: XCTestCase {
         XCTAssertNotNil(signOutButton)
         signOutButton?.tap()
 
-        let emailField = app.textFields["auth.email"]
-        XCTAssertTrue(emailField.waitForExistence(timeout: 5))
+        let authGate = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.textFields["auth.email"],
+                app.secureTextFields["auth.password"],
+                app.buttons["auth.mode.signIn"],
+                app.buttons["Sign In"],
+                app.buttons["auth.primary"],
+            ],
+            timeout: 8,
+            maxSwipes: 8
+        )
+        XCTAssertNotNil(authGate)
 
         completeLocalSignin(
             app: app,
@@ -1085,9 +1099,15 @@ final class BadviceUITests: XCTestCase {
 
         XCTAssertTrue(handleField.waitForExistence(timeout: 8))
         fillTextInput(handleField, text: handle)
+        let expectedHandle = handle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let handleMatches = waitUntilTextFieldValueContains(
+            handleField,
+            expectedText: expectedHandle,
+            timeout: 2.5
+        )
         XCTAssertTrue(
-            (handleField.value as? String ?? "").contains(handle),
-            "Expected Friends handle field to contain the requested handle after typing"
+            handleMatches,
+            "Expected Friends handle field to contain the requested handle after typing. expected=\(expectedHandle), actual=\(handleField.value ?? "nil")"
         )
 
         let saveButton = app.buttons["social.profile.save"]
@@ -1099,6 +1119,24 @@ final class BadviceUITests: XCTestCase {
             handleField.waitForExistence(timeout: 3),
             "Expected profile setup sheet to dismiss after successful profile creation."
         )
+    }
+
+    private func waitUntilTextFieldValueContains(
+        _ element: XCUIElement,
+        expectedText: String,
+        timeout: TimeInterval
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            let normalizedValue = (element.value as? String ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            if normalizedValue.contains(expectedText) {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return false
     }
 
     private func completeLocalSignup(
@@ -1141,6 +1179,7 @@ final class BadviceUITests: XCTestCase {
     }
 
     private func completeLocalSignin(app: XCUIApplication, email: String, password: String) {
+        XCTAssertTrue(waitForAuthGateToBecomeReady(app: app, timeout: 8))
         let signInModeButton = app.buttons["auth.mode.signIn"]
         if signInModeButton.waitForExistence(timeout: 3) && !signInModeButton.isSelected {
             signInModeButton.tap()

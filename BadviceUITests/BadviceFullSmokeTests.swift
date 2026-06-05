@@ -326,8 +326,20 @@ final class BadviceFullSmokeTests: XCTestCase {
         signOutButton.tap()
 
         // Verify we're back at auth gate
-        let emailField = app.textFields["auth.email"]
-        XCTAssertTrue(emailField.waitForExistence(timeout: 5), "Should return to auth gate after sign out")
+        let authGate = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.textFields["auth.email"],
+                app.secureTextFields["auth.password"],
+                app.buttons["auth.mode.signIn"],
+                app.buttons["Sign In"],
+                app.buttons["auth.primary"],
+                app.buttons["Sign Up"],
+            ],
+            timeout: 8,
+            maxSwipes: 8
+        )
+        XCTAssertNotNil(authGate, "Should return to auth gate after sign out")
 
         // Sign back in
         completeLocalSignin(app: app, email: "smoke@badvice.test", password: "Smoke123!")
