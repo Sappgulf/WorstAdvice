@@ -24,7 +24,7 @@ final class BadviceUITests: XCTestCase {
         let generateButton = app.buttons["generate.primary"]
         XCTAssertTrue(generateButton.waitForExistence(timeout: 12))
 
-        let saveButton = app.buttons["Save"]
+        let saveButton = app.buttons["generate.save"]
         if saveButton.waitForExistence(timeout: 2) {
             saveButton.tap()
         }
@@ -849,12 +849,13 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(signOutButton.waitForExistence(timeout: 5))
 
         let deleteAccountButton = app.buttons["settings.auth.deleteAccount"]
-        if !deleteAccountButton.waitForExistence(timeout: 3) {
-            for _ in 0..<8 where !deleteAccountButton.exists {
+        if !deleteAccountButton.waitForExistence(timeout: 3) || !deleteAccountButton.isHittable {
+            for _ in 0..<8 where !deleteAccountButton.isHittable {
                 app.swipeUp()
             }
         }
         XCTAssertTrue(deleteAccountButton.waitForExistence(timeout: 3))
+        XCTAssertTrue(deleteAccountButton.isHittable)
         if deleteAccountButton.isHittable {
             deleteAccountButton.tap()
         } else {
@@ -863,6 +864,12 @@ final class BadviceUITests: XCTestCase {
 
         let deletePasswordField = app.secureTextFields["settings.auth.deletePassword"]
         XCTAssertTrue(deletePasswordField.waitForExistence(timeout: 3))
+        if !deletePasswordField.isHittable {
+            for _ in 0..<4 where !deletePasswordField.isHittable {
+                app.swipeUp()
+            }
+        }
+        XCTAssertTrue(deletePasswordField.isHittable)
         fillTextInput(deletePasswordField, text: "Chaos456")
 
         let confirmDeleteButton = app.buttons["settings.auth.deleteConfirm"]
@@ -1318,19 +1325,59 @@ final class BadviceUITests: XCTestCase {
         return searchElement.exists ? searchElement : nil
     }
 
-    private func fillTextInput(_ element: XCUIElement, text: String) {
+    private func fillTextInput(_ element: XCUIElement, text: String, clearExistingValue: Bool = true) {
         let app = XCUIApplication()
         let input = waitForEditableElement(element, app: app, timeout: 6)
         XCTAssertNotNil(input)
         guard let inputField = input else { return }
 
         XCTAssertTrue(inputField.waitForExistence(timeout: 3))
-        inputField.tap()
+        focusTextInput(inputField, app: app)
 
-        if let currentValue = inputField.value as? String, shouldClearTextInputValue(currentValue, for: inputField) {
+        if clearExistingValue,
+           let currentValue = inputField.value as? String,
+           shouldClearTextInputValue(currentValue, for: inputField) {
             inputField.typeText(String(repeating: "\u{8}", count: currentValue.count))
         }
         inputField.typeText(text)
+    }
+
+    private func focusTextInput(_ element: XCUIElement, app: XCUIApplication) {
+        for attempt in 0..<4 {
+            if attempt > 0 {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+            }
+
+            if element.isHittable {
+                element.tap()
+            } else {
+                element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            }
+
+            if waitForKeyboardFocus(element, timeout: 0.8) {
+                return
+            }
+
+            app.swipeDown()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+
+        if element.isHittable {
+            element.tap()
+        } else {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+    }
+
+    private func waitForKeyboardFocus(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if (element.value(forKey: "hasKeyboardFocus") as? Bool) == true {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+        return (element.value(forKey: "hasKeyboardFocus") as? Bool) == true
     }
 
     private func shouldClearTextInputValue(_ value: String, for element: XCUIElement) -> Bool {

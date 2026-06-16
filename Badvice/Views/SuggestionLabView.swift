@@ -14,6 +14,12 @@ struct SuggestionLabView: View {
     @State private var suggestionAdviceLine = ""
     @State private var suggestionError = ""
     @State private var submitSuccess = false
+    @FocusState private var focusedField: SuggestionField?
+
+    private enum SuggestionField {
+        case topic
+        case adviceLine
+    }
 
     private var normalizedSuggestionTopic: String {
         suggestionTopic.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -137,6 +143,7 @@ struct SuggestionLabView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
                     .background(fieldBackground)
+                    .focused($focusedField, equals: .topic)
 
                 fieldLabel("Advice line")
                 TextField("Advice line", text: $suggestionAdviceLine, axis: .vertical)
@@ -145,6 +152,7 @@ struct SuggestionLabView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 14)
                     .background(fieldBackground)
+                    .focused($focusedField, equals: .adviceLine)
 
                 if !suggestionError.isEmpty {
                     Text(suggestionError)
@@ -302,11 +310,13 @@ struct SuggestionLabView: View {
         ) {
             suggestionError = message
             submitSuccess = false
+            focusedField = normalizedSuggestionTopic.count < 3 ? .topic : .adviceLine
             HapticsManager.playError(isEnabled: settings.hapticsEnabled)
         } else {
             suggestionError = ""
             suggestionTopic = ""
             suggestionAdviceLine = ""
+            focusedField = nil
             HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 submitSuccess = true

@@ -9,6 +9,12 @@ struct QuoteSuggestionLabView: View {
     @State private var suggestionQuoteText = ""
     @State private var suggestionError = ""
     @State private var submitSuccess = false
+    @FocusState private var focusedField: QuoteField?
+
+    private enum QuoteField {
+        case source
+        case quoteText
+    }
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
@@ -137,6 +143,7 @@ struct QuoteSuggestionLabView: View {
                     .padding(.vertical, 12)
                     .background(fieldBackground)
                     .accessibilityIdentifier("Source (optional)")
+                    .focused($focusedField, equals: .source)
 
                 fieldLabel("Quote text")
                 TextField("Quote text", text: $suggestionQuoteText, axis: .vertical)
@@ -146,6 +153,7 @@ struct QuoteSuggestionLabView: View {
                     .padding(.vertical, 14)
                     .background(fieldBackground)
                     .accessibilityIdentifier("Quote text")
+                    .focused($focusedField, equals: .quoteText)
 
                 if !suggestionError.isEmpty {
                     Text(suggestionError)
@@ -303,11 +311,13 @@ struct QuoteSuggestionLabView: View {
         ) {
             suggestionError = message
             submitSuccess = false
+            focusedField = .quoteText
             HapticsManager.playError(isEnabled: settings.hapticsEnabled)
         } else {
             suggestionError = ""
             suggestionSource = ""
             suggestionQuoteText = ""
+            focusedField = nil
             HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 submitSuccess = true

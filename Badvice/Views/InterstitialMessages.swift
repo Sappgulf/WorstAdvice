@@ -4,6 +4,16 @@ import UIKit
 import UserNotifications
 
 struct SettingsTabView: View {
+    private enum AuthSheet: Identifiable {
+        case changePassword
+
+        var id: String {
+            switch self {
+            case .changePassword: "changePassword"
+            }
+        }
+    }
+
     @Bindable var viewModel: SettingsViewModel
     @Bindable var generateViewModel: GenerateViewModel
     @Bindable var quotesViewModel: QuotesViewModel
@@ -22,7 +32,7 @@ struct SettingsTabView: View {
     @State private var shockwaveTheme: ThemeMode?
     @State private var shockwaveScale: CGFloat = 0.1
     @State private var shockwaveOpacity: Double = 0
-    @State private var showChangePasswordSheet = false
+    @State private var activeAuthSheet: AuthSheet?
 
     @State private var appearanceTask: Task<Void, Never>?
     @State private var dataLoadTask: Task<Void, Never>?
@@ -32,7 +42,7 @@ struct SettingsTabView: View {
     @State private var gearResetTask: Task<Void, Never>?
     @State private var didLoadInitialDiagnostics = false
     @State private var showingSocialDiagnostics = false
-    @State private var showDeleteAccountSheet = false
+    @State private var showDeleteAccountConfirmation = false
     @State private var currentPasswordDraft = ""
     @State private var newPasswordDraft = ""
     @State private var confirmPasswordDraft = ""
@@ -256,11 +266,11 @@ struct SettingsTabView: View {
                     .ignoresSafeArea()
             }
         }
-        .sheet(isPresented: $showChangePasswordSheet) {
-            changePasswordSheet
-        }
-        .sheet(isPresented: $showDeleteAccountSheet) {
-            deleteAccountSheet
+        .sheet(item: $activeAuthSheet) { sheet in
+            switch sheet {
+            case .changePassword:
+                changePasswordSheet
+            }
         }
         .navigationDestination(isPresented: $showingSocialDiagnostics) {
             SocialHealthDiagnosticsView(social: social, settings: viewModel)
@@ -451,22 +461,11 @@ struct SettingsTabView: View {
 
                 settingsDivider
 
-                Button(role: .destructive) {
-                    onSignOut()
-                } label: {
-                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .tint(.red)
-                .accessibilityIdentifier("settings.auth.signOut")
-
                 Button {
                     currentPasswordDraft = ""
                     newPasswordDraft = ""
                     confirmPasswordDraft = ""
-                    showChangePasswordSheet = true
+                    activeAuthSheet = .changePassword
                 } label: {
                     Label("Change Password", systemImage: "key.fill")
                         .font(.subheadline.weight(.semibold))
@@ -478,7 +477,9 @@ struct SettingsTabView: View {
 
                 Button(role: .destructive) {
                     deletePasswordDraft = ""
-                    showDeleteAccountSheet = true
+                    withAnimation(.snappy(duration: 0.22)) {
+                        showDeleteAccountConfirmation = true
+                    }
                 } label: {
                     Label("Delete Local Account", systemImage: "trash.fill")
                         .font(.subheadline.weight(.semibold))
@@ -487,6 +488,21 @@ struct SettingsTabView: View {
                 .buttonStyle(.bordered)
                 .tint(.red)
                 .accessibilityIdentifier("settings.auth.deleteAccount")
+
+                if showDeleteAccountConfirmation {
+                    deleteAccountConfirmationCard
+                }
+
+                Button(role: .destructive) {
+                    onSignOut()
+                } label: {
+                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .accessibilityIdentifier("settings.auth.signOut")
             }
         }
     }
@@ -525,7 +541,7 @@ struct SettingsTabView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        showChangePasswordSheet = false
+                        activeAuthSheet = nil
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -537,7 +553,7 @@ struct SettingsTabView: View {
                                 confirmPassword: confirmPasswordDraft
                             )
                             if didUpdate {
-                                showChangePasswordSheet = false
+                                activeAuthSheet = nil
                             }
                         }
                     }
@@ -553,52 +569,65 @@ struct SettingsTabView: View {
         }
     }
 
-    private var deleteAccountSheet: some View {
-        NavigationStack {
-            Form {
-                Section("Delete Local Account") {
-                    Text("This removes the local Badvice account on this device and clears its local app data.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    SecureField("Current password", text: $deletePasswordDraft)
-                        .textContentType(.password)
-                        .accessibilityIdentifier("settings.auth.deletePassword")
-                }
+    private var deleteAccountConfirmationCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Delete local account")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.red)
+            Text("This removes the local Badvice account on this device and clears local app data.")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+                .lineLimit(2)
+            SecureField("Current password", text: $deletePasswordDraft)
+                .textContentType(.password)
+                .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("settings.auth.deletePassword")
 
-                if let status = auth.statusMessage, !status.isEmpty {
-                    Section("Status") {
-                        Text(status)
-                            .font(.caption)
-                            .foregroundStyle(
-                                status.localizedCaseInsensitiveContains("deleted") ? .green : .red
-                            )
-                            .accessibilityIdentifier("settings.auth.deleteStatus")
-                    }
-                }
+            if let status = auth.statusMessage, !status.isEmpty {
+                Text(status)
+                    .font(.caption)
+                    .foregroundStyle(
+                        status.localizedCaseInsensitiveContains("deleted") ? .green : .red
+                    )
+                    .accessibilityIdentifier("settings.auth.deleteStatus")
             }
-            .navigationTitle("Delete Account")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        showDeleteAccountSheet = false
+
+            HStack(spacing: 10) {
+                Button("Cancel") {
+                    withAnimation(.snappy(duration: 0.18)) {
+                        showDeleteAccountConfirmation = false
+                        deletePasswordDraft = ""
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(auth.isSubmitting ? "Deleting..." : "Delete") {
-                        Task {
-                            await onDeleteAccount(deletePasswordDraft)
-                            if !auth.isAuthenticated {
-                                showDeleteAccountSheet = false
-                            }
+                .buttonStyle(.bordered)
+
+                Button(role: .destructive) {
+                    Task {
+                        await onDeleteAccount(deletePasswordDraft)
+                        if !auth.isAuthenticated {
+                            showDeleteAccountConfirmation = false
                         }
                     }
-                    .disabled(auth.isSubmitting || deletePasswordDraft.isEmpty)
-                    .foregroundStyle(.red)
-                    .accessibilityIdentifier("settings.auth.deleteConfirm")
+                } label: {
+                    Text(auth.isSubmitting ? "Deleting..." : "Delete")
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+                .disabled(auth.isSubmitting || deletePasswordDraft.isEmpty)
+                .accessibilityIdentifier("settings.auth.deleteConfirm")
             }
         }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(Color.red.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .stroke(Color.red.opacity(0.22), lineWidth: 1)
+                )
+        )
+        .accessibilityElement(children: .contain)
     }
 
     private var communityLabsSection: some View {
