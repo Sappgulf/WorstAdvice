@@ -112,24 +112,24 @@ struct ChaosHubTabView: View {
             return "Advice is already on the way. Jump back to Generate to track the result."
         }
         if !dailyMission.isComplete {
-            return "\(dailyMission.currentCount) of \(dailyMission.targetCount) complete. One focused run gives this screen real momentum."
+            return "\(dailyMission.currentCount) of \(dailyMission.targetCount) complete. Run one more piece of advice to move the board."
         }
         if !weeklyMission.isComplete {
-            return "\(weeklyMission.currentCount) of \(weeklyMission.targetCount) complete. Stack a few more wins to unlock the weekly reward."
+            return "\(weeklyMission.currentCount) of \(weeklyMission.targetCount) complete. Keep the week moving from Advice."
         }
         if social.currentUser == nil {
-            return "Friends is the next unlock. Create a profile to compete on the leaderboard and share drafts."
+            return "Create a profile when you want leaderboards, shared drafts, and friend activity."
         }
         if social.friends.isEmpty {
-            return "Your missions are moving, but the social layer is still empty. Add one friend so scores, feed posts, and collabs can start paying off."
+            return "Add one friend to turn mission progress into feed posts, collabs, and leaderboard pressure."
         }
         if social.feedPosts.isEmpty {
-            return "You have a network, but no visible momentum yet. Share a line from Generate or Quotes to make this season feel alive."
+            return "Share one saved line from Generate or Quotes to put activity into the season."
         }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             return "Your mission work is done. Put a score on the board and start the season."
         }
-        return "You have momentum. Keep generating, saving, and sharing to push Mission Score higher."
+        return "Generate, save, and share to push Mission Score higher."
     }
     private var primaryNextStepButtonTitle: String {
         if !social.availability.isAccountAvailable {
@@ -463,6 +463,12 @@ struct ChaosHubTabView: View {
                     statPill(title: mission.tone.title, systemImage: "dial.medium")
                 }
 
+                rewardHintRow(
+                    title: mission.isComplete ? "Daily reward unlocked" : "Daily reward",
+                    detail: mission.isComplete ? "Mission momentum is banked for today." : "Finish this run to strengthen today's Mission Score.",
+                    isComplete: mission.isComplete
+                )
+
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text("\(mission.currentCount)/\(mission.targetCount) completed")
@@ -506,6 +512,11 @@ struct ChaosHubTabView: View {
                     Text(weekly.subtitle)
                         .font(.caption)
                         .foregroundStyle(secondaryText)
+                    rewardHintRow(
+                        title: weekly.isComplete ? "Weekly reward unlocked" : "Weekly reward",
+                        detail: weekly.isComplete ? "Bonus mission points are ready." : "Complete the weekly target to unlock bonus mission points.",
+                        isComplete: weekly.isComplete
+                    )
                     HStack {
                         Text("\(weekly.currentCount)/\(weekly.targetCount) completed")
                             .font(.caption.weight(.semibold))
@@ -573,6 +584,34 @@ struct ChaosHubTabView: View {
                 }
             }
         }
+    }
+
+    private func rewardHintRow(title: String, detail: String, isComplete: Bool) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: isComplete ? "gift.fill" : "gift")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(isComplete ? accent : secondaryText)
+                .frame(width: 22, height: 22)
+                .background(
+                    Circle()
+                        .fill((isComplete ? accent : secondaryText).opacity(0.11))
+                )
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                .fill((isComplete ? accent : secondaryText).opacity(0.07))
+        )
     }
 
     private var winsStrip: some View {

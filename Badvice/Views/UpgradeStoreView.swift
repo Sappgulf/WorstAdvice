@@ -153,7 +153,7 @@ struct UpgradeStoreView: View {
                     Text("Upgrade Badvice")
                         .font(.title2.weight(.bold))
                         .foregroundStyle(primaryText)
-                    Text("The store should make the product tiers legible: what unlocks permanently, what stays seasonal, and what actually changes when you pay.")
+                    Text("Permanent unlocks, seasonal rewards, and content packs in one clear ladder.")
                         .font(.subheadline)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -187,22 +187,22 @@ struct UpgradeStoreView: View {
     private var ladderCard: some View {
         storeSection(
             title: "What each tier changes",
-            subtitle: "The store should explain outcomes, not just list products."
+            subtitle: "Each tier maps to a visible product value."
         ) {
             VStack(spacing: 10) {
                 ladderRow(
                     title: "Premium",
-                    body: "Best first step. Unlock the stronger generator and sharing surfaces without committing to the full top tier.",
+                    body: "Best first step. Unlock stronger generation, cleaner sharing, and more control over the core loop.",
                     state: store.isPremium ? "Active" : "Available"
                 )
                 ladderRow(
                     title: "Pro",
-                    body: "Best permanent upgrade. Get the widest feature set and stop thinking about piecemeal unlocks.",
+                    body: "Best permanent upgrade. Get the widest feature set, included packs, and the least fragmented path.",
                     state: store.isPro ? "Active" : "Available"
                 )
                 ladderRow(
                     title: "Season Pass",
-                    body: "Best for progression. Use this when the missions, rewards, and live-season loop are the main reason you open the app.",
+                    body: "Best for progression. Use this when missions, rewards, and live-season momentum are the main draw.",
                     state: store.hasActiveSeasonalPass ? "Active" : "Available"
                 )
             }

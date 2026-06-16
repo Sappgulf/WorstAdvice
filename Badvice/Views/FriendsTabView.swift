@@ -101,29 +101,29 @@ struct FriendsTabView: View {
         case .failed(let message):
             return message
         case .needsProfileSetup:
-            return "Create a public handle when you want requests, feed posts, and collabs. Generate and Friend Roast still work without it."
+            return "Create a handle when you want requests, feed posts, and collabs. Solo generation stays ready."
         case .empty:
-            return "Friends is online. Share your handle or search for someone to start the network."
+            return "Friends is online. Search a handle or share yours to start the network."
         case .ready:
             if social.currentUser == nil {
-                return "Create a profile when you want social sharing. Solo generation still works now."
+                return "Create a profile when you want social sharing. Solo generation stays ready."
             }
             if !social.incomingRequests.isEmpty {
-                return "People are waiting on you. Accept or decline requests so the network can actually start."
+                return "Requests are waiting. Accept or decline them to clear the path."
             }
             if !social.outgoingRequests.isEmpty && social.friends.isEmpty {
-                return "Your first requests are out. Track them here or search for another friend so the tab does not stall."
+                return "Your first requests are out. Track them here or search for another friend."
             }
             if social.friends.isEmpty {
-                return "You have a profile. Next step is sending or accepting a request so the social loop can start."
+                return "You have a profile. Send or accept one request to start the loop."
             }
             if social.feedPosts.isEmpty {
-                return "Your network exists, but the feed is quiet. Share from Generate or Quotes to make Friends feel alive."
+                return "Your network exists. Share from Generate or Quotes to wake up the feed."
             }
             if social.collabDocs.isEmpty {
-                return "Friends are connected. Start a shared draft to turn the tab into something collaborative."
+                return "Friends are connected. Start a shared draft when you want a collab."
             }
-            return "Requests, posts, and collabs are all live. Keep the loop active from Generate, Quotes, and Friends."
+            return "Requests, posts, and collabs are live. Keep the loop moving from Generate, Quotes, and Friends."
         }
     }
     private var friendsPrimaryActionTitle: String {
@@ -398,7 +398,7 @@ struct FriendsTabView: View {
                         .foregroundStyle(primaryText)
                         .accessibilityIdentifier("friends.title")
 
-                    Text("Optional social setup for shared drafts, feed posts, and collabs.")
+                    Text("Shared drafts, feed posts, and collabs when you want them.")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 }
@@ -429,10 +429,10 @@ struct FriendsTabView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Setup Funnel")
+                    Text("Setup Path")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(primaryText)
-                    Text("Set this up when you want the social multiplier. The core Badvice loop stays usable solo.")
+                    Text("Profile, first friend, first share, first collab.")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -584,10 +584,11 @@ struct FriendsTabView: View {
     }
 
     private func setupStepRow(title: String, detail: String, state: SetupStepState) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        let stateTint = state.tint(accent: accent)
+        return HStack(alignment: .top, spacing: 10) {
             Image(systemName: state.iconName)
                 .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(state.tint(accent: accent))
+                .foregroundStyle(stateTint)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -604,18 +605,22 @@ struct FriendsTabView: View {
 
             Text(state.label)
                 .font(.caption2.weight(.bold))
-                .foregroundStyle(state.tint(accent: accent))
+                .foregroundStyle(stateTint)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(state.tint(accent: accent).opacity(0.12))
+                        .fill(stateTint.opacity(0.12))
                 )
         }
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
-                .fill(secondaryText.opacity(0.08))
+                .fill(state == .now ? accent.opacity(0.08) : secondaryText.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                        .stroke(state == .now ? accent.opacity(0.18) : .clear, lineWidth: 1)
+                )
         )
     }
 

@@ -426,7 +426,17 @@ final class BadviceFullSmokeTests: XCTestCase {
         generateButton.tap()
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
 
+        XCTAssertTrue(
+            scrollToFind(app: app, element: app.otherElements["advice.card"], maxSwipes: 12),
+            "Generated advice card should appear before checking result actions"
+        )
+
         // Verify action buttons all exist
+        XCTAssertTrue(
+            scrollToFind(app: app, element: app.staticTexts["Keep or send it"], maxSwipes: 12)
+                || scrollToFind(app: app, element: app.otherElements["generate.actionRailHeader"], maxSwipes: 12),
+            "Generate action rail header should explain save/copy/share/remix actions"
+        )
         let actionButtons = ["generate.save", "generate.copy", "generate.share", "generate.remix"]
         for identifier in actionButtons {
             let button = app.buttons[identifier]

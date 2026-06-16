@@ -855,7 +855,11 @@ final class BadviceUITests: XCTestCase {
             }
         }
         XCTAssertTrue(deleteAccountButton.waitForExistence(timeout: 3))
-        deleteAccountButton.tap()
+        if deleteAccountButton.isHittable {
+            deleteAccountButton.tap()
+        } else {
+            deleteAccountButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
 
         let deletePasswordField = app.secureTextFields["settings.auth.deletePassword"]
         XCTAssertTrue(deletePasswordField.waitForExistence(timeout: 3))

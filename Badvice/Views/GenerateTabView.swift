@@ -54,15 +54,30 @@ struct GenerateTabView: View {
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var headerSubtitle: String {
         if viewModel.isGenerating {
-            return "Generating now. The next terrible idea is on the way."
+            return "Generating now."
         }
         if viewModel.current == nil {
-            return "Tap Advise Me to generate your first terrible idea."
+            return "Ready for the first run."
         }
         if viewModel.challengeStreakDays > 0 {
-            return "\(viewModel.challengeStreakDays)-day streak active. Generate, save, or share to keep it alive."
+            return "\(viewModel.challengeStreakDays)-day streak active."
         }
-        return "Generate, laugh, save, copy, share, or remix."
+        return "Generate, save, copy, share, or remix."
+    }
+    private var coreLoopStatus: String {
+        if viewModel.isGenerating {
+            return "Working"
+        }
+        if viewModel.current == nil {
+            return "Start"
+        }
+        if viewModel.isCurrentFavorite {
+            return "Saved"
+        }
+        if viewModel.todayGeneratedCount > 1 {
+            return "Remix"
+        }
+        return "Share"
     }
     private var socialEntryPrompt: String {
         social.availability.isAccountAvailable
@@ -306,7 +321,7 @@ struct GenerateTabView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("More tools")
                         .font(.subheadline.weight(.semibold))
-                    Text("Assist, missions, stats, battles, and extras")
+                    Text("Prompt assist, missions, sharing extras, and labs")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 }
@@ -427,10 +442,16 @@ struct GenerateTabView: View {
                         selectorRow
                         scenarioComposer
                         primaryActionButtons
+                        dailyProgressCard
                         if let notice = viewModel.generationNotice, !notice.isEmpty {
                             Text(notice)
                                 .font(.caption)
                                 .foregroundStyle(secondaryText)
+                        }
+
+                        if viewModel.current != nil {
+                            resultNextStepCard
+                                .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
                         }
 
                         Group {
@@ -751,17 +772,23 @@ struct GenerateTabView: View {
                 .shadow(color: accent.opacity(0.25), radius: 10, x: 0, y: 5)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Tight prompt studio")
+                    Text("Generate bad advice")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(primaryText)
-                    Text("Pick the lane, add context only when it helps, and let the engine keep the answer sharp.")
+                    Text("One lane, one tone, one optional detail. Everything else stays out of the way.")
                         .font(.footnote)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
         } content: {
-            HStack(spacing: 8) {
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 8),
+                    GridItem(.flexible(), spacing: 8),
+                ],
+                spacing: 8
+            ) {
                 generationHeroChip(
                     title: "Lane",
                     value: viewModel.selectedCategory.title,
@@ -776,6 +803,11 @@ struct GenerateTabView: View {
                     title: "Runs",
                     value: "\(viewModel.todayGeneratedCount)",
                     systemImage: "sparkles"
+                )
+                generationHeroChip(
+                    title: "Next",
+                    value: coreLoopStatus,
+                    systemImage: "arrow.forward.circle"
                 )
             }
         }
@@ -813,6 +845,168 @@ struct GenerateTabView: View {
             RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.07))
         )
+    }
+
+    private var dailyProgressCard: some View {
+        HStack(spacing: 10) {
+            progressStep(
+                title: "Generate",
+                systemImage: viewModel.current == nil ? "sparkles" : "checkmark.circle.fill",
+                isComplete: viewModel.current != nil
+            )
+            progressStep(
+                title: "Save",
+                systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
+                isComplete: viewModel.isCurrentFavorite
+            )
+            progressStep(
+                title: "Share",
+                systemImage: "square.and.arrow.up",
+                isComplete: viewModel.todayGeneratedCount > 0
+            )
+            progressStep(
+                title: "Return",
+                systemImage: viewModel.challengeStreakDays > 0 ? "flame.fill" : "calendar",
+                isComplete: viewModel.challengeStreakDays > 0
+            )
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.08), lineWidth: 1)
+                )
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Daily progress")
+    }
+
+    private var resultNextStepCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: resultNextStepIcon)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(accent.opacity(0.12)))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(resultNextStepTitle)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                        .accessibilityIdentifier("generate.resultNextStep.title")
+                    Text(resultNextStepDetail)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 8) {
+                compactResultButton(
+                    title: viewModel.isCurrentFavorite ? "Saved" : "Save",
+                    systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
+                    accessibilityID: "generate.resultNextStep.save"
+                ) {
+                    toggleCurrentFavorite()
+                }
+                compactResultButton(
+                    title: "Share",
+                    systemImage: "square.and.arrow.up",
+                    accessibilityID: "generate.resultNextStep.share"
+                ) {
+                    shareCurrentAdvice()
+                }
+                compactResultButton(
+                    title: "Remix",
+                    systemImage: "bolt.fill",
+                    accessibilityID: "generate.resultNextStep.remix"
+                ) {
+                    remixCurrentAdvice()
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.1), lineWidth: 1)
+                )
+        )
+        .accessibilityIdentifier("generate.resultNextStep")
+    }
+
+    private var resultNextStepIcon: String {
+        if !viewModel.isCurrentFavorite { return "bookmark" }
+        if canShareToFriends() { return "person.2.fill" }
+        if viewModel.todayGeneratedCount <= 1 { return "square.and.arrow.up" }
+        return "bolt.fill"
+    }
+
+    private var resultNextStepTitle: String {
+        if !viewModel.isCurrentFavorite { return "Keep the keeper" }
+        if canShareToFriends() { return "Ready for Friends" }
+        if viewModel.todayGeneratedCount <= 1 { return "Send it or remix it" }
+        return "Tune the punchline"
+    }
+
+    private var resultNextStepDetail: String {
+        if !viewModel.isCurrentFavorite {
+            return "Save the useful line first so it lands in Favorites and your weekly recap."
+        }
+        if canShareToFriends() {
+            return "Share it to Friends when you want reactions, or start a collab from the extras below."
+        }
+        if viewModel.todayGeneratedCount <= 1 {
+            return "Share the first hit, then remix only if the tone needs a sharper edge."
+        }
+        return "You have a few runs today. Remix selectively so the result still feels intentional."
+    }
+
+    private func compactResultButton(
+        title: String,
+        systemImage: String,
+        accessibilityID: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.caption.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, minHeight: 36)
+        }
+        .buttonStyle(.bordered)
+        .tint(accent)
+        .disabled(viewModel.isGenerating)
+        .accessibilityIdentifier(accessibilityID)
+    }
+
+    private func progressStep(title: String, systemImage: String, isComplete: Bool) -> some View {
+        VStack(spacing: 5) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(isComplete ? accent : secondaryText)
+                .frame(width: 24, height: 24)
+                .background(
+                    Circle()
+                        .fill(isComplete ? accent.opacity(0.14) : secondaryText.opacity(0.08))
+                )
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(isComplete ? primaryText : secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var selectorRow: some View {
@@ -1183,19 +1377,36 @@ struct GenerateTabView: View {
     }
 
     private var whyThisFailsCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Why this is terrible")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(secondaryText)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.bubble.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 24, height: 24)
+                    .background(Circle().fill(accent.opacity(0.12)))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Why this is terrible")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(secondaryText)
+                    Text("The joke lands better when the bad logic is obvious.")
+                        .font(.caption2)
+                        .foregroundStyle(secondaryText.opacity(0.82))
+                }
+            }
             Text(viewModel.lastWhyTerrible)
-                .font(.footnote)
+                .font(.footnote.weight(.medium))
                 .foregroundStyle(primaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(accent.opacity(0.08), lineWidth: 1)
+                )
         )
     }
 
@@ -1316,6 +1527,23 @@ struct GenerateTabView: View {
                 let railColumns = [
                     GridItem(.adaptive(minimum: 64, maximum: 96), spacing: 10, alignment: .top)
                 ]
+                HStack(spacing: 8) {
+                    Label("Keep or send it", systemImage: "square.and.arrow.up.on.square")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(secondaryText)
+                    Spacer(minLength: 0)
+                    Text(viewModel.isCurrentFavorite ? "Saved" : "Ready")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(viewModel.isCurrentFavorite ? accent : secondaryText)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill((viewModel.isCurrentFavorite ? accent : secondaryText).opacity(0.12))
+                        )
+                }
+                .accessibilityIdentifier("generate.actionRailHeader")
+
                 // Save / Copy / Share rail
                 LazyVGrid(columns: railColumns, spacing: 10) {
                     railButton(
@@ -1323,14 +1551,7 @@ struct GenerateTabView: View {
                         systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
                         isEnabled: !viewModel.isGenerating
                     ) {
-                        let wasFavorite = viewModel.isCurrentFavorite
-                        viewModel.toggleFavorite()
-                        onDataChanged()
-                        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                        activeToast = ToastMessage(
-                            message: wasFavorite ? "Removed from Favorites" : "Saved!",
-                            style: wasFavorite ? .deleted : .success
-                        )
+                        toggleCurrentFavorite()
                     }
                     .accessibilityIdentifier("generate.save")
 
@@ -1339,10 +1560,7 @@ struct GenerateTabView: View {
                         systemImage: "doc.on.doc",
                         isEnabled: !viewModel.isGenerating
                     ) {
-                        UIPasteboard.general.string = viewModel.currentShareText
-                        viewModel.trackCopy()
-                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        activeToast = ToastMessage(message: "Copied!", style: .success)
+                        copyCurrentAdvice()
                     }
                     .accessibilityIdentifier("generate.copy")
 
@@ -1360,8 +1578,7 @@ struct GenerateTabView: View {
                         systemImage: "bolt.fill",
                         isEnabled: !viewModel.isGenerating
                     ) {
-                        viewModel.remixCurrentAdvice()
-                        activeToast = ToastMessage(message: "Remixed!", style: .success)
+                        remixCurrentAdvice()
                     }
                     .accessibilityIdentifier("generate.remix")
                 }
@@ -1503,6 +1720,29 @@ struct GenerateTabView: View {
             showingShareSheet = true
             activeToast = ToastMessage(message: "Share card ready.", style: .success)
         }
+    }
+
+    private func toggleCurrentFavorite() {
+        let wasFavorite = viewModel.isCurrentFavorite
+        viewModel.toggleFavorite()
+        onDataChanged()
+        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+        activeToast = ToastMessage(
+            message: wasFavorite ? "Removed from Favorites" : "Saved!",
+            style: wasFavorite ? .deleted : .success
+        )
+    }
+
+    private func copyCurrentAdvice() {
+        UIPasteboard.general.string = viewModel.currentShareText
+        viewModel.trackCopy()
+        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        activeToast = ToastMessage(message: "Copied!", style: .success)
+    }
+
+    private func remixCurrentAdvice() {
+        viewModel.remixCurrentAdvice()
+        activeToast = ToastMessage(message: "Remixed!", style: .success)
     }
 
     private func exportCurrentAdviceGIF() {
@@ -1780,7 +2020,7 @@ struct GenerateTabView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 28) {
+        VStack(spacing: 22) {
             Spacer()
             ZStack {
                 Circle()
@@ -1794,20 +2034,45 @@ struct GenerateTabView: View {
             }
 
             VStack(spacing: 12) {
-                Text("Tap Advise Me to generate your first terrible idea.")
+                Text("Start with one bad idea.")
                     .font(Theme.cardFont(for: settings.theme))
                     .foregroundStyle(primaryText)
 
-                Text("Pick a tone, add one optional detail, then save, copy, share, or remix the result.")
+                Text("Pick a category and tone, add one optional detail, then generate, save, copy, share, or remix.")
                     .font(Theme.bodyFont(for: settings.theme))
                     .foregroundStyle(secondaryText)
                     .opacity(0.8)
             }
             .multilineTextAlignment(.center)
 
+            HStack(spacing: 8) {
+                emptyStateStep("1", "Pick")
+                emptyStateStep("2", "Generate")
+                emptyStateStep("3", "Save")
+                emptyStateStep("4", "Share")
+            }
+            .padding(.horizontal, 8)
+
             Spacer()
         }
         .frame(minHeight: 320)
+        .frame(maxWidth: .infinity)
+        .accessibilityIdentifier("generate.emptyState")
+    }
+
+    private func emptyStateStep(_ number: String, _ title: String) -> some View {
+        VStack(spacing: 4) {
+            Text(number)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(buttonText)
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(accent))
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
         .frame(maxWidth: .infinity)
     }
 }

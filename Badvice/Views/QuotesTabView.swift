@@ -35,9 +35,9 @@ struct QuotesTabView: View {
             return "Your current filters are too narrow or the library needs fresh material. Clear the filters or jump back to Generate."
         }
         if !showQuoteSpotlight {
-            return "The daily quote is strongest when you stop and unpack it. Open the spotlight, copy it, or share it anywhere."
+            return "Open the spotlight, copy the line, or share it anywhere."
         }
-        return "You have today's quote in focus. Rate it, copy it, share it, or send it into Friends when social is ready."
+        return "Today's quote is in focus. Rate it, copy it, share it, or send it into Friends."
     }
     private var quotesPrimaryActionTitle: String {
         if viewModel.filteredQuotes.isEmpty {
@@ -323,7 +323,7 @@ struct QuotesTabView: View {
                     Text("Quote Desk")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(primaryText)
-                    Text("A cleaner read on the daily line, the strongest signals, and the best material in the bank.")
+                    Text("Daily line first. Library, search, and signals after that.")
                         .font(.footnote)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -638,7 +638,7 @@ struct QuotesTabView: View {
                 Text("Daily Ritual")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
-                Text("Read it, copy it, share it, then keep the library for later.")
+                Text("Read, rate, copy, share.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -677,6 +677,23 @@ struct QuotesTabView: View {
                     .font(.caption.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 40)
                 }
+
+                HStack(spacing: 8) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(accent)
+                    Text(hasRated ? "Come back tomorrow for the next daily line." : "Rate today to finish the ritual, then come back tomorrow.")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                }
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                        .fill(accent.opacity(0.07))
+                )
+                .accessibilityIdentifier("quotes.tomorrowCue")
             }
         }
     }

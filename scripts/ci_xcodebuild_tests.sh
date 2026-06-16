@@ -57,6 +57,13 @@ fi
 
 echo "Using destination: $IOS_DESTINATION"
 
+if [[ -n "$SIMULATOR_UDID" ]]; then
+  echo "Cleaning stale simulator app/test-runner state for: $SIMULATOR_UDID"
+  xcrun simctl terminate "$SIMULATOR_UDID" com.worstadvice.app >/dev/null 2>&1 || true
+  xcrun simctl terminate "$SIMULATOR_UDID" com.worstadvice.uitests.xctrunner >/dev/null 2>&1 || true
+  xcrun simctl terminate "$SIMULATOR_UDID" com.worstadvice.uitests >/dev/null 2>&1 || true
+fi
+
 xcodebuild -resolvePackageDependencies \
   -project "$PROJECT_PATH" \
   -scheme "$SCHEME" \

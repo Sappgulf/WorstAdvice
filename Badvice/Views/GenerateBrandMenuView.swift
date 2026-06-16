@@ -54,6 +54,7 @@ struct GenerateBrandMenuView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.sectionSpacing) {
                         heroCard
+                        recommendedFlowCard
                         quickAccessCard
                         if shouldShowCloudKitCard {
                             cloudKitCard
@@ -127,6 +128,28 @@ struct GenerateBrandMenuView: View {
                 menuMetric(title: "Mode", value: "Slim")
             }
         }
+    }
+
+    private var recommendedFlowCard: some View {
+        SectionShell(accent: accent, cardColor: cardColor) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Recommended Flow")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Text("Start with Advice, keep the useful lines, then use Missions or Friends only when they add momentum.")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } content: {
+            HStack(spacing: 8) {
+                flowStep("1", "Advice", tab: .generate)
+                flowStep("2", "Saved", tab: .favorites)
+                flowStep("3", "Missions", tab: .chaosHub)
+                flowStep("4", "Friends", tab: .friends)
+            }
+        }
+        .accessibilityIdentifier("brandMenu.recommendedFlow")
     }
 
     private var quickAccessCard: some View {
@@ -252,6 +275,38 @@ struct GenerateBrandMenuView: View {
             primaryText: primaryText,
             secondaryText: secondaryText
         )
+    }
+
+    private func flowStep(_ number: String, _ title: String, tab: AppTab) -> some View {
+        Button {
+            openQuickAccessTab(tab)
+        } label: {
+            VStack(spacing: 5) {
+                Text(number)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(buttonText)
+                    .frame(width: 24, height: 24)
+                    .background(Circle().fill(accent))
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                    .fill(accent.opacity(0.07))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                            .stroke(accent.opacity(0.12), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("brandMenu.flow.\(tab.rawValue)")
+        .accessibilityLabel("Open \(title)")
     }
 
     private func quickAccessButton(
