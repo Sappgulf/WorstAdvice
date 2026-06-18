@@ -98,6 +98,29 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         }
     }
 
+    func testGenerateUsesOneCommandCardForSelectionLoadingAndResult() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
+
+        let commandCard = app.otherElements["generate.commandCard"]
+        XCTAssertTrue(commandCard.waitForExistence(timeout: 12), "The command card should own the generate flow.")
+        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 8))
+        XCTAssertNotNil(discoverSelectorHeader(app: app, identifier: "generate.category", timeout: 8, maxSwipes: 4))
+        XCTAssertNotNil(discoverSelectorHeader(app: app, identifier: "generate.tone", timeout: 8, maxSwipes: 4))
+
+        app.buttons["generate.primary"].tap()
+        if let loading = waitForGenerateLoadingElement(app: app, timeout: 3) {
+            XCTAssertTrue(commandCard.exists, "Loading should happen without replacing the command card.")
+            XCTAssertTrue(loadingCopy(from: loading).contains("Generating advice"))
+        }
+
+        XCTAssertTrue(waitForGenerateAdviceToSettle(app: app, timeout: 18))
+        XCTAssertTrue(commandCard.exists, "The command card should still be present after generation settles.")
+        XCTAssertTrue(app.otherElements["advice.card"].waitForExistence(timeout: 8), "The advice card should render inside the command flow.")
+        XCTAssertNotNil(waitForAnyElement(app: app, candidates: [app.buttons["generate.save"]], timeout: 3, maxSwipes: 4))
+        XCTAssertNotNil(waitForAnyElement(app: app, candidates: [app.buttons["generate.copy"]], timeout: 3, maxSwipes: 4))
+        XCTAssertNotNil(waitForAnyElement(app: app, candidates: [app.buttons["generate.share"]], timeout: 3, maxSwipes: 4))
+    }
+
     func testSplashAndOnboardingFlowCompletesAndPersistsAfterRelaunch() throws {
         let app = launchTestApp(
             extraLaunchArguments: ["-ui-testing-auth-reset", "-ui-testing-auth-skip"],

@@ -21,6 +21,7 @@ struct GenerateTabView: View {
     @State private var showingAdvanced = false
     @State private var showingPromptAssist = false
     @State private var showingStudioExtras = false
+    @State private var showingTuneNextRun = false
     @State private var showingBrandMenu = false
     @State private var pendingBrandMenuTab: AppTab? = nil
     @State private var showingBracket = false        // #2 Advice Battles entry point
@@ -433,7 +434,6 @@ struct GenerateTabView: View {
                             headerView
                         }
                         generationCommandCard
-                        primaryActionButtons
                         if viewModel.current != nil || viewModel.todayGeneratedCount > 0 {
                             dailyProgressCard
                         }
@@ -442,112 +442,6 @@ struct GenerateTabView: View {
                                 .font(.caption)
                                 .foregroundStyle(secondaryText)
                         }
-
-                        if viewModel.current != nil {
-                            resultNextStepCard
-                                .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
-                        }
-
-                        Group {
-                            if let record = viewModel.current {
-                                AdviceCardView(
-                                    record: record,
-                                    theme: settings.theme,
-                                    reduceMotion: isMotionReduced,
-                                    sourceBadgeText: viewModel.generationSourceBadgeText
-                                )
-                                .accessibilityIdentifier("advice.card")
-                                .transition(
-                                    isMotionReduced
-                                        ? .identity
-                                        : .asymmetric(
-                                            insertion: .scale.combined(with: .opacity), removal: .opacity)
-                                )
-                                .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
-                                .animation(
-                                    isMotionReduced ? nil : .spring(response: 0.2, dampingFraction: 0.5),
-                                    value: viewModel.hapticTrigger
-                                )
-                                .contextMenu {
-                                    Button(
-                                        "Save",
-                                        systemImage: viewModel.isCurrentFavorite
-                                            ? "bookmark.fill" : "bookmark"
-                                    ) {
-                                        let wasFavorite = viewModel.isCurrentFavorite
-                                        viewModel.toggleFavorite()
-                                        onDataChanged()
-                                        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                                        activeToast = ToastMessage(
-                                            message: wasFavorite ? "Removed from Favorites" : "Saved!",
-                                            style: wasFavorite ? .deleted : .success
-                                        )
-                                    }
-
-                                    Button("Copy", systemImage: "doc.on.doc") {
-                                        UIPasteboard.general.string = viewModel.currentShareText
-                                        viewModel.trackCopy()
-                                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                                        activeToast = ToastMessage(message: "Copied!", style: .success)
-                                    }
-
-                                    Button("Share", systemImage: "square.and.arrow.up") {
-                                        guard let payload = viewModel.currentSharePayload else { return }
-                                        Task {
-                                            let image = await ShareCardRenderer.renderAsync(content: payload)
-                                            shareItems = [image, viewModel.currentShareText]
-                                            viewModel.trackShare(
-                                                template: payload.template, ratio: payload.aspectRatio)
-                                            showingShareSheet = true
-                                            HapticsManager.playSelection(
-                                                isEnabled: settings.hapticsEnabled)
-                                        }
-                                    }
-
-                                    Button("Collaborate", systemImage: "person.2.badge.plus") {
-                                        guard canShareToFriends() else {
-                                            showFriendsUnavailable()
-                                            return
-                                        }
-                                        guard let record = viewModel.current else { return }
-                                        social.queueCollabDraft(type: .advice, content: record.adviceLine)
-                                        openTab(.friends)
-                                        activeToast = ToastMessage(
-                                            message: "Draft sent to Friends > Collab.",
-                                            style: .info
-                                        )
-                                    }
-                                }
-                                .onTapGesture(count: 2) {
-                                    let wasFavorite = viewModel.isCurrentFavorite
-                                    viewModel.toggleFavorite()
-                                    onDataChanged()
-                                    HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                                    activeToast = ToastMessage(
-                                        message: wasFavorite ? "Removed from Favorites" : "Saved!",
-                                        style: wasFavorite ? .deleted : .success
-                                    )
-                                }
-                            } else if !viewModel.isGenerating {
-                                emptyState
-                                    .transition(isMotionReduced ? .identity : .opacity)
-                            }
-                        }
-                        .overlay {
-                            if viewModel.isGenerating {
-                                LoadingAdviceView(theme: settings.theme, reduceMotion: isMotionReduced)
-                            }
-                        }
-                        .animation(
-                            isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.86),
-                            value: viewModel.current?.id
-                        )
-                        .animation(
-                            isMotionReduced ? nil : .easeInOut(duration: 0.2),
-                            value: viewModel.isGenerating
-                        )
-
-                        votingRow
                         generateToolsSection
                     }
                     .padding(.horizontal, Theme.horizontalPadding)
@@ -778,10 +672,18 @@ struct GenerateTabView: View {
         } content: {
             VStack(alignment: .leading, spacing: 14) {
                 generationHeroMetrics
-                if !usesCompactScreenshotLayout {
-                    selectorRow
+                if viewModel.current == nil || viewModel.isGenerating {
+                    if !usesCompactScreenshotLayout {
+                        selectorRow
+                    }
+                    scenarioComposerFields
+                    primaryActionButtons
+                    unifiedAdviceStage
+                } else {
+                    unifiedAdviceStage
+                    primaryActionButtons
+                    tuneNextRunDisclosure
                 }
-                scenarioComposerFields
             }
         }
         .shadow(
@@ -792,6 +694,129 @@ struct GenerateTabView: View {
         )
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("generate.commandCard")
+    }
+
+    private var tuneNextRunDisclosure: some View {
+        DisclosureGroup(
+            isExpanded: $showingTuneNextRun.animation(
+                isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))
+        ) {
+            VStack(alignment: .leading, spacing: 12) {
+                if !usesCompactScreenshotLayout {
+                    selectorRow
+                }
+                scenarioComposerFields
+            }
+            .padding(.top, 8)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.caption.weight(.bold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Tune next run")
+                        .font(.caption.weight(.bold))
+                    Text("Adjust lane, tone, or detail after this result.")
+                        .font(.caption2)
+                        .foregroundStyle(secondaryText)
+                }
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(primaryText)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                .fill(secondaryText.opacity(0.07))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                        .stroke(accent.opacity(0.08), lineWidth: 1)
+                )
+        )
+        .accessibilityIdentifier("generate.tuneNextRun")
+    }
+
+    @ViewBuilder
+    private var unifiedAdviceStage: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if viewModel.current != nil {
+                resultNextStepCard
+                    .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
+            }
+
+            ZStack {
+                if let record = viewModel.current {
+                    AdviceCardView(
+                        record: record,
+                        theme: settings.theme,
+                        reduceMotion: isMotionReduced,
+                        sourceBadgeText: viewModel.generationSourceBadgeText
+                    )
+                    .accessibilityIdentifier("advice.card")
+                    .transition(
+                        isMotionReduced
+                            ? .identity
+                            : .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity)
+                    )
+                    .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
+                    .animation(
+                        isMotionReduced ? nil : .spring(response: 0.2, dampingFraction: 0.5),
+                        value: viewModel.hapticTrigger
+                    )
+                    .contextMenu {
+                        Button(
+                            "Save",
+                            systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark"
+                        ) {
+                            toggleCurrentFavorite()
+                        }
+
+                        Button("Copy", systemImage: "doc.on.doc") {
+                            copyCurrentAdvice()
+                        }
+
+                        Button("Share", systemImage: "square.and.arrow.up") {
+                            shareCurrentAdvice()
+                        }
+
+                        Button("Collaborate", systemImage: "person.2.badge.plus") {
+                            guard canShareToFriends() else {
+                                showFriendsUnavailable()
+                                return
+                            }
+                            social.queueCollabDraft(type: .advice, content: record.adviceLine)
+                            openTab(.friends)
+                            activeToast = ToastMessage(
+                                message: "Draft sent to Friends > Collab.",
+                                style: .info
+                            )
+                        }
+                    }
+                    .onTapGesture(count: 2) {
+                        toggleCurrentFavorite()
+                    }
+                } else {
+                    emptyState
+                        .transition(isMotionReduced ? .identity : .opacity)
+                }
+
+                if viewModel.isGenerating {
+                    LoadingAdviceView(theme: settings.theme, reduceMotion: isMotionReduced)
+                        .transition(isMotionReduced ? .identity : .opacity.combined(with: .scale(scale: 0.98)))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .animation(
+                isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.86),
+                value: viewModel.current?.id
+            )
+            .animation(
+                isMotionReduced ? nil : .easeInOut(duration: 0.2),
+                value: viewModel.isGenerating
+            )
+
+            votingRow
+        }
+        .padding(.top, 2)
     }
 
     private var commandCardTitle: String {
@@ -2051,15 +2076,14 @@ struct GenerateTabView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 22) {
-            Spacer()
+        VStack(spacing: 18) {
             ZStack {
                 Circle()
                     .fill(accent.opacity(0.12))
-                    .frame(width: 140, height: 140)
+                    .frame(width: 116, height: 116)
 
                 Image(systemName: "sparkles")
-                    .font(.system(size: 60, weight: .light))
+                    .font(.system(size: 48, weight: .light))
                     .foregroundStyle(accent)
                     .shadow(color: accent.opacity(0.3), radius: 10)
             }
@@ -2083,10 +2107,9 @@ struct GenerateTabView: View {
                 emptyStateStep("4", "Share")
             }
             .padding(.horizontal, 8)
-
-            Spacer()
         }
-        .frame(minHeight: 320)
+        .padding(.vertical, 22)
+        .frame(minHeight: 260)
         .frame(maxWidth: .infinity)
         .accessibilityIdentifier("generate.emptyState")
     }

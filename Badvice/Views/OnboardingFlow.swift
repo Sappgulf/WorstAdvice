@@ -142,6 +142,8 @@ struct OnboardingFlow: View {
                         title: page.title,
                         subtitle: page.subtitle,
                         kicker: page.kicker,
+                        previewTitle: page.previewTitle,
+                        previewAdvice: page.previewAdvice,
                         accent: page.accent,
                         reduceMotion: isMotionReduced
                     )
@@ -168,7 +170,7 @@ struct OnboardingFlow: View {
     }
 
     private var onboardingControlDock: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             HStack {
                 Text("Command loop")
                     .font(.caption2.weight(.bold))
@@ -205,13 +207,6 @@ struct OnboardingFlow: View {
                 starterChoicePanel
                     .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .bottom)))
             }
-
-        previewCard(
-            accent: pages[currentPage].accent,
-            title: pages[currentPage].previewTitle,
-            text: pages[currentPage].previewAdvice,
-            isVisible: currentPage == 0 || currentPage == 1 || currentPage == 2 || currentPage == pages.count - 1
-        )
 
             Button {
                 advanceOnboarding()
@@ -422,6 +417,8 @@ private struct OnboardingPageView: View {
     let title: String
     let subtitle: String
     let kicker: String
+    let previewTitle: String
+    let previewAdvice: String
     let accent: Color
     var reduceMotion: Bool = false
 
@@ -430,27 +427,27 @@ private struct OnboardingPageView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer()
+            Spacer(minLength: 18)
 
             // Icon bubble
             ZStack {
                 Circle()
                     .fill(accent.opacity(0.12))
-                    .frame(width: 140, height: 140)
+                    .frame(width: 118, height: 118)
                     .scaleEffect(floatAnim ? 1.05 : 0.95)
 
                 Circle()
                     .fill(accent.opacity(0.07))
-                    .frame(width: 110, height: 110)
+                    .frame(width: 92, height: 92)
                     .scaleEffect(floatAnim ? 0.9 : 1.1)
 
                 if reduceMotion {
                     Image(systemName: icon)
-                        .font(.system(size: 52, weight: .semibold))
+                        .font(.system(size: 44, weight: .semibold))
                         .foregroundStyle(accent)
                 } else {
                     Image(systemName: icon)
-                        .font(.system(size: 52, weight: .semibold))
+                        .font(.system(size: 44, weight: .semibold))
                         .foregroundStyle(accent)
                         .symbolEffect(.bounce.up.byLayer, value: appeared)
                         .offset(y: floatAnim ? -5 : 5)
@@ -465,7 +462,7 @@ private struct OnboardingPageView: View {
                 floatAnim = !reduceMotion
             }
 
-            Spacer().frame(height: 52)
+            Spacer().frame(height: 30)
 
             Text(title)
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
@@ -488,22 +485,110 @@ private struct OnboardingPageView: View {
                 .opacity(appeared ? 1 : 0)
                 .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.82).delay(0.28), value: appeared)
 
+            onboardingPreviewCard
+                .padding(.top, 20)
+                .padding(.horizontal, 24)
+                .offset(y: appeared ? 0 : 18)
+                .opacity(appeared ? 1 : 0)
+                .animation(reduceMotion ? nil : .spring(response: 0.48, dampingFraction: 0.82).delay(0.32), value: appeared)
+
             Text(kicker)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(accent.opacity(0.78))
                 .textCase(.uppercase)
                 .tracking(1.1)
-                .padding(.top, 10)
+                .padding(.top, 14)
                 .opacity(0.9)
                 .padding(.bottom, 20)
                 .offset(y: appeared ? 0 : 20)
                 .opacity(appeared ? 0.9 : 0.0)
-                .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.82).delay(0.34), value: appeared)
+                .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.82).delay(0.38), value: appeared)
 
-            Spacer()
+            Spacer(minLength: 160)
         }
         .onAppear {
             appeared = true
         }
+    }
+
+    private var onboardingPreviewCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [accent.opacity(0.92), accent.opacity(0.58)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Image(systemName: "sparkles")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 42, height: 42)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(previewTitle)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(accent.opacity(0.76))
+                        .textCase(.uppercase)
+                    Text("One card carries setup, loading, and the result.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 8) {
+                onboardingPreviewPill("Lane", icon: "square.grid.2x2")
+                onboardingPreviewPill("Tone", icon: "dial.medium")
+            }
+
+            Text(previewAdvice)
+                .font(.system(.callout, design: .rounded, weight: .semibold))
+                .foregroundStyle(.primary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ProgressView(value: 0.72)
+                .progressViewStyle(.linear)
+                .tint(accent)
+                .scaleEffect(y: 0.75)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [accent.opacity(0.34), Color.white.opacity(0.24), accent.opacity(0.12)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+                .shadow(color: accent.opacity(0.18), radius: 18, y: 10)
+        )
+        .scaleEffect(floatAnim && !reduceMotion ? 1.01 : 1.0)
+    }
+
+    private func onboardingPreviewPill(_ title: String, icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.caption2.weight(.bold))
+            .lineLimit(1)
+            .foregroundStyle(accent)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(accent.opacity(0.12))
+            )
     }
 }
