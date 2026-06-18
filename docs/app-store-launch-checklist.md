@@ -1,6 +1,6 @@
 # Badvice App Store Launch Checklist
 
-Last verified: 2026-03-07 22:53 CST (America/Chicago)
+Last verified: 2026-06-18 CST (America/Chicago) for codebase checklist currency.
 
 ## 1) Release Build Validation
 
@@ -40,7 +40,7 @@ Status: COMPLETE (codebase) + MANUAL ITEMS REMAIN
 
 - Confirm App Privacy questionnaire answers are fully up to date.
 - Complete/update app metadata (subtitle, description, keywords, support/marketing URLs).
-- Upload/select final screenshots for all required device classes.
+- Upload/select final screenshots for all required device classes. Use `docs/browser-screenshot-qa.md` as the current capture checklist.
 - Set pricing/availability and release strategy.
 - Confirm export compliance / content rights / age rating answers.
 
@@ -48,4 +48,4 @@ Status: COMPLETE (codebase) + MANUAL ITEMS REMAIN
 
 - Privacy manifest file (`Badvice/Resources/PrivacyInfo.xcprivacy`) is present and included in the app target.
   Validate whether your used APIs/SDKs require any additional manifest entries before submission.
-- Xcode emits a non-blocking asset notice about legacy iPad `76x76@1x` app icon support.
+- Xcode may emit a non-blocking asset notice about legacy iPad `76x76@1x` app icon support.

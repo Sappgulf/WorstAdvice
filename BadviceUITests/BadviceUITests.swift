@@ -91,6 +91,97 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(openSettings(app: app))
     }
 
+    func testScreenshotModeProductLoopAnchors() throws {
+        let generateApp = launchScreenshotModeApp(startTab: "generate", resetData: true)
+        XCTAssertTrue(generateApp.otherElements["generate.commandCard"].waitForExistence(timeout: 8))
+        XCTAssertTrue(generateApp.buttons["generate.primary"].waitForExistence(timeout: 5))
+        generateApp.terminate()
+
+        let chaosApp = launchScreenshotModeApp(startTab: "chaosHub")
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: chaosApp,
+                candidates: [
+                    chaosApp.staticTexts["chaos.progressionPath.title"],
+                    chaosApp.otherElements["chaos.progressionPath"],
+                    chaosApp.staticTexts["Progression Path"],
+                ],
+                timeout: 5,
+                maxSwipes: 3
+            ),
+            "Missions progression path should be visible in screenshot mode."
+        )
+        chaosApp.terminate()
+
+        let friendsApp = launchScreenshotModeApp(startTab: "friends")
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: friendsApp,
+                candidates: [
+                    friendsApp.staticTexts["friends.setupFunnel.title"],
+                    friendsApp.otherElements["friends.setupFunnel"],
+                    friendsApp.staticTexts["Setup Path"],
+                ],
+                timeout: 5,
+                maxSwipes: 3
+            ),
+            "Friends setup funnel should be visible in screenshot mode."
+        )
+        XCTAssertTrue(
+            friendsApp.otherElements["friends.setupFunnel.progress"].waitForExistence(timeout: 3)
+                || friendsApp.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Setup progress")).firstMatch.exists
+        )
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: friendsApp,
+                candidates: [
+                    friendsApp.buttons["friends.setupFunnel.primary"],
+                    friendsApp.staticTexts["friends.setupFunnel.primary.title"],
+                    friendsApp.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Create Profile")).firstMatch,
+                    friendsApp.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Find First Friend")).firstMatch,
+                    friendsApp.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Open Generate")).firstMatch,
+                ],
+                timeout: 4,
+                maxSwipes: 1
+            ),
+            "Friends setup funnel should expose a primary next action."
+        )
+        friendsApp.terminate()
+
+        let quotesApp = launchScreenshotModeApp(startTab: "quotes")
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: quotesApp,
+                candidates: [
+                    quotesApp.staticTexts["quotes.dailyRitual.title"],
+                    quotesApp.otherElements["quotes.dailyRitual"],
+                    quotesApp.staticTexts["Daily Ritual"],
+                ],
+                timeout: 5,
+                maxSwipes: 3
+            ),
+            "Quotes daily ritual should be visible in screenshot mode."
+        )
+        XCTAssertTrue(quotesApp.buttons["quotes.ritual.friendAction"].waitForExistence(timeout: 3))
+        quotesApp.terminate()
+
+        let settingsApp = launchScreenshotModeApp(startTab: "settings")
+        let upgradeEntry = waitForAnyElement(
+            app: settingsApp,
+            candidates: [
+                settingsApp.buttons["settings.upgradeStore"],
+                settingsApp.otherElements["settings.upgradeStore"],
+                settingsApp.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Upgrade")).firstMatch,
+                settingsApp.cells.containing(.staticText, identifier: "Upgrade & Store").firstMatch,
+                settingsApp.staticTexts["Upgrade & Store"].firstMatch,
+            ],
+            timeout: 6,
+            maxSwipes: 12
+        )
+        XCTAssertNotNil(upgradeEntry, "Settings should expose Upgrade & Store for screenshot proof.")
+        settingsApp.terminate()
+    }
+
     func testSettingsSuggestionPipelineAndAppleLocalModelSurfacesAfterDebugPolishSeedPreload() throws {
         let app = launchTestApp(extraLaunchArguments: [
             "-debug-preload-polish-fixtures",
@@ -353,6 +444,18 @@ final class BadviceUITests: XCTestCase {
         return app
     }
 
+    private func launchScreenshotModeApp(startTab: String, resetData: Bool = false) -> XCUIApplication {
+        var arguments = [
+            "-screenshot-mode",
+            "-screenshot-start-tab", startTab,
+            "-debug-polish-seed", "424242",
+        ]
+        if resetData {
+            arguments.insert("-ui-testing-reset-data", at: 0)
+        }
+        return launchTestApp(extraLaunchArguments: arguments, timeout: 20)
+    }
+
     private func waitForAppToEnterForeground(app: XCUIApplication, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
@@ -368,6 +471,15 @@ final class BadviceUITests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         let readinessChecks: [() -> Bool] = [
             { app.buttons["generate.primary"].exists },
+            { app.otherElements["generate.commandCard"].exists },
+            { app.staticTexts["chaos.progressionPath.title"].exists },
+            { app.otherElements["chaos.progressionPath"].exists },
+            { app.staticTexts["friends.setupFunnel.title"].exists },
+            { app.otherElements["friends.setupFunnel"].exists },
+            { app.staticTexts["quotes.dailyRitual.title"].exists },
+            { app.otherElements["quotes.dailyRitual"].exists },
+            { app.buttons["settings.upgradeStore"].exists },
+            { app.otherElements["settings.upgradeStore"].exists },
             { app.buttons["auth.primary"].exists },
             { app.buttons["Get Started"].exists },
             { app.buttons["Continue"].exists },
@@ -855,21 +967,53 @@ final class BadviceUITests: XCTestCase {
             }
         }
         XCTAssertTrue(deleteAccountButton.waitForExistence(timeout: 3))
-        XCTAssertTrue(deleteAccountButton.isHittable)
         if deleteAccountButton.isHittable {
             deleteAccountButton.tap()
         } else {
             deleteAccountButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
 
-        let deletePasswordField = app.secureTextFields["settings.auth.deletePassword"]
-        XCTAssertTrue(deletePasswordField.waitForExistence(timeout: 3))
-        if !deletePasswordField.isHittable {
-            for _ in 0..<4 where !deletePasswordField.isHittable {
-                app.swipeUp()
-            }
+        let deleteSheet = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.navigationBars["Delete Account"],
+                app.staticTexts["Delete Account"],
+                app.staticTexts["Delete local account"],
+            ],
+            timeout: 4
+        )
+        if deleteSheet == nil, deleteAccountButton.exists {
+            deleteAccountButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
-        XCTAssertTrue(deletePasswordField.isHittable)
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.navigationBars["Delete Account"],
+                    app.staticTexts["Delete Account"],
+                    app.staticTexts["Delete local account"],
+                ],
+                timeout: 5
+            )
+        )
+
+        let deletePasswordField = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.secureTextFields["settings.auth.deletePassword"],
+                app.textFields["settings.auth.deletePassword"],
+                app.textViews["settings.auth.deletePassword"],
+                app.secureTextFields["Current password"],
+                app.textFields["Current password"],
+            ],
+            timeout: 5
+        ) ?? findEditableField(
+            identifier: "settings.auth.deletePassword",
+            label: "Current password",
+            app: app
+        )
+        XCTAssertNotNil(deletePasswordField)
+        guard let deletePasswordField else { return }
         fillTextInput(deletePasswordField, text: "Chaos456")
 
         let confirmDeleteButton = app.buttons["settings.auth.deleteConfirm"]

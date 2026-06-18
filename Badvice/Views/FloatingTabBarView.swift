@@ -49,6 +49,27 @@ struct FloatingTabBarView: View {
                 .background { tabBarBackground }
                 .padding(.horizontal, Theme.floatingTabBarHorizontalPadding)
                 .padding(.bottom, max(8, proxy.safeAreaInsets.bottom * 0.24))
+                .background(alignment: .bottom) {
+                    if reduceMotion {
+                        LinearGradient(
+                            colors: [
+                                Theme.canvasColor(for: theme).opacity(0),
+                                Theme.canvasColor(for: theme).opacity(0.92),
+                                Theme.canvasColor(for: theme),
+                                Theme.canvasColor(for: theme),
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                            .frame(
+                                height: Theme.floatingTabBarReservedHeight
+                                    + max(42, proxy.safeAreaInsets.bottom + 32)
+                                    + 34
+                            )
+                            .frame(maxWidth: .infinity)
+                            .ignoresSafeArea(.container, edges: .bottom)
+                    }
+                }
                 .offset(y: tabBarVisible ? 0 : 120)
                 .animation(
                     reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8),
@@ -211,9 +232,9 @@ struct FloatingTabBarView: View {
 
     private var tabBarBackground: some View {
         ZStack {
-            if lowPowerModeEnabled {
+            if lowPowerModeEnabled || reduceMotion {
                 RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
-                    .fill(tabBarStyle.backgroundTint.opacity(0.94))
+                    .fill(Theme.tabBarBackground(for: theme).opacity(0.98))
                     .shadow(
                         color: tabBarStyle.shadow,
                         radius: tabBarStyle.shadowRadius * 0.75,

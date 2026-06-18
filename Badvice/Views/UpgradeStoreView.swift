@@ -70,12 +70,16 @@ struct UpgradeStoreView: View {
 
                     statusBanner
 
+                    recommendedPathCard
+
                     if store.isLoadingProducts {
                         ProgressView("Loading offers…")
                             .tint(accent)
                             .padding(.top, 8)
                     } else {
                         ladderCard
+
+                        benefitMatrixCard
 
                         if !featuredProducts.isEmpty {
                             storeSection(
@@ -209,6 +213,48 @@ struct UpgradeStoreView: View {
         }
     }
 
+    private var recommendedPathCard: some View {
+        storeSection(
+            title: "Recommended Path",
+            subtitle: recommendedPathDetail
+        ) {
+            HStack(spacing: 8) {
+                valueChip(title: "Start", detail: "Free")
+                valueChip(title: "Best Step", detail: store.isPremium || store.isPro ? "Pro" : "Premium")
+                valueChip(title: "Live Loop", detail: store.hasActiveSeasonalPass ? "Active" : "Season")
+            }
+        }
+        .accessibilityIdentifier("upgrade.recommendedPath")
+    }
+
+    private var recommendedPathDetail: String {
+        if store.isPro {
+            return "You already have the permanent top tier. Seasonal pass is only worth it if live progression is the draw."
+        }
+        if store.isPremium {
+            return "Premium is active. Pro is the clean permanent step if you want included packs and fewer separate purchases."
+        }
+        if store.hasActiveSeasonalPass {
+            return "The live loop is active. Premium is the cleaner everyday upgrade for Generate, sharing, and core controls."
+        }
+        return "Most users should start with Premium, then choose Pro for permanent breadth or Season Pass for live rewards."
+    }
+
+    private var benefitMatrixCard: some View {
+        storeSection(
+            title: "Visible Value",
+            subtitle: "Every upgrade should map to something you can see in the app."
+        ) {
+            VStack(spacing: 10) {
+                benefitRow(title: "Generate", free: "Core", premium: "More control", pro: "Full depth")
+                benefitRow(title: "Share Cards", free: "Basic", premium: "Polished", pro: "All styles")
+                benefitRow(title: "Missions", free: "Daily", premium: "Richer loop", pro: "All rewards")
+                benefitRow(title: "Packs", free: "Limited", premium: "Selected", pro: "Included")
+            }
+        }
+        .accessibilityIdentifier("upgrade.benefitMatrix")
+    }
+
     private func storeSection<Content: View>(
         title: String,
         subtitle: String,
@@ -338,6 +384,18 @@ struct UpgradeStoreView: View {
             RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
                 .fill(secondaryText.opacity(0.08))
         )
+    }
+
+    private func benefitRow(title: String, free: String, premium: String, pro: String) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(primaryText)
+                .frame(width: 74, alignment: .leading)
+            valueChip(title: "Free", detail: free)
+            valueChip(title: "Premium", detail: premium)
+            valueChip(title: "Pro", detail: pro)
+        }
     }
 
     private func inlineBanner(text: String, tint: Color) -> some View {

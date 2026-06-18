@@ -432,6 +432,7 @@ struct FriendsTabView: View {
                     Text("Setup Path")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(primaryText)
+                        .accessibilityIdentifier("friends.setupFunnel.title")
                     Text("Profile, first friend, first share, first collab.")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
@@ -473,6 +474,47 @@ struct FriendsTabView: View {
                     state: social.collabDocs.isEmpty ? (!social.feedPosts.isEmpty ? .now : .next) : .done
                 )
             }
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Setup progress")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(secondaryText)
+                    Spacer()
+                    Text("\(friendsSetupCompletedSteps)/4")
+                        .font(.caption.weight(.bold).monospacedDigit())
+                        .foregroundStyle(accent)
+                }
+                GeometryReader { geo in
+                    RoundedRectangle(cornerRadius: 999, style: .continuous)
+                        .fill(secondaryText.opacity(0.14))
+                        .overlay(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 999, style: .continuous)
+                                .fill(accent)
+                                .frame(width: geo.size.width * CGFloat(friendsSetupProgress))
+                        }
+                }
+                .frame(height: 7)
+            }
+            .accessibilityIdentifier("friends.setupFunnel.progress")
+
+            Button {
+                performCurrentSetupStep()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: friendsSetupActionIcon)
+                    Text(friendsSetupActionTitle)
+                        .accessibilityIdentifier("friends.setupFunnel.primary.title")
+                }
+                .font(.caption.weight(.bold))
+                .frame(maxWidth: .infinity, minHeight: 40)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(accent)
+            .foregroundStyle(buttonText)
+            .accessibilityLabel(friendsSetupActionTitle)
+            .accessibilityHint("Continues the Friends setup path.")
+            .accessibilityIdentifier("friends.setupFunnel.primary")
         }
         .padding(14)
         .background(
@@ -581,6 +623,37 @@ struct FriendsTabView: View {
             return "First Collab"
         }
         return "Loop Active"
+    }
+
+    private var friendsSetupCompletedSteps: Int {
+        var completed = 0
+        if social.currentUser != nil { completed += 1 }
+        if !social.friends.isEmpty { completed += 1 }
+        if !social.feedPosts.isEmpty { completed += 1 }
+        if !social.collabDocs.isEmpty { completed += 1 }
+        return completed
+    }
+
+    private var friendsSetupProgress: Double {
+        Double(friendsSetupCompletedSteps) / 4.0
+    }
+
+    private var friendsSetupActionTitle: String {
+        if social.currentUser == nil { return "Create Profile" }
+        if social.friends.isEmpty { return "Find First Friend" }
+        if social.feedPosts.isEmpty { return "Open Generate" }
+        if social.collabDocs.isEmpty { return "Start Collab" }
+        return "Refresh Social"
+    }
+
+    private var friendsSetupActionIcon: String {
+        switch friendsSetupActionTitle {
+        case "Create Profile": return "person.crop.circle.badge.plus"
+        case "Find First Friend": return "magnifyingglass"
+        case "Open Generate": return "sparkles"
+        case "Start Collab": return "doc.badge.plus"
+        default: return "arrow.clockwise"
+        }
     }
 
     private func setupStepRow(title: String, detail: String, state: SetupStepState) -> some View {
@@ -1490,6 +1563,20 @@ struct FriendsTabView: View {
             } else {
                 Task { await social.refreshSocialData() }
             }
+        }
+    }
+
+    private func performCurrentSetupStep() {
+        if social.currentUser == nil {
+            openFriendsSetupFlow()
+        } else if social.friends.isEmpty {
+            openFriendsSection(.friends)
+        } else if social.feedPosts.isEmpty {
+            onOpenTab?(.generate)
+        } else if social.collabDocs.isEmpty {
+            openFriendsSection(.collab)
+        } else {
+            Task { await social.refreshSocialData() }
         }
     }
 

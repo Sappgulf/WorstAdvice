@@ -6,10 +6,12 @@ import UserNotifications
 struct SettingsTabView: View {
     private enum AuthSheet: Identifiable {
         case changePassword
+        case deleteAccount
 
         var id: String {
             switch self {
             case .changePassword: "changePassword"
+            case .deleteAccount: "deleteAccount"
             }
         }
     }
@@ -42,7 +44,6 @@ struct SettingsTabView: View {
     @State private var gearResetTask: Task<Void, Never>?
     @State private var didLoadInitialDiagnostics = false
     @State private var showingSocialDiagnostics = false
-    @State private var showDeleteAccountConfirmation = false
     @State private var currentPasswordDraft = ""
     @State private var newPasswordDraft = ""
     @State private var confirmPasswordDraft = ""
@@ -270,6 +271,8 @@ struct SettingsTabView: View {
             switch sheet {
             case .changePassword:
                 changePasswordSheet
+            case .deleteAccount:
+                deleteAccountSheet
             }
         }
         .navigationDestination(isPresented: $showingSocialDiagnostics) {
@@ -477,9 +480,7 @@ struct SettingsTabView: View {
 
                 Button(role: .destructive) {
                     deletePasswordDraft = ""
-                    withAnimation(.snappy(duration: 0.22)) {
-                        showDeleteAccountConfirmation = true
-                    }
+                    activeAuthSheet = .deleteAccount
                 } label: {
                     Label("Delete Local Account", systemImage: "trash.fill")
                         .font(.subheadline.weight(.semibold))
@@ -488,10 +489,6 @@ struct SettingsTabView: View {
                 .buttonStyle(.bordered)
                 .tint(.red)
                 .accessibilityIdentifier("settings.auth.deleteAccount")
-
-                if showDeleteAccountConfirmation {
-                    deleteAccountConfirmationCard
-                }
 
                 Button(role: .destructive) {
                     onSignOut()
@@ -569,65 +566,52 @@ struct SettingsTabView: View {
         }
     }
 
-    private var deleteAccountConfirmationCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Delete local account")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(.red)
-            Text("This removes the local Badvice account on this device and clears local app data.")
-                .font(.caption)
-                .foregroundStyle(secondaryText)
-                .lineLimit(2)
-            SecureField("Current password", text: $deletePasswordDraft)
-                .textContentType(.password)
-                .textFieldStyle(.roundedBorder)
-                .accessibilityIdentifier("settings.auth.deletePassword")
+    private var deleteAccountSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Delete local account") {
+                    Text("This removes the local Badvice account on this device and clears local app data.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    SecureField("Current password", text: $deletePasswordDraft)
+                        .textContentType(.password)
+                        .accessibilityIdentifier("settings.auth.deletePassword")
+                }
 
-            if let status = auth.statusMessage, !status.isEmpty {
-                Text(status)
-                    .font(.caption)
-                    .foregroundStyle(
-                        status.localizedCaseInsensitiveContains("deleted") ? .green : .red
-                    )
-                    .accessibilityIdentifier("settings.auth.deleteStatus")
+                if let status = auth.statusMessage, !status.isEmpty {
+                    Section("Status") {
+                        Text(status)
+                            .font(.caption)
+                            .foregroundStyle(
+                                status.localizedCaseInsensitiveContains("deleted") ? .green : .red
+                            )
+                            .accessibilityIdentifier("settings.auth.deleteStatus")
+                    }
+                }
             }
-
-            HStack(spacing: 10) {
-                Button("Cancel") {
-                    withAnimation(.snappy(duration: 0.18)) {
-                        showDeleteAccountConfirmation = false
+            .navigationTitle("Delete Account")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        activeAuthSheet = nil
                         deletePasswordDraft = ""
                     }
                 }
-                .buttonStyle(.bordered)
-
-                Button(role: .destructive) {
-                    Task {
-                        await onDeleteAccount(deletePasswordDraft)
-                        if !auth.isAuthenticated {
-                            showDeleteAccountConfirmation = false
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(auth.isSubmitting ? "Deleting..." : "Delete", role: .destructive) {
+                        Task {
+                            await onDeleteAccount(deletePasswordDraft)
+                            if !auth.isAuthenticated {
+                                activeAuthSheet = nil
+                            }
                         }
                     }
-                } label: {
-                    Text(auth.isSubmitting ? "Deleting..." : "Delete")
-                        .frame(maxWidth: .infinity)
+                    .disabled(auth.isSubmitting || deletePasswordDraft.isEmpty)
+                    .accessibilityIdentifier("settings.auth.deleteConfirm")
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.red)
-                .disabled(auth.isSubmitting || deletePasswordDraft.isEmpty)
-                .accessibilityIdentifier("settings.auth.deleteConfirm")
             }
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(Color.red.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .stroke(Color.red.opacity(0.22), lineWidth: 1)
-                )
-        )
-        .accessibilityElement(children: .contain)
     }
 
     private var communityLabsSection: some View {
@@ -1074,7 +1058,12 @@ struct SettingsTabView: View {
                 NavigationLink {
                     UpgradeStoreView(settings: viewModel)
                 } label: {
-                    settingsNavRow("Upgrade & Store", systemImage: "star.fill", badge: nil)
+                    settingsNavRow(
+                        "Upgrade & Store",
+                        systemImage: "star.fill",
+                        badge: nil,
+                        accessibilityIdentifier: "settings.upgradeStore"
+                    )
                 }
                 .buttonStyle(.plain)
 
@@ -1883,7 +1872,12 @@ struct SettingsTabView: View {
         .padding(.vertical, 4)
     }
 
-    private func settingsNavRow(_ label: String, systemImage: String, badge: String?) -> some View {
+    private func settingsNavRow(
+        _ label: String,
+        systemImage: String,
+        badge: String?,
+        accessibilityIdentifier: String? = nil
+    ) -> some View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
                 .font(.body.weight(.medium))
@@ -1913,6 +1907,17 @@ struct SettingsTabView: View {
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget, alignment: .leading)
         .contentShape(Rectangle())
+        .accessibilityIdentifier(accessibilityIdentifier ?? settingsRowAccessibilityID(for: label))
+    }
+
+    private func settingsRowAccessibilityID(for label: String) -> String {
+        let normalized = label
+            .lowercased()
+            .replacingOccurrences(of: "&", with: "and")
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: ".")
+        return "settings.row.\(normalized)"
     }
 
     // MARK: - Card container

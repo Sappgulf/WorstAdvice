@@ -130,9 +130,16 @@ struct ContentView: View {
 
     private var launchArguments: [String] { ProcessInfo.processInfo.arguments }
     private var isUITesting: Bool { launchArguments.contains("-ui-testing") }
+    private var isScreenshotMode: Bool { isUITesting && launchArguments.contains("-screenshot-mode") }
+    private var shouldPreloadDebugPolishFixtures: Bool {
+        isUITesting && (isScreenshotMode || launchArguments.contains("-debug-preload-polish-fixtures"))
+    }
+    private var isHostedUnitTesting: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
     private var settingsTabAvailable: Bool { auth?.isAuthenticated == true && session != nil }
     private var shouldAutoGenerateAdviceOnOpen: Bool {
-        !isUITesting && !launchArguments.contains("-debug-preload-polish-fixtures")
+        !isUITesting && !shouldPreloadDebugPolishFixtures
     }
 
     var body: some View {
@@ -424,11 +431,12 @@ struct ContentView: View {
             newSession.bootstrapExperienceIfNeeded(
                 autoGenerateInitialAdvice: shouldAutoGenerateAdviceOnOpen
             )
-            if isUITesting, launchArguments.contains("-debug-preload-polish-fixtures") {
+            if shouldPreloadDebugPolishFixtures {
                 let seed = intLaunchArgumentValue(after: "-debug-polish-seed") ?? 424_242
                 Self.logger.info("Awaiting debug polish preload")
                 await newSession.preloadDebugPolishFixturesIfNeeded(seed: seed)
             }
+            applyScreenshotStartTabIfNeeded(session: newSession)
         }
     }
 
@@ -504,11 +512,16 @@ struct ContentView: View {
         newSession.bootstrapExperienceIfNeeded(
             autoGenerateInitialAdvice: shouldAutoGenerateAdviceOnOpen
         )
-        if isUITesting, launchArguments.contains("-debug-preload-polish-fixtures") {
+        if shouldPreloadDebugPolishFixtures {
             let seed = intLaunchArgumentValue(after: "-debug-polish-seed") ?? 424_242
             Task {
                 await newSession.preloadDebugPolishFixturesIfNeeded(seed: seed)
+                await MainActor.run {
+                    applyScreenshotStartTabIfNeeded(session: newSession)
+                }
             }
+        } else {
+            applyScreenshotStartTabIfNeeded(session: newSession)
         }
     }
 
@@ -777,10 +790,10 @@ struct ContentView: View {
             activeSession?.repository.purgeCurrentAccountData()
             hasResetUITestData = true
         }
-        if isUITesting, launchArguments.contains("-skip-onboarding") {
+        if isUITesting, launchArguments.contains("-skip-onboarding") || isScreenshotMode {
             hasSeenOnboarding = true
         }
-        if isUITesting, launchArguments.contains("-skip-splash") {
+        if isUITesting, launchArguments.contains("-skip-splash") || isScreenshotMode {
             showSplash = false
         }
         if isUITesting {
@@ -796,6 +809,32 @@ struct ContentView: View {
         let valueIndex = launchArguments.index(after: flagIndex)
         guard valueIndex < launchArguments.endIndex else { return nil }
         return Int(launchArguments[valueIndex])
+    }
+
+    private func stringLaunchArgumentValue(after flag: String) -> String? {
+        guard let flagIndex = launchArguments.firstIndex(of: flag) else { return nil }
+        let valueIndex = launchArguments.index(after: flagIndex)
+        guard valueIndex < launchArguments.endIndex else { return nil }
+        return launchArguments[valueIndex]
+    }
+
+    private func applyScreenshotStartTabIfNeeded(session: AppSessionViewModel) {
+        guard isScreenshotMode,
+              let rawTab = stringLaunchArgumentValue(after: "-screenshot-start-tab"),
+              let tab = AppTab(rawValue: rawTab)
+        else { return }
+
+        if tab == .settings {
+            showingSettingsRoot = true
+            tabBarVisible = true
+            return
+        }
+
+        showingSettingsRoot = false
+        loadedTabs.insert(tab)
+        selectedTab = tab
+        tabBarVisible = true
+        session.settings.reduceMotion = true
     }
 
     private func routeIncomingDeepLink(_ url: URL, session: AppSessionViewModel) async {
@@ -951,6 +990,8 @@ struct ContentView: View {
     }
 
     private func handlePendingAppIntent(for session: AppSessionViewModel) async {
+        guard !isHostedUnitTesting else { return }
+
         while let pendingInviteID = referralManager.consumePendingInviteID() {
             Self.logger.info("Replaying queued invite deep link: \(pendingInviteID, privacy: .public)")
             setSelectedTab(.friends, session: session)

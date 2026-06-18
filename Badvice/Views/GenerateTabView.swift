@@ -45,6 +45,13 @@ struct GenerateTabView: View {
     private var isMotionReduced: Bool {
         settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion
     }
+    private var isScreenshotMode: Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.contains("-ui-testing") && arguments.contains("-screenshot-mode")
+    }
+    private var usesCompactScreenshotLayout: Bool {
+        isScreenshotMode && UIScreen.main.bounds.height <= 700
+    }
 
     // Hoist per-theme lookups so each is a single switch instead of many repeated calls per body
     private var accent: Color { Theme.accent(for: settings.theme) }
@@ -63,21 +70,6 @@ struct GenerateTabView: View {
             return "\(viewModel.challengeStreakDays)-day streak active."
         }
         return "Generate, save, copy, share, or remix."
-    }
-    private var coreLoopStatus: String {
-        if viewModel.isGenerating {
-            return "Working"
-        }
-        if viewModel.current == nil {
-            return "Start"
-        }
-        if viewModel.isCurrentFavorite {
-            return "Saved"
-        }
-        if viewModel.todayGeneratedCount > 1 {
-            return "Remix"
-        }
-        return "Share"
     }
     private var socialEntryPrompt: String {
         social.availability.isAccountAvailable
@@ -437,12 +429,14 @@ struct GenerateTabView: View {
                                 .transition(.move(edge: .top).combined(with: .opacity))
                         }
 
-                        headerView
-                        generationHeroCard
-                        selectorRow
-                        scenarioComposer
+                        if !usesCompactScreenshotLayout {
+                            headerView
+                        }
+                        generationCommandCard
                         primaryActionButtons
-                        dailyProgressCard
+                        if viewModel.current != nil || viewModel.todayGeneratedCount > 0 {
+                            dailyProgressCard
+                        }
                         if let notice = viewModel.generationNotice, !notice.isEmpty {
                             Text(notice)
                                 .font(.caption)
@@ -748,67 +742,46 @@ struct GenerateTabView: View {
         }
     }
 
-    private var generationHeroCard: some View {
+    private var generationCommandCard: some View {
         SectionShell(accent: accent, cardColor: cardColor) {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius + 2, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
                                     accent.opacity(0.95),
-                                    accent.opacity(0.55),
-                                    cardColor.opacity(0.9),
+                                    (Theme.secondaryAccent(for: settings.theme) ?? accent).opacity(0.62),
+                                    cardColor.opacity(0.88),
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                    Image(systemName: "wand.and.stars")
+                    Image(systemName: "sparkles")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(buttonText)
                 }
                 .frame(width: 52, height: 52)
-                .shadow(color: accent.opacity(0.25), radius: 10, x: 0, y: 5)
+                .shadow(color: accent.opacity(0.22), radius: 10, x: 0, y: 5)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Generate bad advice")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(commandCardTitle)
                         .font(.headline.weight(.bold))
                         .foregroundStyle(primaryText)
-                    Text("One lane, one tone, one optional detail. Everything else stays out of the way.")
+                    Text(commandCardSubtitle)
                         .font(.footnote)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
         } content: {
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), spacing: 8),
-                    GridItem(.flexible(), spacing: 8),
-                ],
-                spacing: 8
-            ) {
-                generationHeroChip(
-                    title: "Lane",
-                    value: viewModel.selectedCategory.title,
-                    systemImage: "square.grid.2x2"
-                )
-                generationHeroChip(
-                    title: "Tone",
-                    value: viewModel.selectedTone.title,
-                    systemImage: "message.fill"
-                )
-                generationHeroChip(
-                    title: "Runs",
-                    value: "\(viewModel.todayGeneratedCount)",
-                    systemImage: "sparkles"
-                )
-                generationHeroChip(
-                    title: "Next",
-                    value: coreLoopStatus,
-                    systemImage: "arrow.forward.circle"
-                )
+            VStack(alignment: .leading, spacing: 14) {
+                generationHeroMetrics
+                if !usesCompactScreenshotLayout {
+                    selectorRow
+                }
+                scenarioComposerFields
             }
         }
         .shadow(
@@ -817,11 +790,49 @@ struct GenerateTabView: View {
             x: 0,
             y: Theme.cardShadow(for: settings.theme).y * 0.35
         )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Generate summary")
-        .accessibilityValue(
-            "Category \(viewModel.selectedCategory.title), tone \(viewModel.selectedTone.title), \(viewModel.todayGeneratedCount) generated today"
-        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("generate.commandCard")
+    }
+
+    private var commandCardTitle: String {
+        if viewModel.isGenerating { return "Writing the bad idea" }
+        if viewModel.current == nil { return "Build one bad idea" }
+        if viewModel.isCurrentFavorite { return "Saved. Now send it." }
+        return "Tune the next take"
+    }
+
+    private var commandCardSubtitle: String {
+        if viewModel.isGenerating {
+            return "Category, tone, and your one detail are locked in for this run."
+        }
+        if viewModel.current == nil {
+            return "Choose a lane, set the voice, add one detail, then generate."
+        }
+        if viewModel.isCurrentFavorite {
+            return "Share the keeper or remix only when the tone needs a sharper edge."
+        }
+        return "Save the line if it works, or adjust the prompt before the next run."
+    }
+
+    private var generationHeroMetrics: some View {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: 8),
+                GridItem(.flexible(), spacing: 8),
+            ],
+            spacing: 8
+        ) {
+            generationHeroChip(
+                title: "Lane",
+                value: viewModel.selectedCategory.title,
+                systemImage: "square.grid.2x2"
+            )
+            generationHeroChip(
+                title: "Tone",
+                value: viewModel.selectedTone.title,
+                systemImage: "message.fill"
+            )
+        }
     }
 
     private func generationHeroChip(title: String, value: String, systemImage: String) -> some View {
@@ -1102,14 +1113,43 @@ struct GenerateTabView: View {
             }
             .accessibilityIdentifier(accessibilityPrefix)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    chips()
+            if isScreenshotMode {
+                HStack {
+                    selectedScreenshotChip(selectedSummary)
+                    Spacer(minLength: 0)
                 }
-                .padding(.trailing, 4)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        chips()
+                    }
+                    .padding(.trailing, 4)
+                }
             }
         }
         .padding(.horizontal, 2)
+    }
+
+    private func selectedScreenshotChip(_ label: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.caption.weight(.bold))
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .foregroundStyle(buttonText)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(
+            Capsule(style: .continuous)
+                .fill(accent.opacity(0.2))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(accent.opacity(0.35), lineWidth: 1)
+        )
     }
 
     private func selectorChip(
@@ -1183,7 +1223,7 @@ struct GenerateTabView: View {
         )
     }
 
-    private var scenarioComposer: some View {
+    private var scenarioComposerFields: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Label("Situation", systemImage: "text.alignleft")
@@ -1220,15 +1260,6 @@ struct GenerateTabView: View {
                 )
                 .foregroundStyle(primaryText)
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(cardColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .stroke(accent.opacity(0.1), lineWidth: 1)
-                )
-        )
     }
 
     @ViewBuilder

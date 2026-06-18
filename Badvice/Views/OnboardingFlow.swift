@@ -23,6 +23,7 @@ struct OnboardingFlow: View {
         let title: String
         let subtitle: String
         let kicker: String
+        let previewTitle: String
         let previewAdvice: String
         let accent: Color
         let background: LinearGradient
@@ -30,56 +31,62 @@ struct OnboardingFlow: View {
 
     private let pages: [Page] = [
         Page(
-            icon: "sparkles",
-            title: "Start in\nAdvice.",
-            subtitle: "Pick a category, type a scenario, and get one polished bad idea at a time.",
-            kicker: "Start fast. Improve as you go.",
-            previewAdvice: "\"Need a way to ask for extra tasks without sounding needy?\"",
+            icon: "slider.horizontal.3",
+            title: "Build one\ncommand.",
+            subtitle: "Pick a category and tone first. Add details only when the moment needs them.",
+            kicker: "One focused setup, not a form.",
+            previewTitle: "Command card",
+            previewAdvice: "Career + Corporate Consultant is ready for the first run.",
             accent: Color(hex: "8F4A22"),
             background: LinearGradient(colors: [Color(hex: "F7F2E8"), Color(hex: "F1E4D4")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
-            icon: "quote.bubble.fill",
-            title: "Keep the\nbest ones.",
-            subtitle: "History remembers every run. Favorites keeps the best ideas ready for the next moment.",
-            kicker: "Save instantly, share later.",
-            previewAdvice: "\"I’m all about clarity, so let me turn this into one sharp line.\"",
+            icon: "bolt.fill",
+            title: "Generate with\nintent.",
+            subtitle: "The primary button stays close to the setup so each run feels deliberate.",
+            kicker: "Tap once. Review fast.",
+            previewTitle: "First result",
+            previewAdvice: "\"Volunteer for the project, then immediately ask who owns the consequences.\"",
             accent: Color(hex: "7E4B7A"),
             background: LinearGradient(colors: [Color(hex: "F3EAF6"), Color(hex: "E6D7F0")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "square.and.arrow.up",
-            title: "Library makes it\ndaily.",
-            subtitle: "Open Library for your daily line, ratings, and share-ready moments.",
-            kicker: "One clean loop, no clutter.",
-            previewAdvice: "\"No idea has to stay hidden once it’s helped two friends already.\"",
+            title: "Save the\nusable chaos.",
+            subtitle: "Favorite, copy, share, or remix from the result instead of hunting through clutter.",
+            kicker: "Keep momentum in reach.",
+            previewTitle: "Next action",
+            previewAdvice: "Share the line, then remix it when the same problem comes back louder.",
             accent: Color(hex: "2E6F64"),
             background: LinearGradient(colors: [Color(hex: "EAF6F3"), Color(hex: "D8EFE8")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "flame.fill",
             title: "Missions track\nmomentum.",
-            subtitle: "Missions show your daily challenge, weekly push, and momentum.",
+            subtitle: "Missions turn runs, saves, and shares into a visible daily rhythm.",
             kicker: "Tiny habits, loud consistency.",
-            previewAdvice: "\"Beat my own score today and turn that embarrassment into progress.\"",
+            previewTitle: "Today",
+            previewAdvice: "Generate once, save one keeper, then decide whether the streak deserves mercy.",
             accent: Color(hex: "B84A14"),
             background: LinearGradient(colors: [Color(hex: "FDF3EC"), Color(hex: "F7E0CC")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
-            icon: "person.2.fill",
-            title: "Social opens\nwhen you are ready.",
-            subtitle: "Profile first, then friend, first share, and first collab. No noise, only real connection.",
-            kicker: "Social grows when advice is already flowing.",
-            previewAdvice: "\"I’m not here to brag; I’m here to help our team sound cooler, faster.\"",
+            icon: "quote.bubble.fill",
+            title: "Quotes keep it\nwarm.",
+            subtitle: "Daily quotes give you a quick rating loop when you are not generating.",
+            kicker: "Open, rate, move on.",
+            previewTitle: "Daily quote",
+            previewAdvice: "\"Consistency is just chaos with a calendar invite.\"",
             accent: Color(hex: "2B5CA8"),
             background: LinearGradient(colors: [Color(hex: "EBF2FE"), Color(hex: "D6E6FF")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "map.fill",
-            title: "One loop to\nremember.",
-            subtitle: "Advice → Save → Missions → Quote. That is the rhythm, not a to-do.",
-            kicker: "Three taps to keep moving.",
-            previewAdvice: "\"Looping wins, even on chaotic Thursdays.\"",
+            title: "Start with a\nreal preset.",
+            subtitle: "Choose a starter category and tone. Badvice opens on Generate with your first command ready.",
+            kicker: "Command. Generate. Keep moving.",
+            previewTitle: "Starter preset",
+            previewAdvice: "Your setup is applied immediately so the first tap already has a point.",
             accent: Color(hex: "3C4E7A"),
             background: LinearGradient(colors: [Color(hex: "EAF0FB"), Color(hex: "DDE6F6")], startPoint: .topLeading, endPoint: .bottomTrailing)
         )
@@ -163,7 +170,7 @@ struct OnboardingFlow: View {
     private var onboardingControlDock: some View {
         VStack(spacing: 16) {
             HStack {
-                Text("Badvice loop")
+                Text("Command loop")
                     .font(.caption2.weight(.bold))
                     .textCase(.uppercase)
                     .tracking(1.4)
@@ -172,7 +179,7 @@ struct OnboardingFlow: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(currentPage < pages.count - 1 ? "Swipe or tap Next" : "Start in Advice")
+                Text(currentPage < pages.count - 1 ? "Swipe or tap Next" : "Start in Generate")
                     .font(.caption)
                     .foregroundStyle(pages[currentPage].accent.opacity(0.7))
             }
@@ -201,8 +208,9 @@ struct OnboardingFlow: View {
 
         previewCard(
             accent: pages[currentPage].accent,
+            title: pages[currentPage].previewTitle,
             text: pages[currentPage].previewAdvice,
-            isVisible: currentPage == 0 || currentPage == 2 || currentPage == pages.count - 1
+            isVisible: currentPage == 0 || currentPage == 1 || currentPage == 2 || currentPage == pages.count - 1
         )
 
             Button {
@@ -258,7 +266,7 @@ struct OnboardingFlow: View {
 
     private var starterChoicePanel: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Starter setup")
+            Text("Starter command")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(pages[currentPage].accent.opacity(0.9))
             chipRow(
@@ -331,7 +339,7 @@ struct OnboardingFlow: View {
         }
     }
 
-    private func previewCard(accent: Color, text: String, isVisible: Bool) -> some View {
+    private func previewCard(accent: Color, title: String, text: String, isVisible: Bool) -> some View {
         Group {
             if isVisible {
                 HStack(alignment: .top, spacing: 10) {
@@ -341,7 +349,7 @@ struct OnboardingFlow: View {
                         .padding(.top, 1)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Preview move")
+                        Text(title)
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(accent.opacity(0.76))
                         Text(text)

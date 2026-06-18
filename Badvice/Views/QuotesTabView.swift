@@ -312,6 +312,7 @@ struct QuotesTabView: View {
                 }
             }
         }
+        .accessibilityIdentifier("quotes.dailyRitual")
     }
 
     private var quoteHeaderCard: some View {
@@ -638,6 +639,7 @@ struct QuotesTabView: View {
                 Text("Daily Ritual")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
+                    .accessibilityIdentifier("quotes.dailyRitual.title")
                 Text("Read, rate, copy, share.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
@@ -649,6 +651,7 @@ struct QuotesTabView: View {
                     ritualPill(title: "Read", value: showQuoteSpotlight ? "Open" : "Pending")
                     ritualPill(title: "Rate", value: hasRated ? "Done" : "Pending")
                     ritualPill(title: "Share", value: shareStatus)
+                    ritualPill(title: "Streak", value: quoteRitualState)
                 }
 
                 HStack(spacing: 10) {
@@ -677,6 +680,21 @@ struct QuotesTabView: View {
                     .font(.caption.weight(.semibold))
                     .frame(maxWidth: .infinity, minHeight: 40)
                 }
+
+                Button {
+                    if quoteShareStatus == "Ready" {
+                        shareQuoteToFriends(dailyQuote)
+                    } else {
+                        onOpenTab?(.friends)
+                    }
+                } label: {
+                    Label(quoteFriendActionTitle, systemImage: quoteFriendActionIcon)
+                        .font(.caption.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(.bordered)
+                .tint(accent)
+                .accessibilityIdentifier("quotes.ritual.friendAction")
 
                 HStack(spacing: 8) {
                     Image(systemName: "calendar.badge.clock")
@@ -731,6 +749,31 @@ struct QuotesTabView: View {
 
     private var quoteShareButtonTitle: String {
         quoteShareStatus == "Ready" ? "Share Quote" : "Share Solo"
+    }
+
+    private var quoteRitualState: String {
+        let dailyQuote = viewModel.dailyQuote
+        if viewModel.vote(for: dailyQuote) == .none { return "Rate" }
+        if quoteShareStatus == "Ready" { return "Ready" }
+        if social.currentUser == nil { return "Setup" }
+        return "Solo"
+    }
+
+    private var quoteFriendActionTitle: String {
+        switch quoteShareStatus {
+        case "Ready":
+            return "Share To Friends"
+        case "Setup":
+            return "Set Up Friends"
+        case "Find":
+            return "Find Friends"
+        default:
+            return "Open Friends"
+        }
+    }
+
+    private var quoteFriendActionIcon: String {
+        quoteShareStatus == "Ready" ? "person.2.fill" : "person.crop.circle.badge.plus"
     }
 
     private func copyQuote(_ quote: BadQuote, isDaily: Bool) {

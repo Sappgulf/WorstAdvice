@@ -78,6 +78,9 @@ struct ShareCardRenderer {
                 withAttributes: titleAttributes
             )
 
+            drawLoopRail(in: cg, cardRect: cardRect, sideInset: sideInset, storyMode: storyMode)
+            drawBrandGlyph(in: cg, cardRect: cardRect, template: content.template)
+
             if isRedFlagTemplate {
                 let cautionRect = CGRect(
                     x: cardRect.minX, y: cardRect.minY + 94, width: cardRect.width,
@@ -258,6 +261,67 @@ struct ShareCardRenderer {
             UIColor.white.withAlphaComponent(alpha).setFill()
             cg.fill(CGRect(x: x, y: y, width: 2, height: 2))
         }
+        cg.restoreGState()
+    }
+
+    private static func drawLoopRail(
+        in cg: CGContext,
+        cardRect: CGRect,
+        sideInset: CGFloat,
+        storyMode: Bool
+    ) {
+        let railText = "COMMAND  ->  GENERATE  ->  SHARE"
+        let railAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.monospacedSystemFont(ofSize: storyMode ? 18 : 16, weight: .bold),
+            .foregroundColor: UIColor.white.withAlphaComponent(0.68),
+            .kern: 1.2,
+        ]
+        let railRect = CGRect(
+            x: cardRect.minX + sideInset,
+            y: cardRect.minY + (storyMode ? 100 : 96),
+            width: cardRect.width - (sideInset * 2),
+            height: 28
+        )
+        NSString(string: railText).draw(in: railRect, withAttributes: railAttrs)
+    }
+
+    private static func drawBrandGlyph(
+        in cg: CGContext,
+        cardRect: CGRect,
+        template: ShareCardTemplate
+    ) {
+        cg.saveGState()
+        let glyphRect = CGRect(x: cardRect.maxX - 132, y: cardRect.minY + 42, width: 72, height: 72)
+        let path = UIBezierPath(roundedRect: glyphRect, cornerRadius: 22)
+        UIColor.white.withAlphaComponent(0.12).setFill()
+        path.fill()
+        UIColor.white.withAlphaComponent(0.32).setStroke()
+        path.lineWidth = 1.4
+        path.stroke()
+
+        let mark: String
+        switch template {
+        case .redFlag:
+            mark = "!"
+        case .certified:
+            mark = "✓"
+        default:
+            mark = "B"
+        }
+        let markAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 38, weight: .black),
+            .foregroundColor: UIColor.white.withAlphaComponent(0.9),
+        ]
+        let markSize = mark.size(withAttributes: markAttrs)
+        NSString(string: mark).draw(
+            in: CGRect(
+                x: glyphRect.midX - markSize.width / 2,
+                y: glyphRect.midY - markSize.height / 2,
+                width: markSize.width,
+                height: markSize.height
+            ),
+            withAttributes: markAttrs
+        )
         cg.restoreGState()
     }
 

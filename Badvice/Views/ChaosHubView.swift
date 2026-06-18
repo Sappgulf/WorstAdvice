@@ -175,6 +175,10 @@ struct ChaosHubTabView: View {
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
 
+                    missionPathCard
+                        .opacity(contentAppeared ? 1 : 0)
+                        .offset(y: contentAppeared ? 0 : 16)
+
                     missionCard
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
@@ -584,6 +588,98 @@ struct ChaosHubTabView: View {
                 }
             }
         }
+    }
+
+    private var missionPathCard: some View {
+        cardShell {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Progression Path")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(primaryText)
+                            .accessibilityIdentifier("chaos.progressionPath.title")
+                        Text("The season is simpler when each next action has a job.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Text(missionPathBadge)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(accent)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+                }
+
+                VStack(spacing: 9) {
+                    missionPathRow(
+                        title: "Generate",
+                        detail: "Create today’s bad idea.",
+                        state: dailyMission.currentCount > 0 ? .done : .now
+                    )
+                    missionPathRow(
+                        title: "Save",
+                        detail: "Keep one line worth reusing.",
+                        state: generateViewModel.favoriteCount > 0 ? .done : (dailyMission.currentCount > 0 ? .now : .next)
+                    )
+                    missionPathRow(
+                        title: "Streak",
+                        detail: "Finish the daily mission and push the week.",
+                        state: dailyMission.isComplete ? .done : (generateViewModel.favoriteCount > 0 ? .now : .next)
+                    )
+                    missionPathRow(
+                        title: "Social",
+                        detail: "Share, collab, or post a score when the loop is active.",
+                        state: social.feedPosts.isEmpty ? (dailyMission.isComplete ? .now : .next) : .done
+                    )
+                }
+            }
+        }
+        .accessibilityIdentifier("chaos.progressionPath")
+    }
+
+    private var missionPathBadge: String {
+        if social.feedPosts.isEmpty == false { return "Loop Active" }
+        if dailyMission.isComplete { return "Share Next" }
+        if generateViewModel.favoriteCount > 0 { return "Finish Daily" }
+        if dailyMission.currentCount > 0 { return "Save Next" }
+        return "Start"
+    }
+
+    private func missionPathRow(title: String, detail: String, state: MissionPathState) -> some View {
+        let tint = state.tint(accent: accent)
+        return HStack(alignment: .top, spacing: 10) {
+            Image(systemName: state.iconName)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(tint)
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(tint.opacity(0.11)))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(primaryText)
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            Text(state.label)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(tint)
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                .fill(state == .now ? accent.opacity(0.08) : secondaryText.opacity(0.06))
+        )
     }
 
     private func rewardHintRow(title: String, detail: String, isComplete: Bool) -> some View {
@@ -1270,6 +1366,36 @@ private struct ChaosFormulaSheet: View {
             Text(formula)
                 .font(.subheadline.weight(.bold).monospacedDigit())
                 .foregroundStyle(color)
+        }
+    }
+}
+
+private enum MissionPathState {
+    case done
+    case now
+    case next
+
+    var label: String {
+        switch self {
+        case .done: return "Done"
+        case .now: return "Now"
+        case .next: return "Next"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .done: return "checkmark.circle.fill"
+        case .now: return "arrow.right.circle.fill"
+        case .next: return "circle"
+        }
+    }
+
+    func tint(accent: Color) -> Color {
+        switch self {
+        case .done: return .green
+        case .now: return accent
+        case .next: return .secondary
         }
     }
 }

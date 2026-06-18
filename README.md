@@ -35,7 +35,7 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
   - One-tap copy/share
   - Dynamic primary CTA on Advice tab (`Advise Me` rotates to fresh prompts every few generations)
   - `Surprise Me` and deterministic `Daily Drop` quick generation actions
-  - Image card export with 3 templates, subtle noise, rounded card, watermark
+  - Image card export with branded templates, subtle noise, rounded card, watermark, and command/generate/share rail
   - Supports square and story aspect ratios
   - Optional footer disclaimer: `For entertainment only`
 - Quotes:
@@ -55,12 +55,14 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
 - Viral loops:
   - Share caption presets (`Deadpan`, `Chaotic`, `Faux Expert`)
   - Streak challenge progress (3/7/14/30-day goals)
+  - Missions progression path connecting Generate, Save, Streak, and Social
   - Friend Roast flow with friend-name targeting
   - Lightweight analytics event logging hooks for key actions
   - Local voting feedback on generated advice (`like` / `dislike`)
   - Suggestion Lab for user-submitted bad advice ideas
   - Community Pulse leaderboard for top suggested topics and top liked/disliked lines
 - Social layer (CloudKit-backed):
+  - Guided setup funnel for profile, first friend, first share, and first collab
   - Profile creation with validated handles
   - Friends discovery, request/accept/decline/block flows
   - Friends feed sharing (advice + quotes)

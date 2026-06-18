@@ -25,7 +25,8 @@ struct AdviceCardView: View {
     @State private var isAdviceExpanded = false
     @State private var isGoodAdviceRevealed = false
     
-    // Triple-A Polish: Tilt & Parallax State
+    // Keep one signature refresh flourish. Interactive tilt is intentionally off
+    // so scrolling cards do not fight the main feed gesture.
     @State private var rotationX: Double = 0
     @State private var rotationY: Double = 0
     @State private var rippleScale: CGFloat = 0.5
@@ -42,6 +43,7 @@ struct AdviceCardView: View {
     private var isMotionReduced: Bool {
         reduceMotion || accessibilityReduceMotion
     }
+    private var allowsInteractiveTilt: Bool { false }
 
     var body: some View {
         let accent = Theme.accent(for: theme)
@@ -284,7 +286,7 @@ struct AdviceCardView: View {
         .simultaneousGesture(
             DragGesture(minimumDistance: 14)
                 .onChanged { value in
-                    guard !isMotionReduced else { return }
+                    guard !isMotionReduced, allowsInteractiveTilt else { return }
                     let t = value.translation
                     let dx = abs(t.width  - lastTiltTranslation.width)
                     let dy = abs(t.height - lastTiltTranslation.height)
@@ -305,7 +307,7 @@ struct AdviceCardView: View {
                     }
                 }
                 .onEnded { _ in
-                    guard !isMotionReduced else { return }
+                    guard !isMotionReduced, allowsInteractiveTilt else { return }
                     lastTiltTranslation = .zero
                     withAnimation(Theme.springSmooth) {
                         rotationX = 0

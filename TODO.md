@@ -1,18 +1,16 @@
 # Badvice Upgrade Backlog
 
 ## Now
-- Simplify `GenerateTabView` so the primary path is obvious: controls, prompt, current advice, actions.
-- Move secondary content on Generate into progressive disclosure instead of stacking everything on first load.
-- Standardize section spacing, card shells, and CTA hierarchy across `Advice`, `Social`, `Library`, and `Missions`.
-- Reduce overlapping motion treatments on `AdviceCardView` and keep one stronger signature interaction.
-- Improve empty and loading states so each state explains the next useful action.
+- Verify the new `GenerateTabView` command card, Missions progression path, Friends setup funnel, and Quotes daily ritual in browser-visible simulator proof.
+- Refresh App Store screenshots around the current primary surfaces: Generate, Missions, Quotes, Friends, Saved, and Settings using the scripted device matrix.
+- Use screenshot mode for deterministic browser proof and App Store capture prep.
+- Run `scripts/capture_screenshot_mode.sh` after UI smoke is green to refresh repeatable tab screenshots.
+- Keep empty/loading states action-led as each surface evolves.
 
 ## Next
-- Rework `ChaosHubView` into the main progression surface: streaks, missions, rewards, season status, next recommended action.
-- Simplify `FriendsTabView` into a guided setup funnel: profile, first friend, first share, first collab.
-- Make `QuotesTabView` more retention-driven with stronger daily ritual, sharing, and spotlight behavior.
-- Clarify premium tiers in `UpgradeStoreView` and connect entitlements from `StoreKitManager` to visible product value.
-- Tighten onboarding so it reflects the actual first-use loop and strongest product hooks.
+- Continue tightening progression rewards, social first-use, quote sharing, and upgrade entitlement clarity after the browser/test pass.
+- Review the scripted App Store screenshot matrix and select final App Store Connect images.
+- Consider a small generated bitmap texture/background only if it materially improves share-card or onboarding art without adding asset noise.
 
 ## Later
 - Add seasonal content loops, limited-time missions, and better reward surfaces.
