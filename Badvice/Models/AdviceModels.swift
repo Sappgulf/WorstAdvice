@@ -574,6 +574,12 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     ]
 }
 
+extension AppTab {
+    var focusModeStorageKey: String {
+        "badvice.focusmode.\(rawValue)"
+    }
+}
+
 @available(iOS 16.0, *)
 extension AppTab: AppEnum {
     static let typeDisplayRepresentation = TypeDisplayRepresentation("Badvice tab")

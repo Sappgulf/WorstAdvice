@@ -23,14 +23,13 @@ struct HistoryTabView: View {
     @Bindable var generateViewModel: GenerateViewModel
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @AppStorage(AppTab.history.focusModeStorageKey) private var isFocusMode = false
     var onUseRecord: (AdviceRecord) -> Void
     var onDataChanged: () -> Void
     var onJumpToGenerate: (() -> Void)? = nil
 
     @State private var showingClearConfirmation = false
     @State private var historyListAppeared = false
-    @State private var historyEmptyStateAppeared = false
-    @State private var historyFloatingOffset: CGFloat = 0
     @State private var activeToast: ToastMessage? = nil
     @State private var hallOfFameExpanded = false
 
@@ -99,97 +98,99 @@ struct HistoryTabView: View {
                     VStack(spacing: 0) {
                         // Search + controls header
                         VStack(spacing: 8) {
-                            InlineSearchField(
-                                text: $viewModel.searchText,
-                                prompt: "Search history",
-                                accent: accent,
-                                secondaryText: secondaryText,
-                                surfaceColor: cardColor
-                            )
+                            if !isFocusMode {
+                                InlineSearchField(
+                                    text: $viewModel.searchText,
+                                    prompt: "Search history",
+                                    accent: accent,
+                                    secondaryText: secondaryText,
+                                    surfaceColor: cardColor
+                                )
 
-                            HStack(spacing: 10) {
-                                Picker("Sort", selection: $viewModel.rankingMode) {
-                                    ForEach(HistoryViewModel.RankingMode.allCases) { mode in
-                                        Text(mode.title).tag(mode)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-
-                                Menu {
-                                    ForEach(AdviceCategory.concrete) { cat in
-                                        Button {
-                                            viewModel.selectedCategory = viewModel.selectedCategory == cat ? nil : cat
-                                        } label: {
-                                            Label(cat.title, systemImage: viewModel.selectedCategory == cat ? "checkmark" : cat.icon)
+                                HStack(spacing: 10) {
+                                    Picker("Sort", selection: $viewModel.rankingMode) {
+                                        ForEach(HistoryViewModel.RankingMode.allCases) { mode in
+                                            Text(mode.title).tag(mode)
                                         }
                                     }
-                                    Divider()
-                                    Button(role: .destructive) {
-                                        showingClearConfirmation = true
+                                    .pickerStyle(.segmented)
+
+                                    Menu {
+                                        ForEach(AdviceCategory.concrete) { cat in
+                                            Button {
+                                                viewModel.selectedCategory = viewModel.selectedCategory == cat ? nil : cat
+                                            } label: {
+                                                Label(cat.title, systemImage: viewModel.selectedCategory == cat ? "checkmark" : cat.icon)
+                                            }
+                                        }
+                                        Divider()
+                                        Button(role: .destructive) {
+                                            showingClearConfirmation = true
+                                        } label: {
+                                            Label("Clear History", systemImage: "trash")
+                                        }
                                     } label: {
-                                        Label("Clear History", systemImage: "trash")
-                                    }
-                                } label: {
-                                    Image(systemName: "ellipsis.circle")
-                                        .font(.system(size: 18, weight: .medium))
-                                        .foregroundStyle(secondaryText)
-                                        .frame(
-                                            width: Theme.compactIconButtonSize,
-                                            height: Theme.compactIconButtonSize
-                                        )
-                                        .background(
-                                            .ultraThinMaterial,
-                                            in: RoundedRectangle(
-                                                cornerRadius: Theme.compactCornerRadius,
-                                                style: .continuous
+                                        Image(systemName: "ellipsis.circle")
+                                            .font(.system(size: 18, weight: .medium))
+                                            .foregroundStyle(secondaryText)
+                                            .frame(
+                                                width: Theme.compactIconButtonSize,
+                                                height: Theme.compactIconButtonSize
                                             )
-                                        )
-                                }
-                                .accessibilityLabel("History options")
-                            }
-
-                            if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
-                                historyQuickActions
-                                    .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
-                            }
-
-                        historyCategoryChips
-
-                            // Hall of Fame card
-                            hallOfFameSection
-                                .padding(.horizontal, 0)
-
-                            // Stats strip
-                            let filtersActive = viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty
-                            HStack {
-                                Label("\(viewModel.likedCount)", systemImage: "hand.thumbsup.fill")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(accent)
-                                Text("liked")
-                                    .font(.caption)
-                                    .foregroundStyle(secondaryText)
-                                Spacer()
-                                HStack(spacing: 3) {
-                                    if filtersActive {
-                                        Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                                            .font(.caption2)
-                                            .foregroundStyle(accent)
-                                            .transition(.opacity.combined(with: .scale(scale: 0.7)))
+                                            .background(
+                                                .ultraThinMaterial,
+                                                in: RoundedRectangle(
+                                                    cornerRadius: Theme.compactCornerRadius,
+                                                    style: .continuous
+                                                )
+                                            )
                                     }
-                                    Text("\(viewModel.filteredHistory.count) shown")
-                                        .font(.caption.weight(filtersActive ? .semibold : .regular).monospacedDigit())
-                                        .foregroundStyle(filtersActive ? accent : secondaryText)
+                                    .accessibilityLabel("History options")
                                 }
-                                .animation(isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7), value: filtersActive)
-                                Spacer()
-                                Text("disliked")
-                                    .font(.caption)
-                                    .foregroundStyle(secondaryText)
-                                Label("\(viewModel.dislikedCount)", systemImage: "hand.thumbsdown.fill")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(secondaryText.opacity(0.7))
+
+                                if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
+                                    historyQuickActions
+                                        .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
+                                }
+
+                                historyCategoryChips
+
+                                // Hall of Fame card
+                                hallOfFameSection
+                                    .padding(.horizontal, 0)
+
+                                // Stats strip
+                                let filtersActive = viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty
+                                HStack {
+                                    Label("\(viewModel.likedCount)", systemImage: "hand.thumbsup.fill")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(accent)
+                                    Text("liked")
+                                        .font(.caption)
+                                        .foregroundStyle(secondaryText)
+                                    Spacer()
+                                    HStack(spacing: 3) {
+                                        if filtersActive {
+                                            Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                                                .font(.caption2)
+                                                .foregroundStyle(accent)
+                                                .transition(.opacity.combined(with: .scale(scale: 0.7)))
+                                        }
+                                        Text("\(viewModel.filteredHistory.count) shown")
+                                            .font(.caption.weight(filtersActive ? .semibold : .regular).monospacedDigit())
+                                            .foregroundStyle(filtersActive ? accent : secondaryText)
+                                    }
+                                    .animation(isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7), value: filtersActive)
+                                    Spacer()
+                                    Text("disliked")
+                                        .font(.caption)
+                                        .foregroundStyle(secondaryText)
+                                    Label("\(viewModel.dislikedCount)", systemImage: "hand.thumbsdown.fill")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(secondaryText.opacity(0.7))
+                                }
+                                .padding(.horizontal, 4)
                             }
-                            .padding(.horizontal, 4)
                         }
                         .animation(isMotionReduced ? nil : .easeInOut(duration: Theme.animFast), value: viewModel.selectedCategory == nil && viewModel.searchText.isEmpty)
                         .padding(.horizontal, 16)
@@ -210,6 +211,7 @@ struct HistoryTabView: View {
             }
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar { focusModeToolbar }
             .toolbarBackground(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .confirmationDialog(
@@ -240,6 +242,21 @@ struct HistoryTabView: View {
         .toast(item: $activeToast, accentColor: accent)
     }
 
+    @ToolbarContentBuilder
+    private var focusModeToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            TabFocusModeToggle(
+                isEnabled: isFocusMode,
+                accent: accent
+            ) {
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isFocusMode.toggle()
+                }
+            }
+        }
+    }
+
     // MARK: - Hall of Fame
 
     @ViewBuilder
@@ -249,7 +266,7 @@ struct HistoryTabView: View {
         let liked  = generateViewModel.leaderboardTopLiked
         let hasData = !shared.isEmpty || !copied.isEmpty || !liked.isEmpty
         if hasData {
-            VStack(alignment: .leading, spacing: 0) {
+            SectionShell(accent: accent, cardColor: cardColor) {
                 Button {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
@@ -258,7 +275,7 @@ struct HistoryTabView: View {
                 } label: {
                     HStack(spacing: 10) {
                         ZStack {
-                            Circle().fill(accent.opacity(0.12)).frame(width: 32, height: 32)
+                            Circle().fill(accent.opacity(0.14)).frame(width: 32, height: 32)
                             Image(systemName: "trophy.fill")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(accent)
@@ -271,26 +288,20 @@ struct HistoryTabView: View {
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(secondaryText)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
                 }
                 .buttonStyle(.plain)
-
+            } content: {
                 if hallOfFameExpanded {
                     VStack(spacing: 8) {
                         hallOfFameRow(title: "Most Shared", items: shared, icon: "square.and.arrow.up", valueLabel: { "x\($0.shareCountValue)" })
                         hallOfFameRow(title: "Most Copied", items: copied, icon: "doc.on.doc", valueLabel: { "x\($0.copyCountValue)" })
                         hallOfFameRow(title: "Liked", items: liked, icon: "hand.thumbsup.fill", valueLabel: { _ in "Saved" })
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, 2)
+                    .padding(.bottom, 6)
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(cardColor)
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(accent.opacity(0.12), lineWidth: 1))
-            )
             .padding(.bottom, 8)
         }
     }
@@ -318,7 +329,26 @@ struct HistoryTabView: View {
             }
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(secondaryText.opacity(0.08)))
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [cardColor.opacity(0.85), cardColor.opacity(0.52)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(accent.opacity(0.24), lineWidth: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(accent.opacity(0.08))
+                .frame(height: 1),
+            alignment: .top
+        )
     }
 
     private var historyList: some View {
@@ -400,10 +430,38 @@ struct HistoryTabView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+            .background(
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [cardColor.opacity(0.84), cardColor.opacity(0.58)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        LinearGradient(
+                            colors: [accent.opacity(0.08), .clear, .black.opacity(0.04)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                    .stroke(.white.opacity(0.07), lineWidth: 1)
+                    .stroke(accent.opacity(0.18), lineWidth: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                    .fill(.black.opacity(0.04))
+                    .frame(height: 1),
+                alignment: .top
+            )
+            .shadow(
+                color: .black.opacity(0.08),
+                radius: 7,
+                x: 0,
+                y: 4
             )
         }
         .buttonStyle(.plain)
@@ -498,96 +556,41 @@ struct HistoryTabView: View {
     }
 
     private var historyEmptyState: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                Circle()
-                    .fill(accent.opacity(0.08))
-                    .frame(width: 130, height: 130)
-                    .scaleEffect(historyEmptyStateAppeared ? 1.0 : 0.7)
-                    .opacity(historyEmptyStateAppeared ? 1 : 0)
-                Circle()
-                    .fill(accent.opacity(0.13))
-                    .frame(width: 100, height: 100)
-                    .offset(y: historyFloatingOffset)
-                if isMotionReduced {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 42, weight: .medium))
-                        .foregroundStyle(accent)
-                        .offset(y: historyFloatingOffset)
-                } else {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 42, weight: .medium))
-                        .foregroundStyle(accent)
-                        .offset(y: historyFloatingOffset)
-                        .symbolEffect(.bounce, options: .repeating, value: historyEmptyStateAppeared)
-                }
+        TabEmptyStatePanel(
+            icon: "clock.arrow.circlepath",
+            title: "No History Yet",
+            message: "No bad decisions on record yet.\nThat's about to change.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor,
+            reduceMotion: isMotionReduced
+        ) {
+            TabCommandActionButton(
+                title: "Generate Advice",
+                systemImage: "sparkles",
+                accent: accent,
+                buttonText: buttonText,
+                accessibilityIdentifier: "history.generate"
+            ) {
+                onJumpToGenerate?()
             }
-            .onAppear {
-                guard !isMotionReduced else { return }
-                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
-                    historyFloatingOffset = -9
-                }
-            }
-
-            VStack(spacing: 8) {
-                Text("No History Yet")
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .foregroundStyle(primaryText)
-                    .opacity(historyEmptyStateAppeared ? 1 : 0)
-                    .offset(y: historyEmptyStateAppeared ? 0 : 18)
-
-                Text("No bad decisions on record yet.\nThat's about to change.")
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(secondaryText)
-                    .lineSpacing(3)
-                    .opacity(historyEmptyStateAppeared ? 1 : 0)
-                    .offset(y: historyEmptyStateAppeared ? 0 : 12)
-            }
-
-            Button { onJumpToGenerate?() } label: {
-                Label("Generate Advice", systemImage: "sparkles")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 50)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(accent)
-            .foregroundStyle(buttonText)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .padding(.horizontal, 40)
-            .accessibilityIdentifier("history.generate")
-            .opacity(historyEmptyStateAppeared ? 1 : 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            guard !historyEmptyStateAppeared else { return }
-            if isMotionReduced {
-                historyEmptyStateAppeared = true
-            } else {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.72)) {
-                    historyEmptyStateAppeared = true
-                }
-            }
-        }
-        .onDisappear {
-            historyEmptyStateAppeared = false
-            historyFloatingOffset = 0
         }
     }
 
     private var historyQuickActions: some View {
         HStack(spacing: 10) {
-            Button {
+            TabCommandActionButton(
+                title: "Clear Filters",
+                systemImage: "line.3.horizontal.decrease.circle",
+                accent: accent,
+                buttonText: buttonText,
+                prominent: false
+            ) {
                 viewModel.selectedCategory = nil
                 viewModel.searchText = ""
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-            } label: {
-                Label("Clear Filters", systemImage: "line.3.horizontal.decrease.circle")
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
             }
-            .buttonStyle(.bordered)
-            .tint(accent)
         }
     }
 
@@ -602,47 +605,32 @@ struct HistoryTabView: View {
         )
     }
 
-    @State private var noResultsAppeared = false
-
     private var historyNoResultsState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 36, weight: .medium))
-                .foregroundStyle(secondaryText.opacity(0.65))
-                .scaleEffect(noResultsAppeared ? 1 : 0.5)
-                .rotationEffect(.degrees(noResultsAppeared ? 0 : -20))
-            Text("No matches found")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(primaryText)
-                .opacity(noResultsAppeared ? 1 : 0)
-            Text("Try a different search or category.")
-                .font(.subheadline)
-                .foregroundStyle(secondaryText)
-                .opacity(noResultsAppeared ? 1 : 0)
+        TabEmptyStatePanel(
+            icon: "magnifyingglass",
+            title: "No matches found",
+            message: "Try a different search or category.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor,
+            reduceMotion: isMotionReduced
+        ) {
             if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
-                Button {
+                TabCommandActionButton(
+                    title: "Clear Filters",
+                    systemImage: "arrow.uturn.backward",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    accessibilityIdentifier: "history.clearFilters"
+                ) {
                     viewModel.selectedCategory = nil
                     viewModel.searchText = ""
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                } label: {
-                    Label("Clear Filters", systemImage: "arrow.uturn.backward")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 20).padding(.vertical, 10)
                 }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .clipShape(Capsule(style: .continuous))
-                .accessibilityIdentifier("history.clearFilters")
-                .opacity(noResultsAppeared ? 1 : 0)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            guard !noResultsAppeared else { return }
-            if isMotionReduced { noResultsAppeared = true }
-            else { withAnimation(.spring(response: 0.5, dampingFraction: 0.72)) { noResultsAppeared = true } }
-        }
-        .onDisappear { noResultsAppeared = false }
     }
 
     private func animateHistoryListIfNeeded() {

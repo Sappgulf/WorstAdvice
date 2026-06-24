@@ -302,6 +302,180 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 5))
     }
 
+    func testTabSurfacePolishCoverageAcrossAllSurfaces() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
+
+        let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
+        XCTAssertTrue(generateTab.waitForExistence(timeout: 6))
+        generateTab.tap()
+        assertTabSurface(
+            app: app,
+            tabMarkerCandidates: [
+                app.buttons["generate.primary"],
+                app.staticTexts["Advice"],
+                app.otherElements["generate.commandCard"],
+            ],
+            commandActionIDs: ["generate.primary", "generate.save", "generate.copy", "generate.share"],
+            expectFocusToggle: true
+        )
+
+        let primaryTabs = [
+            "tab.friends",
+            "tab.chaosHub",
+            "tab.quotes",
+        ]
+        for tabID in primaryTabs {
+            let tabButton = app.buttons.matching(identifier: tabID).firstMatch
+            XCTAssertTrue(tabButton.waitForExistence(timeout: 4), "Expected primary tab visible: \(tabID)")
+            tabButton.tap()
+
+            switch tabID {
+            case "tab.friends":
+                assertTabSurface(
+                    app: app,
+                    tabMarkerCandidates: [
+                        app.buttons["friends.section.feed"],
+                        app.buttons["friends.section.collab"],
+                        app.otherElements["friends.sectionPicker"],
+                        app.staticTexts["Friends"],
+                    ],
+                    commandActionIDs: [
+                        "friends.command.feed",
+                        "friends.command.collab",
+                        "friends.newCollabDoc",
+                        "friends.openSetup.banner",
+                        "friends.openSetup.section",
+                    ],
+                    expectFocusToggle: true
+                )
+            case "tab.chaosHub":
+                assertTabSurface(
+                    app: app,
+                    tabMarkerCandidates: [
+                        app.buttons["chaos.command.primary"],
+                        app.buttons["chaos.command.generate"],
+                        app.buttons["chaos.social.submitScore"],
+                        app.staticTexts["Missions"],
+                    ],
+                    commandActionIDs: [
+                        "chaos.command.primary",
+                        "chaos.command.generate",
+                    ],
+                    expectFocusToggle: true
+                )
+            case "tab.quotes":
+                assertTabSurface(
+                    app: app,
+                    tabMarkerCandidates: [
+                        app.buttons["quotes.dailyHero"],
+                        app.buttons["quotes.command.primary"],
+                        app.staticTexts["Quotes"],
+                    ],
+                    commandActionIDs: [
+                        "quotes.command.primary",
+                        "quotes.command.daily",
+                        "quotes.command.generate",
+                        "quotes.ritual.friendAction",
+                        "quotes.spotlight.toggle",
+                    ],
+                    expectFocusToggle: true
+                )
+            default:
+                break
+            }
+        }
+
+        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "favorites", quickAccessLabel: "Favorites"))
+        assertTabSurface(
+            app: app,
+            tabMarkerCandidates: [
+                app.staticTexts["Favorites"],
+                app.buttons["favorites.command.primary"],
+                app.buttons["favorites.generate"],
+            ],
+            commandActionIDs: [
+                "favorites.command.primary",
+                "favorites.generate",
+                "favorites.clearFilters",
+            ],
+            expectFocusToggle: true
+        )
+
+        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "history", quickAccessLabel: "History"))
+        assertTabSurface(
+            app: app,
+            tabMarkerCandidates: [
+                app.staticTexts["History"],
+                app.buttons["history.command.primary"],
+                app.buttons["history.generate"],
+                app.buttons["history.clearFilters"],
+            ],
+            commandActionIDs: [
+                "history.command.primary",
+                "history.generate",
+                "history.clearFilters",
+            ],
+            expectFocusToggle: true
+        )
+
+        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "explore", quickAccessLabel: "Explore"))
+        assertTabSurface(
+            app: app,
+            tabMarkerCandidates: [
+                app.staticTexts["Explore"],
+                app.buttons["explore.command.primary"],
+                app.buttons["explore.command.reset"],
+                app.otherElements["explore.command.card"],
+                app.otherElements["explore.emptyState"],
+            ],
+            commandActionIDs: [
+                "explore.command.primary",
+                "explore.command.reset",
+                "explore.clearFilters",
+                "explore.generateFresh",
+            ],
+            expectFocusToggle: true
+        )
+
+        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "groupChallenges", quickAccessLabel: "Challenges"))
+        assertTabSurface(
+            app: app,
+            tabMarkerCandidates: [
+                app.staticTexts["Challenges"],
+                app.buttons["groupChallenges.command.primary"],
+                app.buttons["groupChallenges.command.join"],
+                app.buttons["groupChallenges.empty.create"],
+                app.buttons["groupChallenges.empty.join"],
+            ],
+            commandActionIDs: [
+                "groupChallenges.command.primary",
+                "groupChallenges.command.join",
+                "groupChallenges.empty.create",
+                "groupChallenges.empty.join",
+            ],
+            expectFocusToggle: true
+        )
+
+        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "settings", quickAccessLabel: "Settings"))
+        assertTabSurface(
+            app: app,
+            tabMarkerCandidates: [
+                app.buttons["settings.auth.signOut"],
+                app.buttons["settings.socialHealth.open"],
+                app.buttons["settings.socialHealth.view"],
+                app.staticTexts["Settings"],
+                app.navigationBars["Settings"].firstMatch,
+            ],
+            commandActionIDs: [
+                "settings.socialHealth.open",
+                "settings.socialHealth.view",
+                "settings.auth.signOut",
+                "settings.menuButton",
+            ],
+            expectFocusToggle: false
+        )
+    }
+
     private func launchTestApp(
         extraLaunchArguments: [String] = [],
         skipIntro: Bool = true,
@@ -329,11 +503,14 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         app: XCUIApplication,
         candidates: [XCUIElement],
         timeout: TimeInterval,
-        maxSwipes: Int = 0
+        maxSwipes: Int = 0,
+        requireHittable: Bool = true
     ) -> XCUIElement? {
         let timeoutDate = Date().addingTimeInterval(timeout)
         while Date() < timeoutDate {
-            if let found = candidates.first(where: { $0.exists && $0.isHittable }) {
+            if let found = candidates.first(where: {
+                requireHittable ? ($0.exists && $0.isHittable) : $0.exists
+            }) {
                 return found
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
@@ -345,14 +522,165 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             app.swipeUp()
             let postSwipeDeadline = Date().addingTimeInterval(0.4)
             while Date() < postSwipeDeadline {
-                if let found = candidates.first(where: { $0.exists && $0.isHittable }) {
+                if let found = candidates.first(where: {
+                    requireHittable ? ($0.exists && $0.isHittable) : $0.exists
+                }) {
                     return found
                 }
                 RunLoop.current.run(until: Date().addingTimeInterval(0.1))
             }
         }
 
-        return candidates.first(where: { $0.exists && $0.isHittable })
+        return candidates.first(where: { requireHittable ? ($0.exists && $0.isHittable) : $0.exists })
+    }
+
+    private func assertTabSurface(
+        app: XCUIApplication,
+        tabMarkerCandidates: [XCUIElement],
+        commandActionIDs: [String],
+        expectFocusToggle: Bool
+    ) {
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: tabMarkerCandidates,
+                timeout: 6,
+                maxSwipes: 8,
+                requireHittable: false
+            ),
+            "Expected a marker for this tab surface."
+        )
+
+        for commandID in commandActionIDs {
+            let candidates = [
+                app.buttons[commandID],
+                app.otherElements[commandID],
+                app.staticTexts[commandID],
+                app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", commandID)).firstMatch,
+                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", commandID)).firstMatch,
+            ]
+            let found = waitForAnyElement(
+                app: app,
+                candidates: candidates,
+                timeout: 4,
+                maxSwipes: 4,
+                requireHittable: false
+            )
+            XCTAssertNotNil(found, "Expected command affordance for identifier prefix \(commandID) to be present.")
+        }
+
+        if expectFocusToggle {
+            let focusToggle = app.buttons["focus.mode.toggle"]
+            if focusToggle.waitForExistence(timeout: 2) {
+                let beforeLabel = focusToggle.label
+                if focusToggle.isHittable {
+                    focusToggle.tap()
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+                    let updatedToggle = app.buttons["focus.mode.toggle"]
+                    if updatedToggle.waitForExistence(timeout: 2) {
+                        XCTAssertNotEqual(
+                            beforeLabel,
+                            updatedToggle.label,
+                            "Focus mode label should toggle state while polish controls stay visible."
+                        )
+                        if updatedToggle.isHittable {
+                            updatedToggle.tap()
+                        }
+                    }
+                }
+            }
+        }
+
+        let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
+        if generateTab.waitForExistence(timeout: 2) {
+            generateTab.tap()
+            _ = app.buttons["generate.primary"].waitForExistence(timeout: 2)
+            generateTab.tap()
+        }
+    }
+
+    private func openBrandMenu(app: XCUIApplication) -> Bool {
+        let direct = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.buttons["generate.brandMenu"],
+                app.buttons["brandMenu.recommendedFlow"],
+                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Brand")).firstMatch,
+                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Menu")).firstMatch,
+                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "More")).firstMatch,
+            ],
+            timeout: 4,
+            maxSwipes: 4,
+            requireHittable: false
+        )
+        if let direct {
+            if direct.waitForExistence(timeout: 0.2), direct.isHittable || direct.exists {
+                direct.tap()
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private func closeBrandMenu(app: XCUIApplication) {
+        let closeCandidates = [
+            app.buttons["Done"],
+            app.buttons["Close"],
+            app.buttons["Cancel"],
+            app.buttons["Done"].firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Done")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Close")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Cancel")).firstMatch,
+            app.navigationBars.buttons.firstMatch,
+        ]
+
+        if let closeTarget = waitForAnyElement(
+            app: app,
+            candidates: closeCandidates,
+            timeout: 2,
+            maxSwipes: 2,
+            requireHittable: false
+        ),
+        closeTarget.isHittable
+        {
+            closeTarget.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+        }
+    }
+
+    @discardableResult
+    private func openQuickAccessFromBrandMenu(app: XCUIApplication, quickAccessID: String, quickAccessLabel: String) -> Bool {
+        guard openBrandMenu(app: app) else {
+            return false
+        }
+
+        let quickAccess = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.buttons["brandMenu.quickAccess.\(quickAccessID)"],
+                app.buttons[quickAccessID],
+                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", quickAccessLabel)).firstMatch,
+                app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", quickAccessLabel)).firstMatch,
+            ],
+            timeout: 5,
+            maxSwipes: 6,
+            requireHittable: false
+        )
+
+        guard let quickAccess else {
+            closeBrandMenu(app: app)
+            return false
+        }
+
+        if quickAccess.waitForExistence(timeout: 2) && quickAccess.isHittable {
+            quickAccess.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+            return true
+        }
+
+        closeBrandMenu(app: app)
+        return false
     }
 
     private func waitForAppToBecomeReady(app: XCUIApplication, timeout: TimeInterval) -> Bool {

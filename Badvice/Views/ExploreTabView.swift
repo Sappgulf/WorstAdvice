@@ -9,7 +9,9 @@ struct ExploreTabView: View {
     @State private var searchText = ""
     @State private var selectedCategory: AdviceCategory?
     @State private var selectedTone: ToneMode?
+    @AppStorage(AppTab.explore.focusModeStorageKey) private var isFocusMode = false
     @Environment(\.tabBarVisible) private var tabBarVisible
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
@@ -23,6 +25,9 @@ struct ExploreTabView: View {
         selectedCategory != nil
             || selectedTone != nil
             || !normalizedSearchText.isEmpty
+    }
+    private var isMotionReduced: Bool {
+        settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion
     }
 
     var filteredTrending: [TrendingAdvice] {
@@ -49,9 +54,11 @@ struct ExploreTabView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         heroSection
 
-                        filterSection
-
                         exploreCommandCard
+
+                        if !isFocusMode {
+                            filterSection
+                        }
 
                         if filteredTrending.isEmpty {
                             emptyStateView
@@ -66,6 +73,7 @@ struct ExploreTabView: View {
                 .trackScrollForTabBar()
             }
             .navigationTitle("Explore")
+            .toolbar { exploreToolbar }
             .toolbarBackground(.hidden, for: .navigationBar)
             .searchable(text: $searchText, prompt: "Search starter ideas")
             .onAppear {
@@ -239,46 +247,39 @@ struct ExploreTabView: View {
     }
 
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 48, weight: .semibold))
-                .foregroundStyle(accent)
-            Text("No starter ideas found")
-                .font(.headline)
-                .foregroundStyle(primaryText)
-            Text("Try adjusting your filters or search terms.")
-                .font(.subheadline)
-                .foregroundStyle(secondaryText)
+        TabEmptyStatePanel(
+            icon: "magnifyingglass",
+            title: "No starter ideas found",
+            message: "Try adjusting your filters or search terms.",
+                accent: accent,
+                primaryText: primaryText,
+                secondaryText: secondaryText,
+                cardColor: cardFill,
+                reduceMotion: isMotionReduced
+                ) {
             if isFilterActive {
-                Button {
+                TabCommandActionButton(
+                    title: "Clear filters",
+                    systemImage: "xmark.circle.fill",
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "explore.clearFilters"
+                ) {
                     clearFilters()
-                } label: {
-                    Label("Clear filters", systemImage: "xmark.circle.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .foregroundStyle(.white)
-                .accessibilityIdentifier("explore.clearFilters")
             } else {
-                Button {
+                TabCommandActionButton(
+                    title: "Generate fresh advice",
+                    systemImage: "sparkles",
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "explore.generateFresh"
+                ) {
                     onJumpToGenerate(.random, .random)
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                } label: {
-                    Label("Generate fresh advice", systemImage: "sparkles")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .foregroundStyle(.white)
-                .accessibilityIdentifier("explore.generateFresh")
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(cardShell)
         .accessibilityIdentifier("explore.emptyState")
     }
 
@@ -288,9 +289,9 @@ struct ExploreTabView: View {
                 .font(.headline)
                 .foregroundStyle(primaryText)
 
-            LazyVStack(spacing: 16) {
-                ForEach(filteredTrending) { advice in
-                    TrendingAdviceCard(
+                LazyVStack(spacing: 16) {
+                    ForEach(filteredTrending) { advice in
+                        TrendingAdviceCard(
                         advice: advice,
                         analyticsId: "explore.trending.\(advice.id)",
                         accent: accent,
@@ -303,10 +304,10 @@ struct ExploreTabView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Community", systemImage: "globe")
-                    .font(.headline)
-                    .foregroundStyle(primaryText)
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("Community", systemImage: "globe")
+                        .font(.headline)
+                        .foregroundStyle(primaryText)
 
                 GlobalCommunityFeedView(
                     social: social,
@@ -315,7 +316,31 @@ struct ExploreTabView: View {
                 )
                 .frame(minHeight: 320)
                 .padding(16)
-                .background(cardShell)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                        .fill(cardColor)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [accent.opacity(0.1), .clear],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .blendMode(.screen)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                                .stroke(accent.opacity(0.14), lineWidth: 1)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                                .fill(accent.opacity(0.08))
+                                .frame(height: 2),
+                            alignment: .top
+                        )
+                )
             }
         }
     }
@@ -345,6 +370,21 @@ struct ExploreTabView: View {
             return "Clear Filters"
         }
         return "Use First Idea"
+    }
+
+    @ToolbarContentBuilder
+    private var exploreToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            TabFocusModeToggle(
+                isEnabled: isFocusMode,
+                accent: accent
+            ) {
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isFocusMode.toggle()
+                }
+            }
+        }
     }
 
     private func loadTrending() async {
@@ -406,17 +446,18 @@ struct ExploreTabView: View {
                     .font(.headline)
                     .foregroundStyle(primaryText)
                 Spacer()
-                Button(action: resetAction) {
-                    Text(resetTitle)
-                        .font(.caption.weight(.semibold))
-                        .lineLimit(1)
-                        .padding(.horizontal, 10)
-                        .frame(minHeight: 32)
-                        .contentShape(Rectangle())
-                }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(isResetSelected ? accent : secondaryText)
-                    .accessibilityIdentifier(resetIdentifier)
+                TabCommandActionButton(
+                    title: resetTitle,
+                    systemImage: isResetSelected ? "line.3.horizontal.decrease.circle" : "xmark.circle.fill",
+                    accent: isResetSelected ? accent : secondaryText,
+                    buttonText: isResetSelected ? buttonText : secondaryText,
+                    prominent: false,
+                    isDisabled: isResetSelected,
+                    minHeight: 32,
+                    action: resetAction
+                )
+                .accessibilityIdentifier(resetIdentifier)
+                .frame(width: 126)
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -431,8 +472,8 @@ struct ExploreTabView: View {
     }
 
     private var heroCardShell: some View {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
-            .fill(cardFill)
+        RoundedRectangle(cornerRadius: 30, style: .continuous)
+            .fill(cardFill.opacity(1))
             .overlay(
                 LinearGradient(
                     colors: [accent.opacity(0.16), .clear],
@@ -442,17 +483,46 @@ struct ExploreTabView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .strokeBorder(accent.opacity(0.11), lineWidth: 1)
+                    .strokeBorder(accent.opacity(0.16), lineWidth: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accent.opacity(0.3), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(height: 1.8),
+                alignment: .top
             )
             .shadow(color: .black.opacity(0.14), radius: 18, x: 0, y: 10)
     }
 
     private var cardShell: some View {
-        RoundedRectangle(cornerRadius: 24, style: .continuous)
+        RoundedRectangle(cornerRadius: 26, style: .continuous)
             .fill(cardFill)
             .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .strokeBorder(accent.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accent.opacity(0.14), .clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .blendMode(.screen)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .strokeBorder(accent.opacity(0.16), lineWidth: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(accent.opacity(0.07))
+                    .frame(height: 1.4),
+                alignment: .top
             )
             .shadow(color: .black.opacity(0.10), radius: 14, x: 0, y: 8)
     }
@@ -473,7 +543,23 @@ struct ExploreTabView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(cardFill.opacity(0.84))
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.18), accent.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(accent.opacity(0.24), lineWidth: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(accent.opacity(0.08))
+                .frame(height: 1.2),
+            alignment: .top
         )
     }
 
@@ -510,40 +596,28 @@ struct ExploreTabView: View {
     }
 }
 
-struct FilterChip: View {
-    let title: String
-    var icon: String? = nil
-    let isSelected: Bool
-    var accent: Color = .accentColor
-    var primaryText: Color = .primary
-    var secondaryText: Color = .secondary
-    var selectedText: Color = .white
-    let accessibilityIdentifier: String
-    let action: () -> Void
+    struct FilterChip: View {
+        let title: String
+        var icon: String? = nil
+        let isSelected: Bool
+        var accent: Color = .accentColor
+        var primaryText: Color = .primary
+        var secondaryText: Color = .secondary
+        let accessibilityIdentifier: String
+        let buttonText: Color
+        let action: () -> Void
 
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                if let icon = icon {
-                    Image(systemName: icon)
-                        .font(.caption)
-                }
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(isSelected ? accent : secondaryText.opacity(0.14))
-            )
-            .foregroundStyle(isSelected ? selectedText : primaryText)
-            .overlay(
-                Capsule(style: .continuous)
-                    .strokeBorder(isSelected ? accent.opacity(0.35) : Color.clear, lineWidth: 1)
-            )
+        var body: some View {
+        TabCommandActionButton(
+            title: title,
+            systemImage: icon,
+            accent: accent,
+            buttonText: buttonText,
+            prominent: isSelected,
+            minHeight: 34
+        ) {
+            action()
         }
-        .buttonStyle(.plain)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
@@ -559,7 +633,7 @@ struct TrendingAdviceCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 12) {
+            SectionShell(accent: accent, cardColor: cardFill.opacity(0.96)) {
                 HStack {
                     Label(advice.category.title, systemImage: advice.category.icon)
                         .font(.caption)
@@ -569,40 +643,30 @@ struct TrendingAdviceCard: View {
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 }
+            } content: {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(advice.adviceLine)
+                        .font(.body)
+                        .foregroundStyle(primaryText)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
 
-                Text(advice.adviceLine)
-                    .font(.body)
-                    .foregroundStyle(primaryText)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-
-                HStack {
-                    Label("\(advice.likeCount)", systemImage: "heart.fill")
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                    Label("\(advice.shareCount)", systemImage: "square.and.arrow.up")
-                        .font(.caption)
-                        .foregroundStyle(.blue)
-                    Spacer()
+                    HStack {
+                        Label("\(advice.likeCount)", systemImage: "heart.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                        Label("\(advice.shareCount)", systemImage: "square.and.arrow.up")
+                            .font(.caption)
+                            .foregroundStyle(.blue)
+                        Spacer()
+                    }
+                    .padding(.top, 2)
                 }
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(cardFill)
-                    .overlay(
-                        LinearGradient(
-                            colors: [accent.opacity(0.14), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            )
             .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(accent.opacity(0.09), lineWidth: 1)
+                RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                    .stroke(accent.opacity(0.16), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.10), radius: 12, x: 0, y: 8)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(analyticsId)

@@ -21,8 +21,10 @@ struct FriendsTabView: View {
     @State private var collabEditorVersion: Int64 = 0
     @State private var collabEditorType: SocialPostType = .advice
     @State private var collabEditorContributors: [SocialUser] = []
+    @AppStorage(AppTab.friends.focusModeStorageKey) private var isFocusMode = false
 
     @Environment(\.tabBarVisible) private var tabBarVisible
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
@@ -204,11 +206,15 @@ struct FriendsTabView: View {
                 VStack(spacing: 12) {
                     friendsHeader
                     friendsCommandCard
-                    friendsSetupFunnelCard
-                    friendsStateBanner
+                    if !isFocusMode {
+                        friendsSetupFunnelCard
+                        friendsStateBanner
+                    }
 
                     sectionPicker
-                    sectionAccessibilityAnchor
+                    if !isFocusMode {
+                        sectionAccessibilityAnchor
+                    }
                     switch selectedSection {
                     case .friends:
                         friendsSection
@@ -228,6 +234,7 @@ struct FriendsTabView: View {
         .accessibilityIdentifier("friends.root")
         .accessibilityElement(children: .contain)
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
+        .toolbar { friendsToolbar }
         .onAppear {
             tabBarVisible.wrappedValue = true
             #if DEBUG
@@ -287,6 +294,21 @@ struct FriendsTabView: View {
             currentSectionAnchor(label: "Friends feed is empty.", identifier: "friends.feed.empty")
         } else if selectedSection == .collab && social.collabDocs.isEmpty {
             currentSectionAnchor(label: "Shared drafts are empty.", identifier: "friends.collab.empty")
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var friendsToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            TabFocusModeToggle(
+                isEnabled: isFocusMode,
+                accent: accent
+            ) {
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isFocusMode.toggle()
+                }
+            }
         }
     }
 
@@ -498,20 +520,15 @@ struct FriendsTabView: View {
             }
             .accessibilityIdentifier("friends.setupFunnel.progress")
 
-            Button {
+            TabCommandActionButton(
+                title: friendsSetupActionTitle,
+                systemImage: friendsSetupActionIcon,
+                accent: accent,
+                buttonText: buttonText,
+                accessibilityIdentifier: "friends.setupFunnel.primary"
+            ) {
                 performCurrentSetupStep()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: friendsSetupActionIcon)
-                    Text(friendsSetupActionTitle)
-                        .accessibilityIdentifier("friends.setupFunnel.primary.title")
-                }
-                .font(.caption.weight(.bold))
-                .frame(maxWidth: .infinity, minHeight: 40)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(accent)
-            .foregroundStyle(buttonText)
             .accessibilityLabel(friendsSetupActionTitle)
             .accessibilityHint("Continues the Friends setup path.")
             .accessibilityIdentifier("friends.setupFunnel.primary")
@@ -577,22 +594,27 @@ struct FriendsTabView: View {
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                     VStack(spacing: 8) {
-                        Button("Retry") {
+                        TabCommandActionButton(
+                            title: "Retry",
+                            systemImage: "arrow.clockwise",
+                            accent: accent,
+                            buttonText: buttonText,
+                            accessibilityIdentifier: "friends.retryLoad"
+                        ) {
                             Task { await social.retryFriendsLoad() }
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(accent)
-                        .foregroundStyle(buttonText)
-                        .accessibilityIdentifier("friends.retryLoad")
-                        .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
 
                             if social.needsProfileSetup {
-                                Button("Open Setup") {
+                                TabCommandActionButton(
+                                    title: "Open Setup",
+                                    systemImage: "person.crop.circle.badge.plus",
+                                    accent: accent,
+                                    buttonText: buttonText,
+                                    prominent: false,
+                                    accessibilityIdentifier: "friends.openSetup.banner"
+                                ) {
                                     openFriendsSetupFlow()
                                 }
-                            .buttonStyle(.bordered)
-                            .accessibilityIdentifier("friends.openSetup.banner")
-                            .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
                         }
                     }
                     #if DEBUG
@@ -636,6 +658,10 @@ struct FriendsTabView: View {
 
     private var friendsSetupProgress: Double {
         Double(friendsSetupCompletedSteps) / 4.0
+    }
+
+    private var isMotionReduced: Bool {
+        settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion
     }
 
     private var friendsSetupActionTitle: String {
@@ -805,21 +831,26 @@ struct FriendsTabView: View {
                             .font(.caption)
                             .foregroundStyle(secondaryText)
                         VStack(spacing: 8) {
-                            Button("Open Setup") {
+                            TabCommandActionButton(
+                                title: "Open Setup",
+                                systemImage: "person.crop.circle.badge.plus",
+                                accent: accent,
+                                buttonText: buttonText,
+                                accessibilityIdentifier: "friends.openSetup.section"
+                            ) {
                                 openFriendsSetupFlow()
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(accent)
-                            .foregroundStyle(buttonText)
-                            .accessibilityIdentifier("friends.openSetup.section")
-                            .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
 
-                            Button("Retry CloudKit") {
+                            TabCommandActionButton(
+                                title: "Retry CloudKit",
+                                systemImage: "arrow.clockwise",
+                                accent: accent,
+                                buttonText: buttonText,
+                                prominent: false,
+                                accessibilityIdentifier: "friends.retryCloudKit"
+                            ) {
                                 Task { await social.retryFriendsLoad() }
                             }
-                            .buttonStyle(.bordered)
-                            .accessibilityIdentifier("friends.retryCloudKit")
-                            .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget)
                         }
                         .font(.caption.weight(.semibold))
                     }
@@ -860,26 +891,41 @@ struct FriendsTabView: View {
                         }
 
                         HStack(spacing: 8) {
-                            Button("Open Generate") {
+                            TabCommandActionButton(
+                                title: "Open Generate",
+                                systemImage: "sparkles",
+                                accent: accent,
+                                buttonText: buttonText,
+                                accessibilityIdentifier: "friends.generate"
+                            ) {
                                 onOpenTab?(.generate)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(accent)
-                            .foregroundStyle(buttonText)
 
-                            Button("Browse Quotes") {
+                            TabCommandActionButton(
+                                title: "Browse Quotes",
+                                systemImage: "quote.bubble",
+                                accent: accent,
+                                buttonText: buttonText,
+                                prominent: false,
+                                accessibilityIdentifier: "friends.browseQuotes"
+                            ) {
                                 onOpenTab?(.quotes)
                             }
-                            .buttonStyle(.bordered)
 
-                            Button("Copy My Handle") {
+                            TabCommandActionButton(
+                                title: "Copy My Handle",
+                                systemImage: "doc.on.doc",
+                                accent: accent,
+                                buttonText: buttonText,
+                                prominent: false,
+                                accessibilityIdentifier: "friends.copyHandle"
+                            ) {
                                 UIPasteboard.general.string = "@\(currentUser.handle)"
                                 activeToast = ToastMessage(
                                     message: "Copied @\(currentUser.handle)",
                                     style: .success
                                 )
                             }
-                            .buttonStyle(.bordered)
                         }
                         .font(.caption.weight(.semibold))
                     }
@@ -915,20 +961,20 @@ struct FriendsTabView: View {
                                 }
                             }
 
-                        Button {
+                        TabCommandActionButton(
+                            title: "Find",
+                            systemImage: "magnifyingglass",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: true,
+                            minHeight: 42,
+                            accessibilityIdentifier: "friends.searchButton",
+                            isDisabled: !canSearchForFriends
+                        ) {
                             Task {
                                 await social.searchUserByHandle(normalizedHandleSearchText)
                             }
-                        } label: {
-                            Text("Find")
-                                .font(.caption.weight(.bold))
-                                .frame(minWidth: 70, minHeight: 42)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(accent)
-                        .foregroundStyle(buttonText)
-                        .disabled(!canSearchForFriends)
-                        .accessibilityIdentifier("friends.searchButton")
                     }
 
                     if let result = social.latestSearchResult {
@@ -946,20 +992,18 @@ struct FriendsTabView: View {
                                     .foregroundStyle(secondaryText)
                             }
                             Spacer(minLength: 8)
-                            Button {
+                            TabCommandActionButton(
+                                title: relationshipState.buttonTitle,
+                                systemImage: relationshipState.isActionEnabled ? "person.badge.plus" : "person.fill.xmark",
+                                accent: accent,
+                                buttonText: buttonText,
+                                prominent: true,
+                                isDisabled: !relationshipState.isActionEnabled || !social.socialFeaturesEnabled,
+                                accessibilityIdentifier: "friends.addButton"
+                            ) {
                                 guard relationshipState.isActionEnabled else { return }
                                 Task { await social.sendFriendRequest(to: result) }
-                            } label: {
-                                Text(relationshipState.buttonTitle)
-                                    .font(.caption.weight(.bold))
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(Capsule(style: .continuous).fill(accent))
-                                    .foregroundStyle(buttonText)
                             }
-                            .buttonStyle(.plain)
-                            .disabled(!relationshipState.isActionEnabled || !social.socialFeaturesEnabled)
-                            .accessibilityIdentifier("friends.addButton")
                         }
                         .padding(10)
                         .background(
@@ -998,19 +1042,28 @@ struct FriendsTabView: View {
                                         .foregroundStyle(secondaryText)
                                 }
                                 Spacer(minLength: 8)
-                                Button("Accept") {
+                                TabCommandActionButton(
+                                    title: "Accept",
+                                    systemImage: "checkmark.seal.fill",
+                                    accent: accent,
+                                    buttonText: buttonText,
+                                    prominent: false,
+                                    accessibilityIdentifier: "friends.acceptRequest"
+                                ) {
                                     Task { await social.acceptRequest(request) }
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .tint(accent)
-                                .font(.caption.weight(.semibold))
                                 .disabled(!social.socialFeaturesEnabled)
 
-                                Button("Decline") {
+                                TabCommandActionButton(
+                                    title: "Decline",
+                                    systemImage: "xmark.circle",
+                                    accent: accent,
+                                    buttonText: buttonText,
+                                    prominent: false,
+                                    accessibilityIdentifier: "friends.declineRequest"
+                                ) {
                                     Task { await social.declineRequest(request) }
                                 }
-                                .buttonStyle(.bordered)
-                                .font(.caption.weight(.semibold))
                                 .disabled(!social.socialFeaturesEnabled)
                             }
                         }
@@ -1056,17 +1109,19 @@ struct FriendsTabView: View {
                                 .font(.caption)
                                 .foregroundStyle(secondaryText)
                             if let currentUser = social.currentUser {
-                                Button("Copy @\(currentUser.handle)") {
+                                TabCommandActionButton(
+                                    title: "Copy @\(currentUser.handle)",
+                                    systemImage: "doc.on.doc",
+                                    accent: accent,
+                                    buttonText: buttonText,
+                                    accessibilityIdentifier: "friends.copyHandleCurrent"
+                                ) {
                                     UIPasteboard.general.string = "@\(currentUser.handle)"
                                     activeToast = ToastMessage(
                                         message: "Copied @\(currentUser.handle)",
                                         style: .success
                                     )
                                 }
-                                .buttonStyle(.borderedProminent)
-                                .tint(accent)
-                                .foregroundStyle(buttonText)
-                                .font(.caption.weight(.semibold))
                             }
                         }
                     } else {
@@ -1081,19 +1136,28 @@ struct FriendsTabView: View {
                                         .foregroundStyle(secondaryText)
                                 }
                                 Spacer(minLength: 8)
-                                Button("Block") {
+                                TabCommandActionButton(
+                                    title: "Block",
+                                    systemImage: "xmark.circle",
+                                    accent: .red,
+                                    buttonText: buttonText,
+                                    prominent: false,
+                                    accessibilityIdentifier: "friends.block"
+                                ) {
                                     Task { await social.block(friend) }
                                 }
-                                .buttonStyle(.bordered)
-                                .font(.caption.weight(.semibold))
-                                .tint(.red)
                                 .disabled(!social.socialFeaturesEnabled)
 
-                                Button("Report") {
+                                TabCommandActionButton(
+                                    title: "Report",
+                                    systemImage: "flag.fill",
+                                    accent: accent,
+                                    buttonText: buttonText,
+                                    prominent: false,
+                                    accessibilityIdentifier: "friends.report"
+                                ) {
                                     social.report(user: friend)
                                 }
-                                .buttonStyle(.bordered)
-                                .font(.caption.weight(.semibold))
                             }
                         }
                     }
@@ -1141,54 +1205,65 @@ struct FriendsTabView: View {
             }
 
             if social.feedPosts.isEmpty {
-                socialCard {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(
-                            social.friends.isEmpty
-                                ? "Add friends first, then share from Generate or Quotes to wake up the feed."
-                                : "Nobody has posted yet. Be first and break the silence."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(secondaryText)
-
-                        VStack(spacing: 8) {
-                            Button("Find Friends") {
+                TabEmptyStatePanel(
+                    icon: "person.3.fill",
+                    title: social.friends.isEmpty ? "Add friends first" : "Feed is quiet",
+                    message: social.friends.isEmpty
+                        ? "Add friends first, then share from Generate or Quotes to wake up the feed."
+                        : "Nobody has posted yet. Be first and break the silence.",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText,
+                    cardColor: cardColor,
+                    reduceMotion: isMotionReduced
+                ) {
+                HStack(spacing: 8) {
+                        if social.friends.isEmpty {
+                            TabCommandActionButton(
+                                title: "Find Friends",
+                                systemImage: "magnifyingglass",
+                                accent: accent,
+                                buttonText: buttonText,
+                                accessibilityIdentifier: "friends.feed.findFriends"
+                            ) {
                                 openFriendsSection(.friends)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(accent)
-                            .foregroundStyle(buttonText)
-                            .frame(maxWidth: .infinity, minHeight: 42)
-                            .accessibilityIdentifier("friends.feed.findFriends")
-
-                            HStack(spacing: 8) {
-                                Button("Open Generate") {
-                                    onOpenTab?(.generate)
-                                }
-                                .buttonStyle(.bordered)
-                                .frame(maxWidth: .infinity, minHeight: 40)
-                                .accessibilityIdentifier("friends.feed.openGenerate")
-
-                                Button("Open Quotes") {
-                                    onOpenTab?(.quotes)
-                                }
-                                .buttonStyle(.bordered)
-                                .frame(maxWidth: .infinity, minHeight: 40)
-                                .accessibilityIdentifier("friends.feed.openQuotes")
-                            }
-
-                            Button("Refresh Social") {
-                                Task { await social.refreshSocialData() }
-                            }
-                            .buttonStyle(.bordered)
-                            .frame(maxWidth: .infinity, minHeight: 40)
-                            .disabled(!social.socialFeaturesEnabled)
-                            .accessibilityIdentifier("friends.feed.refresh")
                         }
-                        .font(.caption.weight(.semibold))
+
+                        TabCommandActionButton(
+                            title: "Open Generate",
+                            systemImage: "sparkles",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: false,
+                            accessibilityIdentifier: "friends.feed.openGenerate"
+                        ) {
+                            onOpenTab?(.generate)
+                        }
+
+                        TabCommandActionButton(
+                            title: "Open Quotes",
+                            systemImage: "quote.bubble",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: false,
+                            accessibilityIdentifier: "friends.feed.openQuotes"
+                        ) {
+                            onOpenTab?(.quotes)
+                        }
                     }
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("friends.feed.empty")
+
+                    TabCommandActionButton(
+                        title: "Refresh Social",
+                        systemImage: "arrow.clockwise",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        isDisabled: !social.socialFeaturesEnabled,
+                        accessibilityIdentifier: "friends.feed.refresh"
+                    ) {
+                        Task { await social.refreshSocialData() }
+                    }
                 }
             } else {
                 ForEach(social.feedPosts) { post in
@@ -1221,20 +1296,29 @@ struct FriendsTabView: View {
                             FeedReactionBar(postID: post.id, social: social)
 
                             HStack(spacing: 8) {
-                                Button("Report") {
+                                TabCommandActionButton(
+                                    title: "Report",
+                                    systemImage: "flag.fill",
+                                    accent: accent,
+                                    buttonText: buttonText,
+                                    prominent: false,
+                                    accessibilityIdentifier: "friends.feedReport"
+                                ) {
                                     social.report(post: post)
                                 }
-                                .buttonStyle(.bordered)
-                                .font(.caption.weight(.semibold))
 
                                 if let author = post.author {
-                                    Button("Block User") {
+                                    TabCommandActionButton(
+                                        title: "Block User",
+                                        systemImage: "person.fill.xmark",
+                                        accent: .red,
+                                        buttonText: buttonText,
+                                        prominent: false,
+                                        isDisabled: !social.socialFeaturesEnabled,
+                                        accessibilityIdentifier: "friends.feedBlockUser"
+                                    ) {
                                         Task { await social.block(author) }
                                     }
-                                    .buttonStyle(.bordered)
-                                    .font(.caption.weight(.semibold))
-                                    .tint(.red)
-                                    .disabled(!social.socialFeaturesEnabled)
                                 }
                             }
                         }
@@ -1252,7 +1336,7 @@ struct FriendsTabView: View {
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(primaryText)
 
-                    if let draft = social.pendingCollabDraft {
+                            if let draft = social.pendingCollabDraft {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Draft ready from \(draft.type.rawValue).")
                                 .font(.caption)
@@ -1261,16 +1345,18 @@ struct FriendsTabView: View {
                                 .font(.caption)
                                 .lineLimit(2)
                                 .foregroundStyle(primaryText)
-                            Button("Create Collaboration") {
+                            TabCommandActionButton(
+                                title: "Create Collaboration",
+                                systemImage: "doc.badge.plus",
+                                accent: accent,
+                                buttonText: buttonText,
+                                isDisabled: !social.socialFeaturesEnabled,
+                                accessibilityIdentifier: "friends.createCollab"
+                            ) {
                                 collabComposerType = draft.type
                                 collabComposerText = draft.content
                                 showCollabComposer = true
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(accent)
-                            .foregroundStyle(buttonText)
-                            .font(.caption.weight(.semibold))
-                            .disabled(!social.socialFeaturesEnabled)
                         }
                         .padding(10)
                         .background(
@@ -1279,69 +1365,86 @@ struct FriendsTabView: View {
                         )
                     }
 
-                    Button("New Blank Doc") {
+                    TabCommandActionButton(
+                        title: "New Blank Doc",
+                        systemImage: "doc.text",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        isDisabled: !social.socialFeaturesEnabled,
+                        accessibilityIdentifier: "friends.newCollabDoc"
+                    ) {
                         collabComposerType = .advice
                         collabComposerText = ""
                         selectedContributorIDs.removeAll()
                         showCollabComposer = true
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption.weight(.semibold))
-                    .disabled(!social.socialFeaturesEnabled)
-                    .accessibilityIdentifier("friends.newCollabDoc")
                 }
             }
 
             if social.collabDocs.isEmpty {
-                socialCard {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(
-                            social.friends.isEmpty
-                                ? "Add friends first, then invite them into a draft from Generate, Quotes, or a blank doc."
-                                : "No collaboration docs yet. Start a blank draft here or send one over from Generate or Quotes."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(secondaryText)
-
-                        VStack(spacing: 8) {
-                            Button("Find Friends") {
-                                openFriendsSection(.friends)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(accent)
-                            .foregroundStyle(buttonText)
-                            .frame(maxWidth: .infinity, minHeight: 42)
-                            .accessibilityIdentifier("friends.collab.findFriends")
-
-                            HStack(spacing: 8) {
-                                Button("Open Generate") {
-                                    onOpenTab?(.generate)
-                                }
-                                .buttonStyle(.bordered)
-                                .frame(maxWidth: .infinity, minHeight: 40)
-                                .accessibilityIdentifier("friends.collab.openGenerate")
-
-                                Button("Open Quotes") {
-                                    onOpenTab?(.quotes)
-                                }
-                                .buttonStyle(.bordered)
-                                .frame(maxWidth: .infinity, minHeight: 40)
-                                .accessibilityIdentifier("friends.collab.openQuotes")
-                            }
-
-                            Button("Refresh Social") {
-                                Task { await social.refreshSocialData() }
-                            }
-                            .buttonStyle(.bordered)
-                            .frame(maxWidth: .infinity, minHeight: 40)
-                            .disabled(!social.socialFeaturesEnabled)
-                            .accessibilityIdentifier("friends.collab.refresh")
+                TabEmptyStatePanel(
+                    icon: "doc.text.fill",
+                    title: social.friends.isEmpty ? "Add friends first" : "No collaboration docs yet",
+                    message: social.friends.isEmpty
+                        ? "Add friends first, then invite them into a draft from Generate, Quotes, or a blank doc."
+                        : "No collaboration docs yet. Start a blank draft here or send one over from Generate or Quotes.",
+                    accent: accent,
+                    primaryText: primaryText,
+                    secondaryText: secondaryText,
+                    cardColor: cardColor,
+                    reduceMotion: isMotionReduced
+                ) {
+                    if social.friends.isEmpty {
+                        TabCommandActionButton(
+                            title: "Find Friends",
+                            systemImage: "magnifyingglass",
+                            accent: accent,
+                            buttonText: buttonText,
+                            accessibilityIdentifier: "friends.collab.findFriends"
+                        ) {
+                            openFriendsSection(.friends)
                         }
-                        .font(.caption.weight(.semibold))
                     }
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("friends.collab.empty")
+
+                    HStack(spacing: 8) {
+                        TabCommandActionButton(
+                            title: "Open Generate",
+                            systemImage: "sparkles",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: false,
+                            accessibilityIdentifier: "friends.collab.openGenerate"
+                        ) {
+                            onOpenTab?(.generate)
+                        }
+
+                        TabCommandActionButton(
+                            title: "Open Quotes",
+                            systemImage: "quote.bubble",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: false,
+                            accessibilityIdentifier: "friends.collab.openQuotes"
+                        ) {
+                            onOpenTab?(.quotes)
+                        }
+                    }
+
+                    TabCommandActionButton(
+                        title: "Refresh Social",
+                        systemImage: "arrow.clockwise",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        isDisabled: !social.socialFeaturesEnabled,
+                        accessibilityIdentifier: "friends.collab.refresh"
+                    ) {
+                        Task { await social.refreshSocialData() }
+                    }
+
                 }
+                .accessibilityIdentifier("friends.collab.empty")
             } else {
                 ForEach(social.collabDocs) { doc in
                     Button {
@@ -1517,22 +1620,31 @@ struct FriendsTabView: View {
                         RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [
-                                        .white.opacity(0.09),
-                                        .clear,
-                                    ],
+                                    colors: [accent.opacity(0.09), .clear],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                             .blendMode(.screen)
                     )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [accent.opacity(0.07), .clear],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(height: 2),
+                        alignment: .top
+                    )
             }
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                    .stroke(accent.opacity(0.1), lineWidth: 1)
+                    .stroke(accent.opacity(0.22), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 5)
+            .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 6)
     }
 
     private func performPrimaryFriendsAction() {

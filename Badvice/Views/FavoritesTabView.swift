@@ -261,24 +261,28 @@ private struct FavoriteListRow: View {
                 .fill(cardColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    .white.opacity(0.09),
-                                    .clear,
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                        .fill(.linearGradient(colors: [accent.opacity(0.16), .clear, .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
                         )
-                        .blendMode(.screen)
                 )
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .stroke(.white.opacity(0.09), lineWidth: 1)
+                .stroke(accent.opacity(0.20), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 5)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.22), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(height: 1.4)
+                .padding(.horizontal, 14)
+                .padding(.top, 1)
+        )
+        .shadow(color: .black.opacity(0.10), radius: 10, x: 0, y: 5)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(record.adviceLine), \(record.category.title), \(record.tone.title)")
     }
@@ -330,24 +334,32 @@ private struct FavoriteGridCell: View {
                 .fill(cardColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    .white.opacity(0.08),
-                                    .clear,
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                        .fill(.linearGradient(colors: [accent.opacity(0.12), .clear, .black.opacity(0.04)], startPoint: .topLeading, endPoint: .bottomTrailing)
                         )
-                        .blendMode(.screen)
                 )
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.1), lineWidth: 1)
+                .stroke(accent.opacity(0.20), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.14), radius: 12, x: 0, y: 5)
+        .overlay(alignment: .top) {
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.25), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(height: 1.3)
+                .padding(.horizontal, 14)
+                .padding(.top, 1)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .stroke(accent.opacity(0.20), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.10), radius: 10, x: 0, y: 5)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(record.adviceLine), \(record.tone.title)")
     }
@@ -364,6 +376,7 @@ struct FavoritesTabView: View {
     @State private var listContentAppeared = false
     @State private var activeToast: ToastMessage? = nil
     @State private var isFavoritesLoading = false
+    @AppStorage(AppTab.favorites.focusModeStorageKey) private var isFocusMode = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -437,93 +450,99 @@ struct FavoritesTabView: View {
                     emptyState
                 } else {
                     VStack(spacing: 0) {
-                        // Header bar
-                        HStack(spacing: 10) {
-                            InlineSearchField(
-                                text: $viewModel.searchText,
-                                prompt: "Search favorites",
-                                accent: accent,
-                                secondaryText: secondaryText,
-                                surfaceColor: cardColor
-                            )
+                        if !isFocusMode {
+                            // Header bar
+                            HStack(spacing: 10) {
+                                InlineSearchField(
+                                    text: $viewModel.searchText,
+                                    prompt: "Search favorites",
+                                    accent: accent,
+                                    secondaryText: secondaryText,
+                                    surfaceColor: cardColor
+                                )
 
-                            // Category filter menu
-                            Menu {
-                                Button {
-                                    viewModel.selectedCategory = nil
-                                } label: {
-                                    if viewModel.selectedCategory == nil {
-                                        Label("All", systemImage: "checkmark")
-                                    } else { Text("All") }
-                                }
-                                ForEach(AdviceCategory.concrete) { cat in
+                                // Category filter menu
+                                Menu {
                                     Button {
-                                        viewModel.selectedCategory = cat
+                                        viewModel.selectedCategory = nil
                                     } label: {
-                                        if viewModel.selectedCategory == cat {
-                                            Label(cat.title, systemImage: "checkmark")
-                                        } else { Text(cat.title) }
+                                        if viewModel.selectedCategory == nil {
+                                            Label("All", systemImage: "checkmark")
+                                        } else { Text("All") }
                                     }
+                                    ForEach(AdviceCategory.concrete) { cat in
+                                        Button {
+                                            viewModel.selectedCategory = cat
+                                        } label: {
+                                            if viewModel.selectedCategory == cat {
+                                                Label(cat.title, systemImage: "checkmark")
+                                            } else { Text(cat.title) }
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: viewModel.selectedCategory == nil
+                                          ? "line.3.horizontal.decrease.circle"
+                                          : "line.3.horizontal.decrease.circle.fill")
+                                        .font(.system(size: 20, weight: .medium))
+                                        .foregroundStyle(viewModel.selectedCategory == nil ? secondaryText : accent)
+                                        .frame(
+                                            width: Theme.compactIconButtonSize,
+                                            height: Theme.compactIconButtonSize
+                                        )
+                                        .background(
+                                            .ultraThinMaterial,
+                                            in: RoundedRectangle(
+                                                cornerRadius: Theme.compactCornerRadius,
+                                                style: .continuous
+                                            )
+                                        )
                                 }
-                            } label: {
-                                Image(systemName: viewModel.selectedCategory == nil
-                                      ? "line.3.horizontal.decrease.circle"
-                                      : "line.3.horizontal.decrease.circle.fill")
-                                    .font(.system(size: 20, weight: .medium))
-                                    .foregroundStyle(viewModel.selectedCategory == nil ? secondaryText : accent)
-                                    .frame(
-                                        width: Theme.compactIconButtonSize,
-                                        height: Theme.compactIconButtonSize
-                                    )
-                                    .background(
-                                        .ultraThinMaterial,
-                                        in: RoundedRectangle(
-                                            cornerRadius: Theme.compactCornerRadius,
-                                            style: .continuous
-                                        )
-                                    )
-                            }
-                            .accessibilityLabel("Filter favorites by category")
+                                .accessibilityLabel("Filter favorites by category")
 
-                            // Layout toggle
-                            Button {
-                                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                                layout = layout == .list ? .grid : .list
-                            } label: {
-                                Image(systemName: layout == .list ? "rectangle.grid.1x2" : "square.grid.2x2")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundStyle(secondaryText)
-                                    .frame(
-                                        width: Theme.compactIconButtonSize,
-                                        height: Theme.compactIconButtonSize
-                                    )
-                                    .background(
-                                        .ultraThinMaterial,
-                                        in: RoundedRectangle(
-                                            cornerRadius: Theme.compactCornerRadius,
-                                            style: .continuous
+                                // Layout toggle
+                                Button {
+                                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                                    layout = layout == .list ? .grid : .list
+                                } label: {
+                                    Image(systemName: layout == .list ? "rectangle.grid.1x2" : "square.grid.2x2")
+                                        .font(.system(size: 18, weight: .medium))
+                                        .foregroundStyle(secondaryText)
+                                        .frame(
+                                            width: Theme.compactIconButtonSize,
+                                            height: Theme.compactIconButtonSize
                                         )
-                                    )
+                                        .background(
+                                            .ultraThinMaterial,
+                                            in: RoundedRectangle(
+                                                cornerRadius: Theme.compactCornerRadius,
+                                                style: .continuous
+                                            )
+                                        )
+                                }
+                                .accessibilityLabel(
+                                    layout == .list ? "Switch to grid layout" : "Switch to list layout"
+                                )
                             }
-                            .accessibilityLabel(
-                                layout == .list ? "Switch to grid layout" : "Switch to list layout"
-                            )
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                            .padding(.bottom, 6)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 6)
 
                         favoritesCommandCard
                             .padding(.horizontal, 16)
                             .padding(.bottom, 8)
 
-                        favoritesInsightsCard
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 8)
+                        if !isFocusMode {
+                            favoritesInsightsCard
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 8)
+                        }
 
-                        favoritesCategoryChips
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 8)
+                        if !isFocusMode {
+                            favoritesCategoryChips
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 8)
+                        }
 
                         if viewModel.filteredFavorites.isEmpty {
                             noResultsState
@@ -555,6 +574,18 @@ struct FavoritesTabView: View {
 
     @ToolbarContentBuilder
     private var layoutToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            TabFocusModeToggle(
+                isEnabled: isFocusMode,
+                accent: accent
+            ) {
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isFocusMode.toggle()
+                }
+            }
+        }
+
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button {
@@ -875,134 +906,55 @@ struct FavoritesTabView: View {
         .transition(.opacity)
     }
 
-    @State private var emptyStateAppeared = false
-    @State private var floatingOffset: CGFloat = 0
-
     private var emptyState: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                Circle()
-                    .fill(accent.opacity(0.08))
-                    .frame(width: 130, height: 130)
-                    .scaleEffect(emptyStateAppeared ? 1.0 : 0.7)
-                    .opacity(emptyStateAppeared ? 1 : 0)
-                Circle()
-                    .fill(accent.opacity(0.13))
-                    .frame(width: 100, height: 100)
-                    .offset(y: floatingOffset)
-                if isMotionReduced {
-                    Image(systemName: "bookmark")
-                        .font(.system(size: 42, weight: .medium))
-                        .foregroundStyle(accent)
-                        .offset(y: floatingOffset)
-                } else {
-                    Image(systemName: "bookmark")
-                        .font(.system(size: 42, weight: .medium))
-                        .foregroundStyle(accent)
-                        .offset(y: floatingOffset)
-                        .symbolEffect(.bounce, options: .repeating, value: emptyStateAppeared)
-                }
-            }
-            .onAppear {
-                guard !isMotionReduced else { return }
-                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
-                    floatingOffset = -9
-                }
-            }
-
-            VStack(spacing: 8) {
-                Text("Nothing saved yet.")
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .foregroundStyle(primaryText)
-                    .opacity(emptyStateAppeared ? 1 : 0)
-                    .offset(y: emptyStateAppeared ? 0 : 18)
-
-                Text("Bold of you. Save a piece of advice\nand pretend you'll follow it.")
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(secondaryText)
-                    .lineSpacing(3)
-                    .opacity(emptyStateAppeared ? 1 : 0)
-                    .offset(y: emptyStateAppeared ? 0 : 12)
-            }
-
-            Button {
+        TabEmptyStatePanel(
+            icon: "bookmark",
+            title: "Nothing saved yet.",
+            message: "Bold of you. Save a piece of advice and pretend you'll follow it.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor,
+            reduceMotion: isMotionReduced
+        ) {
+            TabCommandActionButton(
+                title: "Generate Advice",
+                systemImage: "sparkles",
+                accent: accent,
+                buttonText: buttonText
+            ) {
                 onJumpToGenerate?()
-            } label: {
-                Label("Generate Advice", systemImage: "sparkles")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 50)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(accent)
-            .foregroundStyle(buttonText)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .padding(.horizontal, 40)
             .accessibilityIdentifier("favorites.generate")
-            .opacity(emptyStateAppeared ? 1 : 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            guard !emptyStateAppeared else { return }
-            if isMotionReduced {
-                emptyStateAppeared = true
-            } else {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.72)) {
-                    emptyStateAppeared = true
-                }
-            }
-        }
-        .onDisappear {
-            emptyStateAppeared = false
-            floatingOffset = 0
         }
     }
 
-    @State private var noResultsAppeared = false
-
     private var noResultsState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 36, weight: .medium))
-                .foregroundStyle(secondaryText.opacity(0.65))
-                .scaleEffect(noResultsAppeared ? 1 : 0.5)
-                .rotationEffect(.degrees(noResultsAppeared ? 0 : -20))
-
-            Text("No matches")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(primaryText)
-                .opacity(noResultsAppeared ? 1 : 0)
-
-            Text("Try a different search or category.")
-                .font(.subheadline)
-                .foregroundStyle(secondaryText)
-                .opacity(noResultsAppeared ? 1 : 0)
-
+        TabEmptyStatePanel(
+            icon: "magnifyingglass",
+            title: "No matches",
+            message: "Try a different search or category.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor,
+            reduceMotion: isMotionReduced
+        ) {
             if viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty {
-                Button {
+                TabCommandActionButton(
+                    title: "Clear Filters",
+                    systemImage: "arrow.uturn.backward",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false
+                ) {
                     viewModel.selectedCategory = nil
                     viewModel.searchText = ""
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                } label: {
-                    Label("Clear Filters", systemImage: "arrow.uturn.backward")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
                 }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .clipShape(Capsule(style: .continuous))
                 .accessibilityIdentifier("favorites.clearFilters")
-                .opacity(noResultsAppeared ? 1 : 0)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            guard !noResultsAppeared else { return }
-            if isMotionReduced { noResultsAppeared = true }
-            else { withAnimation(.spring(response: 0.5, dampingFraction: 0.72)) { noResultsAppeared = true } }
-        }
-        .onDisappear { noResultsAppeared = false }
     }
 }
 
@@ -1048,20 +1000,23 @@ private struct FavoriteDetailView: View {
                     .padding(.horizontal, Theme.horizontalPadding)
 
                     HStack(spacing: 10) {
-                        Button {
+                        TabCommandActionButton(
+                            title: "Copy Text",
+                            systemImage: "doc.on.doc",
+                            accent: accent,
+                            buttonText: buttonText
+                        ) {
                             UIPasteboard.general.string = record.adviceLine
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                             activeToast = ToastMessage(message: "Copied!", style: .success)
-                        } label: {
-                            Label("Copy Text", systemImage: "doc.on.doc")
-                                .font(.subheadline.weight(.semibold))
-                                .frame(maxWidth: .infinity, minHeight: 46)
                         }
-                        .buttonStyle(.bordered)
-                        .tint(accent)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                        Button {
+                        TabCommandActionButton(
+                            title: "Share Card",
+                            systemImage: "square.and.arrow.up",
+                            accent: accent,
+                            buttonText: buttonText
+                        ) {
                             let content = ShareCardContent(
                                 category: record.category,
                                 tone: record.tone,
@@ -1076,14 +1031,7 @@ private struct FavoriteDetailView: View {
                                 shareItems = [image, record.adviceLine]
                                 showingShareSheet = true
                             }
-                        } label: {
-                            Label("Share Card", systemImage: "square.and.arrow.up")
-                                .font(.subheadline.weight(.semibold))
-                                .frame(maxWidth: .infinity, minHeight: 46)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(accent)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     .padding(.horizontal, Theme.horizontalPadding)
 
@@ -1102,17 +1050,17 @@ private struct FavoriteDetailView: View {
                                     .transition(.opacity.combined(with: .scale(scale: 0.85)))
                             }
                             if aftermathIsDirty {
-                                Button {
+                                TabCommandActionButton(
+                                    title: "Save Note",
+                                    systemImage: "checkmark.circle",
+                                    accent: accent,
+                                    buttonText: buttonText,
+                                    prominent: false,
+                                    minHeight: 34
+                                ) {
                                     HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
                                     viewModel.setAftermathNote(record, note: aftermathText)
                                     activeToast = ToastMessage(message: "Note saved", style: .success)
-                                } label: {
-                                    Text("Save Note")
-                                        .font(.caption.weight(.semibold))
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 5)
-                                        .background(Capsule(style: .continuous).fill(accent.opacity(0.15)))
-                                        .foregroundStyle(accent)
                                 }
                                 .transition(.opacity.combined(with: .scale(scale: 0.9)))
                             }

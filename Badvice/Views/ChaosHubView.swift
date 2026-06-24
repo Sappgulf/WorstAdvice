@@ -9,6 +9,7 @@ struct ChaosHubTabView: View {
 
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @AppStorage(AppTab.chaosHub.focusModeStorageKey) private var isFocusMode = false
 
     @State private var contentAppeared = false
     @State private var visibleContracts: [ChaosContract] = []
@@ -183,25 +184,27 @@ struct ChaosHubTabView: View {
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
 
-                    winsStrip
-                        .opacity(contentAppeared ? 1 : 0)
-                        .offset(y: contentAppeared ? 0 : 16)
+                    if !isFocusMode {
+                        winsStrip
+                            .opacity(contentAppeared ? 1 : 0)
+                            .offset(y: contentAppeared ? 0 : 16)
 
-                    socialLeaderboardCard
-                        .opacity(contentAppeared ? 1 : 0)
-                        .offset(y: contentAppeared ? 0 : 16)
+                        socialLeaderboardCard
+                            .opacity(contentAppeared ? 1 : 0)
+                            .offset(y: contentAppeared ? 0 : 16)
 
-                    contractsSection
-                        .opacity(contentAppeared ? 1 : 0)
-                        .offset(y: contentAppeared ? 0 : 16)
+                        contractsSection
+                            .opacity(contentAppeared ? 1 : 0)
+                            .offset(y: contentAppeared ? 0 : 16)
 
-                    pulseCard
-                        .opacity(contentAppeared ? 1 : 0)
-                        .offset(y: contentAppeared ? 0 : 16)
+                        pulseCard
+                            .opacity(contentAppeared ? 1 : 0)
+                            .offset(y: contentAppeared ? 0 : 16)
 
-                    quickActionsCard
-                        .opacity(contentAppeared ? 1 : 0)
-                        .offset(y: contentAppeared ? 0 : 16)
+                        quickActionsCard
+                            .opacity(contentAppeared ? 1 : 0)
+                            .offset(y: contentAppeared ? 0 : 16)
+                    }
                 }
                     .padding(.horizontal, Theme.horizontalPadding)
                     .padding(.top, 12)
@@ -212,6 +215,7 @@ struct ChaosHubTabView: View {
             .navigationTitle("Missions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar { focusModeToolbar }
             .background(Color.clear)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .refreshable {
@@ -275,6 +279,21 @@ struct ChaosHubTabView: View {
                     try? await Task.sleep(for: .milliseconds(550))
                     guard !Task.isCancelled else { return }
                     weeklyCompletePulse = false
+                }
+            }
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var focusModeToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            TabFocusModeToggle(
+                isEnabled: isFocusMode,
+                accent: accent
+            ) {
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isFocusMode.toggle()
                 }
             }
         }

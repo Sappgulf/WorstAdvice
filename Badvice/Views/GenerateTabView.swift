@@ -39,6 +39,7 @@ struct GenerateTabView: View {
     @State private var loadingCompletionHapticArmed = false
     @State private var lastGeneratedAdviceIDForHaptics: UUID? = nil
     @State private var lastKnownStreakDays: Int = 0
+    @AppStorage(AppTab.generate.focusModeStorageKey) private var isFocusMode = false
     @AppStorage("hasDismissedWhatsNewCard_2026_02c") private var hasDismissedWhatsNewCard = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -283,6 +284,21 @@ struct GenerateTabView: View {
         )
     }
 
+    @ToolbarContentBuilder
+    private var focusModeToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            TabFocusModeToggle(
+                isEnabled: isFocusMode,
+                accent: accent
+            ) {
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isFocusMode.toggle()
+                }
+            }
+        }
+    }
+
     private var generateToolsSection: some View {
         DisclosureGroup(
             isExpanded: $showingAdvanced.animation(
@@ -434,15 +450,20 @@ struct GenerateTabView: View {
                             headerView
                         }
                         generationCommandCard
-                        if viewModel.current != nil || viewModel.todayGeneratedCount > 0 {
+                        if !isFocusMode && (viewModel.current != nil || viewModel.todayGeneratedCount > 0) {
                             dailyProgressCard
                         }
-                        if let notice = viewModel.generationNotice, !notice.isEmpty {
+                        if !isFocusMode,
+                           let notice = viewModel.generationNotice,
+                           !notice.isEmpty
+                        {
                             Text(notice)
                                 .font(.caption)
                                 .foregroundStyle(secondaryText)
                         }
-                        generateToolsSection
+                        if !isFocusMode {
+                            generateToolsSection
+                        }
                     }
                     .padding(.horizontal, Theme.horizontalPadding)
                     .padding(.top, 16)
@@ -451,6 +472,7 @@ struct GenerateTabView: View {
                 .scrollDismissesKeyboard(.interactively)
                 .coordinateSpace(name: "scroll")
                 .trackScrollForTabBar()
+                .toolbar { focusModeToolbar }
                 .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 24)
                 .refreshable {
                     // Pull to generate new advice
@@ -1013,16 +1035,17 @@ struct GenerateTabView: View {
         accessibilityID: String,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.caption.weight(.bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity, minHeight: 36)
+        TabCommandActionButton(
+            title: title,
+            systemImage: systemImage,
+            accent: accent,
+            buttonText: buttonText,
+            prominent: false,
+            isDisabled: viewModel.isGenerating,
+            minHeight: 36
+        ) {
+            action()
         }
-        .buttonStyle(.bordered)
-        .tint(accent)
-        .disabled(viewModel.isGenerating)
         .accessibilityIdentifier(accessibilityID)
     }
 
@@ -1256,11 +1279,16 @@ struct GenerateTabView: View {
                     .foregroundStyle(secondaryText)
                 Spacer(minLength: 0)
                 if !viewModel.scenarioText.isEmpty {
-                    Button("Clear") {
+                    TabCommandActionButton(
+                        title: "Clear",
+                        systemImage: "xmark.circle.fill",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        minHeight: 30
+                    ) {
                         viewModel.scenarioText = ""
                     }
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(secondaryText)
                     .transition(
                         isMotionReduced ? .identity : .opacity.combined(with: .scale(scale: 0.8)))
                 }
@@ -1297,24 +1325,35 @@ struct GenerateTabView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(secondaryText)
                     Spacer()
-                    Button("Shuffle") {
+                    TabCommandActionButton(
+                        title: "Shuffle",
+                        systemImage: "shuffle",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        minHeight: 30
+                    ) {
                         if let pick = suggestions.randomElement() {
                             applyScenarioSuggestion(pick)
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         }
                     }
-                    .font(.caption.weight(.semibold))
                 }
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(suggestions, id: \.self) { suggestion in
-                            Button(suggestion) {
+                            TabCommandActionButton(
+                                title: suggestion,
+                                systemImage: "sparkles",
+                                accent: accent,
+                                buttonText: buttonText,
+                                prominent: false,
+                                minHeight: 30
+                            ) {
                                 applyScenarioSuggestion(suggestion)
                                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                             }
-                            .buttonStyle(.bordered)
-                            .tint(accent)
                         }
                     }
                 }
@@ -1602,7 +1641,7 @@ struct GenerateTabView: View {
 
                 // Save / Copy / Share rail
                 LazyVGrid(columns: railColumns, spacing: 10) {
-                    railButton(
+                    actionRailButton(
                         title: viewModel.isCurrentFavorite ? "Saved" : "Save",
                         systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
                         isEnabled: !viewModel.isGenerating
@@ -1611,7 +1650,7 @@ struct GenerateTabView: View {
                     }
                     .accessibilityIdentifier("generate.save")
 
-                    railButton(
+                    actionRailButton(
                         title: "Copy",
                         systemImage: "doc.on.doc",
                         isEnabled: !viewModel.isGenerating
@@ -1620,7 +1659,7 @@ struct GenerateTabView: View {
                     }
                     .accessibilityIdentifier("generate.copy")
 
-                    railButton(
+                    actionRailButton(
                         title: "Share",
                         systemImage: "square.and.arrow.up",
                         isEnabled: !viewModel.isGenerating
@@ -1629,7 +1668,7 @@ struct GenerateTabView: View {
                     }
                     .accessibilityIdentifier("generate.share")
 
-                    railButton(
+                    actionRailButton(
                         title: "Remix",
                         systemImage: "bolt.fill",
                         isEnabled: !viewModel.isGenerating
@@ -1672,15 +1711,16 @@ struct GenerateTabView: View {
             .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
-                Button {
+                TabCommandActionButton(
+                    title: "Got it",
+                    systemImage: nil,
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    minHeight: 36
+                ) {
                     hasDismissedWhatsNewCard = true
-                } label: {
-                    Text("Got it")
-                        .font(.caption.weight(.semibold))
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .foregroundStyle(buttonText)
                 .accessibilityIdentifier("generate.whatsNew.gotIt")
             }
         }
@@ -1729,7 +1769,13 @@ struct GenerateTabView: View {
                             .foregroundStyle(primaryText)
                     }
                 }
-                Button {
+                TabCommandActionButton(
+                    title: "Share Recap",
+                    systemImage: "square.and.arrow.up",
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "generate.shareRecap"
+                ) {
                     let lines = recapItems.enumerated().map {
                         "\($0.offset + 1). \($0.element.adviceLine)"
                     }.joined(separator: "\n")
@@ -1737,14 +1783,7 @@ struct GenerateTabView: View {
                     shareItems = [shareText]
                     showingShareSheet = true
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                } label: {
-                    Label("Share Recap", systemImage: "square.and.arrow.up")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 12).padding(.vertical, 6)
-                        .background(Capsule().fill(accent.opacity(0.15)))
-                        .foregroundStyle(accent)
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -1946,40 +1985,22 @@ struct GenerateTabView: View {
         )
     }
 
-    private func railButton(
+    private func actionRailButton(
         title: String,
         systemImage: String,
         isEnabled: Bool,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            VStack(spacing: 6) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 38, height: 38)
-                    .background(
-                        Circle()
-                            .fill(cardColor)
-                    )
-                Text(title)
-                    .font(.caption2.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
-            }
-            .frame(maxWidth: .infinity, minHeight: 68)
-            .padding(.horizontal, 6)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
-                    .fill(cardColor.opacity(0.72))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
-                    .stroke(accent.opacity(0.08), lineWidth: 1)
-            )
+        TabCommandActionButton(
+            title: title,
+            systemImage: systemImage,
+            accent: accent,
+            buttonText: buttonText,
+            isDisabled: !isEnabled,
+            minHeight: 66
+        ) {
+            action()
         }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : 0.45)
         .accessibilityLabel(title)
     }
 
@@ -1993,52 +2014,34 @@ struct GenerateTabView: View {
 
                 Spacer()
 
-                Button {
+                TabCommandActionButton(
+                    title: viewModel.currentVote == .like ? "Liked" : "Like",
+                    systemImage: viewModel.currentVote == .like ? "hand.thumbsup.fill" : "hand.thumbsup",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: viewModel.currentVote == .like,
+                    minHeight: 36
+                ) {
                     viewModel.toggleVote(.like)
                     onDataChanged()
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(
-                            systemName: viewModel.currentVote == .like
-                                ? "hand.thumbsup.fill" : "hand.thumbsup")
-                        if viewModel.currentVote == .like {
-                            Text("Liked")
-                                .font(.caption.weight(.semibold))
-                                .transition(
-                                    .opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
-                        }
-                    }
-                    .frame(height: 36)
-                    .padding(.horizontal, viewModel.currentVote == .like ? 12 : 0)
                 }
-                .buttonStyle(.bordered)
-                .tint(viewModel.currentVote == .like ? accent : secondaryText)
                 .animation(
                     isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7),
                     value: viewModel.currentVote)
 
-                Button {
+                TabCommandActionButton(
+                    title: viewModel.currentVote == .dislike ? "Noted" : "Dislike",
+                    systemImage: viewModel.currentVote == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: viewModel.currentVote == .dislike,
+                    minHeight: 36
+                ) {
                     viewModel.toggleVote(.dislike)
                     onDataChanged()
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(
-                            systemName: viewModel.currentVote == .dislike
-                                ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                        if viewModel.currentVote == .dislike {
-                            Text("Noted")
-                                .font(.caption.weight(.semibold))
-                                .transition(
-                                    .opacity.combined(with: .scale(scale: 0.8, anchor: .leading)))
-                        }
-                    }
-                    .frame(height: 36)
-                    .padding(.horizontal, viewModel.currentVote == .dislike ? 12 : 0)
                 }
-                .buttonStyle(.bordered)
-                .tint(viewModel.currentVote == .dislike ? accent.opacity(0.8) : secondaryText)
                 .animation(
                     isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7),
                     value: viewModel.currentVote)
@@ -2064,42 +2067,33 @@ struct GenerateTabView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(viewModel.keywordSuggestions, id: \.self) { suggestion in
-                    Button(suggestion) {
+                    TabCommandActionButton(
+                        title: suggestion,
+                        systemImage: "sparkle",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        minHeight: 32
+                    ) {
                         viewModel.applySuggestion(suggestion)
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(accent)
                 }
             }
         }
     }
 
     private var emptyState: some View {
-        VStack(spacing: 18) {
-            ZStack {
-                Circle()
-                    .fill(accent.opacity(0.12))
-                    .frame(width: 116, height: 116)
-
-                Image(systemName: "sparkles")
-                    .font(.system(size: 48, weight: .light))
-                    .foregroundStyle(accent)
-                    .shadow(color: accent.opacity(0.3), radius: 10)
-            }
-
-            VStack(spacing: 12) {
-                Text("Start with one bad idea.")
-                    .font(Theme.cardFont(for: settings.theme))
-                    .foregroundStyle(primaryText)
-
-                Text("Pick a category and tone, add one optional detail, then generate, save, copy, share, or remix.")
-                    .font(Theme.bodyFont(for: settings.theme))
-                    .foregroundStyle(secondaryText)
-                    .opacity(0.8)
-            }
-            .multilineTextAlignment(.center)
-
+        TabEmptyStatePanel(
+            icon: "sparkles",
+            title: "Start with one bad idea.",
+            message: "Pick a category and tone, add one optional detail, then generate, save, copy, share, or remix.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor,
+            reduceMotion: isMotionReduced
+        ) {
             HStack(spacing: 8) {
                 emptyStateStep("1", "Pick")
                 emptyStateStep("2", "Generate")
@@ -2108,9 +2102,6 @@ struct GenerateTabView: View {
             }
             .padding(.horizontal, 8)
         }
-        .padding(.vertical, 22)
-        .frame(minHeight: 260)
-        .frame(maxWidth: .infinity)
         .accessibilityIdentifier("generate.emptyState")
     }
 

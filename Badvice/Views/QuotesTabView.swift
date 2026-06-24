@@ -11,6 +11,7 @@ struct QuotesTabView: View {
     @State private var showingShareSheet = false
     @State private var activeToast: ToastMessage? = nil
     @State private var showQuoteSpotlight = false
+    @AppStorage(AppTab.quotes.focusModeStorageKey) private var isFocusMode = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -48,6 +49,15 @@ struct QuotesTabView: View {
         }
         return "Share Quote"
     }
+    private var quotesPrimaryActionIcon: String {
+        if viewModel.filteredQuotes.isEmpty {
+            return viewModel.selectedCategory == nil ? "sparkles" : "line.3.horizontal.decrease.circle"
+        }
+        if !showQuoteSpotlight {
+            return "sun.max"
+        }
+        return "square.and.arrow.up"
+    }
 
     var body: some View {
         NavigationStack {
@@ -59,17 +69,23 @@ struct QuotesTabView: View {
                         quotesCommandCard
                             .padding(.horizontal, 16)
 
-                        quoteHeaderCard
-                            .padding(.horizontal, 16)
+                        if !isFocusMode {
+                            quoteHeaderCard
+                                .padding(.horizontal, 16)
+                        }
 
                         dailyQuoteHero
                             .padding(.horizontal, 16)
 
-                        dailyRitualCard
-                            .padding(.horizontal, 16)
+                        if !isFocusMode {
+                            dailyRitualCard
+                                .padding(.horizontal, 16)
+                        }
 
-                        quoteSpotlightCard
-                            .padding(.horizontal, 16)
+                        if !isFocusMode {
+                            quoteSpotlightCard
+                                .padding(.horizontal, 16)
+                        }
 
                         if !social.availability.isAvailable {
                             QuotesInlineBanner(
@@ -89,145 +105,39 @@ struct QuotesTabView: View {
                             .padding(.horizontal, 16)
                         }
 
-                        // Sort + search row
-                        VStack(spacing: 10) {
-                            InlineSearchField(
-                                text: $viewModel.searchText,
-                                prompt: "Search quotes",
-                                accent: accent,
-                                secondaryText: secondaryText,
-                                surfaceColor: cardColor
-                            )
-
-                            HStack(spacing: 10) {
-                                Picker("Sort", selection: $viewModel.rankingMode) {
-                                    ForEach(QuoteRankingMode.allCases) { mode in
-                                        Text(mode.title).tag(mode)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-
-                                Menu {
-                                    Button {
-                                        viewModel.selectedCategory = nil
-                                    } label: {
-                                        if viewModel.selectedCategory == nil {
-                                            Label("All", systemImage: "checkmark")
-                                        } else { Text("All") }
-                                    }
-                                    ForEach(AdviceCategory.concrete) { cat in
-                                        Button { viewModel.selectedCategory = cat } label: {
-                                            if viewModel.selectedCategory == cat {
-                                                Label(cat.title, systemImage: "checkmark")
-                                            } else { Text(cat.title) }
-                                        }
-                                    }
-                                } label: {
-                                    Image(systemName: viewModel.selectedCategory == nil
-                                          ? "line.3.horizontal.decrease.circle"
-                                          : "line.3.horizontal.decrease.circle.fill")
-                                        .font(.system(size: 18, weight: .medium))
-                                        .foregroundStyle(viewModel.selectedCategory == nil ? secondaryText : accent)
-                                        .frame(
-                                            width: Theme.compactIconButtonSize,
-                                            height: Theme.compactIconButtonSize
-                                        )
-                                        .background(
-                                            .ultraThinMaterial,
-                                            in: RoundedRectangle(
-                                                cornerRadius: Theme.compactCornerRadius,
-                                                style: .continuous
-                                            )
-                                        )
-                                }
-                                .accessibilityLabel("Filter quotes by category")
-                            }
-
-                            AdviceCategoryFilterChips(
-                                selectedCategory: $viewModel.selectedCategory,
-                                accent: accent,
-                                secondaryText: secondaryText,
-                                hapticsEnabled: settings.hapticsEnabled,
-                                reduceMotion: isMotionReduced,
-                                accessibilityPrefix: "quotes.category"
-                            )
-
-#if DEBUG
-                            HStack(spacing: 10) {
-                                Label("Source", systemImage: "ladybug")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(secondaryText)
-                                Picker("Quote Source", selection: $viewModel.debugSourceFilter) {
-                                    ForEach(QuoteSourceDebugFilter.allCases) { filter in
-                                        Text(filter.title).tag(filter)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .tint(accent)
-
-                                Spacer()
-
-                                Text(viewModel.debugSourceFilter.title)
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(accent)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule(style: .continuous)
-                                            .fill(accent.opacity(0.14))
-                                    )
-                            }
-                            .padding(.horizontal, 2)
-#endif
-
-                            // Stats strip
-                            HStack {
-                                Label("\(viewModel.likedCount)", systemImage: "hand.thumbsup.fill")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(accent)
-                                Text("liked")
-                                    .font(.caption)
-                                    .foregroundStyle(secondaryText)
-                                Spacer()
-                                Text("disliked")
-                                    .font(.caption)
-                                    .foregroundStyle(secondaryText)
-                                Label("\(viewModel.dislikedCount)", systemImage: "hand.thumbsdown.fill")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(secondaryText.opacity(0.7))
-                            }
-                            .padding(.horizontal, 4)
+                        if !isFocusMode {
+                            quotesFilterWorkspace
+                                .padding(.horizontal, 16)
                         }
-                        .padding(.horizontal, 16)
 
                         // Quote rows
                         let quotes = viewModel.filteredQuotes
                         if quotes.isEmpty {
-                            QuotesEmptyState(theme: settings.theme, reduceMotion: isMotionReduced)
+                            quotesEmptyState
                                 .padding(.horizontal, 16)
                             if viewModel.selectedCategory != nil {
-                                Button {
+                                TabCommandActionButton(
+                                    title: "Show All Categories",
+                                    systemImage: "line.3.horizontal.decrease.circle",
+                                    accent: accent,
+                                    buttonText: buttonText,
+                                    prominent: false
+                                ) {
                                     viewModel.selectedCategory = nil
                                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                                } label: {
-                                    Label("Show All Categories", systemImage: "line.3.horizontal.decrease.circle")
-                                        .font(.subheadline.weight(.semibold))
-                                        .frame(maxWidth: .infinity, minHeight: 44)
                                 }
-                                .buttonStyle(.bordered)
-                                .tint(accent)
                                 .padding(.horizontal, 16)
                                 .accessibilityIdentifier("quotes.showAllCategories")
                             }
-                            Button { onJumpToGenerate?() } label: {
-                                Label("Generate Advice", systemImage: "sparkles")
-                                    .font(.subheadline.weight(.semibold))
-                                    .frame(maxWidth: .infinity, minHeight: 44)
+                            TabCommandActionButton(
+                                title: "Generate Advice",
+                                systemImage: "sparkles",
+                                accent: accent,
+                                buttonText: buttonText,
+                                minHeight: 44
+                            ) {
+                                onJumpToGenerate?()
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(accent)
-                            .foregroundStyle(buttonText)
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .padding(.horizontal, 16)
                             .accessibilityIdentifier("quotes.generate")
                         } else {
@@ -246,6 +156,7 @@ struct QuotesTabView: View {
             .navigationTitle("Quotes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar { toolbarContent }
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 Task(priority: .utility) {
@@ -261,6 +172,170 @@ struct QuotesTabView: View {
             ActivityShareSheet(items: shareItems)
         }
         .toast(item: $activeToast, accentColor: accent)
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            TabFocusModeToggle(
+                isEnabled: isFocusMode,
+                accent: accent
+            ) {
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isFocusMode.toggle()
+                }
+            }
+        }
+    }
+
+    private var quotesFilterWorkspace: some View {
+        VStack(spacing: 10) {
+            InlineSearchField(
+                text: $viewModel.searchText,
+                prompt: "Search quotes",
+                accent: accent,
+                secondaryText: secondaryText,
+                surfaceColor: cardColor
+            )
+
+            HStack(spacing: 10) {
+                Picker("Sort", selection: $viewModel.rankingMode) {
+                    ForEach(QuoteRankingMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Menu {
+                    Button {
+                        viewModel.selectedCategory = nil
+                    } label: {
+                        if viewModel.selectedCategory == nil {
+                            Label("All", systemImage: "checkmark")
+                        } else { Text("All") }
+                    }
+                    ForEach(AdviceCategory.concrete) { cat in
+                        Button { viewModel.selectedCategory = cat } label: {
+                            if viewModel.selectedCategory == cat {
+                                Label(cat.title, systemImage: "checkmark")
+                            } else { Text(cat.title) }
+                        }
+                    }
+                } label: {
+                    Image(systemName: viewModel.selectedCategory == nil
+                          ? "line.3.horizontal.decrease.circle"
+                          : "line.3.horizontal.decrease.circle.fill")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(viewModel.selectedCategory == nil ? secondaryText : accent)
+                        .frame(
+                            width: Theme.compactIconButtonSize,
+                            height: Theme.compactIconButtonSize
+                        )
+                        .background(
+                            .ultraThinMaterial,
+                            in: RoundedRectangle(
+                                cornerRadius: Theme.compactCornerRadius,
+                                style: .continuous
+                            )
+                        )
+                }
+                .accessibilityLabel("Filter quotes by category")
+            }
+
+            AdviceCategoryFilterChips(
+                selectedCategory: $viewModel.selectedCategory,
+                accent: accent,
+                secondaryText: secondaryText,
+                hapticsEnabled: settings.hapticsEnabled,
+                reduceMotion: isMotionReduced,
+                accessibilityPrefix: "quotes.category"
+            )
+
+#if DEBUG
+            HStack(spacing: 10) {
+                Label("Source", systemImage: "ladybug")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(secondaryText)
+                Picker("Quote Source", selection: $viewModel.debugSourceFilter) {
+                    ForEach(QuoteSourceDebugFilter.allCases) { filter in
+                        Text(filter.title).tag(filter)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(accent)
+
+                Spacer()
+
+                Text(viewModel.debugSourceFilter.title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(accent.opacity(0.14))
+                    )
+            }
+            .padding(.horizontal, 2)
+#endif
+
+            HStack {
+                Label("\(viewModel.likedCount)", systemImage: "hand.thumbsup.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(accent)
+                Text("liked")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                Spacer()
+                Text("disliked")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                Label("\(viewModel.dislikedCount)", systemImage: "hand.thumbsdown.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(secondaryText.opacity(0.7))
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
+    private var quotesEmptyState: some View {
+        TabEmptyStatePanel(
+            icon: "quote.bubble",
+            title: "All quiet here.",
+            message: "No quotes in this category yet.\nPick another or generate more advice.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor,
+            reduceMotion: isMotionReduced
+        ) {
+            HStack(spacing: 10) {
+                if viewModel.selectedCategory != nil {
+                    TabCommandActionButton(
+                        title: "Show All Categories",
+                        systemImage: "line.3.horizontal.decrease.circle",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        accessibilityIdentifier: "quotes.showAllCategories"
+                    ) {
+                        viewModel.selectedCategory = nil
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    }
+                }
+
+                TabCommandActionButton(
+                    title: "Generate Advice",
+                    systemImage: "sparkles",
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "quotes.generate"
+                ) {
+                    onJumpToGenerate?()
+                }
+            }
+        }
     }
 
     private var quotesCommandCard: some View {
@@ -282,33 +357,39 @@ struct QuotesTabView: View {
             }
         } actions: {
             VStack(spacing: 10) {
-                Button(quotesPrimaryActionTitle) {
+                TabCommandActionButton(
+                    title: quotesPrimaryActionTitle,
+                    systemImage: quotesPrimaryActionIcon,
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "quotes.command.primary"
+                ) {
                     performPrimaryQuotesAction()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .foregroundStyle(buttonText)
-                .font(.caption.weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 42)
-                .accessibilityIdentifier("quotes.command.primary")
 
                 HStack(spacing: 10) {
-                    Button("Daily Quote") {
+                    TabCommandActionButton(
+                        title: "Daily Quote",
+                        systemImage: "sun.max",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        accessibilityIdentifier: "quotes.command.daily"
+                    ) {
                         showQuoteSpotlight = true
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 40)
-                    .accessibilityIdentifier("quotes.command.daily")
 
-                    Button("Generate") {
+                    TabCommandActionButton(
+                        title: "Generate",
+                        systemImage: "sparkles",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        accessibilityIdentifier: "quotes.command.generate"
+                    ) {
                         onJumpToGenerate?()
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 40)
-                    .accessibilityIdentifier("quotes.command.generate")
                 }
             }
         }
@@ -318,7 +399,7 @@ struct QuotesTabView: View {
     private var quoteHeaderCard: some View {
         let filteredCount = viewModel.filteredQuotes.count
         let libraryCount = viewModel.allQuotes.count
-        return VStack(alignment: .leading, spacing: 14) {
+        return SectionShell(accent: accent, cardColor: cardColor) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Quote Desk")
@@ -341,23 +422,14 @@ struct QuotesTabView: View {
                             .fill(accent.opacity(0.12))
                     )
             }
-
+        }
+        content: {
             HStack(spacing: 10) {
                 quoteMetricPill(title: "Visible", value: "\(filteredCount)")
                 quoteMetricPill(title: "Library", value: "\(libraryCount)")
                 quoteMetricPill(title: "Votes", value: "\(viewModel.likedCount + viewModel.dislikedCount)")
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
-                .fill(cardColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
-                        .stroke(accent.opacity(0.12), lineWidth: 1)
-                )
-        )
     }
 
     private func quoteMetricPill(title: String, value: String) -> some View {
@@ -375,7 +447,23 @@ struct QuotesTabView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(accent.opacity(0.08))
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.2), accent.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(accent.opacity(0.06))
+                .frame(height: 1.1),
+            alignment: .top
         )
     }
 
@@ -430,11 +518,24 @@ struct QuotesTabView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(cardColor)
+                .fill(cardColor.opacity(0.97))
+                .overlay(
+                    LinearGradient(
+                        colors: [accent.opacity(0.08), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.09), lineWidth: 1)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                .fill(accent.opacity(0.08))
+                .frame(height: 1.2),
+            alignment: .top
         )
         .contextMenu {
             Button { copyQuote(quote, isDaily: false) } label: {
@@ -505,54 +606,68 @@ struct QuotesTabView: View {
                 HStack(spacing: 10) {
                     HStack(spacing: 8) {
                         let heroVote = viewModel.vote(for: dailyQuote)
-                        Button {
+                        TabCommandActionButton(
+                            title: heroVote == .like ? "Liked" : "Like",
+                            systemImage: heroVote == .like ? "hand.thumbsup.fill" : "hand.thumbsup",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: heroVote == .like,
+                            minHeight: 38
+                        ) {
                             viewModel.toggleVote(.like, for: dailyQuote)
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        } label: {
-                            Image(systemName: heroVote == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
-                                .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                         }
-                        .buttonStyle(.bordered)
-                        .tint(accent)
                         .accessibilityLabel("Like quote")
 
-                        Button {
+                        TabCommandActionButton(
+                            title: heroVote == .dislike ? "Noted" : "Dislike",
+                            systemImage: heroVote == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: heroVote == .dislike,
+                            minHeight: 38
+                        ) {
                             viewModel.toggleVote(.dislike, for: dailyQuote)
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        } label: {
-                            Image(systemName: heroVote == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                                .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                         }
-                        .buttonStyle(.bordered)
-                        .tint(accent)
                         .accessibilityLabel("Dislike quote")
                     }
                     Spacer()
-                    Button {
+                    TabCommandActionButton(
+                        title: "Spotlight",
+                        systemImage: "sparkle.magnifyingglass",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        minHeight: 38
+                    ) {
                         showQuoteSpotlight = true
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    } label: {
-                        Image(systemName: "sparkle.magnifyingglass")
-                            .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(accent)
                     .accessibilityLabel("Open quote spotlight")
 
-                    Button { copyQuote(dailyQuote, isDaily: true) } label: {
-                        Image(systemName: "doc.on.doc")
-                            .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
+                    TabCommandActionButton(
+                        title: "Copy Quote",
+                        systemImage: "doc.on.doc",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        minHeight: 38
+                    ) {
+                        copyQuote(dailyQuote, isDaily: true)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(accent)
                     .accessibilityLabel("Copy quote")
 
-                    Button { shareQuote(dailyQuote, isDaily: true) } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .frame(width: Theme.minimumTapTarget, height: Theme.minimumTapTarget)
+                    TabCommandActionButton(
+                        title: "Share Quote",
+                        systemImage: "square.and.arrow.up",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: true,
+                        minHeight: 38
+                    ) {
+                        shareQuote(dailyQuote, isDaily: true)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(accent)
                     .accessibilityLabel("Share quote")
                 }
                 .padding(.top, 16)
@@ -585,12 +700,18 @@ struct QuotesTabView: View {
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(primaryText)
                 Spacer()
-                Button(showQuoteSpotlight ? "Hide" : "Show") {
+                TabCommandActionButton(
+                    title: showQuoteSpotlight ? "Hide Spotlight" : "Show Spotlight",
+                    systemImage: showQuoteSpotlight ? "chevron.up" : "chevron.down",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    minHeight: 30
+                ) {
                     withAnimation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8)) {
                         showQuoteSpotlight.toggle()
                     }
                 }
-                .font(.caption.weight(.semibold))
                 .accessibilityIdentifier("quotes.spotlight.toggle")
             }
         } content: {
@@ -615,10 +736,23 @@ struct QuotesTabView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
-                        .fill(cardColor)
+                        .fill(cardColor.opacity(0.96))
+                        .overlay(
+                            LinearGradient(
+                                colors: [accent.opacity(0.08), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
                         .overlay(
                             RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
-                                .stroke(accent.opacity(0.09), lineWidth: 1)
+                                .stroke(accent.opacity(0.12), lineWidth: 1)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                                .fill(accent.opacity(0.06))
+                                .frame(height: 1),
+                            alignment: .top
                         )
                 )
             } else {
@@ -655,45 +789,56 @@ struct QuotesTabView: View {
                 }
 
                 HStack(spacing: 10) {
-                    Button(showQuoteSpotlight ? "Close Spotlight" : "Open Spotlight") {
+                    TabCommandActionButton(
+                        title: showQuoteSpotlight ? "Close Spotlight" : "Open Spotlight",
+                        systemImage: showQuoteSpotlight ? "eye.slash" : "eye",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        minHeight: 40
+                    ) {
                         withAnimation(isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.8)) {
                             showQuoteSpotlight.toggle()
                         }
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 40)
 
-                    Button("Copy Quote") {
+                    TabCommandActionButton(
+                        title: "Copy Quote",
+                        systemImage: "doc.on.doc",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        minHeight: 40
+                    ) {
                         copyQuote(dailyQuote, isDaily: true)
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 40)
 
-                    Button(shareButtonTitle) {
+                    TabCommandActionButton(
+                        title: shareButtonTitle,
+                        systemImage: "square.and.arrow.up",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: true,
+                        minHeight: 40
+                    ) {
                         shareQuote(dailyQuote, isDaily: true)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(accent)
-                    .foregroundStyle(buttonText)
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 40)
                 }
 
-                Button {
+                TabCommandActionButton(
+                    title: quoteFriendActionTitle,
+                    systemImage: quoteFriendActionIcon,
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    minHeight: 40
+                ) {
                     if quoteShareStatus == "Ready" {
                         shareQuoteToFriends(dailyQuote)
                     } else {
                         onOpenTab?(.friends)
                     }
-                } label: {
-                    Label(quoteFriendActionTitle, systemImage: quoteFriendActionIcon)
-                        .font(.caption.weight(.bold))
-                        .frame(maxWidth: .infinity, minHeight: 40)
                 }
-                .buttonStyle(.bordered)
-                .tint(accent)
                 .accessibilityIdentifier("quotes.ritual.friendAction")
 
                 HStack(spacing: 8) {
@@ -844,33 +989,33 @@ struct QuotesTabView: View {
     }
 
     private func voteButtons(for quote: BadQuote) -> some View {
-        let neutralFill = accent.opacity(0.14)
-        let activeFill = accent.opacity(0.28)
         let voteState = viewModel.vote(for: quote)
 
         return HStack(spacing: 8) {
-            Button {
+            TabCommandActionButton(
+                title: voteState == .like ? "Liked" : "Like",
+                systemImage: voteState == .like ? "hand.thumbsup.fill" : "hand.thumbsup",
+                accent: accent,
+                buttonText: buttonText,
+                prominent: voteState == .like,
+                minHeight: 32
+            ) {
                 viewModel.toggleVote(.like, for: quote)
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-            } label: {
-                Image(systemName: voteState == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
-                    .foregroundStyle(accent)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(voteState == .like ? activeFill : neutralFill))
             }
-            .buttonStyle(.plain)
             .accessibilityLabel("Like quote")
 
-            Button {
+            TabCommandActionButton(
+                title: voteState == .dislike ? "Noted" : "Dislike",
+                systemImage: voteState == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown",
+                accent: accent,
+                buttonText: buttonText,
+                prominent: voteState == .dislike,
+                minHeight: 32
+            ) {
                 viewModel.toggleVote(.dislike, for: quote)
                 HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-            } label: {
-                Image(systemName: voteState == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-                    .foregroundStyle(accent)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(voteState == .dislike ? activeFill : neutralFill))
             }
-            .buttonStyle(.plain)
             .accessibilityLabel("Dislike quote")
         }
     }
@@ -972,80 +1117,5 @@ enum FriendSearchRelationshipState: Equatable {
 
     var isActionEnabled: Bool {
         self == .addable
-    }
-}
-
-
-
-// MARK: - Quotes Empty State
-
-private struct QuotesEmptyState: View {
-    let theme: ThemeMode
-    var reduceMotion: Bool = false
-
-    @State private var appeared = false
-    @State private var floatOffset: CGFloat = 0
-
-    private var accent: Color { Theme.accent(for: theme) }
-    private var primaryText: Color { Theme.primaryText(for: theme) }
-    private var secondaryText: Color { Theme.secondaryText(for: theme) }
-
-    var body: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                Circle()
-                    .fill(accent.opacity(0.08))
-                    .frame(width: 130, height: 130)
-                    .scaleEffect(appeared ? 1.0 : 0.7)
-                    .opacity(appeared ? 1 : 0)
-                Circle()
-                    .fill(accent.opacity(0.13))
-                    .frame(width: 100, height: 100)
-                    .offset(y: floatOffset)
-                if reduceMotion {
-                    Image(systemName: "quote.bubble")
-                        .font(.system(size: 42, weight: .medium))
-                        .foregroundStyle(accent)
-                        .offset(y: floatOffset)
-                } else {
-                    Image(systemName: "quote.bubble")
-                        .font(.system(size: 42, weight: .medium))
-                        .foregroundStyle(accent)
-                        .offset(y: floatOffset)
-                        .symbolEffect(.bounce, options: .repeating, value: appeared)
-                }
-            }
-
-            VStack(spacing: 8) {
-                Text("All quiet here.")
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .foregroundStyle(primaryText)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 18)
-
-                Text("No quotes in this category yet.\nPick another or generate more advice.")
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(secondaryText)
-                    .lineSpacing(3)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 12)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .onAppear {
-            guard !appeared else { return }
-            if reduceMotion {
-                appeared = true
-            } else {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.72)) { appeared = true }
-                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) { floatOffset = -9 }
-            }
-        }
-        .onDisappear {
-            appeared = false
-            floatOffset = 0
-        }
     }
 }

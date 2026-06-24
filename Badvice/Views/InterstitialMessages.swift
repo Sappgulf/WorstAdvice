@@ -24,6 +24,7 @@ struct SettingsTabView: View {
     var achievementsManager: AchievementsManager
     var onSignOut: () -> Void
     var onDeleteAccount: (_ password: String) async -> Void
+    @AppStorage(AppTab.settings.focusModeStorageKey) private var isFocusMode = false
 
     @State private var sectionsAppeared = false
     @State private var gearWobble = false
@@ -87,6 +88,7 @@ struct SettingsTabView: View {
     private var primaryText: Color { Theme.primaryText(for: viewModel.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: viewModel.theme) }
     private var cardColor: Color { Theme.cardColor(for: viewModel.theme) }
+    private var buttonText: Color { Theme.buttonText(for: viewModel.theme) }
 
     var body: some View {
         ScrollView {
@@ -98,99 +100,143 @@ struct SettingsTabView: View {
                         isMotionReduced
                             ? nil
                             : .spring(response: 0.5, dampingFraction: 0.78),
-                        value: sectionsAppeared)
+                        value: sectionsAppeared
+                    )
 
                 Group {
-                    socialHealthSection
-                        .opacity(sectionsAppeared ? 1 : 0)
-                        .offset(y: sectionsAppeared ? 0 : 24)
-                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                        .animation(
-                            isMotionReduced
-                                ? nil
-                                : .spring(response: 0.5, dampingFraction: 0.75),
-                            value: sectionsAppeared)
-                    accountSection
-                        .opacity(sectionsAppeared ? 1 : 0)
-                        .offset(y: sectionsAppeared ? 0 : 24)
-                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                        .animation(
-                            isMotionReduced
-                                ? nil
-                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05),
-                            value: sectionsAppeared)
-                    communityLabsSection
-                        .opacity(sectionsAppeared ? 1 : 0)
-                        .offset(y: sectionsAppeared ? 0 : 24)
-                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                        .animation(
-                            isMotionReduced
-                                ? nil
-                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10),
-                            value: sectionsAppeared)
-                    themeSection
-                        .opacity(sectionsAppeared ? 1 : 0)
-                        .offset(y: sectionsAppeared ? 0 : 24)
-                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                        .animation(
-                            isMotionReduced
-                                ? nil
-                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.15),
-                            value: sectionsAppeared)
-                    experienceSection
-                        .opacity(sectionsAppeared ? 1 : 0)
-                        .offset(y: sectionsAppeared ? 0 : 24)
-                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                        .animation(
-                            isMotionReduced
-                                ? nil
-                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.20),
-                            value: sectionsAppeared)
-                    notificationSection
-                        .opacity(sectionsAppeared ? 1 : 0)
-                        .offset(y: sectionsAppeared ? 0 : 24)
-                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                        .animation(
-                            isMotionReduced
-                                ? nil
-                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.225),
-                            value: sectionsAppeared)
-                    sharingSection
-                        .opacity(sectionsAppeared ? 1 : 0)
-                        .offset(y: sectionsAppeared ? 0 : 24)
-                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                        .animation(
-                            isMotionReduced
-                                ? nil
-                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.25),
-                            value: sectionsAppeared)
-                    discoverSection
-                        .opacity(sectionsAppeared ? 1 : 0)
-                        .offset(y: sectionsAppeared ? 0 : 24)
-                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                        .animation(
-                            isMotionReduced
-                                ? nil
-                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.30),
-                            value: sectionsAppeared)
-                    dataSection
-                        .opacity(sectionsAppeared ? 1 : 0)
-                        .offset(y: sectionsAppeared ? 0 : 24)
-                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                        .animation(
-                            isMotionReduced
-                                ? nil
-                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.35),
-                            value: sectionsAppeared)
-                    aboutSection
-                        .opacity(sectionsAppeared ? 1 : 0)
-                        .offset(y: sectionsAppeared ? 0 : 24)
-                        .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                        .animation(
-                            isMotionReduced
-                                ? nil
-                                : .spring(response: 0.5, dampingFraction: 0.75).delay(0.40),
-                            value: sectionsAppeared)
+                    if isFocusMode {
+                        accountSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75),
+                                value: sectionsAppeared
+                            )
+                        themeSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05),
+                                value: sectionsAppeared
+                            )
+                        experienceSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10),
+                                value: sectionsAppeared
+                            )
+                    } else {
+                        socialHealthSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75),
+                                value: sectionsAppeared
+                            )
+                        accountSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05),
+                                value: sectionsAppeared
+                            )
+                        communityLabsSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10),
+                                value: sectionsAppeared
+                            )
+                        themeSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.15),
+                                value: sectionsAppeared
+                            )
+                        experienceSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.20),
+                                value: sectionsAppeared
+                            )
+                        notificationSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.225),
+                                value: sectionsAppeared
+                            )
+                        sharingSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.25),
+                                value: sectionsAppeared
+                            )
+                        discoverSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.30),
+                                value: sectionsAppeared
+                            )
+                        dataSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.35),
+                                value: sectionsAppeared
+                            )
+                        aboutSection
+                            .opacity(sectionsAppeared ? 1 : 0)
+                            .offset(y: sectionsAppeared ? 0 : 24)
+                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                            .animation(
+                                isMotionReduced
+                                    ? nil
+                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.40),
+                                value: sectionsAppeared
+                            )
+                    }
                 }
                 .padding(.horizontal, 16)
             }
@@ -277,6 +323,22 @@ struct SettingsTabView: View {
         }
         .navigationDestination(isPresented: $showingSocialDiagnostics) {
             SocialHealthDiagnosticsView(social: social, settings: viewModel)
+        }
+        .toolbar { focusModeToolbar }
+    }
+
+    @ToolbarContentBuilder
+    private var focusModeToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            TabFocusModeToggle(
+                isEnabled: isFocusMode,
+                accent: accent
+            ) {
+                HapticsManager.playSelection(isEnabled: viewModel.hapticsEnabled)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isFocusMode.toggle()
+                }
+            }
         }
     }
 
@@ -396,12 +458,31 @@ struct SettingsTabView: View {
         .padding(Theme.sectionSpacing)
         .background(
             RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                .fill(cardColor.opacity(0.96))
+                .fill(
+                    LinearGradient(
+                        colors: [cardColor.opacity(0.96), cardColor.opacity(0.78)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    LinearGradient(
+                        colors: [accent.opacity(0.12), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .shadow(color: .black.opacity(0.05), radius: 10, y: 5)
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.1), lineWidth: 1)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .fill(accent.opacity(0.06))
+                .frame(height: 1),
+            alignment: .top
         )
         .padding(.horizontal, 16)
         .padding(.top, 20)
@@ -430,7 +511,23 @@ struct SettingsTabView: View {
         .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(accent.opacity(0.12))
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.14), accent.opacity(0.06)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(accent.opacity(0.2), lineWidth: 1)
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(accent.opacity(0.16), lineWidth: 1)
+                .blendMode(.screen),
+            alignment: .top
         )
     }
 
@@ -464,41 +561,40 @@ struct SettingsTabView: View {
 
                 settingsDivider
 
-                Button {
+                TabCommandActionButton(
+                    title: "Change Password",
+                    systemImage: "key.fill",
+                    accent: accent,
+                    buttonText: buttonText
+                ) {
                     currentPasswordDraft = ""
                     newPasswordDraft = ""
                     confirmPasswordDraft = ""
                     activeAuthSheet = .changePassword
-                } label: {
-                    Label("Change Password", systemImage: "key.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
-                .tint(accent)
                 .accessibilityIdentifier("settings.auth.changePassword")
 
-                Button(role: .destructive) {
+                TabCommandActionButton(
+                    title: "Delete Local Account",
+                    systemImage: "trash.fill",
+                    accent: .red,
+                    buttonText: buttonText,
+                    prominent: false
+                ) {
                     deletePasswordDraft = ""
                     activeAuthSheet = .deleteAccount
-                } label: {
-                    Label("Delete Local Account", systemImage: "trash.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
-                .tint(.red)
                 .accessibilityIdentifier("settings.auth.deleteAccount")
 
-                Button(role: .destructive) {
+                TabCommandActionButton(
+                    title: "Sign Out",
+                    systemImage: "rectangle.portrait.and.arrow.right",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false
+                ) {
                     onSignOut()
-                } label: {
-                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
-                .tint(.red)
                 .accessibilityIdentifier("settings.auth.signOut")
             }
         }
@@ -961,9 +1057,16 @@ struct SettingsTabView: View {
                         .foregroundStyle(secondaryText)
                     Spacer()
                     if notificationPermissionGranted == false {
-                        Button("Enable") { openAppSettings() }
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(accent)
+                        TabCommandActionButton(
+                            title: "Enable",
+                            systemImage: "bell.badge",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: false,
+                            minHeight: 34
+                        ) {
+                            openAppSettings()
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1533,42 +1636,50 @@ struct SettingsTabView: View {
 
             HStack(spacing: 8) {
                 if !model.isInstalled {
-                    Button {
+                    TabCommandActionButton(
+                        title: "Install",
+                        systemImage: "arrow.down.circle",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false
+                    ) {
                         viewModel.selectAppleLocalModel(id: model.id)
                         Task { await viewModel.installAppleLocalModel(id: model.id) }
-                    } label: {
-                        Label("Install", systemImage: "arrow.down.circle")
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption.weight(.semibold))
                 } else {
-                    Button {
+                    TabCommandActionButton(
+                        title: "Warm Up",
+                        systemImage: "bolt.fill",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false
+                    ) {
                         viewModel.selectAppleLocalModel(id: model.id)
                         Task { await viewModel.warmUpAppleLocalModel(id: model.id) }
-                    } label: {
-                        Label("Warm Up", systemImage: "bolt.fill")
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption.weight(.semibold))
                 }
 
                 if model.source == .downloaded {
-                    Button(role: .destructive) {
+                    TabCommandActionButton(
+                        title: "Remove",
+                        systemImage: "trash",
+                        accent: .red,
+                        buttonText: buttonText,
+                        prominent: false
+                    ) {
                         Task { await viewModel.removeAppleLocalModel(id: model.id) }
-                    } label: {
-                        Label("Remove", systemImage: "trash")
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption.weight(.semibold))
                 }
 
-                Button {
+                TabCommandActionButton(
+                    title: "Recheck",
+                    systemImage: "arrow.clockwise",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false
+                ) {
                     viewModel.refreshAppleOnDeviceModelAvailability()
-                } label: {
-                    Label("Recheck", systemImage: "arrow.clockwise")
                 }
-                .buttonStyle(.bordered)
-                .font(.caption.weight(.semibold))
             }
         }
         .padding(10)
@@ -1936,12 +2047,35 @@ struct SettingsTabView: View {
                 .padding(Theme.sectionSpacing)
                 .background(
                     RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                        .fill(cardColor)
+                        .fill(
+                            LinearGradient(
+                                colors: [cardColor, cardColor.opacity(0.85), cardColor.opacity(0.75)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                                .fill(accent.opacity(0.06))
+                                .frame(height: 1),
+                            alignment: .top
+                        )
                         .shadow(color: .black.opacity(0.04), radius: 8, y: 4)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                        .stroke(accent.opacity(0.08), lineWidth: 1)
+                        .stroke(accent.opacity(0.12), lineWidth: 1)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [accent.opacity(0.4), accent.opacity(0.08)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
                 )
         }
     }

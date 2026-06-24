@@ -93,10 +93,19 @@ struct FloatingTabBarView: View {
         } label: {
             VStack(spacing: 2) {
                 ZStack(alignment: .topTrailing) {
+                    Circle()
+                        .fill(isSelected || isHighlighted ? accent.opacity(0.18) : secondaryText.opacity(0.12))
+                        .frame(width: 30, height: 30)
+                        .scaleEffect(isHighlighted && !isSelected ? 1.06 : 1.0)
                     Image(systemName: tab.systemImage)
                         .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
                         .symbolVariant(isSelected ? .fill : .none)
                         .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
+                        .foregroundStyle(
+                            isSelected
+                                ? accent
+                                : (isHighlighted ? accent.opacity(0.78) : secondaryText.opacity(0.74))
+                        )
 
                     if badgeCount > 0 {
                         Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
@@ -127,11 +136,11 @@ struct FloatingTabBarView: View {
             .padding(.top, 5)
             .padding(.bottom, 5)
             .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
-            .background {
-                if isSelected || isHighlighted {
-                    Capsule(style: .continuous)
-                        .fill(
-                            accent.opacity(
+                .background {
+                    if isSelected || isHighlighted {
+                        Capsule(style: .continuous)
+                            .fill(
+                                accent.opacity(
                                 isSelected
                                     ? tabBarStyle.selectedFillOpacity
                                     : tabBarStyle.highlightedFillOpacity
@@ -143,8 +152,10 @@ struct FloatingTabBarView: View {
                             Capsule(style: .continuous)
                                 .stroke(accent.opacity(0.38), lineWidth: isSelected ? 0.8 : 0)
                         )
+                        .shadow(color: accent.opacity(0.2), radius: 6, x: 0, y: 3)
+                        .animation(.spring(response: Theme.animFast, dampingFraction: 0.8), value: isSelected)
+                    }
                 }
-            }
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -163,9 +174,19 @@ struct FloatingTabBarView: View {
             showingShellMenu = true
         } label: {
             VStack(spacing: 2) {
-                Image(systemName: "ellipsis.circle")
-                    .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
-                    .symbolEffect(.bounce.up.byLayer, value: isSelected)
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? accent.opacity(0.18) : secondaryText.opacity(0.12))
+                        .frame(width: 30, height: 30)
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
+                        .symbolEffect(.bounce.up.byLayer, value: isSelected)
+                }
+                .foregroundStyle(
+                    isSelected
+                        ? accent
+                        : secondaryText.opacity(0.74)
+                )
 
                 Text("More")
                     .font(.system(size: 9, weight: isSelected ? .semibold : .regular, design: .rounded))
@@ -178,8 +199,8 @@ struct FloatingTabBarView: View {
             .frame(minHeight: Theme.floatingTabItemMinHeight)
             .padding(.top, 5)
             .padding(.bottom, 5)
-            .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
-            .background {
+                .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
+                .background {
                 if isSelected {
                     Capsule(style: .continuous)
                         .fill(accent.opacity(tabBarStyle.selectedFillOpacity))
@@ -189,6 +210,7 @@ struct FloatingTabBarView: View {
                             Capsule(style: .continuous)
                                 .stroke(accent.opacity(0.38), lineWidth: 0.7)
                         )
+                        .shadow(color: accent.opacity(0.22), radius: 5, x: 0, y: 2)
                 }
             }
         }
@@ -305,6 +327,21 @@ struct FloatingTabBarView: View {
                     .stroke(glow.opacity(0.25), lineWidth: 1)
                     .blur(radius: 2)
             }
+
+            RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            accent.opacity(0.35),
+                            .clear,
+                            .clear,
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .blendMode(.plusLighter)
+                .padding(1.2)
         }
     }
 

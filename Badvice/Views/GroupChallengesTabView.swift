@@ -11,6 +11,7 @@ struct GroupChallengesTabView: View {
     let generateViewModel: GenerateViewModel
     let settings: SettingsViewModel
     let onOpenTab: (AppTab) -> Void
+    @AppStorage(AppTab.groupChallenges.focusModeStorageKey) private var isFocusMode = false
 
     @State private var activeChallenges: [GroupChallenge] = Self.demoActiveChallenges
     @State private var completedChallenges: [GroupChallenge] = Self.demoCompletedChallenges
@@ -23,12 +24,14 @@ struct GroupChallengesTabView: View {
     @State private var copiedCodeDismissTask: Task<Void, Never>?
     @State private var joinFeedbackDismissTask: Task<Void, Never>?
     @Environment(\.tabBarVisible) private var tabBarVisible
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var buttonText: Color { Theme.buttonText(for: settings.theme) }
+    private var isMotionReduced: Bool { settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion }
 
     var body: some View {
         NavigationStack {
@@ -37,16 +40,20 @@ struct GroupChallengesTabView: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        headerSection
+                        if !isFocusMode {
+                            headerSection
+                        }
                         challengeCommandCard
 
                         if !activeChallenges.isEmpty {
                             activeChallengesSection
                         }
-                        if !completedChallenges.isEmpty {
+                        if !isFocusMode && !completedChallenges.isEmpty {
                             completedChallengesSection
                         }
-                        if activeChallenges.isEmpty && completedChallenges.isEmpty {
+                        if isFocusMode && activeChallenges.isEmpty {
+                            emptyStateView
+                        } else if activeChallenges.isEmpty && completedChallenges.isEmpty {
                             emptyStateView
                         }
                     }
@@ -58,18 +65,7 @@ struct GroupChallengesTabView: View {
             }
             .navigationTitle("Group Challenges")
             .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        showCreateSheet = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill").foregroundStyle(accent)
-                    }
-                    .accessibilityLabel("Create challenge")
-                    .accessibilityIdentifier("groupChallenges.toolbarCreate")
-                }
-            }
+            .toolbar { focusModeToolbar }
             .sheet(isPresented: $showCreateSheet) {
                 CreateChallengeSheet(onCreate: { challenge in
                     activeChallenges.append(challenge)
@@ -158,6 +154,12 @@ struct GroupChallengesTabView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
+            Label("Challenge Board", systemImage: "flag.checkered")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(accent)
+                .textCase(.uppercase)
+                .tracking(1.1)
+                .padding(.bottom, 2)
             Text("Challenge Your Friends")
                 .font(.title2.bold())
                 .foregroundStyle(primaryText)
@@ -166,29 +168,28 @@ struct GroupChallengesTabView: View {
                 .foregroundStyle(secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
-                Button {
+                TabCommandActionButton(
+                    title: "Create",
+                    systemImage: "plus",
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "groupChallenges.headerCreate"
+                ) {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     showCreateSheet = true
-                } label: {
-                    Label("Create", systemImage: "plus")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .accessibilityIdentifier("groupChallenges.headerCreate")
 
-                Button {
+                TabCommandActionButton(
+                    title: "Join by Code",
+                    systemImage: "person.badge.plus",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    accessibilityIdentifier: "groupChallenges.headerJoin"
+                ) {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                     showJoinAlert = true
-                } label: {
-                    Label("Join by Code", systemImage: "person.badge.plus")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .accessibilityIdentifier("groupChallenges.headerJoin")
             }
             .padding(.top, 4)
         }
@@ -196,11 +197,31 @@ struct GroupChallengesTabView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
-                .fill(cardColor.opacity(0.84))
+                .fill(
+                    LinearGradient(
+                        colors: [cardColor.opacity(0.92), cardColor.opacity(0.84), cardColor.opacity(0.74)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    LinearGradient(
+                        colors: [accent.opacity(0.08), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
-                        .stroke(accent.opacity(0.12), lineWidth: 1)
+                        .stroke(accent.opacity(0.2), lineWidth: 1)
                 )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
+                        .fill(accent.opacity(0.09))
+                        .frame(height: 1.2),
+                    alignment: .top
+                )
+                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
         )
     }
 
@@ -250,45 +271,75 @@ struct GroupChallengesTabView: View {
                     performChallengePrimaryAction()
                 }
 
-                TabCommandActionButton(
-                    title: "Join",
-                    systemImage: "person.badge.plus",
-                    accent: accent,
-                    buttonText: buttonText,
-                    prominent: false,
-                    accessibilityIdentifier: "groupChallenges.command.join"
-                ) {
-                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    showJoinAlert = true
+                if !isFocusMode {
+                    TabCommandActionButton(
+                        title: "Join",
+                        systemImage: "person.badge.plus",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        accessibilityIdentifier: "groupChallenges.command.join"
+                    ) {
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        showJoinAlert = true
+                    }
                 }
             }
         }
         .accessibilityIdentifier("groupChallenges.command.card")
     }
 
-    private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "person.3.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(secondaryText)
-            Text("No Active Challenges")
-                .font(.headline)
-                .foregroundStyle(primaryText)
-            Text("Create a challenge or join one with a friend's invite code.")
-                .font(.subheadline)
-                .foregroundStyle(secondaryText)
-                .multilineTextAlignment(.center)
+    @ToolbarContentBuilder
+    private var focusModeToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            TabFocusModeToggle(
+                isEnabled: isFocusMode,
+                accent: accent
+            ) {
+                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isFocusMode.toggle()
+                }
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(cardColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                        .stroke(accent.opacity(0.1), lineWidth: 1)
-                )
-        )
+    }
+
+    private var emptyStateView: some View {
+        TabEmptyStatePanel(
+            icon: "person.3.fill",
+            title: "No Active Challenges",
+            message: "Create a challenge or join one with a friend's invite code.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor,
+            reduceMotion: isMotionReduced
+        ) {
+            HStack(spacing: 10) {
+                TabCommandActionButton(
+                    title: "Create Mission",
+                    systemImage: "plus",
+                    accent: accent,
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "groupChallenges.empty.create"
+                ) {
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    showCreateSheet = true
+                }
+
+                TabCommandActionButton(
+                    title: "Join by Code",
+                    systemImage: "person.badge.plus",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    accessibilityIdentifier: "groupChallenges.empty.join"
+                ) {
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    showJoinAlert = true
+                }
+            }
+        }
     }
 
     private var activeChallengesSection: some View {
@@ -521,8 +572,27 @@ private struct CompletedChallengeCard: View {
             }
         }
         .padding(14)
-        .background(cardColor.opacity(0.6))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [cardColor.opacity(0.8), cardColor.opacity(0.58)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(accent.opacity(0.2), lineWidth: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(accent.opacity(0.06))
+                .frame(height: 1),
+            alignment: .top
+        )
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -546,14 +616,16 @@ private struct ChallengeDetailSheet: View {
                     LabeledContent("Category", value: challenge.category.title)
                     LabeledContent("Tone", value: challenge.tone.title)
                     LabeledContent("Invite Code") {
-                        Button {
+                        TabCommandActionButton(
+                            title: challenge.inviteCode,
+                            systemImage: "doc.on.doc",
+                            accent: accent,
+                            buttonText: Theme.buttonText(for: settings.theme),
+                            prominent: false
+                        ) {
                             onCopyCode()
-                        } label: {
-                            Text(challenge.inviteCode)
-                                .font(.body.monospaced().bold())
-                                .foregroundStyle(accent)
                         }
-                        .buttonStyle(.plain)
+                        .font(.body.monospaced().bold())
                         .accessibilityIdentifier("groupChallenges.detail.copyCode")
                     }
                     LabeledContent("Ends") {
@@ -576,10 +648,13 @@ private struct ChallengeDetailSheet: View {
                     }
                 }
                 Section {
-                    Button(action: onPlay) {
-                        Label("Play Now", systemImage: "play.fill")
-                            .frame(maxWidth: .infinity)
-                            .foregroundStyle(accent)
+                    TabCommandActionButton(
+                        title: "Play Now",
+                        systemImage: "play.fill",
+                        accent: accent,
+                        buttonText: Theme.buttonText(for: settings.theme)
+                    ) {
+                        onPlay()
                     }
                     .accessibilityIdentifier("groupChallenges.detail.play")
                 }
@@ -640,7 +715,16 @@ struct ChallengeCard: View {
                         .font(.caption.bold())
                         .foregroundStyle(.white)
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.green)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.green.opacity(0.9), Color.green.opacity(0.5)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                        )
                         .clipShape(Capsule())
                 }
             }
@@ -653,49 +737,81 @@ struct ChallengeCard: View {
                     .foregroundStyle(daysLeft <= 1 ? .orange : secondaryText)
             }
             .font(.caption)
+            .padding(.bottom, 2)
 
             leaderboardSection
 
             VStack(spacing: 8) {
-                Button(action: onPlay) {
-                    Label("Play Now", systemImage: "play.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 42)
+                TabCommandActionButton(
+                    title: "Play Now",
+                    systemImage: "play.fill",
+                    accent: accent,
+                    buttonText: Theme.buttonText(for: settings.theme)
+                ) {
+                    onPlay()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
                 .accessibilityIdentifier("groupChallenges.card.play")
 
                 HStack(spacing: 8) {
-                    Button(action: onCopyCode) {
-                        Label(isCopied ? "Copied" : "Copy Code", systemImage: isCopied ? "checkmark" : "doc.on.doc")
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .contentShape(Rectangle())
+                    TabCommandActionButton(
+                        title: isCopied ? "Copied" : "Copy Code",
+                        systemImage: isCopied ? "checkmark" : "doc.on.doc",
+                        accent: accent,
+                        buttonText: Theme.buttonText(for: settings.theme),
+                        prominent: isCopied,
+                        minHeight: 44
+                    ) {
+                        onCopyCode()
                     }
-                    .buttonStyle(.bordered)
-                    .tint(accent)
                     .accessibilityIdentifier("groupChallenges.card.copyCode")
                     .accessibilityLabel(isCopied ? "Copied challenge code" : "Copy challenge code")
                     .accessibilityValue(isCopied ? "Copied \(challenge.inviteCode)" : challenge.inviteCode)
                     .accessibilityAction { onCopyCode() }
 
-                    Button(action: onDetails) {
-                        Image(systemName: "info.circle")
-                            .font(.headline)
-                            .foregroundStyle(accent)
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
+                    TabCommandActionButton(
+                        title: "Details",
+                        systemImage: "info.circle",
+                        accent: accent,
+                        buttonText: Theme.buttonText(for: settings.theme),
+                        prominent: false,
+                        minHeight: 44
+                    ) {
+                        onDetails()
                     }
-                    .buttonStyle(.plain)
                     .accessibilityLabel("Challenge details")
                     .accessibilityIdentifier("groupChallenges.card.details")
                 }
             }
         }
         .padding(14)
-        .background(cardColor)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [cardColor.opacity(0.92), cardColor.opacity(0.72)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    LinearGradient(
+                        colors: [accent.opacity(0.1), .clear, .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(accent.opacity(0.08))
+                .frame(height: 1.1),
+            alignment: .top
+        )
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
 
     private var leaderboardSection: some View {

@@ -30,8 +30,8 @@ struct TabCommandMetric: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(secondaryText.opacity(0.8))
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(accent.opacity(0.8))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text(value)
@@ -45,7 +45,21 @@ struct TabCommandMetric: View {
         .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
-                .fill(accent.opacity(0.08))
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            accent.opacity(0.2),
+                            accent.opacity(0.08),
+                            accent.opacity(0.04),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
         )
     }
 }
@@ -115,40 +129,108 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.12), lineWidth: 1)
+                .stroke(accent.opacity(0.22), lineWidth: 1)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.18), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blendMode(.screen)
+                .mask(
+                    RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                )
+        )
+        .overlay(alignment: .top) {
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.75), accent.opacity(0.12), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(height: 1.5)
+                .padding(.horizontal, 16)
+                .padding(.top, 1)
+        }
+        .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
         .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 4)
     }
 }
 
 struct TabCommandActionButton: View {
     let title: String
-    let systemImage: String
+    let systemImage: String?
     let accent: Color
     let buttonText: Color
     var prominent = true
     var isDisabled = false
     var accessibilityIdentifier: String? = nil
+    var minHeight: CGFloat = Theme.commandActionMinHeight
     let action: () -> Void
 
     @ViewBuilder
     var body: some View {
         actionButton
-            .adaptiveGlassButtonStyle(prominent: prominent)
-            .foregroundStyle(prominent ? buttonText : accent)
     }
 
     private var actionButton: some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
+            actionLabel
                 .font(.caption.weight(.semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
-                .frame(maxWidth: .infinity, minHeight: Theme.commandActionMinHeight)
+                .frame(maxWidth: .infinity, minHeight: minHeight)
+                .padding(.horizontal, 10)
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(prominent ? buttonText : accent)
+        .opacity(isDisabled ? 0.7 : 1.0)
         .tint(accent)
         .disabled(isDisabled)
         .accessibilityIdentifier(accessibilityIdentifier ?? "")
+        .contentShape(Capsule(style: .continuous))
+        .background {
+            ZStack {
+                Capsule(style: .continuous)
+                    .fill(prominent ? (isDisabled ? accent.opacity(0.10) : accent.opacity(0.16)) : .clear)
+                if !isDisabled {
+                    Capsule(style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    accent.opacity(prominent ? 0.24 : 0.14),
+                                    accent.opacity(prominent ? 0.08 : 0.0),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .opacity(prominent ? 0.45 : 0.16)
+                }
+            }
+            .overlay(
+                Capsule(style: .continuous)
+                        .stroke(
+                            isDisabled ? accent.opacity(0.22) : accent.opacity(prominent ? 0.48 : 0.3),
+                            lineWidth: 1
+                        )
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var actionLabel: some View {
+        if let systemImage {
+            Label(title, systemImage: systemImage)
+        } else {
+            Text(title)
+        }
     }
 }
 
@@ -181,8 +263,36 @@ struct SectionShell<Header: View, Content: View>: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.1), lineWidth: 1)
+                .stroke(accent.opacity(0.20), lineWidth: 1)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.12), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .blendMode(.screen)
+                .mask(
+                    RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                )
+        )
+        .overlay(alignment: .top) {
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.30), .clear],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .frame(height: 1.5)
+                .padding(.horizontal, 16)
+                .padding(.top, 1)
+        }
+        .shadow(color: .black.opacity(0.08), radius: 9, x: 0, y: 4)
     }
 }
 
@@ -282,6 +392,162 @@ struct AdviceCategoryFilterChips: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier(accessibilityID)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+struct TabEmptyStatePanel<Actions: View>: View {
+    let icon: String
+    let title: String
+    let message: String
+    let accent: Color
+    let primaryText: Color
+    let secondaryText: Color
+    let cardColor: Color
+    let reduceMotion: Bool
+    @ViewBuilder let actions: () -> Actions
+
+    @State private var appeared = false
+    @State private var floatOffset: CGFloat = 0
+
+    init(
+        icon: String,
+        title: String,
+        message: String,
+        accent: Color,
+        primaryText: Color,
+        secondaryText: Color,
+        cardColor: Color,
+        reduceMotion: Bool,
+        @ViewBuilder actions: @escaping () -> Actions = { EmptyView() }
+    ) {
+        self.icon = icon
+        self.title = title
+        self.message = message
+        self.accent = accent
+        self.primaryText = primaryText
+        self.secondaryText = secondaryText
+        self.cardColor = cardColor
+        self.reduceMotion = reduceMotion
+        self.actions = actions
+    }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(accent.opacity(0.1))
+                    .frame(width: 112, height: 112)
+                    .scaleEffect(appeared ? 1.0 : 0.8)
+                    .opacity(appeared ? 1.0 : 0)
+                Circle()
+                    .fill(accent.opacity(0.14))
+                    .frame(width: 84, height: 84)
+                    .offset(y: floatOffset)
+
+                if reduceMotion {
+                    Image(systemName: icon)
+                        .font(.system(size: 38, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .offset(y: floatOffset)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 38, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .offset(y: floatOffset)
+                        .symbolEffect(.bounce, options: .repeating, value: appeared)
+                }
+            }
+
+            VStack(spacing: 8) {
+                Text(title)
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .foregroundStyle(primaryText)
+                    .multilineTextAlignment(.center)
+                    .opacity(appeared ? 1.0 : 0)
+                    .offset(y: appeared ? 0 : 14)
+
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(secondaryText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+                    .opacity(appeared ? 1.0 : 0)
+                    .offset(y: appeared ? 0 : 12)
+            }
+
+            actions()
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(cardColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [accent.opacity(0.16), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .blendMode(.screen)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(accent.opacity(0.18), lineWidth: 1)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .fill(accent.opacity(0.07))
+                        .frame(height: 1.4),
+                    alignment: .top
+                )
+                .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 8)
+        )
+        .onAppear {
+            guard !appeared else { return }
+            if reduceMotion {
+                appeared = true
+            } else {
+                withAnimation(.spring(response: 0.52, dampingFraction: 0.74)) {
+                    appeared = true
+                }
+                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
+                    floatOffset = -9
+                }
+            }
+        }
+        .onDisappear {
+            appeared = false
+            floatOffset = 0
+        }
+    }
+}
+
+struct TabFocusModeToggle: View {
+    let isEnabled: Bool
+    let accent: Color
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            Label(
+                isEnabled ? "Focus" : "Focus",
+                systemImage: isEnabled ? "eye.slash.fill" : "eye"
+            )
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule(style: .continuous)
+                    .fill((isEnabled ? accent : accent.opacity(0.12)).opacity(isEnabled ? 0.16 : 0.08))
+            )
+            .foregroundStyle(isEnabled ? accent : accent)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("focus.mode.toggle")
+        .accessibilityLabel(isEnabled ? "Disable focus mode" : "Enable focus mode")
     }
 }
 
