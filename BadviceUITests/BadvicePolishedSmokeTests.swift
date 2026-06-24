@@ -643,6 +643,109 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         XCTAssertNotNil(reset, "Expected explore command affordance to stay available after toggling filters.")
     }
 
+    func testMissionProgressionSurfaceAndQuickActionsKeepRendering() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
+
+        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "chaosHub", quickAccessLabel: "Missions"))
+
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.staticTexts["chaos.progressionPath.title"],
+                    app.otherElements["chaos.progressionPath"],
+                    app.buttons["chaos.command.card"],
+                    app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Progression Path")).firstMatch,
+                    app.staticTexts["Daily Mission"],
+                ],
+                timeout: 7,
+                maxSwipes: 6,
+                requireHittable: false
+            ),
+            "Missions/Progression surface should render with either the progression path or mission cards."
+        )
+
+        let quickAction = waitForActionLikeElement(
+            app: app,
+            identifier: "chaos.openAdvice",
+            labelHints: ["Open Advice", "daily"],
+            timeout: 5,
+            maxSwipes: 4,
+            requireHittable: false
+        )
+        XCTAssertNotNil(
+            quickAction,
+            "Expected at least one Missions quick action affordance to be discoverable."
+        )
+    }
+
+    func testSettingsQuickAccessExposesAuthAndSystemControls() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data", "-debug-preload-polish-fixtures", "-debug-polish-seed", "424242"])
+
+        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "settings", quickAccessLabel: "Settings"))
+
+        let settingsSurface = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.buttons["settings.auth.signOut"],
+                app.buttons["settings.auth.changePassword"],
+                app.buttons["settings.socialHealth.open"],
+                app.buttons["settings.socialHealth.view"],
+                app.buttons["settings.theme.badvice"],
+                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch,
+                app.staticTexts["Settings"],
+            ],
+            timeout: 7,
+            maxSwipes: 8,
+            requireHittable: false
+        )
+        XCTAssertNotNil(settingsSurface, "Expected settings surface to render with auth, social, or theme controls.")
+
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.buttons["settings.upgradeStore"],
+                    app.otherElements["settings.upgradeStore"],
+                    app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Upgrade")) .firstMatch,
+                    app.staticTexts["Upgrade & Store"],
+                ],
+                timeout: 5,
+                maxSwipes: 8,
+                requireHittable: false
+            ),
+            "Expected Upgrade & Store system surface to remain discoverable in Settings polish shell."
+        )
+
+        if let socialDiagnostics = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.buttons["settings.socialHealth.open"],
+                app.buttons["settings.socialHealth.view"],
+                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Diagnostics")).firstMatch,
+            ],
+            timeout: 2,
+            maxSwipes: 2,
+            requireHittable: false
+        ),
+        socialDiagnostics.isHittable
+        {
+            socialDiagnostics.tap()
+            XCTAssertNotNil(
+                waitForAnyElement(
+                    app: app,
+                    candidates: [
+                        app.buttons["settings.socialHealth.retryQueue"],
+                        app.buttons["settings.socialHealth.copyReport"],
+                    ],
+                    timeout: 4,
+                    maxSwipes: 1,
+                    requireHittable: false
+                )
+            )
+        }
+    }
+
     private func launchTestApp(
         extraLaunchArguments: [String] = [],
         skipIntro: Bool = true,
