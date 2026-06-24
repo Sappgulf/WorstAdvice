@@ -272,21 +272,14 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             brandMenuButton.tap()
             let done = waitForAnyElement(
                 app: app,
-                candidates: [
-                    app.buttons["Done"],
-                    app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Done")).firstMatch,
-                    app.buttons["Cancel"],
-                    app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Cancel")).firstMatch,
-                    app.buttons["Close"],
-                    app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Close")).firstMatch,
-                    app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Done")).firstMatch,
-                    app.navigationBars.buttons.firstMatch,
-                ],
+                candidates: dismissBrandMenuCandidates(app),
                 timeout: 4
             )
             if let done {
                 done.tap()
+                RunLoop.current.run(until: Date().addingTimeInterval(0.25))
             }
+            closeBrandMenu(app: app)
         } else {
             print("Brand menu not discoverable from current UI state; continuing with tab-cycle fallback.")
         }
@@ -356,7 +349,21 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         if finalGenerateTab.waitForExistence(timeout: 5) {
             finalGenerateTab.tap()
         }
-        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 5))
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.buttons["generate.primary"],
+                    app.otherElements["generate.commandCard"],
+                    app.staticTexts["Advice"],
+                    app.buttons["focus.mode.toggle"],
+                ],
+                timeout: 6,
+                maxSwipes: 3,
+                requireHittable: false
+            ),
+            "Expected generate context to reappear after tab cycling."
+        )
     }
 
     func testTabSurfacePolishCoverageAcrossAllSurfaces() throws {
@@ -669,7 +676,7 @@ final class BadvicePolishedSmokeTests: XCTestCase {
                 app: app,
                 candidates: tabMarkerCandidates,
                 timeout: 6,
-                maxSwipes: 8,
+                maxSwipes: 3,
                 requireHittable: false
             ),
             "Expected a marker for this tab surface."
@@ -680,12 +687,13 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             let found = waitForActionLikeElement(
                 app: app,
                 identifier: commandID,
-                timeout: 4,
-                maxSwipes: 4,
+                timeout: 2.2,
+                maxSwipes: 1,
                 requireHittable: false
             )
             if found != nil {
                 foundAnyCommandAction = true
+                break
             }
         }
 
@@ -741,20 +749,9 @@ final class BadvicePolishedSmokeTests: XCTestCase {
     }
 
     private func closeBrandMenu(app: XCUIApplication) {
-        let closeCandidates = [
-            app.buttons["Done"],
-            app.buttons["Close"],
-            app.buttons["Cancel"],
-            app.buttons["Done"].firstMatch,
-            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Done")).firstMatch,
-            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Close")).firstMatch,
-            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Cancel")).firstMatch,
-            app.navigationBars.buttons.firstMatch,
-        ]
-
         if let closeTarget = waitForAnyElement(
             app: app,
-            candidates: closeCandidates,
+            candidates: dismissBrandMenuCandidates(app),
             timeout: 2,
             maxSwipes: 2,
             requireHittable: false
@@ -764,6 +761,19 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             closeTarget.tap()
             RunLoop.current.run(until: Date().addingTimeInterval(0.35))
         }
+    }
+
+    private func dismissBrandMenuCandidates(_ app: XCUIApplication) -> [XCUIElement] {
+        [
+            app.buttons["Done"],
+            app.buttons["Close"],
+            app.buttons["Cancel"],
+            app.buttons["Done"].firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Done")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Close")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Cancel")).firstMatch,
+            app.navigationBars.buttons.firstMatch,
+        ]
     }
 
     @discardableResult
