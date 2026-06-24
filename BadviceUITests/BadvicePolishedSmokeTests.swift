@@ -746,6 +746,92 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         }
     }
 
+    func testQuotesDailyRitualFriendActionIsDiscoverableAndResponsive() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data", "-debug-preload-polish-fixtures", "-debug-polish-seed", "424242"])
+
+        let quotesTab = app.buttons.matching(identifier: "tab.quotes").firstMatch
+        XCTAssertTrue(quotesTab.waitForExistence(timeout: 5))
+        quotesTab.tap()
+
+        XCTAssertTrue(
+            app.otherElements["quotes.dailyRitual"].waitForExistence(timeout: 5)
+                || app.staticTexts["quotes.dailyRitual.title"].waitForExistence(timeout: 2)
+        )
+
+        let friendAction = app.buttons["quotes.ritual.friendAction"]
+        XCTAssertTrue(
+            friendAction.waitForExistence(timeout: 3) ||
+                app.otherElements.matching(NSPredicate(format: "label CONTAINS[c] %@", "Friends")).firstMatch.waitForExistence(timeout: 4)
+        )
+
+        if friendAction.waitForExistence(timeout: 2) && friendAction.isHittable {
+            friendAction.tap()
+
+            let quotesFriendOutcome = waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.navigationBars["Friends Setup"],
+                    app.navigationBars["Friends"],
+                    app.otherElements["friends.setupFunnel"],
+                    app.buttons["friends.openSetup"],
+                    app.staticTexts["Friends"],
+                    app.staticTexts["Social features are unavailable in this test run."],
+                ],
+                timeout: 4,
+                maxSwipes: 4,
+                requireHittable: false
+            )
+            XCTAssertNotNil(quotesFriendOutcome)
+        }
+    }
+
+    func testFriendsSetupFunnelShowsProgressAndPrimaryAction() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data", "-debug-preload-polish-fixtures", "-debug-polish-seed", "424242"])
+
+        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "friends", quickAccessLabel: "Friends"))
+
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.staticTexts["friends.setupFunnel.title"],
+                    app.otherElements["friends.setupFunnel"],
+                    app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Profile" )).firstMatch,
+                    app.otherElements["friends.sectionPicker"],
+                ],
+                timeout: 7,
+                maxSwipes: 8,
+                requireHittable: false
+            ),
+            "Expected Friends setup funnel guidance to render on the Friends surface."
+        )
+
+        let setupProgress = app.otherElements["friends.setupFunnel.progress"]
+        XCTAssertTrue(setupProgress.waitForExistence(timeout: 3))
+
+        let setupPrimary = app.buttons["friends.setupFunnel.primary"]
+        if setupPrimary.waitForExistence(timeout: 4) {
+            XCTAssertNotEqual((setupPrimary.label.isEmpty && setupPrimary.value as? String == nil), true)
+            if setupPrimary.isHittable {
+                setupPrimary.tap()
+                XCTAssertNotNil(
+                    waitForAnyElement(
+                        app: app,
+                        candidates: [
+                            app.navigationBars["Friends Setup"],
+                            app.otherElements["social.profile.intro"],
+                            app.textFields["social.profile.handle"],
+                            app.staticTexts["Friends"],
+                        ],
+                        timeout: 4,
+                        maxSwipes: 6,
+                        requireHittable: false
+                    )
+                )
+            }
+        }
+    }
+
     private func launchTestApp(
         extraLaunchArguments: [String] = [],
         skipIntro: Bool = true,
