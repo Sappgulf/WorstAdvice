@@ -68,7 +68,8 @@ struct GlobalCommunityFeedView: View {
                         title: filter.label,
                         icon: filter.icon,
                         isSelected: selectedFilter == filter,
-                        accessibilityIdentifier: "globalCommunity.filter.\(filter.rawValue)"
+                        accessibilityIdentifier: "globalCommunity.filter.\(filter.rawValue)",
+                        buttonText: Theme.buttonText(for: settings.theme)
                     ) {
                         selectedFilter = filter
                     }

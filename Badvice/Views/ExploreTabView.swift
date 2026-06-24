@@ -212,8 +212,8 @@ struct ExploreTabView: View {
                         accent: accent,
                         primaryText: primaryText,
                         secondaryText: secondaryText,
-                        selectedText: buttonText,
-                        accessibilityIdentifier: "explore.filter.categories.chip.\(index)"
+                        accessibilityIdentifier: "explore.filter.categories.chip.\(index)",
+                        buttonText: buttonText
                     ) {
                         selectCategory(category)
                     }
@@ -236,8 +236,8 @@ struct ExploreTabView: View {
                         accent: accent,
                         primaryText: primaryText,
                         secondaryText: secondaryText,
-                        selectedText: buttonText,
-                        accessibilityIdentifier: "explore.filter.tones.chip.\(index)"
+                        accessibilityIdentifier: "explore.filter.tones.chip.\(index)",
+                        buttonText: buttonText
                     ) {
                         selectTone(tone)
                     }
@@ -316,9 +316,9 @@ struct ExploreTabView: View {
                 )
                 .frame(minHeight: 320)
                 .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                        .fill(cardColor)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                        .fill(cardFill)
                         .overlay(
                             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                                 .fill(

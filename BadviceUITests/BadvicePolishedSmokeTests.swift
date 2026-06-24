@@ -476,6 +476,106 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         )
     }
 
+    func testQuickAccessAndPrimaryTabsAreReachableAndStable() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
+
+        let quickAccessTargets: [(String, String, [String])] = [
+            ("favorites", "Favorites", ["favorites.command.primary", "favorites.generate"]),
+            ("history", "History", ["history.command.primary", "history.generate"]),
+            ("explore", "Explore", ["explore.command.primary", "explore.command.reset"]),
+            ("groupChallenges", "Challenges", ["groupChallenges.command.primary", "groupChallenges.command.join"]),
+            ("settings", "Settings", ["settings.socialHealth.open", "settings.auth.signOut"]),
+        ]
+
+        let tabTargets: [String:[String]] = [
+            "tab.generate": ["generate.primary", "generate.commandCard"],
+            "tab.friends": ["friends.section.feed", "friends.section.collab"],
+            "tab.chaosHub": ["chaos.command.primary", "chaos.social.submitScore"],
+            "tab.quotes": ["quotes.dailyHero", "quotes.command.primary"],
+            "tab.more": ["favorites.command.primary", "history.generate"]
+        ]
+
+        for (tabIdentifier, markerIdentifiers) in tabTargets {
+            let tab = app.buttons.matching(identifier: tabIdentifier).firstMatch
+            XCTAssertTrue(tab.waitForExistence(timeout: 3), "Expected tab \(tabIdentifier) in bar.")
+            tab.tap()
+
+            var markerMatches: [XCUIElement] = markerIdentifiers.map { app.buttons[$0] }
+            markerMatches += markerIdentifiers.map { app.staticTexts[$0] }
+            markerMatches.append(app.otherElements["\(tabIdentifier).container"])
+
+            XCTAssertNotNil(
+                waitForAnyElement(
+                    app: app,
+                    candidates: markerMatches,
+                    timeout: 6,
+                    maxSwipes: 6,
+                    requireHittable: false
+                ),
+                "Expected markers for \(tabIdentifier) to render."
+            )
+        }
+
+        let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
+        XCTAssertTrue(generateTab.waitForExistence(timeout: 3))
+        generateTab.tap()
+
+        for (quickAccessID, quickAccessLabel, commandIDs) in quickAccessTargets {
+            XCTAssertTrue(
+                openQuickAccessFromBrandMenu(app: app, quickAccessID: quickAccessID, quickAccessLabel: quickAccessLabel),
+                "Expected quick access item \(quickAccessID) to be reachable from menu."
+            )
+
+            for commandID in commandIDs {
+                let commandElement = waitForAnyElement(
+                    app: app,
+                    candidates: [
+                        app.buttons[commandID],
+                        app.otherElements[commandID],
+                        app.staticTexts[commandID],
+                    ],
+                    timeout: 5,
+                    maxSwipes: 3,
+                    requireHittable: false
+                )
+                XCTAssertNotNil(commandElement, "Expected at least one quick access affordance for \(commandID).")
+            }
+
+            XCTAssertTrue(generateTab.waitForExistence(timeout: 3))
+            generateTab.tap()
+        }
+    }
+
+    func testExploreTabFiltersCanToggleAndClear() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
+        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "explore", quickAccessLabel: "Explore"))
+
+        let categoryChips = discoverButtons(app: app, prefix: "explore.filter.categories.chip.", fallbackMax: 12)
+        let toneChips = discoverButtons(app: app, prefix: "explore.filter.tones.chip.", fallbackMax: 12)
+
+        if let firstCategory = categoryChips.first(where: \.exists), firstCategory.isHittable {
+            firstCategory.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        }
+
+        if let firstTone = toneChips.first(where: \.exists), firstTone.isHittable {
+            firstTone.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        }
+
+        let reset = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.buttons["explore.command.reset"],
+                app.buttons["explore.clearFilters"],
+                app.buttons["explore.generateFresh"],
+            ],
+            timeout: 5,
+            maxSwipes: 3
+        )
+        XCTAssertNotNil(reset, "Expected explore command affordance to stay available after toggling filters.")
+    }
+
     private func launchTestApp(
         extraLaunchArguments: [String] = [],
         skipIntro: Bool = true,

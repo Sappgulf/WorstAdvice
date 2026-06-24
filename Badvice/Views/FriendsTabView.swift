@@ -967,9 +967,9 @@ struct FriendsTabView: View {
                             accent: accent,
                             buttonText: buttonText,
                             prominent: true,
-                            minHeight: 42,
+                            isDisabled: !canSearchForFriends,
                             accessibilityIdentifier: "friends.searchButton",
-                            isDisabled: !canSearchForFriends
+                            minHeight: 42
                         ) {
                             Task {
                                 await social.searchUserByHandle(normalizedHandleSearchText)

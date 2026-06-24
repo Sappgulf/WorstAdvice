@@ -356,6 +356,7 @@ struct GroupChallengesTabView: View {
                     primaryText: primaryText,
                     secondaryText: secondaryText,
                     cardColor: cardColor,
+                    buttonText: buttonText,
                     onPlay: {
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         generateViewModel.updateSelections(
@@ -686,6 +687,7 @@ struct ChallengeCard: View {
     let primaryText: Color
     let secondaryText: Color
     let cardColor: Color
+    let buttonText: Color
     let onPlay: () -> Void
     let onCopyCode: () -> Void
     let onDetails: () -> Void
@@ -746,7 +748,7 @@ struct ChallengeCard: View {
                     title: "Play Now",
                     systemImage: "play.fill",
                     accent: accent,
-                    buttonText: Theme.buttonText(for: settings.theme)
+                    buttonText: buttonText
                 ) {
                     onPlay()
                 }
@@ -757,7 +759,7 @@ struct ChallengeCard: View {
                         title: isCopied ? "Copied" : "Copy Code",
                         systemImage: isCopied ? "checkmark" : "doc.on.doc",
                         accent: accent,
-                        buttonText: Theme.buttonText(for: settings.theme),
+                        buttonText: buttonText,
                         prominent: isCopied,
                         minHeight: 44
                     ) {
@@ -772,7 +774,7 @@ struct ChallengeCard: View {
                         title: "Details",
                         systemImage: "info.circle",
                         accent: accent,
-                        buttonText: Theme.buttonText(for: settings.theme),
+                        buttonText: buttonText,
                         prominent: false,
                         minHeight: 44
                     ) {
