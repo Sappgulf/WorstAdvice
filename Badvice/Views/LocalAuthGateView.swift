@@ -323,6 +323,11 @@ struct LocalAuthGateView: View {
                 .padding(.vertical, 36)
             }
         }
+        // This screen's background/accent are hardcoded to a light, warm palette
+        // (not theme-adaptive like the rest of the app), so it must be pinned to
+        // light appearance — otherwise system-adaptive text/material/fields flip
+        // to dark-mode rendering against the light gradient and become unreadable.
+        .preferredColorScheme(.light)
         .onAppear {
             if !auth.hasAccounts {
                 authMode = .signUp

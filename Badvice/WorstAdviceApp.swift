@@ -133,59 +133,50 @@ struct WorstAdviceApp: App {
             }
         }
 
-        let cloudConfiguration = ModelConfiguration(
-            "BadviceCloud",
+        // NOTE: the local persistence schema (AdviceRecord, AppSettingsEntity, etc.) uses
+        // unique constraints and non-optional fields throughout, which CloudKit's Core Data
+        // integration does not support. A `cloudKitDatabase: .automatic` configuration for
+        // this schema always fails NSCocoaErrorDomain 134060 validation, on every launch,
+        // on real devices — it is not a transient condition. Cross-device sync for social
+        // data is handled separately by the CKRecord-based Social layer (CloudKitStore.swift),
+        // so go straight to the local store rather than pay for a doomed attempt on every
+        // cold launch (this container is built synchronously before any UI renders).
+        let localConfiguration = ModelConfiguration(
+            "BadviceLocalFallback",
             schema: schema,
             isStoredInMemoryOnly: false,
             allowsSave: true,
             groupContainer: .automatic,
-            cloudKitDatabase: .automatic
+            cloudKitDatabase: .none
         )
         do {
-            let container = try ModelContainer(for: schema, configurations: [cloudConfiguration])
-            Self.logger.info("SwiftData CloudKit store initialized")
+            let container = try ModelContainer(for: schema, configurations: [localConfiguration])
+            Self.logger.info("SwiftData local store initialized")
             return (container, nil)
         } catch {
             Self.logger.error(
-                "CloudKit store init failed, falling back to local store: \(error.localizedDescription, privacy: .public)"
+                "Local store init failed, using in-memory store: \(error.localizedDescription, privacy: .public)"
             )
-            let fallbackConfiguration = ModelConfiguration(
-                "BadviceLocalFallback",
+            let inMemoryConfiguration = ModelConfiguration(
+                "BadviceInMemoryFallback",
                 schema: schema,
-                isStoredInMemoryOnly: false,
+                isStoredInMemoryOnly: true,
                 allowsSave: true,
-                groupContainer: .automatic,
+                groupContainer: .none,
                 cloudKitDatabase: .none
             )
             do {
-                let container = try ModelContainer(for: schema, configurations: [fallbackConfiguration])
-                Self.logger.info("SwiftData fallback local store initialized")
+                let container = try ModelContainer(
+                    for: schema, configurations: [inMemoryConfiguration]
+                )
+                Self.logger.info("SwiftData in-memory fallback store initialized")
                 return (container, nil)
             } catch {
-                Self.logger.error(
-                    "Local fallback store init failed, using in-memory store: \(error.localizedDescription, privacy: .public)"
+                let message = "Badvice storage could not be initialized."
+                Self.logger.critical(
+                    "\(message, privacy: .public) Error: \(error.localizedDescription, privacy: .public)"
                 )
-                let inMemoryConfiguration = ModelConfiguration(
-                    "BadviceInMemoryFallback",
-                    schema: schema,
-                    isStoredInMemoryOnly: true,
-                    allowsSave: true,
-                    groupContainer: .none,
-                    cloudKitDatabase: .none
-                )
-                do {
-                    let container = try ModelContainer(
-                        for: schema, configurations: [inMemoryConfiguration]
-                    )
-                    Self.logger.info("SwiftData in-memory fallback store initialized")
-                    return (container, nil)
-                } catch {
-                    let message = "Badvice storage could not be initialized."
-                    Self.logger.critical(
-                        "\(message, privacy: .public) Error: \(error.localizedDescription, privacy: .public)"
-                    )
-                    return (nil, message)
-                }
+                return (nil, message)
             }
         }
     }

@@ -29,56 +29,19 @@ struct OnboardingFlow: View {
         let background: LinearGradient
     }
 
+    // Kept short on purpose: every extra page here is friction before a new user's
+    // first generation. Feature tour content (missions, quotes, share/remix) is
+    // better discovered by using the app than by swiping through slides about it.
     private let pages: [Page] = [
         Page(
-            icon: "slider.horizontal.3",
-            title: "Build one\ncommand.",
-            subtitle: "Pick a category and tone first. Add details only when the moment needs them.",
-            kicker: "One focused setup, not a form.",
+            icon: "sparkles",
+            title: "Confidently wrong\nadvice, on command.",
+            subtitle: "Pick a category and tone, generate instantly, then save, share, or remix whatever lands.",
+            kicker: "One tap. Zero good advice.",
             previewTitle: "Command card",
             previewAdvice: "Career + Corporate Consultant is ready for the first run.",
             accent: Color(hex: "8F4A22"),
             background: LinearGradient(colors: [Color(hex: "F7F2E8"), Color(hex: "F1E4D4")], startPoint: .topLeading, endPoint: .bottomTrailing)
-        ),
-        Page(
-            icon: "bolt.fill",
-            title: "Generate with\nintent.",
-            subtitle: "The primary button stays close to the setup so each run feels deliberate.",
-            kicker: "Tap once. Review fast.",
-            previewTitle: "First result",
-            previewAdvice: "\"Volunteer for the project, then immediately ask who owns the consequences.\"",
-            accent: Color(hex: "7E4B7A"),
-            background: LinearGradient(colors: [Color(hex: "F3EAF6"), Color(hex: "E6D7F0")], startPoint: .topLeading, endPoint: .bottomTrailing)
-        ),
-        Page(
-            icon: "square.and.arrow.up",
-            title: "Save the\nusable chaos.",
-            subtitle: "Favorite, copy, share, or remix from the result instead of hunting through clutter.",
-            kicker: "Keep momentum in reach.",
-            previewTitle: "Next action",
-            previewAdvice: "Share the line, then remix it when the same problem comes back louder.",
-            accent: Color(hex: "2E6F64"),
-            background: LinearGradient(colors: [Color(hex: "EAF6F3"), Color(hex: "D8EFE8")], startPoint: .topLeading, endPoint: .bottomTrailing)
-        ),
-        Page(
-            icon: "flame.fill",
-            title: "Missions track\nmomentum.",
-            subtitle: "Missions turn runs, saves, and shares into a visible daily rhythm.",
-            kicker: "Tiny habits, loud consistency.",
-            previewTitle: "Today",
-            previewAdvice: "Generate once, save one keeper, then decide whether the streak deserves mercy.",
-            accent: Color(hex: "B84A14"),
-            background: LinearGradient(colors: [Color(hex: "FDF3EC"), Color(hex: "F7E0CC")], startPoint: .topLeading, endPoint: .bottomTrailing)
-        ),
-        Page(
-            icon: "quote.bubble.fill",
-            title: "Quotes keep it\nwarm.",
-            subtitle: "Daily quotes give you a quick rating loop when you are not generating.",
-            kicker: "Open, rate, move on.",
-            previewTitle: "Daily quote",
-            previewAdvice: "\"Consistency is just chaos with a calendar invite.\"",
-            accent: Color(hex: "2B5CA8"),
-            background: LinearGradient(colors: [Color(hex: "EBF2FE"), Color(hex: "D6E6FF")], startPoint: .topLeading, endPoint: .bottomTrailing)
         ),
         Page(
             icon: "map.fill",
