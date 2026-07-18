@@ -47,22 +47,22 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var icon: String {
         switch self {
-        case .dating: return "heart"
-        case .fitness: return "dumbbell"
-        case .career: return "briefcase"
-        case .money: return "dollarsign.circle"
+        case .dating: return "heart.fill"
+        case .fitness: return "dumbbell.fill"
+        case .career: return "briefcase.fill"
+        case .money: return "dollarsign.circle.fill"
         case .parenting: return "figure.2.and.child.holdinghands"
         case .tech: return "desktopcomputer"
-        case .social: return "person.3"
+        case .social: return "person.3.fill"
         case .cooking: return "fork.knife"
         case .travel: return "airplane"
         case .productivity: return "checklist"
         case .pets: return "pawprint.fill"
-        case .relationships: return "heart.circle"
+        case .relationships: return "person.2.fill"
         case .spirituality: return "star.fill"
-        case .financeCrypto: return "bitcoinsign.circle"
+        case .financeCrypto: return "bitcoinsign.circle.fill"
         case .gaming: return "gamecontroller.fill"
-        case .weddings: return "heart.text.square.fill"
+        case .weddings: return "party.popper.fill"
         case .random: return "shuffle"
         }
     }
