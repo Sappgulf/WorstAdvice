@@ -171,9 +171,9 @@ struct SplashView: View {
         loadingTick = 0
         pulseTick = 0
 
-        let animateInDuration = accessibilityReduceMotion ? 0.18 : 0.46
-        let holdDuration = accessibilityReduceMotion ? 0.28 : 0.95
-        let animateOutDuration = accessibilityReduceMotion ? 0.14 : 0.24
+        let animateInDuration = accessibilityReduceMotion ? 0.18 : 0.5
+        let holdDuration = accessibilityReduceMotion ? 0.6 : 1.9
+        let animateOutDuration = accessibilityReduceMotion ? 0.14 : 0.3
 
         withAnimation(
             accessibilityReduceMotion

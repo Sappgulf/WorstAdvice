@@ -636,8 +636,6 @@ struct GenerateTabView: View {
         } content: {
             VStack(alignment: .leading, spacing: 14) {
                 if viewModel.current == nil || viewModel.isGenerating {
-                    // Hidden once a result is showing — the advice card below already
-                    // displays category/tone as pills, so this would just repeat them.
                     generationHeroMetrics
                     if !usesCompactScreenshotLayout {
                         selectorRow
@@ -648,7 +646,12 @@ struct GenerateTabView: View {
                 } else {
                     unifiedAdviceStage
                     primaryActionButtons
-                    tuneNextRunDisclosure
+                    // Category/tone stay visible at all times — picking them no longer
+                    // auto-generates, so they're a normal control, not a "remix" extra.
+                    if !usesCompactScreenshotLayout {
+                        selectorRow
+                    }
+                    addDetailDisclosure
                 }
             }
         }
@@ -662,26 +665,21 @@ struct GenerateTabView: View {
         .accessibilityIdentifier("generate.commandCard")
     }
 
-    private var tuneNextRunDisclosure: some View {
+    private var addDetailDisclosure: some View {
         DisclosureGroup(
             isExpanded: $showingTuneNextRun.animation(
                 isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.82))
         ) {
-            VStack(alignment: .leading, spacing: 12) {
-                if !usesCompactScreenshotLayout {
-                    selectorRow
-                }
-                scenarioComposerFields
-            }
-            .padding(.top, 8)
+            scenarioComposerFields
+                .padding(.top, 8)
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: "slider.horizontal.3")
+                Image(systemName: "text.alignleft")
                     .font(.caption.weight(.bold))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Tune next run")
+                    Text("Add a detail")
                         .font(.caption.weight(.bold))
-                    Text("Adjust lane, tone, or detail after this result.")
+                    Text("Optional: one real detail to sharpen the next run.")
                         .font(.caption2)
                         .foregroundStyle(secondaryText)
                 }
@@ -1039,7 +1037,7 @@ struct GenerateTabView: View {
                     accessibilityID: "generate.category.chip.\(index)"
                 ) {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    viewModel.updateCategory(category)
+                    viewModel.updateCategory(category, autoGenerate: false)
                 }
             }
         }
@@ -1060,7 +1058,7 @@ struct GenerateTabView: View {
                     accessibilityID: "generate.tone.chip.\(index)"
                 ) {
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    viewModel.updateTone(tone)
+                    viewModel.updateTone(tone, autoGenerate: false)
                 }
             }
         }
