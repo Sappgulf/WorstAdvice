@@ -184,9 +184,7 @@ struct TabCommandActionButton: View {
         .tint(accent)
         .disabled(isDisabled)
         .modifier(ConditionalAccessibilityIdentifier(accessibilityIdentifier: accessibilityIdentifier))
-        .accessibilityElement(children: .combine)
         .accessibilityLabel(title)
-        .accessibilityAddTraits(.isButton)
         .contentShape(Capsule(style: .continuous))
         .background {
             ZStack {

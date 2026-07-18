@@ -693,8 +693,10 @@ struct GenerateTabView: View {
             }
         } content: {
             VStack(alignment: .leading, spacing: 14) {
-                generationHeroMetrics
                 if viewModel.current == nil || viewModel.isGenerating {
+                    // Hidden once a result is showing — the advice card below already
+                    // displays category/tone as pills, so this would just repeat them.
+                    generationHeroMetrics
                     if !usesCompactScreenshotLayout {
                         selectorRow
                     }
@@ -1640,6 +1642,7 @@ struct GenerateTabView: View {
                                 .fill((viewModel.isCurrentFavorite ? accent : secondaryText).opacity(0.12))
                         )
                 }
+                .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("generate.actionRailHeader")
 
                 // Save / Copy / Share rail

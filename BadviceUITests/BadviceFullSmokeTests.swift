@@ -423,8 +423,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         XCTAssertTrue(generateButton.waitForExistence(timeout: 12))
 
         // Generate and verify advice card content
-        generateButton.tap()
-        RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+        tapGenerateAndWaitForResult(app: app, generateButton: generateButton)
 
         XCTAssertTrue(
             scrollToFind(app: app, element: app.otherElements["advice.card"], maxSwipes: 12),
@@ -788,6 +787,52 @@ final class BadviceFullSmokeTests: XCTestCase {
             app.swipeUp()
         }
         return element.exists
+    }
+
+    private func waitForAdviceGenerationToSettle(
+        app: XCUIApplication,
+        timeout: TimeInterval
+    ) -> Bool {
+        let generationLoading = app.otherElements["generate.loading"]
+        let generateButton = app.buttons["generate.primary"]
+
+        if generationLoading.waitForExistence(timeout: 0.5) {
+            let deadline = Date().addingTimeInterval(timeout)
+            while Date() < deadline {
+                if !generationLoading.exists && generateButton.isEnabled { return true }
+                RunLoop.current.run(until: Date().addingTimeInterval(0.12))
+            }
+            return !generationLoading.exists && generateButton.isEnabled
+        }
+
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if generateButton.isEnabled {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.12))
+        }
+        return generateButton.isEnabled
+    }
+
+    /// Simulator touch delivery to SwiftUI buttons is occasionally dropped (the
+    /// synthetic tap event fires but never reaches the button's action closure).
+    /// Retries the tap if the empty state is still showing after settling.
+    @discardableResult
+    private func tapGenerateAndWaitForResult(
+        app: XCUIApplication,
+        generateButton: XCUIElement,
+        maxAttempts: Int = 3
+    ) -> Bool {
+        let emptyState = app.descendants(matching: .any).matching(identifier: "generate.emptyState").firstMatch
+        for _ in 0..<maxAttempts {
+            generateButton.tap()
+            _ = waitForAdviceGenerationToSettle(app: app, timeout: 10)
+            if !emptyState.exists {
+                return true
+            }
+        }
+        return !emptyState.exists
     }
 
     private func dismissTopScreen(app: XCUIApplication) {

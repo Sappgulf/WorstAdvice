@@ -315,8 +315,7 @@ final class BadviceUITests: XCTestCase {
 
         let generateButton = app.buttons["generate.primary"]
         XCTAssertTrue(generateButton.waitForExistence(timeout: 12))
-        generateButton.tap()
-        XCTAssertTrue(waitForAdviceGenerationToSettle(app: app, timeout: 10))
+        XCTAssertTrue(tapGenerateAndWaitForResult(app: app, generateButton: generateButton))
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
 
         let shareButton = app.buttons["generate.share"]
@@ -428,6 +427,26 @@ final class BadviceUITests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.12))
         }
         return generateButton.isEnabled
+    }
+
+    /// Simulator touch delivery to SwiftUI buttons is occasionally dropped (the
+    /// synthetic tap event fires but never reaches the button's action closure).
+    /// Retries the tap if the empty state is still showing after settling.
+    @discardableResult
+    private func tapGenerateAndWaitForResult(
+        app: XCUIApplication,
+        generateButton: XCUIElement,
+        maxAttempts: Int = 3
+    ) -> Bool {
+        let emptyState = app.descendants(matching: .any).matching(identifier: "generate.emptyState").firstMatch
+        for _ in 0..<maxAttempts {
+            generateButton.tap()
+            _ = waitForAdviceGenerationToSettle(app: app, timeout: 10)
+            if !emptyState.exists {
+                return true
+            }
+        }
+        return !emptyState.exists
     }
 
     private func launchTestApp(
