@@ -141,15 +141,15 @@ struct ChaosHubTabView: View {
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
 
-                    chaosMeterCard
-                        .opacity(contentAppeared ? 1 : 0)
-                        .offset(y: contentAppeared ? 0 : 16)
-
-                    seasonStatusCard
-                        .opacity(contentAppeared ? 1 : 0)
-                        .offset(y: contentAppeared ? 0 : 16)
-
-                    missionPathCard
+                    cardShell {
+                        VStack(alignment: .leading, spacing: 14) {
+                            chaosMeterCard
+                            groupDivider
+                            seasonStatusCard
+                            groupDivider
+                            missionPathCard
+                        }
+                    }
                         .opacity(contentAppeared ? 1 : 0)
                         .offset(y: contentAppeared ? 0 : 16)
 
@@ -158,23 +158,25 @@ struct ChaosHubTabView: View {
                         .offset(y: contentAppeared ? 0 : 16)
 
                     if !isFocusMode {
-                        winsStrip
+                        cardShell {
+                            VStack(alignment: .leading, spacing: 14) {
+                                winsStrip
+                                groupDivider
+                                socialLeaderboardCard
+                            }
+                        }
                             .opacity(contentAppeared ? 1 : 0)
                             .offset(y: contentAppeared ? 0 : 16)
 
-                        socialLeaderboardCard
-                            .opacity(contentAppeared ? 1 : 0)
-                            .offset(y: contentAppeared ? 0 : 16)
-
-                        contractsSection
-                            .opacity(contentAppeared ? 1 : 0)
-                            .offset(y: contentAppeared ? 0 : 16)
-
-                        pulseCard
-                            .opacity(contentAppeared ? 1 : 0)
-                            .offset(y: contentAppeared ? 0 : 16)
-
-                        quickActionsCard
+                        cardShell {
+                            VStack(alignment: .leading, spacing: 14) {
+                                contractsSection
+                                groupDivider
+                                pulseCard
+                                groupDivider
+                                quickActionsCard
+                            }
+                        }
                             .opacity(contentAppeared ? 1 : 0)
                             .offset(y: contentAppeared ? 0 : 16)
                     }
@@ -319,7 +321,7 @@ struct ChaosHubTabView: View {
     }
 
     private var chaosMeterCard: some View {
-        cardShell {
+        Group {
             HStack(spacing: 16) {
                 ZStack {
                     Circle()
@@ -380,7 +382,7 @@ struct ChaosHubTabView: View {
     }
 
     private var seasonStatusCard: some View {
-        cardShell {
+        Group {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 10) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -583,7 +585,7 @@ struct ChaosHubTabView: View {
     }
 
     private var missionPathCard: some View {
-        cardShell {
+        Group {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top, spacing: 10) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -703,7 +705,7 @@ struct ChaosHubTabView: View {
     }
 
     private var winsStrip: some View {
-        cardShell {
+        Group {
             VStack(alignment: .leading, spacing: 10) {
                 Label("Wins", systemImage: "trophy")
                     .font(.subheadline.weight(.bold))
@@ -760,7 +762,7 @@ struct ChaosHubTabView: View {
     }
 
     private var pulseCard: some View {
-        cardShell {
+        Group {
             VStack(alignment: .leading, spacing: 12) {
                 Label("Community Pulse", systemImage: "chart.bar.xaxis")
                     .font(.subheadline.weight(.bold))
@@ -815,7 +817,7 @@ struct ChaosHubTabView: View {
     }
 
     private var socialLeaderboardCard: some View {
-        cardShell {
+        Group {
             VStack(alignment: .leading, spacing: 10) {
                 Label("Season Leaderboard", systemImage: "list.number")
                     .font(.subheadline.weight(.bold))
@@ -895,7 +897,7 @@ struct ChaosHubTabView: View {
     }
 
     private var quickActionsCard: some View {
-        cardShell {
+        Group {
             VStack(alignment: .leading, spacing: 10) {
                 Label("Quick Actions", systemImage: "bolt.horizontal.circle")
                     .font(.subheadline.weight(.bold))
@@ -953,7 +955,7 @@ struct ChaosHubTabView: View {
             return social.availability.message
         }
         if social.currentUser == nil {
-            return "Friends profile is still the missing piece. Set that up and this becomes a real season surface instead of a passive dashboard."
+            return "The season leaderboard isn't active for this account yet. Keep running missions — your local score still counts."
         }
         if social.leaderboard.isEmpty {
             return "You are season-ready. Submit the first score and establish the board instead of waiting for activity to appear."
@@ -966,7 +968,7 @@ struct ChaosHubTabView: View {
             return "Offline"
         }
         if social.currentUser == nil {
-            return "Setup"
+            return "Local Only"
         }
         if social.leaderboard.isEmpty {
             return "Launch It"
@@ -1121,6 +1123,12 @@ struct ChaosHubTabView: View {
             RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .fill(secondaryText.opacity(0.06))
         )
+    }
+
+    private var groupDivider: some View {
+        Rectangle()
+            .fill(secondaryText.opacity(0.12))
+            .frame(height: 0.5)
     }
 
     private func cardShell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
