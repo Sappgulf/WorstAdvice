@@ -30,7 +30,7 @@ extension View {
 private struct ScrollTrackingModifier: ViewModifier {
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
-    @State private var dragIntent: Bool?
+    @State private var lastOffset: CGFloat = 0
 
     private var isUITesting: Bool {
         ProcessInfo.processInfo.arguments.contains("-ui-testing")
@@ -41,35 +41,29 @@ private struct ScrollTrackingModifier: ViewModifier {
             content
         } else {
             content
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 6, coordinateSpace: .local)
-                    .onChanged { value in
-                        let translationY = value.translation.height
-                        let nextVisibility: Bool?
-                        if translationY <= -18 {
-                            nextVisibility = false
-                        } else if translationY >= 14 {
-                            nextVisibility = true
-                        } else {
-                            nextVisibility = nil
-                        }
+                .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                    geometry.contentOffset.y
+                } action: { _, newOffset in
+                    let delta = newOffset - lastOffset
+                    let nextVisibility: Bool?
+                    if delta >= 18 {
+                        nextVisibility = false
+                    } else if delta <= -14 {
+                        nextVisibility = true
+                    } else {
+                        nextVisibility = nil
+                    }
+                    lastOffset = newOffset
 
-                        guard let nextVisibility else { return }
-                        guard dragIntent != nextVisibility else { return }
-                        dragIntent = nextVisibility
-
-                        if accessibilityReduceMotion {
+                    guard let nextVisibility, nextVisibility != tabBarVisible.wrappedValue else { return }
+                    if accessibilityReduceMotion {
+                        tabBarVisible.wrappedValue = nextVisibility
+                    } else {
+                        withAnimation(.easeInOut(duration: Theme.animMedium)) {
                             tabBarVisible.wrappedValue = nextVisibility
-                        } else {
-                            withAnimation(.easeInOut(duration: Theme.animMedium)) {
-                                tabBarVisible.wrappedValue = nextVisibility
-                            }
                         }
                     }
-                    .onEnded { _ in
-                        dragIntent = nil
-                    }
-            )
+                }
         }
     }
 }
