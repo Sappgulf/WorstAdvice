@@ -376,6 +376,14 @@ struct GenerateTabView: View {
     }
 
     var body: some View {
+        NavigationStack {
+            generateContent
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(.hidden, for: .navigationBar)
+        }
+    }
+
+    private var generateContent: some View {
         ZStack(alignment: .topLeading) {
             ScrollViewReader { proxy in
                 ScrollView {
