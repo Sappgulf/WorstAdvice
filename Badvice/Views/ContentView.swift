@@ -101,7 +101,6 @@ struct ContentView: View {
     @State private var auth: AuthViewModel?
     @State private var session: AppSessionViewModel?
     @State private var pendingDeepLinks: [URL] = []
-    @State private var referralManager = ReferralManager()
     @State private var showConfetti = false
     @State private var showSplash = true
     @State private var hasResetUITestData = false
@@ -151,7 +150,6 @@ struct ContentView: View {
                 stopBootstrapLoadingMessageRotation()
             }
             .onOpenURL { url in
-                referralManager.handleIncomingURL(url)
                 if let session {
                     Task { await routeIncomingDeepLink(url, session: session) }
                 } else {
@@ -666,7 +664,6 @@ struct ContentView: View {
                 hapticsEnabled: session.settings.hapticsEnabled,
                 reduceMotion: constrainedMotion,
                 lowPowerModeEnabled: effectiveLowPowerMode,
-                friendsBadgeCount: session.social.incomingRequests.count,
                 onPrimaryTabSelected: { tab in
                     setSelectedTab(tab, session: session)
                 },
@@ -681,44 +678,19 @@ struct ContentView: View {
         .sheet(isPresented: $showingShellMenu, onDismiss: {
             handleShellMenuDismiss(session: session)
         }) {
-            #if DEBUG
-                GenerateBrandMenuView(
-                    social: session.social,
-                    settings: session.settings,
-                    quickAccessTabs: brandMenuTabs(),
-                    isPresented: $showingShellMenu,
-                    activeToast: $shellToast,
-                    onSelectQuickAccessTab: { tab in
-                        pendingShellMenuTab = tab
-                    },
-                    onResetAllLocalAccounts: {
-                        await resetAllLocalAccounts(using: auth, session: session)
-                    },
-                    onRefreshSocialAvailability: {
-                        await refreshSocialAvailabilityToast(session: session)
-                    },
-                    onReseedCloudKitSchema: {
-                        await reseedCloudKitSchemaToast(session: session)
-                    }
-                )
-            #else
-                GenerateBrandMenuView(
-                    social: session.social,
-                    settings: session.settings,
-                    quickAccessTabs: brandMenuTabs(),
-                    isPresented: $showingShellMenu,
-                    activeToast: $shellToast,
-                    onSelectQuickAccessTab: { tab in
-                        pendingShellMenuTab = tab
-                    },
-                    onResetAllLocalAccounts: {
-                        await resetAllLocalAccounts(using: auth, session: session)
-                    },
-                    onRefreshSocialAvailability: {
-                        await refreshSocialAvailabilityToast(session: session)
-                    }
-                )
-            #endif
+            GenerateBrandMenuView(
+                social: session.social,
+                settings: session.settings,
+                quickAccessTabs: brandMenuTabs(),
+                isPresented: $showingShellMenu,
+                activeToast: $shellToast,
+                onSelectQuickAccessTab: { tab in
+                    pendingShellMenuTab = tab
+                },
+                onResetAllLocalAccounts: {
+                    await resetAllLocalAccounts(using: auth, session: session)
+                }
+            )
         }
         .toast(item: $shellToast, accentColor: Theme.accent(for: session.settings.theme))
     }
@@ -735,7 +707,7 @@ struct ContentView: View {
                 baseline = session.generate.isGenerating ? .full : .balanced
             case .chaosHub, .explore, .groupChallenges:
                 baseline = .balanced
-            case .friends, .quotes, .favorites, .history, .settings:
+            case .quotes, .favorites, .history, .settings:
                 baseline = .reduced
             }
         }
@@ -861,14 +833,6 @@ struct ContentView: View {
         let shouldGenerate = Bool(query.first(where: { $0.name == "generate" })?.value ?? "true") ?? true
         let normalizedShouldGenerate = shouldGenerate
 
-        if let deepLink = DeepLink(url: url), deepLink.type == .invite, let inviteID = deepLink.inviteID {
-            Self.logger.info("Opening invite deep link: \(inviteID, privacy: .public)")
-            referralManager.clearPendingInvite(id: inviteID)
-            setSelectedTab(.friends, session: session)
-            session.generate.refreshRetentionStateOnAppear()
-            return
-        }
-
         if let requestedTab = component.flatMap({ AppTab(rawValue: $0) }) {
             openShellMenuTab(requestedTab, session: session)
             guard requestedTab == .generate else { return }
@@ -895,11 +859,6 @@ struct ContentView: View {
                 shouldGenerate: normalizedShouldGenerate,
                 session: session
             )
-            return
-        }
-
-        if host == "friends" || pathParts.contains("friends") {
-            setSelectedTab(.friends, session: session)
             return
         }
 
@@ -995,12 +954,6 @@ struct ContentView: View {
     private func handlePendingAppIntent(for session: AppSessionViewModel) async {
         guard !isHostedUnitTesting else { return }
 
-        while let pendingInviteID = referralManager.consumePendingInviteID() {
-            Self.logger.info("Replaying queued invite deep link: \(pendingInviteID, privacy: .public)")
-            setSelectedTab(.friends, session: session)
-            session.generate.refreshRetentionStateOnAppear()
-        }
-
         while let payload = BadviceIntentRouter.shared.consume() {
             switch payload.command {
             case .openTab:
@@ -1046,48 +999,21 @@ struct ContentView: View {
     private func tabView(for tab: AppTab, session: AppSessionViewModel) -> some View {
         switch tab {
         case .generate:
-            #if DEBUG
-                GenerateTabView(
-                    viewModel: session.generate,
-                    settings: session.settings,
-                    social: session.social,
-                    onDataChanged: { session.refreshLists() },
-                    onOpenTab: { tab in
-                        openShellMenuTab(tab, session: session)
-                    },
-                    isActive: selectedTab == .generate,
-                    settingsPresented: showingSettingsRoot,
-                    quickAccessTabs: brandMenuTabs(),
-                    onResetAllLocalAccounts: {
-                        await resetAllLocalAccounts(using: auth!, session: session)
-                    },
-                    onRefreshSocialAvailability: {
-                        await refreshSocialAvailabilityToast(session: session)
-                    },
-                    onReseedCloudKitSchema: {
-                        await reseedCloudKitSchemaToast(session: session)
-                    }
-                )
-            #else
-                GenerateTabView(
-                    viewModel: session.generate,
-                    settings: session.settings,
-                    social: session.social,
-                    onDataChanged: { session.refreshLists() },
-                    onOpenTab: { tab in
-                        openShellMenuTab(tab, session: session)
-                    },
-                    isActive: selectedTab == .generate,
-                    settingsPresented: showingSettingsRoot,
-                    quickAccessTabs: brandMenuTabs(),
-                    onResetAllLocalAccounts: {
-                        await resetAllLocalAccounts(using: auth!, session: session)
-                    },
-                    onRefreshSocialAvailability: {
-                        await refreshSocialAvailabilityToast(session: session)
-                    }
-                )
-            #endif
+            GenerateTabView(
+                viewModel: session.generate,
+                settings: session.settings,
+                social: session.social,
+                onDataChanged: { session.refreshLists() },
+                onOpenTab: { tab in
+                    openShellMenuTab(tab, session: session)
+                },
+                isActive: selectedTab == .generate,
+                settingsPresented: showingSettingsRoot,
+                quickAccessTabs: brandMenuTabs(),
+                onResetAllLocalAccounts: {
+                    await resetAllLocalAccounts(using: auth!, session: session)
+                }
+            )
         case .chaosHub:
             ChaosHubTabView(
                 generateViewModel: session.generate,
@@ -1098,14 +1024,6 @@ struct ContentView: View {
                 },
                 onDataChanged: {
                     session.refreshLists()
-                }
-            )
-        case .friends:
-            FriendsTabView(
-                social: session.social,
-                settings: session.settings,
-                onOpenTab: { tab in
-                    openShellMenuTab(tab, session: session)
                 }
             )
         case .quotes:
@@ -1281,28 +1199,6 @@ struct ContentView: View {
         )
     }
 
-    private func refreshSocialAvailabilityToast(session: AppSessionViewModel) async -> ToastMessage {
-        await session.social.retryFriendsLoad()
-        if session.social.availability.isAccountAvailable {
-            let message =
-                session.social.needsProfileSetup
-                    ? "CloudKit account is available. Finish your Friends profile to continue."
-                    : "CloudKit account is available."
-            return ToastMessage(message: message, style: .success)
-        }
-        return ToastMessage(message: session.social.availability.message, style: .error)
-    }
-
-    #if DEBUG
-        private func reseedCloudKitSchemaToast(session: AppSessionViewModel) async -> ToastMessage {
-            let status = await CloudKitSchemaSeeder.forceReseed()
-            await session.social.retryFriendsLoad()
-            return ToastMessage(
-                message: status.toastMessage,
-                style: status.isError ? .error : .success
-            )
-        }
-    #endif
 }
 
 private struct SettingsUnavailableView: View {

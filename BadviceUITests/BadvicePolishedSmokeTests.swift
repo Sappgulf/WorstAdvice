@@ -236,9 +236,9 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         XCTAssertFalse(categoryChips.isEmpty, "Expected category chips on generate page.")
         XCTAssertFalse(toneChips.isEmpty, "Expected tone chips on generate page.")
 
-        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
-        if friendsTab.waitForExistence(timeout: 3) {
-            friendsTab.tap()
+        let favoritesTab = app.buttons.matching(identifier: "tab.favorites").firstMatch
+        if favoritesTab.waitForExistence(timeout: 3) {
+            favoritesTab.tap()
         }
         app.terminate()
 
@@ -284,7 +284,7 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             print("Brand menu not discoverable from current UI state; continuing with tab-cycle fallback.")
         }
 
-        let tabOrder = ["tab.generate", "tab.friends", "tab.chaosHub", "tab.quotes", "tab.more"]
+        let tabOrder = ["tab.generate", "tab.favorites", "tab.chaosHub", "tab.quotes", "tab.more"]
         for tabID in tabOrder where tabID != "tab.generate" {
             let tab = app.buttons.matching(identifier: tabID).firstMatch
             if !tab.waitForExistence(timeout: 2) { continue }
@@ -305,7 +305,7 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             } else {
                 [
                     app.buttons["generate.primary"],
-                    app.buttons["friends.section.feed"],
+                    app.buttons["favorites.generate"],
                     app.buttons["quotes.dailyHero"],
                     app.buttons["chaos.social.submitScore"],
                     app.navigationBars["\(likelyLabel)"].firstMatch,
@@ -384,7 +384,7 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         )
 
         let primaryTabs = [
-            "tab.friends",
+            "tab.favorites",
             "tab.chaosHub",
             "tab.quotes",
         ]
@@ -394,21 +394,16 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             tabButton.tap()
 
             switch tabID {
-            case "tab.friends":
+            case "tab.favorites":
                 assertTabSurface(
                     app: app,
                     tabMarkerCandidates: [
-                        app.buttons["friends.section.feed"],
-                        app.buttons["friends.section.collab"],
-                        app.otherElements["friends.sectionPicker"],
-                        app.staticTexts["Friends"],
+                        app.buttons["favorites.generate"],
+                        app.staticTexts["Favorites"],
+                        app.staticTexts["Nothing saved yet."],
                     ],
                     commandActionIDs: [
-                        "friends.command.feed",
-                        "friends.command.collab",
-                        "friends.newCollabDoc",
-                        "friends.openSetup.banner",
-                        "friends.openSetup.section",
+                        "favorites.generate",
                     ],
                     expectFocusToggle: true
                 )
@@ -525,14 +520,10 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             app: app,
             tabMarkerCandidates: [
                 app.buttons["settings.auth.signOut"],
-                app.buttons["settings.socialHealth.open"],
-                app.buttons["settings.socialHealth.view"],
                 app.staticTexts["Settings"],
                 app.navigationBars["Settings"].firstMatch,
             ],
             commandActionIDs: [
-                "settings.socialHealth.open",
-                "settings.socialHealth.view",
                 "settings.auth.signOut",
                 "settings.menuButton",
             ],
@@ -544,19 +535,18 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
 
         let quickAccessTargets: [(String, String, [String])] = [
-            ("favorites", "Favorites", ["favorites.command.primary", "favorites.generate"]),
             ("history", "History", ["history.command.primary", "history.generate"]),
             ("explore", "Explore", ["explore.command.primary", "explore.command.reset"]),
             ("groupChallenges", "Challenges", ["groupChallenges.command.primary", "groupChallenges.command.join"]),
-            ("settings", "Settings", ["settings.socialHealth.open", "settings.auth.signOut"]),
+            ("settings", "Settings", ["settings.menuButton", "settings.auth.signOut"]),
         ]
 
         let tabTargets: [String:[String]] = [
             "tab.generate": ["generate.primary", "generate.commandCard"],
-            "tab.friends": ["friends.section.feed", "friends.section.collab"],
+            "tab.favorites": ["favorites.command.primary", "favorites.generate"],
             "tab.chaosHub": ["chaos.command.primary", "chaos.social.submitScore"],
             "tab.quotes": ["quotes.dailyHero", "quotes.command.primary"],
-            "tab.more": ["brandMenu.flow.favorites", "brandMenu.quickAccess.favorites", "favorites.command.primary", "favorites.generate"],
+            "tab.more": ["brandMenu.flow.favorites", "favorites.command.primary", "favorites.generate"],
         ]
 
         for (tabIdentifier, markerIdentifiers) in tabTargets {
@@ -689,8 +679,6 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             candidates: [
                 app.buttons["settings.auth.signOut"],
                 app.buttons["settings.auth.changePassword"],
-                app.buttons["settings.socialHealth.open"],
-                app.buttons["settings.socialHealth.view"],
                 app.buttons["settings.theme.badvice"],
                 app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch,
                 app.staticTexts["Settings"],
@@ -717,119 +705,6 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             "Expected Upgrade & Store system surface to remain discoverable in Settings polish shell."
         )
 
-        if let socialDiagnostics = waitForAnyElement(
-            app: app,
-            candidates: [
-                app.buttons["settings.socialHealth.open"],
-                app.buttons["settings.socialHealth.view"],
-                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Diagnostics")).firstMatch,
-            ],
-            timeout: 2,
-            maxSwipes: 2,
-            requireHittable: false
-        ),
-        socialDiagnostics.isHittable
-        {
-            socialDiagnostics.tap()
-            XCTAssertNotNil(
-                waitForAnyElement(
-                    app: app,
-                    candidates: [
-                        app.buttons["settings.socialHealth.retryQueue"],
-                        app.buttons["settings.socialHealth.copyReport"],
-                    ],
-                    timeout: 4,
-                    maxSwipes: 1,
-                    requireHittable: false
-                )
-            )
-        }
-    }
-
-    func testQuotesDailyRitualFriendActionIsDiscoverableAndResponsive() throws {
-        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data", "-debug-preload-polish-fixtures", "-debug-polish-seed", "424242"])
-
-        let quotesTab = app.buttons.matching(identifier: "tab.quotes").firstMatch
-        XCTAssertTrue(quotesTab.waitForExistence(timeout: 5))
-        quotesTab.tap()
-
-        XCTAssertTrue(
-            app.otherElements["quotes.dailyRitual"].waitForExistence(timeout: 5)
-                || app.staticTexts["quotes.dailyRitual.title"].waitForExistence(timeout: 2)
-        )
-
-        let friendAction = app.buttons["quotes.ritual.friendAction"]
-        XCTAssertTrue(
-            friendAction.waitForExistence(timeout: 3) ||
-                app.otherElements.matching(NSPredicate(format: "label CONTAINS[c] %@", "Friends")).firstMatch.waitForExistence(timeout: 4)
-        )
-
-        if friendAction.waitForExistence(timeout: 2) && friendAction.isHittable {
-            friendAction.tap()
-
-            let quotesFriendOutcome = waitForAnyElement(
-                app: app,
-                candidates: [
-                    app.navigationBars["Friends Setup"],
-                    app.navigationBars["Friends"],
-                    app.otherElements["friends.setupFunnel"],
-                    app.buttons["friends.openSetup"],
-                    app.staticTexts["Friends"],
-                    app.staticTexts["Social features are unavailable in this test run."],
-                ],
-                timeout: 4,
-                maxSwipes: 4,
-                requireHittable: false
-            )
-            XCTAssertNotNil(quotesFriendOutcome)
-        }
-    }
-
-    func testFriendsSetupFunnelShowsProgressAndPrimaryAction() throws {
-        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data", "-debug-preload-polish-fixtures", "-debug-polish-seed", "424242"])
-
-        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "friends", quickAccessLabel: "Friends"))
-
-        XCTAssertNotNil(
-            waitForAnyElement(
-                app: app,
-                candidates: [
-                    app.staticTexts["friends.setupFunnel.title"],
-                    app.otherElements["friends.setupFunnel"],
-                    app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Profile" )).firstMatch,
-                    app.otherElements["friends.sectionPicker"],
-                ],
-                timeout: 7,
-                maxSwipes: 8,
-                requireHittable: false
-            ),
-            "Expected Friends setup funnel guidance to render on the Friends surface."
-        )
-
-        let setupProgress = app.otherElements["friends.setupFunnel.progress"]
-        XCTAssertTrue(setupProgress.waitForExistence(timeout: 3))
-
-        let setupPrimary = app.buttons["friends.setupFunnel.primary"]
-        if setupPrimary.waitForExistence(timeout: 4) {
-            XCTAssertNotEqual((setupPrimary.label.isEmpty && setupPrimary.value as? String == nil), true)
-            if setupPrimary.isHittable {
-                setupPrimary.tap()
-                XCTAssertNotNil(
-                    waitForAnyElement(
-                        app: app,
-                        candidates: [
-                            app.navigationBars["Friends Setup"],
-                            app.otherElements["social.profile.intro"],
-                            app.textFields["social.profile.handle"],
-                            app.staticTexts["Friends"],
-                        ],
-                        timeout: 4,
-                        maxSwipes: 6,
-                        requireHittable: false
-                    )
-                )
-            }
-        }
     }
 
     private func launchTestApp(

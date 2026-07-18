@@ -774,8 +774,6 @@ struct QuotesTabView: View {
     private var dailyRitualCard: some View {
         let dailyQuote = viewModel.dailyQuote
         let hasRated = viewModel.vote(for: dailyQuote) != .none
-        let shareStatus = quoteShareStatus
-        let shareButtonTitle = quoteShareButtonTitle
         return SectionShell(accent: accent, cardColor: cardColor) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Daily Ritual")
@@ -792,7 +790,6 @@ struct QuotesTabView: View {
                 HStack(spacing: 8) {
                     ritualPill(title: "Read", value: showQuoteSpotlight ? "Open" : "Pending")
                     ritualPill(title: "Rate", value: hasRated ? "Done" : "Pending")
-                    ritualPill(title: "Share", value: shareStatus)
                     ritualPill(title: "Streak", value: quoteRitualState)
                 }
 
@@ -822,7 +819,7 @@ struct QuotesTabView: View {
                     }
 
                     TabCommandActionButton(
-                        title: shareButtonTitle,
+                        title: "Share Quote",
                         systemImage: "square.and.arrow.up",
                         accent: accent,
                         buttonText: buttonText,
@@ -832,22 +829,6 @@ struct QuotesTabView: View {
                         shareQuote(dailyQuote, isDaily: true)
                     }
                 }
-
-                TabCommandActionButton(
-                    title: quoteFriendActionTitle,
-                    systemImage: quoteFriendActionIcon,
-                    accent: accent,
-                    buttonText: buttonText,
-                    prominent: false,
-                    minHeight: 40
-                ) {
-                    if quoteShareStatus == "Ready" {
-                        shareQuoteToFriends(dailyQuote)
-                    } else {
-                        onOpenTab?(.friends)
-                    }
-                }
-                .accessibilityIdentifier("quotes.ritual.friendAction")
 
                 HStack(spacing: 8) {
                     Image(systemName: "calendar.badge.clock")
@@ -887,46 +868,8 @@ struct QuotesTabView: View {
         )
     }
 
-    private var quoteShareStatus: String {
-        if !social.availability.isAccountAvailable {
-            return "Offline"
-        }
-        if social.currentUser == nil {
-            return "Setup"
-        }
-        if social.friends.isEmpty {
-            return "Find"
-        }
-        return "Ready"
-    }
-
-    private var quoteShareButtonTitle: String {
-        quoteShareStatus == "Ready" ? "Share Quote" : "Share Solo"
-    }
-
     private var quoteRitualState: String {
-        let dailyQuote = viewModel.dailyQuote
-        if viewModel.vote(for: dailyQuote) == .none { return "Rate" }
-        if quoteShareStatus == "Ready" { return "Ready" }
-        if social.currentUser == nil { return "Setup" }
-        return "Solo"
-    }
-
-    private var quoteFriendActionTitle: String {
-        switch quoteShareStatus {
-        case "Ready":
-            return "Share To Friends"
-        case "Setup":
-            return "Set Up Friends"
-        case "Find":
-            return "Find Friends"
-        default:
-            return "Open Friends"
-        }
-    }
-
-    private var quoteFriendActionIcon: String {
-        quoteShareStatus == "Ready" ? "person.2.fill" : "person.crop.circle.badge.plus"
+        viewModel.vote(for: viewModel.dailyQuote) == .none ? "Rate" : "Done"
     }
 
     private func copyQuote(_ quote: BadQuote, isDaily: Bool) {
@@ -940,42 +883,6 @@ struct QuotesTabView: View {
         shareItems = [viewModel.quoteShareText(quote)]
         viewModel.trackShare(quote, isDaily: isDaily)
         showingShareSheet = true
-    }
-
-    private func shareQuoteToFriends(_ quote: BadQuote) {
-        guard social.socialFeaturesEnabled else {
-            activeToast = ToastMessage(
-                message: social.availability.isAvailable
-                    ? "Finish your Friends profile in Friends to share quotes."
-                    : social.availability.message,
-                style: .error
-            )
-            return
-        }
-        Task {
-            await social.shareQuoteToFriends(text: quote.text)
-            if let message = social.statusMessage {
-                activeToast = ToastMessage(
-                    message: message,
-                    style: message.lowercased().contains("shared") ? .success : .error
-                )
-            }
-        }
-    }
-
-    private func collaborateOnQuote(_ quote: BadQuote) {
-        guard social.socialFeaturesEnabled else {
-            activeToast = ToastMessage(
-                message: social.availability.isAvailable
-                    ? "Finish your Friends profile in Friends to start a collab."
-                    : social.availability.message,
-                style: .error
-            )
-            return
-        }
-        social.queueCollabDraft(type: .quote, content: quote.text)
-        onOpenTab?(.friends)
-        activeToast = ToastMessage(message: "Draft sent to Friends > Collab.", style: .info)
     }
 
     private func performPrimaryQuotesAction() {
@@ -1036,14 +943,6 @@ struct QuotesTabView: View {
             Button { shareQuote(quote, isDaily: false) } label: {
                 Label("Share", systemImage: "square.and.arrow.up")
             }
-            Button { shareQuoteToFriends(quote) } label: {
-                Label("Share to Friends", systemImage: "person.2.fill")
-            }
-            .disabled(!social.socialFeaturesEnabled)
-            Button { collaborateOnQuote(quote) } label: {
-                Label("Collaborate", systemImage: "person.2.badge.plus")
-            }
-            .disabled(!social.socialFeaturesEnabled)
         } label: {
             Image(systemName: "ellipsis.circle")
                 .font(.title3)

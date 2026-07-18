@@ -12,7 +12,6 @@ struct FloatingTabBarView: View {
     let hapticsEnabled: Bool
     let reduceMotion: Bool
     let lowPowerModeEnabled: Bool
-    let friendsBadgeCount: Int
     let onPrimaryTabSelected: (AppTab) -> Void
     let onSettingsSelected: () -> Void
 
@@ -84,7 +83,7 @@ struct FloatingTabBarView: View {
     private func tabButton(_ tab: AppTab) -> some View {
         let isSelected = selectedTab == tab || (tab == .settings && showingSettingsRoot)
         let isHighlighted = tabDragHighlight == tab
-        let badgeCount = tab == .friends ? friendsBadgeCount : 0
+        let badgeCount = 0
         let badgeDescription = accessibilityBadgeDescription(for: tab, badgeCount: badgeCount)
         let titleText = isSelected ? tab.title : tab.compactTitle
 
@@ -248,8 +247,6 @@ struct FloatingTabBarView: View {
     private func accessibilityBadgeDescription(for tab: AppTab, badgeCount: Int) -> String {
         if badgeCount == 0 { return "" }
         switch tab {
-        case .friends:
-            return ", \(badgeCount) pending request\(badgeCount == 1 ? "" : "s")"
         case .chaosHub:
             return ", daily mission needs attention"
         default:

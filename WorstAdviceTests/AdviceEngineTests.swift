@@ -765,7 +765,6 @@ final class PersistenceTests: XCTestCase {
                 .quotes,
                 .favorites,
                 .chaosHub,
-                .friends,
                 .explore,
                 .groupChallenges,
                 .settings,

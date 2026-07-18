@@ -511,7 +511,6 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     case chaosHub
     case explore
     case groupChallenges
-    case friends
     case quotes
     case favorites
     case history
@@ -525,7 +524,6 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
         case .chaosHub: return "Missions"
         case .explore: return "Explore"
         case .groupChallenges: return "Challenges"
-        case .friends: return "Social"
         case .quotes: return "Library"
         case .favorites: return "Favorites"
         case .history: return "History"
@@ -539,7 +537,6 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
         case .chaosHub: return "Missions"
         case .explore: return "Explore"
         case .groupChallenges: return "Challenges"
-        case .friends: return "Social"
         case .quotes: return "Library"
         case .favorites: return "Saved"
         case .history: return "History"
@@ -553,7 +550,6 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
         case .chaosHub: return "flame.fill"
         case .explore: return "magnifyingglass"
         case .groupChallenges: return "person.3.fill"
-        case .friends: return "person.2.fill"
         case .quotes: return "quote.bubble"
         case .favorites: return "bookmark.fill"
         case .history: return "clock"
@@ -562,15 +558,15 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 
     static let defaultOrder: [AppTab] = [
-        .generate, .friends, .chaosHub, .quotes, .favorites, .history, .explore, .groupChallenges, .settings,
+        .generate, .favorites, .chaosHub, .quotes, .history, .explore, .groupChallenges, .settings,
     ]
 
     static let primaryNavigationTabs: [AppTab] = [
-        .generate, .friends, .chaosHub, .quotes,
+        .generate, .favorites, .chaosHub, .quotes,
     ]
 
     static let brandMenuTabs: [AppTab] = [
-        .favorites, .history, .explore, .groupChallenges, .settings,
+        .history, .explore, .groupChallenges, .settings,
     ]
 }
 
@@ -590,7 +586,6 @@ extension AppTab: AppEnum {
         .chaosHub: "Missions",
         .explore: "Explore",
         .groupChallenges: "Challenges",
-        .friends: "Social",
         .quotes: "Library",
         .favorites: "Favorites",
         .history: "History",

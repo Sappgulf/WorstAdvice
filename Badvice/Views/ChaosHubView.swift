@@ -91,15 +91,6 @@ struct ChaosHubTabView: View {
         if !weeklyMission.isComplete {
             return "Keep the weekly mission moving"
         }
-        if social.currentUser == nil {
-            return "Set up Friends profile"
-        }
-        if social.friends.isEmpty {
-            return "Add your first friend"
-        }
-        if social.feedPosts.isEmpty {
-            return "Share your first post"
-        }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             return "Submit your mission score"
         }
@@ -118,15 +109,6 @@ struct ChaosHubTabView: View {
         if !weeklyMission.isComplete {
             return "\(weeklyMission.currentCount) of \(weeklyMission.targetCount) complete. Keep the week moving from Advice."
         }
-        if social.currentUser == nil {
-            return "Create a profile when you want leaderboards, shared drafts, and friend activity."
-        }
-        if social.friends.isEmpty {
-            return "Add one friend to turn mission progress into feed posts, collabs, and leaderboard pressure."
-        }
-        if social.feedPosts.isEmpty {
-            return "Share one saved line from Generate or Quotes to put activity into the season."
-        }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             return "Your mission work is done. Put a score on the board and start the season."
         }
@@ -134,7 +116,7 @@ struct ChaosHubTabView: View {
     }
     private var primaryNextStepButtonTitle: String {
         if !social.availability.isAccountAvailable {
-            return "Open Friends"
+            return "Open Advice"
         }
         if generateViewModel.isGenerating {
             return "Open Advice"
@@ -144,15 +126,6 @@ struct ChaosHubTabView: View {
         }
         if !weeklyMission.isComplete {
             return "Open Advice"
-        }
-        if social.currentUser == nil {
-            return "Open Friends"
-        }
-        if social.friends.isEmpty {
-            return "Find Friends"
-        }
-        if social.feedPosts.isEmpty {
-            return "Open Library"
         }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             return "Submit Score"
@@ -775,24 +748,6 @@ struct ChaosHubTabView: View {
             onOpenTab(.generate)
             return
         }
-        if social.currentUser == nil {
-            generateViewModel.trackChaosHubAction("open_friends_setup")
-            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-            onOpenTab(.friends)
-            return
-        }
-        if social.friends.isEmpty {
-            generateViewModel.trackChaosHubAction("open_friends_for_first_connection")
-            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-            onOpenTab(.friends)
-            return
-        }
-        if social.feedPosts.isEmpty {
-            generateViewModel.trackChaosHubAction("open_quotes_for_first_feed_post")
-            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-            onOpenTab(.quotes)
-            return
-        }
         if social.socialFeaturesEnabled && social.leaderboard.isEmpty {
             generateViewModel.trackChaosHubAction("submit_score_from_command")
             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
@@ -1033,10 +988,7 @@ struct ChaosHubTabView: View {
     }
 
     private var seasonStatusActionTitle: String? {
-        guard social.availability.isAvailable else { return nil }
-        if social.currentUser == nil {
-            return "Open Friends"
-        }
+        guard social.availability.isAvailable, social.currentUser != nil else { return nil }
         if social.leaderboard.isEmpty {
             return "Submit Opening Score"
         }
@@ -1044,11 +996,8 @@ struct ChaosHubTabView: View {
     }
 
     private func performSeasonStatusAction() {
+        guard social.currentUser != nil else { return }
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-        if social.currentUser == nil {
-            onOpenTab(.friends)
-            return
-        }
         Task {
             if social.leaderboard.isEmpty {
                 await social.submitChaosScore(Int64(chaosScore))

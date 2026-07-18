@@ -59,26 +59,22 @@ final class BadviceUITests: XCTestCase {
                 || app.staticTexts["Missions"].waitForExistence(timeout: 5)
         )
 
-        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
-        XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
-        friendsTab.tap()
-        let friendsTabValue = friendsTab.value as? String ?? ""
+        let favoritesTab = app.buttons.matching(identifier: "tab.favorites").firstMatch
+        XCTAssertTrue(favoritesTab.waitForExistence(timeout: 5))
+        favoritesTab.tap()
+        let favoritesTabValue = favoritesTab.value as? String ?? ""
         XCTAssertTrue(
-            friendsTabValue.localizedCaseInsensitiveContains("selected"),
-            "Friends tab should become selected after tap. value=\(friendsTabValue)"
+            favoritesTabValue.localizedCaseInsensitiveContains("selected"),
+            "Favorites tab should become selected after tap. value=\(favoritesTabValue)"
         )
-        let friendsRoot = app.otherElements["friends.root"]
-        let friendsPicker = app.otherElements["friends.sectionPicker"]
-        let friendsButton = app.buttons["friends.section.friends"]
-        let friendsTitle = app.staticTexts["Friends"]
-        let friendsVisible = friendsRoot.waitForExistence(timeout: 5)
-            || friendsPicker.waitForExistence(timeout: 5)
-            || friendsButton.waitForExistence(timeout: 5)
-            || friendsTitle.waitForExistence(timeout: 5)
-        if !friendsVisible {
+        let favoritesGenerate = app.buttons["favorites.generate"]
+        let favoritesTitle = app.staticTexts["Favorites"]
+        let favoritesVisible = favoritesGenerate.waitForExistence(timeout: 5)
+            || favoritesTitle.waitForExistence(timeout: 5)
+        if !favoritesVisible {
             print(app.debugDescription)
         }
-        XCTAssertTrue(friendsVisible)
+        XCTAssertTrue(favoritesVisible)
 
         let quotesTab = app.buttons.matching(identifier: "tab.quotes").firstMatch
         XCTAssertTrue(quotesTab.waitForExistence(timeout: 5))
@@ -112,41 +108,6 @@ final class BadviceUITests: XCTestCase {
             "Missions progression path should be visible in screenshot mode."
         )
         chaosApp.terminate()
-
-        let friendsApp = launchScreenshotModeApp(startTab: "friends")
-        XCTAssertNotNil(
-            waitForAnyElement(
-                app: friendsApp,
-                candidates: [
-                    friendsApp.staticTexts["friends.setupFunnel.title"],
-                    friendsApp.otherElements["friends.setupFunnel"],
-                    friendsApp.staticTexts["Setup Path"],
-                ],
-                timeout: 5,
-                maxSwipes: 3
-            ),
-            "Friends setup funnel should be visible in screenshot mode."
-        )
-        XCTAssertTrue(
-            friendsApp.otherElements["friends.setupFunnel.progress"].waitForExistence(timeout: 3)
-                || friendsApp.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Setup progress")).firstMatch.exists
-        )
-        XCTAssertNotNil(
-            waitForAnyElement(
-                app: friendsApp,
-                candidates: [
-                    friendsApp.buttons["friends.setupFunnel.primary"],
-                    friendsApp.staticTexts["friends.setupFunnel.primary.title"],
-                    friendsApp.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Create Profile")).firstMatch,
-                    friendsApp.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Find First Friend")).firstMatch,
-                    friendsApp.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Open Generate")).firstMatch,
-                ],
-                timeout: 4,
-                maxSwipes: 1
-            ),
-            "Friends setup funnel should expose a primary next action."
-        )
-        friendsApp.terminate()
 
         let quotesApp = launchScreenshotModeApp(startTab: "quotes")
         XCTAssertNotNil(
@@ -340,59 +301,6 @@ final class BadviceUITests: XCTestCase {
         if submitScore.exists {
             XCTAssertFalse(submitScore.isEnabled)
         }
-
-        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
-        XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
-        friendsTab.tap()
-
-        XCTAssertTrue(
-            app.otherElements["friends.sectionPicker"].waitForExistence(timeout: 5)
-                || app.otherElements["friends.root"].waitForExistence(timeout: 2)
-                || app.staticTexts["Friends"].waitForExistence(timeout: 2)
-        )
-        let unavailableText = app.staticTexts["Social features are unavailable in this test run."]
-        let cloudKitStatusText = app.staticTexts["CloudKit account status could not be determined."]
-        let retryLoadButton = app.buttons["friends.retryLoad"]
-        XCTAssertTrue(
-            unavailableText.waitForExistence(timeout: 2)
-                || cloudKitStatusText.waitForExistence(timeout: 2)
-                || retryLoadButton.waitForExistence(timeout: 2)
-        )
-
-        let sectionPicker = app.otherElements["friends.sectionPicker"]
-        XCTAssertTrue(sectionPicker.waitForExistence(timeout: 3))
-
-        let feedSegment = app.buttons["friends.section.feed"]
-        if feedSegment.waitForExistence(timeout: 3) {
-            if feedSegment.isHittable {
-                feedSegment.tap()
-            } else {
-                feedSegment.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-            }
-            let feedRefresh = app.buttons["friends.feedRefresh"]
-            let feedEmpty = app.otherElements["friends.feed.empty"]
-            XCTAssertTrue(feedRefresh.waitForExistence(timeout: 3)
-                || feedEmpty.waitForExistence(timeout: 3))
-            if feedRefresh.exists {
-                XCTAssertFalse(feedRefresh.isEnabled)
-            }
-        }
-
-        let collabSegment = app.buttons["friends.section.collab"]
-        if collabSegment.waitForExistence(timeout: 3) {
-            if collabSegment.isHittable {
-                collabSegment.tap()
-            } else {
-                collabSegment.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-            }
-            let newDoc = app.buttons["friends.newCollabDoc"]
-            let collabEmpty = app.otherElements["friends.collab.empty"]
-            XCTAssertTrue(newDoc.waitForExistence(timeout: 3)
-                || collabEmpty.waitForExistence(timeout: 3))
-            if newDoc.exists {
-                XCTAssertFalse(newDoc.isEnabled)
-            }
-        }
     }
 
     @discardableResult
@@ -537,104 +445,6 @@ final class BadviceUITests: XCTestCase {
         }
 
         return readinessChecks.contains(where: { $0() })
-    }
-
-    func testSocialMockSignupCompletesAndFriendsSurfaceLoads() throws {
-        let app = launchMockSocialApp()
-
-        completeProfileSignup(app: app, handle: "mock_signup_user")
-
-        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
-        XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
-        friendsTab.tap()
-
-        let sectionPicker = app.otherElements["friends.sectionPicker"]
-        XCTAssertTrue(sectionPicker.waitForExistence(timeout: 5))
-
-        let searchField = app.textFields["friends.searchField"]
-        XCTAssertTrue(searchField.waitForExistence(timeout: 3))
-        app.buttons["friends.section.feed"].tap()
-        XCTAssertTrue(app.buttons["friends.feedRefresh"].waitForExistence(timeout: 3))
-
-        app.buttons["friends.section.collab"].tap()
-        XCTAssertTrue(app.buttons["friends.newCollabDoc"].waitForExistence(timeout: 3))
-    }
-
-    func testSocialMockIncomingBadgeAppearsOnTabBar() throws {
-        let app = launchMockSocialApp(seededIncomingRequests: 3)
-        completeProfileSignup(app: app, handle: "badge_user")
-
-        let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
-        XCTAssertTrue(generateTab.waitForExistence(timeout: 5))
-        generateTab.tap()
-
-        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
-        XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
-        let badge = app.staticTexts["tab.friends.badge"]
-        if badge.waitForExistence(timeout: 8) {
-            let badgeLabel = badge.label
-            XCTAssertTrue(
-                badgeLabel.contains("3") || badgeLabel.contains("99+"),
-                "Expected friends badge to show pending request count. label=\(badgeLabel)"
-            )
-        } else {
-            let tabValue = friendsTab.value as? String ?? ""
-            XCTAssertTrue(
-                tabValue.localizedCaseInsensitiveContains("pending requests"),
-                "Expected friends tab accessibility value to include pending request count. value=\(tabValue)"
-            )
-        }
-    }
-
-    func testSettingsSocialDiagnosticsOpensInMockMode() throws {
-        let app = launchMockSocialApp(seededIncomingRequests: 1)
-        completeProfileSignup(app: app, handle: "diagnostics_user")
-
-        XCTAssertTrue(openSettings(app: app))
-
-        let socialHealthOpen = waitForAnyElement(
-            app: app,
-            candidates: [
-                app.buttons["settings.socialHealth.open"],
-                app.buttons.matching(
-                    NSPredicate(format: "label CONTAINS[c] %@", "Open Diagnostics")
-                ).firstMatch,
-                app.buttons.matching(
-                    NSPredicate(format: "label CONTAINS[c] %@", "Social Diagnostics")
-                ).firstMatch,
-                app.buttons.matching(
-                    NSPredicate(format: "label CONTAINS[c] %@", "Social Health")
-                ).firstMatch,
-            ],
-            timeout: 6,
-            maxSwipes: 12
-        )
-        guard let socialHealthOpen else {
-            XCTFail("Expected social diagnostics control in settings")
-            return
-        }
-        if !socialHealthOpen.isHittable {
-            let row = socialHealthOpen.label
-            scrollToFind(app: app, element: socialHealthOpen, maxSwipes: 8)
-            XCTAssertTrue(
-                app.buttons["settings.socialHealth.open"].isHittable
-                    || app.buttons.matching(
-                        NSPredicate(format: "label CONTAINS[c] %@", row)
-                    ).firstMatch.isHittable
-            )
-        }
-        socialHealthOpen.tap()
-
-        let socialDiagnosticsView = app.staticTexts["Social Diagnostics"]
-        let socialDiagNav = app.navigationBars["Social Diagnostics"]
-        XCTAssertTrue(
-            socialDiagNav.waitForExistence(timeout: 5)
-                || socialDiagnosticsView.waitForExistence(timeout: 3),
-            "Social diagnostics should open"
-        )
-
-        let retryQueueButton = app.buttons["settings.socialHealth.retryQueue"]
-        XCTAssertTrue(retryQueueButton.waitForExistence(timeout: 3))
     }
 
     func testSuggestionAndQuoteLabValidationAndSubmissionFlow() throws {
@@ -1045,23 +855,6 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(app.textFields["auth.email"].waitForExistence(timeout: 5))
     }
 
-    private func launchMockSocialApp(seededIncomingRequests: Int = 0) -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments += defaultLaunchArguments + [
-            "-ui-testing-social-mock"
-        ]
-        if seededIncomingRequests > 0 {
-            app.launchArguments += [
-                "-ui-testing-social-seed-incoming",
-                "\(seededIncomingRequests)",
-            ]
-        }
-        app.launch()
-        XCTAssertTrue(waitForAppToEnterForeground(app: app, timeout: 15))
-        XCTAssertTrue(waitForAppToBecomeReady(app: app, timeout: 15))
-        return app
-    }
-
     @discardableResult
     private func waitForAuthenticatedShell(
         app: XCUIApplication,
@@ -1077,7 +870,7 @@ final class BadviceUITests: XCTestCase {
         }
         let tabMarkers = [
             app.buttons.matching(identifier: "tab.generate").firstMatch,
-            app.buttons.matching(identifier: "tab.friends").firstMatch,
+            app.buttons.matching(identifier: "tab.favorites").firstMatch,
             app.buttons.matching(identifier: "tab.quotes").firstMatch,
             app.buttons.matching(identifier: "tab.more").firstMatch,
         ]
@@ -1457,47 +1250,6 @@ final class BadviceUITests: XCTestCase {
         return false
     }
 
-    private func completeProfileSignup(app: XCUIApplication, handle: String) {
-        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
-        XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
-        friendsTab.tap()
-
-        let openSetupButton = app.buttons["friends.openSetup"]
-        XCTAssertTrue(openSetupButton.waitForExistence(timeout: 5))
-        openSetupButton.tap()
-
-        XCTAssertTrue(app.navigationBars["Friends Setup"].waitForExistence(timeout: 5))
-        let intro = app.otherElements["social.profile.intro"]
-        let handleField = app.textFields["social.profile.handle"]
-        if !intro.waitForExistence(timeout: 2) && !handleField.exists {
-            _ = handleField.waitForExistence(timeout: 5)
-        }
-        XCTAssertTrue(intro.exists || handleField.exists)
-
-        XCTAssertTrue(handleField.waitForExistence(timeout: 8))
-        fillTextInput(handleField, text: handle)
-        let expectedHandle = handle.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let handleMatches = waitUntilTextFieldValueContains(
-            handleField,
-            expectedText: expectedHandle,
-            timeout: 2.5
-        )
-        XCTAssertTrue(
-            handleMatches,
-            "Expected Friends handle field to contain the requested handle after typing. expected=\(expectedHandle), actual=\(handleField.value ?? "nil")"
-        )
-
-        let saveButton = app.buttons["social.profile.save"]
-        XCTAssertTrue(saveButton.waitForExistence(timeout: 3))
-        XCTAssertTrue(saveButton.isEnabled)
-        saveButton.tap()
-
-        XCTAssertFalse(
-            handleField.waitForExistence(timeout: 3),
-            "Expected profile setup sheet to dismiss after successful profile creation."
-        )
-    }
-
     private func waitUntilTextFieldValueContains(
         _ element: XCUIElement,
         expectedText: String,
@@ -1823,7 +1575,7 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
             "App should land in a stable shell for a release-readiness run"
         )
 
-        let tabFlow: [String] = ["tab.generate", "tab.friends", "tab.quotes"]
+        let tabFlow: [String] = ["tab.generate", "tab.favorites", "tab.quotes"]
         for tabID in tabFlow {
             let tabButton = app.buttons.matching(identifier: tabID).firstMatch
             guard tabButton.waitForExistence(timeout: 3) else {
@@ -1871,76 +1623,6 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
         )
     }
 
-    func testReadiness_FallbackSurfacesRemainUsableWhenSocialUnavailable() throws {
-        let app = launchReadinessApp(
-            extraLaunchArguments: [
-                "-ui-testing-force-social-unavailable",
-                "-skip-onboarding",
-            ]
-        )
-
-        XCTAssertTrue(openSettings(app: app))
-
-        let socialEntry = waitForAnyElement(
-            app: app,
-            candidates: [
-                app.buttons["settings.socialHealth.open"],
-                app.buttons["settings.socialHealth.view"],
-                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Social Diagnostics")).firstMatch,
-                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Social Health")).firstMatch,
-            ],
-            timeout: 8,
-            maxSwipes: 8
-        )
-        XCTAssertNotNil(socialEntry)
-        socialEntry?.tap()
-
-        let unavailableState = waitForAnyElement(
-            app: app,
-            candidates: [
-                app.staticTexts["Social diagnostics are currently unavailable."],
-                app.staticTexts["Social features are unavailable in this test run."],
-                app.staticTexts["CloudKit account status could not be determined."],
-                app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Unavailable")).firstMatch,
-            ],
-            timeout: 6,
-            maxSwipes: 6
-        )
-        let actionFallback = waitForAnyElement(
-            app: app,
-            candidates: [
-                app.buttons["settings.socialHealth.retryQueue"],
-                app.buttons["Retry Queue"],
-                app.buttons["settings.socialHealth.copyReport"],
-                app.buttons["Copy Report"],
-            ],
-            timeout: 4,
-            maxSwipes: 2
-        )
-        XCTAssertTrue(unavailableState != nil || actionFallback != nil, "Social unavailable mode should still present either fallback content or actions")
-
-        _ = closeTopScreen(app: app)
-        XCTAssertTrue(openSettings(app: app))
-
-        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
-        if friendsTab.waitForExistence(timeout: 4) {
-            friendsTab.tap()
-            XCTAssertNotNil(
-                waitForAnyElement(
-                    app: app,
-                    candidates: [
-                        app.otherElements["friends.sectionPicker"],
-                        app.staticTexts["Social features are unavailable in this test run."],
-                        app.staticTexts["CloudKit account status could not be determined."],
-                        app.buttons["friends.retryLoad"],
-                    ],
-                    timeout: 5,
-                    maxSwipes: 6
-                )
-            )
-        }
-    }
-
     @discardableResult
     private func waitForAnyElement(
         app: XCUIApplication,
@@ -1981,11 +1663,11 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
                 app.staticTexts["Missions"],
                 app.buttons["chaos.social.submitScore"],
             ]
-        case "tab.friends":
+        case "tab.favorites":
             return [
-                app.otherElements["friends.sectionPicker"],
-                app.buttons["friends.section.feed"],
-                app.staticTexts["Friends"],
+                app.buttons["favorites.generate"],
+                app.staticTexts["Favorites"],
+                app.staticTexts["Nothing saved yet."],
             ]
         case "tab.quotes":
             return [

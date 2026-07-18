@@ -44,7 +44,6 @@ struct SettingsTabView: View {
     @State private var notificationsTask: Task<Void, Never>?
     @State private var gearResetTask: Task<Void, Never>?
     @State private var didLoadInitialDiagnostics = false
-    @State private var showingSocialDiagnostics = false
     @State private var currentPasswordDraft = ""
     @State private var newPasswordDraft = ""
     @State private var confirmPasswordDraft = ""
@@ -136,16 +135,6 @@ struct SettingsTabView: View {
                                 value: sectionsAppeared
                             )
                     } else {
-                        socialHealthSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75),
-                                value: sectionsAppeared
-                            )
                         accountSection
                             .opacity(sectionsAppeared ? 1 : 0)
                             .offset(y: sectionsAppeared ? 0 : 24)
@@ -321,9 +310,6 @@ struct SettingsTabView: View {
             case .deleteAccount:
                 deleteAccountSheet
             }
-        }
-        .navigationDestination(isPresented: $showingSocialDiagnostics) {
-            SocialHealthDiagnosticsView(social: social, settings: viewModel)
         }
         .toolbar { focusModeToolbar }
     }
@@ -766,67 +752,6 @@ struct SettingsTabView: View {
         }
     }
 
-    private var socialHealthSection: some View {
-        settingsCard(title: "Social System", icon: "stethoscope") {
-            VStack(spacing: 12) {
-                Button {
-                    showingSocialDiagnostics = true
-                } label: {
-                    settingsNavRow(
-                        "Social Diagnostics",
-                        systemImage: "waveform.path.ecg",
-                        badge: social.queuedActionCount > 0 ? "\(social.queuedActionCount)" : nil
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("settings.socialHealth.open")
-
-                settingsDivider
-
-                Button {
-                    UIPasteboard.general.string = socialHealthReportText()
-                } label: {
-                    Label("Copy Diagnostics Summary", systemImage: "doc.on.doc")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .accessibilityIdentifier("settings.socialHealth.copyReport")
-
-                settingsDivider
-
-                socialStatRow("Backend", value: social.backendDisplayName)
-                socialStatRow(
-                    "Availability",
-                    value: social.availability.isAvailable ? "Available" : "Unavailable"
-                )
-                socialStatRow(
-                    "Profile",
-                    value: social.currentUser.map { "@\($0.handle)" } ?? "Not created"
-                )
-                socialStatRow("Incoming Requests", value: "\(social.incomingRequests.count)")
-                socialStatRow("Queue Depth", value: "\(social.queuedActionCount)")
-
-                settingsDivider
-
-                Button {
-                    Task {
-                        await social.refreshAvailability()
-                        await social.refreshSocialData()
-                    }
-                } label: {
-                    Label("Refresh Social Status", systemImage: "arrow.clockwise")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .accessibilityIdentifier("settings.socialHealth.refresh")
-            }
-        }
-    }
-
     private var themeSection: some View {
         settingsCard(title: "Theme", icon: "paintpalette") {
             LazyVGrid(
@@ -1018,34 +943,6 @@ struct SettingsTabView: View {
         }
     }
 
-    private func socialHealthReportText() -> String {
-        let diagnostics = social.availability.diagnostics
-        return [
-            diagnostics.text(includeDebugDetails: false),
-            "",
-            "Backend: \(social.backendDisplayName)",
-            "Profile: \(social.currentUser.map { "@\($0.handle)" } ?? "None")",
-            "Queue Depth: \(social.queuedActionCount)",
-            "Queued Reports: \(social.queuedModerationReportCount)",
-            "Incoming Requests: \(social.incomingRequests.count)",
-            "Friends: \(social.friends.count)",
-            "Collab Docs: \(social.collabDocs.count)",
-            "Last Queue Drain: \(reportDateString(social.lastQueueDrainAt))",
-        ]
-        .joined(separator: "\n")
-    }
-
-    private func reportDateString(_ date: Date?) -> String {
-        guard let date else { return "Never" }
-        return Self.reportDateFormatter.string(from: date)
-    }
-
-    private static let reportDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter
-    }()
-
     private var notificationSection: some View {
         settingsCard(title: "Notifications", icon: "bell") {
             VStack(spacing: 12) {
@@ -1168,24 +1065,6 @@ struct SettingsTabView: View {
                         badge: nil,
                         accessibilityIdentifier: "settings.upgradeStore"
                     )
-                }
-                .buttonStyle(.plain)
-
-                settingsDivider
-
-                NavigationLink {
-                    InviteFriendsView(social: social, settings: viewModel)
-                } label: {
-                    settingsNavRow("Invite Friends", systemImage: "person.badge.plus", badge: nil)
-                }
-                .buttonStyle(.plain)
-
-                settingsDivider
-
-                NavigationLink {
-                    ActivityFeedView(social: social, settings: viewModel)
-                } label: {
-                    settingsNavRow("Friend Activity", systemImage: "bell.fill", badge: nil)
                 }
                 .buttonStyle(.plain)
 
@@ -1343,19 +1222,6 @@ struct SettingsTabView: View {
         }
     }
 
-    private func socialStatRow(_ title: String, value: String) -> some View {
-        HStack(spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(secondaryText)
-            Spacer()
-            Text(value)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(primaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-    }
 
     private func snapshotPill(title: String, value: String) -> some View {
         VStack(spacing: 4) {

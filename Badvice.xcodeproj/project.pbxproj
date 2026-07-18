@@ -10,7 +10,6 @@
 		129755B3D83C574263AD6020 /* AnimatedShareExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85AA50D7506E97110B20E16F /* AnimatedShareExporter.swift */; };
 		15D513E5FD6D9380FB5819D4 /* BadviceWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2BF026CE4629AB5BD5E11B23 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C250B6FD91B852804C06C42 /* StoreKitManager.swift */; };
-		526DBFC76B337832997A73F3 /* CollabAdviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08A34A9F8EA5EE91F06CC01C /* CollabAdviceView.swift */; };
 		52AD82A6DA1A7B7DA9223525 /* CloudKitSchemaSeeder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28514E6E10424D2C60C8873 /* CloudKitSchemaSeeder.swift */; };
 		52AD82A7DA1A7B7DA9223525 /* CloudKitSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28514E7E10424D2C60C8873 /* CloudKitSchema.swift */; };
 		52AD82A8DA1A7B7DA9223525 /* CloudKitSchemaHealthChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F28514E8E10424D2C60C8873 /* CloudKitSchemaHealthChecker.swift */; };
@@ -19,11 +18,8 @@
 		6023FF49F2203A380675F04A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA4E285DDB5972C81A405FFA /* SwiftUI.framework */; };
 		71EB77B62B215677E29E8766 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C0C112D36AF44AC7271B25 /* LiveActivityManager.swift */; };
 		752D7962F4B643C07ADACB3E /* SpotlightManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BAD1019A3BB68796107B331 /* SpotlightManager.swift */; };
-		79C4823DAEA721464DE6DB9F /* ActivityFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB9F9488A0CBEC42F1CA9AE1 /* ActivityFeedView.swift */; };
-		81ACEF51ED3C6767E14E7F18 /* ReferralManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E133D8AC6C6A815D53FD37F /* ReferralManager.swift */; };
 		849CE4DFFEEE89521945A41D /* OfflinePackCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F152C81A6A99BC970CEE6C3 /* OfflinePackCache.swift */; };
 		8FBB37C624DF5072622F2BA2 /* GlobalCommunityFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E273C3DA489ED7E3D5D44E0 /* GlobalCommunityFeedView.swift */; };
-		91B7F33494FBDFF47FC04141 /* SocialProfileSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C98EE3071240A963E2CD94B /* SocialProfileSetupView.swift */; };
 		973C67C703EAAFA8D5C94C4D /* SuggestionPipelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BCEE47F69102E4E4FAC043F /* SuggestionPipelineView.swift */; };
 		99BADEF42679E9E97A271378 /* AppSessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A5EDD883F062B6F7D61AF6 /* AppSessionViewModel.swift */; };
 		9B277FB62F8C9E7100ADCE99 /* BadviceStreakActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B277FB52F8C9E7100ADCE99 /* BadviceStreakActivityWidget.swift */; };
@@ -84,18 +80,15 @@
 		A1000005000000000000DD02 /* FloatingTabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD02 /* FloatingTabBarView.swift */; };
 		A1000006000000000000EE01 /* FavoritesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006000000000000EE01 /* FavoritesTabView.swift */; };
 		A1000006000000000000EE02 /* QuotesTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006000000000000EE02 /* QuotesTabView.swift */; };
-		A1000006000000000000EE03 /* FriendsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006000000000000EE03 /* FriendsTabView.swift */; };
 		A1000006000000000000EE04 /* HistoryTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006000000000000EE04 /* HistoryTabView.swift */; };
 		A1000007000000000000FF01 /* Shared/ShareKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000007000000000000FF01 /* Shared/ShareKit.swift */; };
 		A1000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift */; };
 		A1000009000000000000AM01 /* GamificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM01 /* GamificationModels.swift */; };
 		A1000009000000000000AM02 /* AppModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM02 /* AppModels.swift */; };
-		A100000A0000000000AA10 /* SocialHealthDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */; };
 		A100000A0000000000AA11 /* SuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA11 /* SuggestionLabView.swift */; };
 		A100000A0000000000AA12 /* QuoteSuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */; };
 		A100000A0000000000AA13 /* CommunityPulseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA13 /* CommunityPulseView.swift */; };
 		A100000A0000000000AA14 /* UpgradeStoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA14 /* UpgradeStoreView.swift */; };
-		A100000A0000000000AA15 /* InviteFriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA15 /* InviteFriendsView.swift */; };
 		A100000A0000000000AA16 /* OfflinePacksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA16 /* OfflinePacksView.swift */; };
 		A100000B000000000000LM01 /* LocalModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000B000000000000LM01 /* LocalModelStore.swift */; };
 		A100000C000000000000AS01 /* AdviceStoreDefaults.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000C000000000000AS01 /* AdviceStoreDefaults.swift */; };
@@ -113,7 +106,6 @@
 		D10000010000000000000001 /* BadviceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000010000000000000001 /* BadviceUITests.swift */; };
 		D10000020000000000000001 /* BadviceFullSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000020000000000000001 /* BadviceFullSmokeTests.swift */; };
 		D10000030000000000000001 /* BadvicePolishedSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000030000000000000001 /* BadvicePolishedSmokeTests.swift */; };
-		D10000040000000000000001 /* BadviceSocialDiagnosticsSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000040000000000000001 /* BadviceSocialDiagnosticsSmokeTests.swift */; };
 		D10000050000000000000001 /* BadviceShippingReadinessTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000050000000000000001 /* BadviceShippingReadinessTests.swift */; };
 		F583507E5A045C5780BC1B36 /* Shared/NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCF16D47C5CD16BA42173EC /* Shared/NetworkMonitor.swift */; };
 		F67E4DFCBEDF98A26BE99151 /* WorstAdviceQuoteWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */; };
@@ -158,7 +150,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		08A34A9F8EA5EE91F06CC01C /* CollabAdviceView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CollabAdviceView.swift; sourceTree = "<group>"; };
 		0ED4144827DD3BE9366FEAA6 /* BadviceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BadviceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1C250B6FD91B852804C06C42 /* StoreKitManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
 		1E273C3DA489ED7E3D5D44E0 /* GlobalCommunityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GlobalCommunityFeedView.swift; sourceTree = "<group>"; };
@@ -170,13 +161,11 @@
 		537EABC7909023C6B45AAB4F /* LocalAuth.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalAuth.swift; sourceTree = "<group>"; };
 		53A5EDD883F062B6F7D61AF6 /* AppSessionViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppSessionViewModel.swift; sourceTree = "<group>"; };
 		56D0F9A0F33FC44CE7FFD0B9 /* AchievementsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AchievementsView.swift; path = Badvice/Views/AchievementsView.swift; sourceTree = "<group>"; };
-		6C98EE3071240A963E2CD94B /* SocialProfileSetupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SocialProfileSetupView.swift; sourceTree = "<group>"; };
 		7CCF16D47C5CD16BA42173EC /* Shared/NetworkMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Shared/NetworkMonitor.swift; sourceTree = "<group>"; };
 		85AA50D7506E97110B20E16F /* AnimatedShareExporter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AnimatedShareExporter.swift; sourceTree = "<group>"; };
 		86C0C112D36AF44AC7271B25 /* LiveActivityManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		88A8B7BA7C96143E7039C52E /* LocalAuthGateView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalAuthGateView.swift; sourceTree = "<group>"; };
 		89E0183259A65059B4694547 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
-		8E133D8AC6C6A815D53FD37F /* ReferralManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReferralManager.swift; sourceTree = "<group>"; };
 		9B277FB52F8C9E7100ADCE99 /* BadviceStreakActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceStreakActivityWidget.swift; sourceTree = "<group>"; };
 		A10000010000000000000028 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		A10000010000000000000029 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
@@ -238,18 +227,15 @@
 		A2000005000000000000DD02 /* FloatingTabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingTabBarView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE01 /* FavoritesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesTabView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE02 /* QuotesTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotesTabView.swift; sourceTree = "<group>"; };
-		A2000006000000000000EE03 /* FriendsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsTabView.swift; sourceTree = "<group>"; };
 		A2000006000000000000EE04 /* HistoryTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryTabView.swift; sourceTree = "<group>"; };
 		A2000007000000000000FF01 /* Shared/ShareKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/ShareKit.swift; sourceTree = "<group>"; };
 		A2000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/State/Social/CloudKitStore.swift; sourceTree = SOURCE_ROOT; };
 		A2000009000000000000AM01 /* GamificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationModels.swift; sourceTree = "<group>"; };
 		A2000009000000000000AM02 /* AppModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModels.swift; sourceTree = "<group>"; };
-		A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialHealthDiagnosticsView.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA11 /* SuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionLabView.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteSuggestionLabView.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA13 /* CommunityPulseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommunityPulseView.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA14 /* UpgradeStoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradeStoreView.swift; sourceTree = "<group>"; };
-		A200000A0000000000AA15 /* InviteFriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteFriendsView.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA16 /* OfflinePacksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflinePacksView.swift; sourceTree = "<group>"; };
 		A200000B000000000000LM01 /* LocalModelStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelStore.swift; sourceTree = "<group>"; };
 		A200000C000000000000AS01 /* AdviceStoreDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdviceStoreDefaults.swift; sourceTree = "<group>"; };
@@ -263,10 +249,8 @@
 		D20000010000000000000002 /* BadviceUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BadviceUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D20000020000000000000001 /* BadviceFullSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceFullSmokeTests.swift; sourceTree = "<group>"; };
 		D20000030000000000000001 /* BadvicePolishedSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadvicePolishedSmokeTests.swift; sourceTree = "<group>"; };
-		D20000040000000000000001 /* BadviceSocialDiagnosticsSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceSocialDiagnosticsSmokeTests.swift; sourceTree = "<group>"; };
 		D20000050000000000000001 /* BadviceShippingReadinessTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadviceShippingReadinessTests.swift; sourceTree = "<group>"; };
 		E2C35747C3F426FECEBC093F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = "<group>"; };
-		EB9F9488A0CBEC42F1CA9AE1 /* ActivityFeedView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ActivityFeedView.swift; sourceTree = "<group>"; };
 		F28514E6E10424D2C60C8873 /* CloudKitSchemaSeeder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchemaSeeder.swift; sourceTree = "<group>"; };
 		F28514E7E10424D2C60C8873 /* CloudKitSchema.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchema.swift; sourceTree = "<group>"; };
 		F28514E8E10424D2C60C8873 /* CloudKitSchemaHealthChecker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CloudKitSchemaHealthChecker.swift; sourceTree = "<group>"; };
@@ -472,18 +456,15 @@
 				A20000010000000000000021 /* HapticsManager.swift */,
 				A20000010000000000000022 /* FloatingParticlesView.swift */,
 				A20000010000000000000023 /* InterstitialMessages.swift */,
-				A200000A0000000000AA10 /* SocialHealthDiagnosticsView.swift */,
 				A200000A0000000000AA11 /* SuggestionLabView.swift */,
 				A200000A0000000000AA12 /* QuoteSuggestionLabView.swift */,
 				A200000A0000000000AA13 /* CommunityPulseView.swift */,
 				A200000A0000000000AA14 /* UpgradeStoreView.swift */,
-				A200000A0000000000AA15 /* InviteFriendsView.swift */,
 				A200000A0000000000AA16 /* OfflinePacksView.swift */,
 				A20000010000000000000024 /* OnboardingView.swift */,
 				A20000010000000000000025 /* StatsView.swift */,
 				A2000006000000000000EE01 /* FavoritesTabView.swift */,
 				A2000006000000000000EE02 /* QuotesTabView.swift */,
-				A2000006000000000000EE03 /* FriendsTabView.swift */,
 				A2000006000000000000EE04 /* HistoryTabView.swift */,
 				A20000010000000000000026 /* OnboardingFlow.swift */,
 				A20000010000000000000027 /* ConfettiView.swift */,
@@ -494,9 +475,6 @@
 				A2000002000000000000AA02 /* ToastView.swift */,
 				A2000002000000000000AA05 /* AdviceBracketView.swift */,
 				88A8B7BA7C96143E7039C52E /* LocalAuthGateView.swift */,
-				6C98EE3071240A963E2CD94B /* SocialProfileSetupView.swift */,
-				EB9F9488A0CBEC42F1CA9AE1 /* ActivityFeedView.swift */,
-				08A34A9F8EA5EE91F06CC01C /* CollabAdviceView.swift */,
 				1E273C3DA489ED7E3D5D44E0 /* GlobalCommunityFeedView.swift */,
 				2BCEE47F69102E4E4FAC043F /* SuggestionPipelineView.swift */,
 				A2000002000000000000AA08 /* ErrorBoundaryView.swift */,
@@ -557,7 +535,6 @@
 				A200000B000000000000LM01 /* LocalModelStore.swift */,
 				1C250B6FD91B852804C06C42 /* StoreKitManager.swift */,
 				2BAD1019A3BB68796107B331 /* SpotlightManager.swift */,
-				8E133D8AC6C6A815D53FD37F /* ReferralManager.swift */,
 				2F152C81A6A99BC970CEE6C3 /* OfflinePackCache.swift */,
 				86C0C112D36AF44AC7271B25 /* LiveActivityManager.swift */,
 				85AA50D7506E97110B20E16F /* AnimatedShareExporter.swift */,
@@ -571,7 +548,6 @@
 				D20000010000000000000001 /* BadviceUITests.swift */,
 				D20000020000000000000001 /* BadviceFullSmokeTests.swift */,
 				D20000030000000000000001 /* BadvicePolishedSmokeTests.swift */,
-				D20000040000000000000001 /* BadviceSocialDiagnosticsSmokeTests.swift */,
 				D20000050000000000000001 /* BadviceShippingReadinessTests.swift */,
 			);
 			path = BadviceUITests;
@@ -738,18 +714,15 @@
 				A10000010000000000000021 /* HapticsManager.swift in Sources */,
 				A10000010000000000000022 /* FloatingParticlesView.swift in Sources */,
 				A10000010000000000000023 /* InterstitialMessages.swift in Sources */,
-				A100000A0000000000AA10 /* SocialHealthDiagnosticsView.swift in Sources */,
 				A100000A0000000000AA11 /* SuggestionLabView.swift in Sources */,
 				A100000A0000000000AA12 /* QuoteSuggestionLabView.swift in Sources */,
 				A100000A0000000000AA13 /* CommunityPulseView.swift in Sources */,
 				A100000A0000000000AA14 /* UpgradeStoreView.swift in Sources */,
-				A100000A0000000000AA15 /* InviteFriendsView.swift in Sources */,
 				A100000A0000000000AA16 /* OfflinePacksView.swift in Sources */,
 				A10000010000000000000024 /* OnboardingView.swift in Sources */,
 				A10000010000000000000025 /* StatsView.swift in Sources */,
 				A1000006000000000000EE01 /* FavoritesTabView.swift in Sources */,
 				A1000006000000000000EE02 /* QuotesTabView.swift in Sources */,
-				A1000006000000000000EE03 /* FriendsTabView.swift in Sources */,
 				A1000006000000000000EE04 /* HistoryTabView.swift in Sources */,
 				A10000010000000000000026 /* OnboardingFlow.swift in Sources */,
 				A10000010000000000000027 /* ConfettiView.swift in Sources */,
@@ -772,13 +745,11 @@
 				CC7C2D8BC35FCFF69C567086 /* LocalAuth.swift in Sources */,
 				99BADEF42679E9E97A271378 /* AppSessionViewModel.swift in Sources */,
 				5F9DAB6EFBFED341DF9CF1FD /* LocalAuthGateView.swift in Sources */,
-				91B7F33494FBDFF47FC04141 /* SocialProfileSetupView.swift in Sources */,
 				52AD82A7DA1A7B7DA9223525 /* CloudKitSchema.swift in Sources */,
 				52AD82A8DA1A7B7DA9223525 /* CloudKitSchemaHealthChecker.swift in Sources */,
 				52AD82A6DA1A7B7DA9223525 /* CloudKitSchemaSeeder.swift in Sources */,
 				2BF026CE4629AB5BD5E11B23 /* StoreKitManager.swift in Sources */,
 				752D7962F4B643C07ADACB3E /* SpotlightManager.swift in Sources */,
-				81ACEF51ED3C6767E14E7F18 /* ReferralManager.swift in Sources */,
 				849CE4DFFEEE89521945A41D /* OfflinePackCache.swift in Sources */,
 				71EB77B62B215677E29E8766 /* LiveActivityManager.swift in Sources */,
 				A10000010000000000000034 /* SchemaMigrationManager.swift in Sources */,
@@ -798,8 +769,6 @@
 				A10000010000000000000041 /* GenerationLoadingMessages.swift in Sources */,
 				A1000001000000000000003F /* SettingsViewModel.swift in Sources */,
 				129755B3D83C574263AD6020 /* AnimatedShareExporter.swift in Sources */,
-				79C4823DAEA721464DE6DB9F /* ActivityFeedView.swift in Sources */,
-				526DBFC76B337832997A73F3 /* CollabAdviceView.swift in Sources */,
 				8FBB37C624DF5072622F2BA2 /* GlobalCommunityFeedView.swift in Sources */,
 				973C67C703EAAFA8D5C94C4D /* SuggestionPipelineView.swift in Sources */,
 				F583507E5A045C5780BC1B36 /* Shared/NetworkMonitor.swift in Sources */,
@@ -829,7 +798,6 @@
 				D10000010000000000000001 /* BadviceUITests.swift in Sources */,
 				D10000020000000000000001 /* BadviceFullSmokeTests.swift in Sources */,
 				D10000030000000000000001 /* BadvicePolishedSmokeTests.swift in Sources */,
-				D10000040000000000000001 /* BadviceSocialDiagnosticsSmokeTests.swift in Sources */,
 				D10000050000000000000001 /* BadviceShippingReadinessTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

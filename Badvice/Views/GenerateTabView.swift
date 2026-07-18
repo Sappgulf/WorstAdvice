@@ -11,10 +11,6 @@ struct GenerateTabView: View {
     var settingsPresented: Bool = false
     var quickAccessTabs: [AppTab] = []
     var onResetAllLocalAccounts: (() async -> ToastMessage)? = nil
-    var onRefreshSocialAvailability: (() async -> ToastMessage)? = nil
-    #if DEBUG
-        var onReseedCloudKitSchema: (() async -> ToastMessage)? = nil
-    #endif
 
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
@@ -25,7 +21,6 @@ struct GenerateTabView: View {
     @State private var showingBrandMenu = false
     @State private var pendingBrandMenuTab: AppTab? = nil
     @State private var showingBracket = false        // #2 Advice Battles entry point
-    @State private var showingCollabAdvice = false   // #7 Collab Advice
     @State private var gifExportInProgress = false
     @State private var generateButtonPulsing = false
     @State private var activeToast: ToastMessage? = nil
@@ -72,11 +67,6 @@ struct GenerateTabView: View {
             return "\(viewModel.challengeStreakDays)-day streak active."
         }
         return "Generate, save, copy, share, or remix."
-    }
-    private var socialEntryPrompt: String {
-        social.availability.isAccountAvailable
-            ? "Finish your Friends profile in Friends, then return here to share posts and start collabs."
-            : social.availability.message
     }
     private var headerReactiveScale: CGFloat {
         guard !isMotionReduced else { return 1.0 }
@@ -358,14 +348,6 @@ struct GenerateTabView: View {
             }
             .buttonStyle(.bordered)
             .tint(accent)
-
-            Button { showingCollabAdvice = true } label: {
-                Label("Collab", systemImage: "person.2.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 40)
-            }
-            .buttonStyle(.bordered)
-            .tint(accent)
         }
     }
 
@@ -375,55 +357,17 @@ struct GenerateTabView: View {
                 .font(.caption.weight(.bold))
                 .foregroundStyle(secondaryText)
 
-            HStack(spacing: 10) {
-                Button {
-                    guard let record = viewModel.current else { return }
-                    guard canShareToFriends() else {
-                        showFriendsUnavailable()
-                        return
-                    }
-                    Task {
-                        await social.shareAdviceToFriends(text: record.adviceLine)
-                        if let message = social.statusMessage {
-                            activeToast = ToastMessage(
-                                message: message,
-                                style: message.lowercased().contains("shared") ? .success : .error
-                            )
-                        }
-                    }
-                } label: {
-                    Label("Friends", systemImage: "person.2.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .accessibilityIdentifier("generate.shareToFriends")
-
-                Button {
-                    exportCurrentAdviceGIF()
-                } label: {
-                    Label(gifExportInProgress ? "Exporting..." : "GIF", systemImage: "square.and.arrow.up.on.square")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .disabled(gifExportInProgress)
-                .accessibilityIdentifier("generate.gif")
+            Button {
+                exportCurrentAdviceGIF()
+            } label: {
+                Label(gifExportInProgress ? "Exporting..." : "GIF", systemImage: "square.and.arrow.up.on.square")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
             }
-
-            if !social.availability.isAvailable {
-                Text(social.availability.message)
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else if social.currentUser == nil {
-                Text("Friends is optional. Set it up when you want shared drafts and collabs.")
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            .buttonStyle(.bordered)
+            .tint(accent)
+            .disabled(gifExportInProgress)
+            .accessibilityIdentifier("generate.gif")
         }
         .padding(12)
         .background(
@@ -555,38 +499,19 @@ struct GenerateTabView: View {
         .sheet(isPresented: $showingBrandMenu, onDismiss: {
             handleBrandMenuDismiss()
         }) {
-            #if DEBUG
-                GenerateBrandMenuView(
-                    social: social,
-                    settings: settings,
-                    quickAccessTabs: quickAccessTabs,
-                    isPresented: $showingBrandMenu,
-                    activeToast: $activeToast,
-                    onSelectQuickAccessTab: { pendingBrandMenuTab = $0 },
-                    onResetAllLocalAccounts: onResetAllLocalAccounts,
-                    onRefreshSocialAvailability: onRefreshSocialAvailability,
-                    onReseedCloudKitSchema: onReseedCloudKitSchema
-                )
-            #else
-                GenerateBrandMenuView(
-                    social: social,
-                    settings: settings,
-                    quickAccessTabs: quickAccessTabs,
-                    isPresented: $showingBrandMenu,
-                    activeToast: $activeToast,
-                    onSelectQuickAccessTab: { pendingBrandMenuTab = $0 },
-                    onResetAllLocalAccounts: onResetAllLocalAccounts,
-                    onRefreshSocialAvailability: onRefreshSocialAvailability
-                )
-            #endif
+            GenerateBrandMenuView(
+                social: social,
+                settings: settings,
+                quickAccessTabs: quickAccessTabs,
+                isPresented: $showingBrandMenu,
+                activeToast: $activeToast,
+                onSelectQuickAccessTab: { pendingBrandMenuTab = $0 },
+                onResetAllLocalAccounts: onResetAllLocalAccounts
+            )
         }
         // #2 Advice Battles
         .sheet(isPresented: $showingBracket) {
             AdviceBracketView(settings: settings, generateViewModel: viewModel)
-        }
-        // #7 Collab Advice
-        .sheet(isPresented: $showingCollabAdvice) {
-            CollabAdviceView(settings: settings, generateViewModel: viewModel, social: social)
         }
         .onAppear {
             AppPerformanceInstrumentation.markAdviceTabFirstRenderIfNeeded()
@@ -811,19 +736,6 @@ struct GenerateTabView: View {
                         Button("Share", systemImage: "square.and.arrow.up") {
                             shareCurrentAdvice()
                         }
-
-                        Button("Collaborate", systemImage: "person.2.badge.plus") {
-                            guard canShareToFriends() else {
-                                showFriendsUnavailable()
-                                return
-                            }
-                            social.queueCollabDraft(type: .advice, content: record.adviceLine)
-                            openTab(.friends)
-                            activeToast = ToastMessage(
-                                message: "Draft sent to Friends > Collab.",
-                                style: .info
-                            )
-                        }
                     }
                     .onTapGesture(count: 2) {
                         toggleCurrentFavorite()
@@ -1022,14 +934,12 @@ struct GenerateTabView: View {
 
     private var resultNextStepIcon: String {
         if !viewModel.isCurrentFavorite { return "bookmark" }
-        if canShareToFriends() { return "person.2.fill" }
         if viewModel.todayGeneratedCount <= 1 { return "square.and.arrow.up" }
         return "bolt.fill"
     }
 
     private var resultNextStepTitle: String {
         if !viewModel.isCurrentFavorite { return "Keep the keeper" }
-        if canShareToFriends() { return "Ready for Friends" }
         if viewModel.todayGeneratedCount <= 1 { return "Send it or remix it" }
         return "Tune the punchline"
     }
@@ -1037,9 +947,6 @@ struct GenerateTabView: View {
     private var resultNextStepDetail: String {
         if !viewModel.isCurrentFavorite {
             return "Save the useful line first so it lands in Favorites and your weekly recap."
-        }
-        if canShareToFriends() {
-            return "Share it to Friends when you want reactions, or start a collab from the extras below."
         }
         if viewModel.todayGeneratedCount <= 1 {
             return "Share the first hit, then remix only if the tone needs a sharper edge."
@@ -1820,10 +1727,6 @@ struct GenerateTabView: View {
         }
     }
 
-    private func showFriendsUnavailable() {
-        activeToast = ToastMessage(message: socialEntryPrompt, style: .info)
-    }
-
     private func shareCurrentAdvice() {
         guard let payload = viewModel.currentSharePayload else { return }
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
@@ -1877,12 +1780,6 @@ struct GenerateTabView: View {
             }
             gifExportInProgress = false
         }
-    }
-
-    private func canShareToFriends() -> Bool {
-        guard social.availability.isAvailable else { return false }
-        guard social.currentUser != nil else { return false }
-        return true
     }
 
     private func handleGeneratingStateChange(_ isGenerating: Bool) {

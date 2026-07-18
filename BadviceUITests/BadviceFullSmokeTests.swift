@@ -18,8 +18,8 @@ final class BadviceFullSmokeTests: XCTestCase {
 
     // MARK: - Full Lifecycle Smoke Test
 
-    /// Open → Generate → Save → Copy → Vote → Surprise → Daily Drop → Battles → Collab →
-    /// Missions → Friends → Quotes → Settings → Close
+    /// Open → Generate → Save → Copy → Vote → Surprise → Daily Drop → Battles →
+    /// Missions → Quotes → Settings → Close
     func testFullAppLifecycleSmokeTest() throws {
         let app = launchTestApp()
 
@@ -199,45 +199,6 @@ final class BadviceFullSmokeTests: XCTestCase {
             _ = refreshLeaderboard.waitForExistence(timeout: 3)
         }
 
-        // ── 4. Friends Tab ──
-        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
-        if friendsTab.waitForExistence(timeout: 5) {
-            friendsTab.tap()
-
-            // Verify section picker loads
-            let sectionPicker = app.otherElements["friends.sectionPicker"]
-            let friendsTitle = app.staticTexts["Friends"]
-            XCTAssertTrue(
-                sectionPicker.waitForExistence(timeout: 5)
-                    || app.buttons["friends.section.friends"].waitForExistence(timeout: 5)
-                    || friendsTitle.waitForExistence(timeout: 5),
-                "Friends tab should load"
-            )
-
-            if sectionPicker.exists || app.buttons["friends.section.friends"].exists {
-                // Tap through each section
-                let feedSegment = app.buttons["friends.section.feed"]
-                if feedSegment.exists {
-                    feedSegment.tap()
-                    let feedRefresh = app.buttons["friends.feedRefresh"]
-                    _ = feedRefresh.waitForExistence(timeout: 3)
-                }
-
-                let collabSegment = app.buttons["friends.section.collab"]
-                if collabSegment.exists {
-                    collabSegment.tap()
-                    let newDoc = app.buttons["friends.newCollabDoc"]
-                    _ = newDoc.waitForExistence(timeout: 3)
-                }
-
-                // Go back to Friends list
-                let friendsSegment = app.buttons["friends.section.friends"]
-                if friendsSegment.exists {
-                    friendsSegment.tap()
-                }
-            }
-        }
-
         // ── 5. Quotes Tab ──
         let quotesTab = app.buttons.matching(identifier: "tab.quotes").firstMatch
         if quotesTab.waitForExistence(timeout: 5) {
@@ -346,73 +307,6 @@ final class BadviceFullSmokeTests: XCTestCase {
         XCTAssertTrue(waitForAuthenticatedShell(app: app), "Should authenticate after sign in")
     }
 
-    // MARK: - Social Mock Smoke Test
-
-    /// Tests social features with mock backend
-    func testSocialMockFullSmoke() throws {
-        let app = launchMockSocialApp(seededIncomingRequests: 2)
-
-        // Complete social profile setup
-        completeProfileSignup(app: app, handle: "smoke_social")
-
-        // ── Verify Friends tab fully loads ──
-        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
-        XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
-        friendsTab.tap()
-
-        let sectionPicker = app.otherElements["friends.sectionPicker"]
-        XCTAssertTrue(sectionPicker.waitForExistence(timeout: 5), "Friends section picker should load")
-
-        // Search for users
-        let searchField = app.textFields["friends.searchField"]
-        if searchField.waitForExistence(timeout: 3) {
-            XCTAssertTrue(searchField.isHittable || searchField.exists)
-            let searchButton = app.buttons["friends.searchButton"]
-            XCTAssertTrue(searchButton.waitForExistence(timeout: 3), "Friends search button should exist")
-            if searchButton.isEnabled {
-                searchButton.tap()
-            }
-        }
-
-        // Check Feed section
-        let feedSegment = app.buttons["friends.section.feed"]
-        if feedSegment.exists {
-            feedSegment.tap()
-            let feedRefresh = app.buttons["friends.feedRefresh"]
-            XCTAssertTrue(feedRefresh.waitForExistence(timeout: 3), "Feed refresh button should exist")
-        }
-
-        // Check Collab section
-        let collabSegment = app.buttons["friends.section.collab"]
-        if collabSegment.exists {
-            collabSegment.tap()
-            let newDoc = app.buttons["friends.newCollabDoc"]
-            XCTAssertTrue(newDoc.waitForExistence(timeout: 3), "New collab doc button should exist")
-        }
-
-        // ── Verify Missions with social ──
-        if openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions") {
-            let leaderboardCard = app.descendants(matching: .any)["chaos.social.leaderboardCard"]
-            _ = leaderboardCard.waitForExistence(timeout: 5)
-        }
-
-        // ── Verify solo share from Generate ──
-        let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
-        if generateTab.waitForExistence(timeout: 5) {
-            generateTab.tap()
-        }
-        let generateButton = app.buttons["generate.primary"]
-        XCTAssertTrue(generateButton.waitForExistence(timeout: 5))
-        generateButton.tap()
-        RunLoop.current.run(until: Date().addingTimeInterval(0.35))
-
-        let shareButton = app.buttons["generate.share"]
-        XCTAssertTrue(scrollToFind(app: app, element: shareButton, maxSwipes: 12))
-        if shareButton.isEnabled {
-            shareButton.tap()
-        }
-    }
-
     // MARK: - Generate Tab Deep Feature Smoke Test
 
     /// Tests every Generate tab interaction in detail
@@ -502,63 +396,6 @@ final class BadviceFullSmokeTests: XCTestCase {
             // Don't hard-fail on scroll visibility since some may be behind conditionals
         }
 
-        // Check social health section
-        let socialHealthOpen = waitForAnyElement(
-            app: app,
-            candidates: [
-                app.buttons["settings.socialHealth.open"],
-                app.buttons["settings.socialHealth.view"],
-                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Social Diagnostics")).firstMatch,
-                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Social Health")).firstMatch,
-                app.buttons["Social Diagnostics"],
-                app.buttons["Social Health"],
-            ],
-            timeout: 5,
-            maxSwipes: 12
-        )
-        if let socialHealthOpen {
-            socialHealthOpen.tap()
-            let socialDiagScreen = waitForAnyElement(
-                app: app,
-                candidates: [
-                    app.navigationBars["Social Diagnostics"],
-                    app.navigationBars["Social Health"],
-                    app.navigationBars.element(boundBy: 0),
-                    app.staticTexts["Social Diagnostics"],
-                    app.staticTexts["Social Health"],
-                    app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Social")).firstMatch,
-                    app.buttons["settings.socialHealth.retryQueue"],
-                    app.buttons["Retry Queue"],
-                    app.buttons["settings.socialHealth.copyReport"],
-                ],
-                timeout: 5,
-                maxSwipes: 10
-            )
-            XCTAssertTrue(
-                socialDiagScreen != nil,
-                "Social diagnostics should open"
-            )
-
-            let retryQueue = waitForAnyElement(
-                app: app,
-                candidates: [
-                    app.buttons["settings.socialHealth.retryQueue"],
-                    app.buttons["settings.socialHealth.copyReport"],
-                    app.buttons["Retry Queue"],
-                    app.buttons["Copy Report"],
-                    app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "retry")).firstMatch,
-                    app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "copy")).firstMatch,
-                ],
-                timeout: 3,
-                maxSwipes: 10
-            )
-            if retryQueue == nil {
-                print("Social diagnostics action set is unavailable in this test mode.")
-            }
-
-            // Navigate back
-            dismissTopScreen(app: app)
-        }
     }
 
     /// Verifies the alternate settings entry points stay stable and do not crash the app.
@@ -658,7 +495,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(0.35))
 
         // Tab switching should be fast
-        let tabs = ["tab.friends", "tab.quotes", "tab.generate"]
+        let tabs = ["tab.favorites", "tab.quotes", "tab.generate"]
         for tabID in tabs {
             let tab = app.buttons.matching(identifier: tabID).firstMatch
             if tab.waitForExistence(timeout: 3) {
@@ -982,23 +819,6 @@ final class BadviceFullSmokeTests: XCTestCase {
         return readinessChecks.contains(where: { $0() })
     }
 
-    private func launchMockSocialApp(seededIncomingRequests: Int = 0) -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments += defaultLaunchArguments + [
-            "-ui-testing-social-mock"
-        ]
-        if seededIncomingRequests > 0 {
-            app.launchArguments += [
-                "-ui-testing-social-seed-incoming",
-                "\(seededIncomingRequests)",
-            ]
-        }
-        app.launch()
-        XCTAssertTrue(waitForAppToEnterForeground(app: app, timeout: 15))
-        XCTAssertTrue(waitForAppToBecomeReady(app: app, timeout: 15))
-        return app
-    }
-
     @discardableResult
     private func waitForAuthenticatedShell(
         app: XCUIApplication,
@@ -1008,7 +828,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         let settingsSignOut = accessElementByIdentifier(app: app, identifier: "settings.auth.signOut", preferButton: true)
         let tabMarkers = [
             app.buttons.matching(identifier: "tab.generate").firstMatch,
-            app.buttons.matching(identifier: "tab.friends").firstMatch,
+            app.buttons.matching(identifier: "tab.favorites").firstMatch,
             app.buttons.matching(identifier: "tab.quotes").firstMatch,
             app.buttons.matching(identifier: "tab.more").firstMatch,
         ]
@@ -1399,35 +1219,6 @@ final class BadviceFullSmokeTests: XCTestCase {
             ],
             timeout: timeout,
             maxSwipes: 4
-        )
-    }
-
-    private func completeProfileSignup(app: XCUIApplication, handle: String) {
-        let friendsTab = app.buttons.matching(identifier: "tab.friends").firstMatch
-        XCTAssertTrue(friendsTab.waitForExistence(timeout: 5))
-        friendsTab.tap()
-
-        let openSetupButton = app.buttons["friends.openSetup"]
-        XCTAssertTrue(openSetupButton.waitForExistence(timeout: 5))
-        openSetupButton.tap()
-
-        XCTAssertTrue(app.navigationBars["Friends Setup"].waitForExistence(timeout: 5))
-        let handleField = app.textFields["social.profile.handle"]
-        XCTAssertTrue(handleField.waitForExistence(timeout: 8))
-        fillTextInput(handleField, text: handle)
-        XCTAssertTrue(
-            (handleField.value as? String ?? "").contains(handle),
-            "Expected Friends handle field to contain the requested handle after typing"
-        )
-
-        let saveButton = app.buttons["social.profile.save"]
-        XCTAssertTrue(saveButton.waitForExistence(timeout: 3))
-        XCTAssertTrue(saveButton.isEnabled)
-        saveButton.tap()
-
-        XCTAssertFalse(
-            handleField.waitForExistence(timeout: 3),
-            "Profile setup sheet should dismiss after save"
         )
     }
 

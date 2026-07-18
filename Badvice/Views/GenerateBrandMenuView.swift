@@ -16,10 +16,6 @@ struct GenerateBrandMenuView: View {
     @Binding var activeToast: ToastMessage?
     var onSelectQuickAccessTab: ((AppTab) -> Void)? = nil
     var onResetAllLocalAccounts: (() async -> ToastMessage)? = nil
-    var onRefreshSocialAvailability: (() async -> ToastMessage)? = nil
-    #if DEBUG
-        var onReseedCloudKitSchema: (() async -> ToastMessage)? = nil
-    #endif
 
     @State private var runningBrandAction = false
     @State private var showingResetAccountsConfirmation = false
@@ -33,13 +29,6 @@ struct GenerateBrandMenuView: View {
         social.availability.isAvailable
             ? "Saved work, history, discovery, challenges, and settings stay one tap away."
             : social.availability.message
-    }
-    private var shouldShowCloudKitCard: Bool {
-        #if DEBUG
-            return onRefreshSocialAvailability != nil || onReseedCloudKitSchema != nil
-        #else
-            return onRefreshSocialAvailability != nil
-        #endif
     }
     private var utilityTabs: [AppTab] {
         quickAccessTabs.filter { $0 != .settings }
@@ -56,9 +45,6 @@ struct GenerateBrandMenuView: View {
                         heroCard
                         recommendedFlowCard
                         quickAccessCard
-                        if shouldShowCloudKitCard {
-                            cloudKitCard
-                        }
                         if onResetAllLocalAccounts != nil {
                             accountCard
                         }
@@ -136,7 +122,7 @@ struct GenerateBrandMenuView: View {
                 Text("Recommended Flow")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
-                Text("Start with Advice, keep the useful lines, then use Missions or Friends only when they add momentum.")
+                Text("Start with Advice, keep the useful lines, then use Missions when it adds momentum.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -146,7 +132,6 @@ struct GenerateBrandMenuView: View {
                 flowStep("1", "Advice", tab: .generate)
                 flowStep("2", "Saved", tab: .favorites)
                 flowStep("3", "Missions", tab: .chaosHub)
-                flowStep("4", "Friends", tab: .friends)
             }
         }
         .accessibilityIdentifier("brandMenu.recommendedFlow")
@@ -189,51 +174,6 @@ struct GenerateBrandMenuView: View {
         }
     }
 
-    private var cloudKitCard: some View {
-        SectionShell(accent: accent, cardColor: cardColor) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Friends Status")
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(primaryText)
-                Text(socialSupportDetail)
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-            }
-        } content: {
-            VStack(spacing: 10) {
-                if onRefreshSocialAvailability != nil {
-                    actionButton(
-                        title: "Refresh Friends Status",
-                        detail: "Re-check Friends services and account availability.",
-                        systemImage: "arrow.clockwise",
-                        tint: accent,
-                        role: nil,
-                        disabled: runningBrandAction
-                    ) {
-                        runAction(onRefreshSocialAvailability)
-                    }
-                    .accessibilityIdentifier("brandMenu.refreshSocial")
-                }
-
-                #if DEBUG
-                    if onReseedCloudKitSchema != nil {
-                        actionButton(
-                            title: "Bootstrap Dev Schema",
-                            detail: "Seed the development schema when the social surface is out of sync.",
-                            systemImage: "icloud.and.arrow.up",
-                            tint: accent,
-                            role: nil,
-                            disabled: runningBrandAction
-                        ) {
-                            runAction(onReseedCloudKitSchema)
-                        }
-                        .accessibilityIdentifier("brandMenu.bootstrapSchema")
-                    }
-                #endif
-            }
-        }
-    }
-
     private var accountCard: some View {
         SectionShell(accent: accent, cardColor: cardColor) {
             VStack(alignment: .leading, spacing: 4) {
@@ -257,14 +197,6 @@ struct GenerateBrandMenuView: View {
             }
             .accessibilityIdentifier("brandMenu.resetAccounts")
         }
-    }
-
-    private var socialSupportDetail: String {
-        #if DEBUG
-            return "Refresh Friends availability or bootstrap the development schema when social setup is out of sync."
-        #else
-            return "Refresh Friends availability when sharing status looks stale."
-        #endif
     }
 
     private func menuMetric(title: String, value: String) -> some View {
