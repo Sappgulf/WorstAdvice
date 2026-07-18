@@ -35,7 +35,9 @@ enum Theme {
     static let cardInnerSpacing: CGFloat = 10
     static let compactCornerRadius: CGFloat = 12
     static let mediumCornerRadius: CGFloat = 14
+    static let tileCornerRadius: CGFloat = 16
     static let largeCornerRadius: CGFloat = 18
+    static let heroCornerRadius: CGFloat = 28
     static let shellPadding: CGFloat = 16
     static let shellSpacing: CGFloat = 12
     static let shellMetricCornerRadius: CGFloat = 10

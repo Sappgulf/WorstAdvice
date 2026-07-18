@@ -92,7 +92,9 @@ struct HistoryTabView: View {
             ZStack {
                 bg.ignoresSafeArea()
 
-                if viewModel.history.isEmpty {
+                if viewModel.loadFailed && viewModel.history.isEmpty {
+                    historyLoadErrorState
+                } else if viewModel.history.isEmpty {
                     historyEmptyState
                 } else {
                     VStack(spacing: 0) {
@@ -330,7 +332,7 @@ struct HistoryTabView: View {
         }
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [cardColor.opacity(0.85), cardColor.opacity(0.52)],
@@ -340,11 +342,11 @@ struct HistoryTabView: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.24), lineWidth: 1)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.08))
                 .frame(height: 1),
             alignment: .top
@@ -558,6 +560,29 @@ struct HistoryTabView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var historyLoadErrorState: some View {
+        TabEmptyStatePanel(
+            icon: "exclamationmark.triangle",
+            title: "Couldn't load your history.",
+            message: "Something went wrong reading your advice history. Your data is still there — try again.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor,
+            reduceMotion: isMotionReduced
+        ) {
+            TabCommandActionButton(
+                title: "Try Again",
+                systemImage: "arrow.clockwise",
+                accent: accent,
+                buttonText: buttonText
+            ) {
+                viewModel.reload()
+            }
+            .accessibilityIdentifier("history.retryLoad")
         }
     }
 

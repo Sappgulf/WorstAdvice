@@ -80,7 +80,7 @@ struct ChaosHubTabView: View {
     private var weeklyMission: GenerateViewModel.WeeklyMissionState { generateViewModel.weeklyMissionState }
     private var primaryNextStepTitle: String {
         if !social.availability.isAccountAvailable {
-            return "Reconnect Friends services"
+            return "Continue with today's mission"
         }
         if generateViewModel.isGenerating {
             return "Generating now"
@@ -1062,7 +1062,7 @@ struct ChaosHubTabView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .fill(accent.opacity(isAccent ? 0.14 : 0.08))
         )
     }
@@ -1079,7 +1079,7 @@ struct ChaosHubTabView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.08))
         )
     }
@@ -1100,7 +1100,7 @@ struct ChaosHubTabView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .fill(secondaryText.opacity(0.09))
         )
     }
@@ -1118,7 +1118,7 @@ struct ChaosHubTabView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .fill(secondaryText.opacity(0.06))
         )
     }

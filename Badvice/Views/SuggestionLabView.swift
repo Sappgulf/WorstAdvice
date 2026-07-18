@@ -64,7 +64,7 @@ struct SuggestionLabView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [accent.opacity(0.95), accent.opacity(0.5)],
@@ -96,7 +96,7 @@ struct SuggestionLabView: View {
         }
         .padding(18)
         .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
                 .fill(cardFill)
                 .overlay(
                     LinearGradient(
@@ -107,7 +107,7 @@ struct SuggestionLabView: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
                 .strokeBorder(accent.opacity(0.12), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.16), radius: 18, x: 0, y: 10)
@@ -174,7 +174,7 @@ struct SuggestionLabView: View {
                 .foregroundStyle(submitSuccess ? .white : primaryText)
                 .padding(.vertical, 14)
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                 .fill(
                     submitSuccess
                         ? AnyShapeStyle(Color.green)
@@ -262,20 +262,20 @@ struct SuggestionLabView: View {
     }
 
     private var cardSurface: some View {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
+        RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
             .fill(cardFill)
             .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
                     .strokeBorder(accent.opacity(0.1), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)
     }
 
     private var fieldBackground: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
             .fill(accent.opacity(0.09))
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                     .strokeBorder(accent.opacity(0.08), lineWidth: 1)
             )
     }

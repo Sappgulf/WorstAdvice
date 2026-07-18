@@ -361,7 +361,7 @@ struct SettingsTabView: View {
                         .foregroundStyle(.white)
                         .frame(width: 64, height: 64)
                         .background(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [accent, accent.opacity(0.72)],
@@ -372,7 +372,7 @@ struct SettingsTabView: View {
                                 .shadow(color: accent.opacity(0.25), radius: 10, y: 5)
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                                 .stroke(Color.white.opacity(0.12), lineWidth: 1)
                         }
                         .scaleEffect(
@@ -402,7 +402,7 @@ struct SettingsTabView: View {
                             ))
                 }
                 .buttonStyle(.plain)
-                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous))
                 .accessibilityLabel("Settings")
                 .accessibilityHint("Double-tap to spin")
                 .accessibilityIdentifier("settings.menuButton")
@@ -497,7 +497,7 @@ struct SettingsTabView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [accent.opacity(0.14), accent.opacity(0.06)],
@@ -506,12 +506,12 @@ struct SettingsTabView: View {
                     )
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                         .stroke(accent.opacity(0.2), lineWidth: 1)
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.16), lineWidth: 1)
                 .blendMode(.screen),
             alignment: .top
@@ -792,10 +792,10 @@ struct SettingsTabView: View {
                     } label: {
                         VStack(spacing: 8) {
                             ZStack {
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                                     .fill(Theme.backgroundGradient(for: mode))
                                     .frame(height: 52)
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                                     .fill(
                                         LinearGradient(
                                             colors: [
@@ -877,7 +877,7 @@ struct SettingsTabView: View {
                     .accessibilityHint("Double-tap to apply this theme to your account.")
                     .overlay {
                         if isTileSelected, let glow {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                                 .stroke(glow.opacity(0.45), lineWidth: 1)
                         }
                     }
@@ -1235,11 +1235,11 @@ struct SettingsTabView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .fill(cardColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.12), lineWidth: 1)
         )
     }
@@ -1330,11 +1330,11 @@ struct SettingsTabView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
                 .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                         .fill(cardColor)
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                         .stroke(secondaryText.opacity(0.12), lineWidth: 1)
                 )
             } else {
@@ -1394,11 +1394,11 @@ struct SettingsTabView: View {
             }
             .padding(12)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                     .fill(cardColor.opacity(0.75))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                     .stroke(appleModelStatusTint.opacity(0.2), lineWidth: 1)
             )
         )
@@ -1551,11 +1551,11 @@ struct SettingsTabView: View {
         }
         .padding(10)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .fill(cardColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                 .stroke(
                     (isSelected ? accent : secondaryText).opacity(isSelected ? 0.22 : 0.10),
                     lineWidth: 1

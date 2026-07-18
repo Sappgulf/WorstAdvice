@@ -13,6 +13,10 @@ final class AdviceRepository {
 
     let context: ModelContext
     let accountKey: String
+    /// Set when the last `fetchAllHistory()` call failed and fell back to an
+    /// empty result, so callers can tell a genuine load failure apart from a
+    /// legitimately empty account.
+    private(set) var lastHistoryFetchFailed = false
     private var cachedHistoryRecords: [AdviceRecord]?
     private var cachedSeenCount: Int?
     private var cachedFingerprintSet: Set<String>?
@@ -74,9 +78,16 @@ final class AdviceRepository {
             predicate: accountScope,
             sortBy: [SortDescriptor(\AdviceRecord.createdAt, order: .reverse)]
         )
-        let history = (try? context.fetch(descriptor)) ?? []
-        cachedHistoryRecords = history
-        return history
+        do {
+            let history = try context.fetch(descriptor)
+            lastHistoryFetchFailed = false
+            cachedHistoryRecords = history
+            return history
+        } catch {
+            logger.error("Failed to fetch history: \(error.localizedDescription, privacy: .public)")
+            lastHistoryFetchFailed = true
+            return []
+        }
     }
 
     func fetchFavorites() -> [AdviceRecord] {

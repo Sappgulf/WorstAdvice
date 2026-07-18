@@ -15,7 +15,7 @@ struct InlineSearchField: View {
     var body: some View {
         HStack(spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                     .fill(isFocused ? accent.opacity(0.18) : secondaryText.opacity(0.08))
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 14, weight: .semibold))
@@ -446,6 +446,8 @@ struct FavoritesTabView: View {
 
                 if isFavoritesLoading {
                     skeletonState
+                } else if viewModel.loadFailed && viewModel.favorites.isEmpty {
+                    loadErrorState
                 } else if viewModel.favorites.isEmpty {
                     emptyState
                 } else {
@@ -782,7 +784,7 @@ struct FavoritesTabView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 9)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous))
     }
 
     private var favoritesCommandCard: some View {
@@ -871,11 +873,11 @@ struct FavoritesTabView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                 .fill(cardColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.12), lineWidth: 1)
         )
     }
@@ -914,6 +916,29 @@ struct FavoritesTabView: View {
         }
         .scrollDisabled(true)
         .transition(.opacity)
+    }
+
+    private var loadErrorState: some View {
+        TabEmptyStatePanel(
+            icon: "exclamationmark.triangle",
+            title: "Couldn't load your favorites.",
+            message: "Something went wrong reading your saved advice. Your data is still there — try again.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor,
+            reduceMotion: isMotionReduced
+        ) {
+            TabCommandActionButton(
+                title: "Try Again",
+                systemImage: "arrow.clockwise",
+                accent: accent,
+                buttonText: buttonText
+            ) {
+                viewModel.reload()
+            }
+            .accessibilityIdentifier("favorites.retryLoad")
+        }
     }
 
     private var emptyState: some View {
@@ -1089,7 +1114,7 @@ private struct FavoriteDetailView: View {
                         .foregroundStyle(primaryText)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous))
                         .onChange(of: aftermathText) { _, newValue in
                             if newValue.count > aftermathCharLimit {
                                 aftermathText = String(newValue.prefix(aftermathCharLimit))

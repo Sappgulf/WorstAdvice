@@ -324,6 +324,6 @@ private struct CommunityPostCard: View {
         }
         .padding(14)
         .background(cardColor)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous))
     }
 }

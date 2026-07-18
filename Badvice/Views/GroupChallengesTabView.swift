@@ -574,7 +574,7 @@ private struct CompletedChallengeCard: View {
         }
         .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [cardColor.opacity(0.8), cardColor.opacity(0.58)],
@@ -584,11 +584,11 @@ private struct CompletedChallengeCard: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.2), lineWidth: 1)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.06))
                 .frame(height: 1),
             alignment: .top
@@ -787,7 +787,7 @@ struct ChallengeCard: View {
         }
         .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [cardColor.opacity(0.92), cardColor.opacity(0.72)],
@@ -804,11 +804,11 @@ struct ChallengeCard: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.18), lineWidth: 1)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.08))
                 .frame(height: 1.1),
             alignment: .top

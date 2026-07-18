@@ -62,7 +62,7 @@ struct CommunityPulseView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [accent.opacity(0.95), accent.opacity(0.45)],
@@ -157,7 +157,7 @@ struct CommunityPulseView: View {
                 .chartPlotStyle { plot in
                     plot
                         .background(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                                 .fill(cardFill.opacity(0.52))
                         )
                 }
@@ -208,7 +208,7 @@ struct CommunityPulseView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                         .fill(accentColor.opacity(0.2))
                     Image(systemName: icon)
                         .font(.system(size: 18, weight: .semibold))
@@ -289,7 +289,7 @@ struct CommunityPulseView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                 .fill(cardFill.opacity(0.82))
         )
     }
@@ -306,16 +306,16 @@ struct CommunityPulseView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                 .fill(cardFill.opacity(0.72))
         )
     }
 
     private var cardShell: some View {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
+        RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
             .fill(cardFill)
             .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
                     .strokeBorder(accent.opacity(0.1), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 8)

@@ -142,9 +142,9 @@ struct AdviceBracketView: View {
             .padding(14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                     .fill(cardColor)
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(accent.opacity(0.18), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous).stroke(accent.opacity(0.18), lineWidth: 1))
             )
         }
         .buttonStyle(.plain)

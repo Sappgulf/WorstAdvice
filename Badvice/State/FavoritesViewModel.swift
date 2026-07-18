@@ -9,6 +9,7 @@ final class FavoritesViewModel {
     private let repository: AdviceRepository
     private let analyticsTracker: AnalyticsTracking
     var favorites: [AdviceRecord] = []
+    var loadFailed = false
     var searchText: String = "" {
         didSet { scheduleSearchDebounce(searchText) }
     }
@@ -31,6 +32,7 @@ final class FavoritesViewModel {
     func reload() {
         hasLoadedInitialData = true
         favorites = repository.fetchFavorites()
+        loadFailed = repository.lastHistoryFetchFailed
         rebuildFavoritesSearchIndex()
         refreshFilteredFavorites()
     }

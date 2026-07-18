@@ -186,7 +186,7 @@ private struct AdviceSuggestionRow: View {
         }
         .padding(14)
         .background(cardColor)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.mediumCornerRadius))
     }
 
     private var statusBadge: some View {
@@ -233,7 +233,7 @@ private struct QuoteSuggestionRow: View {
         }
         .padding(14)
         .background(cardColor)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.mediumCornerRadius))
     }
 }
 

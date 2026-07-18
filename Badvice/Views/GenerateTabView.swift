@@ -107,7 +107,7 @@ struct GenerateTabView: View {
         } label: {
             HStack(spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
@@ -371,7 +371,7 @@ struct GenerateTabView: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .fill(cardColor)
         )
     }
@@ -410,7 +410,7 @@ struct GenerateTabView: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
                             .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                                     .fill(noticeColor.opacity(0.12))
                             )
                             .accessibilityElement(children: .combine)
@@ -1191,7 +1191,7 @@ struct GenerateTabView: View {
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.08))
         )
     }
@@ -1391,7 +1391,7 @@ struct GenerateTabView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .fill(cardColor)
         )
     }
@@ -1421,10 +1421,10 @@ struct GenerateTabView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .fill(cardColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                         .stroke(accent.opacity(0.08), lineWidth: 1)
                 )
         )
@@ -1653,11 +1653,11 @@ struct GenerateTabView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .fill(cardColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.12), lineWidth: 1)
         )
         .accessibilityElement(children: .contain)
@@ -1892,10 +1892,10 @@ struct GenerateTabView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .fill(cardColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                         .stroke(accent.opacity(0.25), lineWidth: 1)
                 )
         )
@@ -1965,7 +1965,7 @@ struct GenerateTabView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                     .fill(cardColor)
             )
         }

@@ -38,7 +38,7 @@ struct LocalAuthGateView: View {
     private var authPills: [AuthPill] {
         [
             AuthPill(id: "local", icon: "iphone.gen3", title: "Stored on this device"),
-            AuthPill(id: "social", icon: "person.2.fill", title: "Friends & collabs"),
+            AuthPill(id: "history", icon: "clock.arrow.circlepath", title: "Full advice history"),
             AuthPill(id: "streaks", icon: "flame.fill", title: "Streaks & missions")
         ]
     }
@@ -146,14 +146,14 @@ struct LocalAuthGateView: View {
                                 .foregroundStyle(accent)
 
                             Text(
-                                "Use it to protect your history, preserve streak progress, and unlock the social surfaces you set up on this device."
+                                "Use it to protect your history and preserve streak progress on this device."
                             )
                             .font(.caption)
                             .foregroundStyle(Color.primary.opacity(0.62))
 
                             HStack(spacing: 10) {
                                 authBenefitMetric(title: "Protected", value: "History")
-                                authBenefitMetric(title: "Ready for", value: "Friends")
+                                authBenefitMetric(title: "Tracks", value: "Missions")
                                 authBenefitMetric(title: "Keeps", value: "Streaks")
                             }
                         }
@@ -280,7 +280,7 @@ struct LocalAuthGateView: View {
                             .frame(maxWidth: .infinity, minHeight: 54)
                             .foregroundStyle(.white)
                             .background(
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                                     .fill(accent)
                             )
                         }
@@ -311,11 +311,11 @@ struct LocalAuthGateView: View {
                     }
                     .padding(24)
                     .background(
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
                             .fill(.ultraThinMaterial)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
                             .stroke(accent.opacity(0.15), lineWidth: 1)
                     )
                 }

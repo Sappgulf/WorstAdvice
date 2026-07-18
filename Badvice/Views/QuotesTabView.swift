@@ -87,24 +87,6 @@ struct QuotesTabView: View {
                                 .padding(.horizontal, 16)
                         }
 
-                        if !social.availability.isAvailable {
-                            QuotesInlineBanner(
-                                text: social.availability.message,
-                                accent: accent,
-                                secondaryText: secondaryText,
-                                cardColor: cardColor
-                            )
-                            .padding(.horizontal, 16)
-                        } else if social.currentUser == nil {
-                            QuotesInlineBanner(
-                                text: "Finish your Friends profile to share quotes and start collabs from here.",
-                                accent: accent,
-                                secondaryText: secondaryText,
-                                cardColor: cardColor
-                            )
-                            .padding(.horizontal, 16)
-                        }
-
                         if !isFocusMode {
                             quotesFilterWorkspace
                                 .padding(.horizontal, 16)
@@ -446,7 +428,7 @@ struct QuotesTabView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [accent.opacity(0.2), accent.opacity(0.05)],
@@ -456,11 +438,11 @@ struct QuotesTabView: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.18), lineWidth: 1)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.06))
                 .frame(height: 1.1),
             alignment: .top

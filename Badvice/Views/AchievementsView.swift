@@ -410,7 +410,7 @@ struct AchievementCelebrationView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
                         .background(Theme.accent(for: theme))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.tileCornerRadius))
                 }
                 .padding(.horizontal, 40)
             }
@@ -651,10 +651,10 @@ struct AchievementCard: View {
         .frame(height: 180)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: Theme.tileCornerRadius)
                 .fill(cardColor)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: Theme.tileCornerRadius)
                         .stroke(achievement.isUnlocked ? accent.opacity(0.3) : Color.clear, lineWidth: 2)
                 )
         )

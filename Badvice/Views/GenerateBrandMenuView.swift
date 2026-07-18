@@ -250,7 +250,7 @@ struct GenerateBrandMenuView: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
                         .fill(accent.opacity(0.12))
                     Image(systemName: systemImage)
                         .font(.system(size: 16, weight: .semibold))

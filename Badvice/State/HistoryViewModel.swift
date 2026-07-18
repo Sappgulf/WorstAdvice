@@ -25,6 +25,7 @@ final class HistoryViewModel {
     private let repository: AdviceRepository
     private let analyticsTracker: AnalyticsTracking
     var history: [AdviceRecord] = []
+    var loadFailed = false
     var searchText: String = "" {
         didSet { scheduleSearchDebounce(searchText) }
     }
@@ -53,6 +54,7 @@ final class HistoryViewModel {
     func reload() {
         hasLoadedInitialData = true
         history = repository.fetchHistory(limit: 50)
+        loadFailed = repository.lastHistoryFetchFailed
         rebuildHistoryCaches()
         refreshFilteredHistory()
     }

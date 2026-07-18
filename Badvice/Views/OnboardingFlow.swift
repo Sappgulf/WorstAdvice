@@ -318,10 +318,10 @@ struct OnboardingFlow: View {
                 }
                 .padding(12)
                 .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                         .fill(accent.opacity(0.09))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                                 .stroke(accent.opacity(0.26), lineWidth: 1)
                         )
                 )
@@ -478,7 +478,7 @@ private struct OnboardingPageView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [accent.opacity(0.92), accent.opacity(0.58)],
@@ -523,10 +523,10 @@ private struct OnboardingPageView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .fill(.ultraThinMaterial)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                         .stroke(
                             LinearGradient(
                                 colors: [accent.opacity(0.34), Color.white.opacity(0.24), accent.opacity(0.12)],

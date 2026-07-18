@@ -88,7 +88,7 @@ struct ExploreTabView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [accent.opacity(0.95), accent.opacity(0.48)],
@@ -482,7 +482,7 @@ struct ExploreTabView: View {
                 )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
                     .strokeBorder(accent.opacity(0.16), lineWidth: 1)
             )
             .overlay(
@@ -542,7 +542,7 @@ struct ExploreTabView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [accent.opacity(0.18), accent.opacity(0.06)],
@@ -552,11 +552,11 @@ struct ExploreTabView: View {
                 )
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.24), lineWidth: 1)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.08))
                 .frame(height: 1.2),
             alignment: .top
