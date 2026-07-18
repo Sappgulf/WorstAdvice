@@ -193,7 +193,10 @@ struct TabCommandActionButton: View {
         .opacity(isDisabled ? 0.7 : 1.0)
         .tint(accent)
         .disabled(isDisabled)
-        .accessibilityIdentifier(accessibilityIdentifier ?? "")
+        .modifier(ConditionalAccessibilityIdentifier(accessibilityIdentifier: accessibilityIdentifier))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isButton)
         .contentShape(Capsule(style: .continuous))
         .background {
             ZStack {
@@ -230,6 +233,20 @@ struct TabCommandActionButton: View {
             Label(title, systemImage: systemImage)
         } else {
             Text(title)
+        }
+    }
+}
+
+private struct ConditionalAccessibilityIdentifier: ViewModifier {
+    let accessibilityIdentifier: String?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let accessibilityIdentifier,
+           !accessibilityIdentifier.isEmpty {
+            content.accessibilityIdentifier(accessibilityIdentifier)
+        } else {
+            content
         }
     }
 }

@@ -245,6 +245,7 @@ struct SettingsTabView: View {
         .coordinateSpace(name: "scroll")
         .trackScrollForTabBar()
         .background(Color.clear)
+        .accessibilityIdentifier("settings.shell")
         .preferredColorScheme(Theme.colorScheme(for: viewModel.theme))
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
@@ -565,37 +566,37 @@ struct SettingsTabView: View {
                     title: "Change Password",
                     systemImage: "key.fill",
                     accent: accent,
-                    buttonText: buttonText
+                    buttonText: buttonText,
+                    accessibilityIdentifier: "settings.auth.changePassword"
                 ) {
                     currentPasswordDraft = ""
                     newPasswordDraft = ""
                     confirmPasswordDraft = ""
                     activeAuthSheet = .changePassword
                 }
-                .accessibilityIdentifier("settings.auth.changePassword")
 
                 TabCommandActionButton(
                     title: "Delete Local Account",
                     systemImage: "trash.fill",
                     accent: .red,
                     buttonText: buttonText,
-                    prominent: false
+                    prominent: false,
+                    accessibilityIdentifier: "settings.auth.deleteAccount"
                 ) {
                     deletePasswordDraft = ""
                     activeAuthSheet = .deleteAccount
                 }
-                .accessibilityIdentifier("settings.auth.deleteAccount")
 
                 TabCommandActionButton(
                     title: "Sign Out",
                     systemImage: "rectangle.portrait.and.arrow.right",
                     accent: accent,
                     buttonText: buttonText,
-                    prominent: false
+                    prominent: false,
+                    accessibilityIdentifier: "settings.auth.signOut"
                 ) {
                     onSignOut()
                 }
-                .accessibilityIdentifier("settings.auth.signOut")
             }
         }
     }

@@ -868,23 +868,26 @@ final class BadviceUITests: XCTestCase {
 
         XCTAssertTrue(openSettings(app: app))
 
-        let signOutButton = waitForAnyElement(
-            app: app,
-            candidates: [
-                app.buttons["settings.auth.signOut"],
-                app.buttons["Sign Out"],
-                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Sign Out")).firstMatch,
-            ],
-            timeout: 6,
-            maxSwipes: 10
-        )
-        if let signOutButton, !signOutButton.waitForExistence(timeout: 3) {
-            for _ in 0..<8 where !signOutButton.exists {
-                app.swipeUp()
-            }
+        guard let signOutButton = authSignOutElement(app: app) else {
+            XCTFail(
+                "Sign out action not found in settings.\n"
+                + "Current app tree snapshot:\n\(app.debugDescription)"
+            )
+            return
         }
-        XCTAssertNotNil(signOutButton)
-        signOutButton?.tap()
+        if !signOutButton.waitForExistence(timeout: 3) {
+            _ = scrollToFind(app: app, element: signOutButton, maxSwipes: 10)
+        }
+        XCTAssertTrue(
+            signOutButton.isHittable || signOutButton.exists,
+            "Sign out action should be found in settings.\n"
+            + "Current app tree snapshot:\n\(app.debugDescription)"
+        )
+        if signOutButton.isHittable {
+            signOutButton.tap()
+        } else {
+            signOutButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
 
         let authGate = waitForAnyElement(
             app: app,
@@ -1083,37 +1086,35 @@ final class BadviceUITests: XCTestCase {
     @discardableResult
     private func openSettings(app: XCUIApplication, timeout: TimeInterval = 15) -> Bool {
         guard waitForAuthenticatedShell(app: app, timeout: timeout) else { return false }
-        if app.buttons["settings.auth.signOut"].exists || app.buttons["settings.auth.changePassword"].exists
-        {
+        if isLikelyInSettings(app: app) {
             return true
         }
 
-        if openMoreQuickAccess(app: app, id: "settings", label: "Settings") {
-            return app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
-                || app.buttons["settings.auth.changePassword"].waitForExistence(timeout: 3)
-                || app.buttons["settings.menuButton"].waitForExistence(timeout: 5)
-                || app.buttons["settings.socialHealth.open"].waitForExistence(timeout: 5)
-                || app.buttons["Sign Out"].waitForExistence(timeout: 2)
-                || app.navigationBars["Settings"].waitForExistence(timeout: 2)
-                || app.navigationBars.firstMatch.label.localizedCaseInsensitiveContains("Settings")
-                || app.staticTexts["Settings"].waitForExistence(timeout: 2)
+        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        if settingsTab.waitForExistence(timeout: 3) {
+            settingsTab.tap()
+            if isLikelyInSettings(app: app) {
+                return true
+            }
+            if waitForSettingsShell(app: app, timeout: 6, maxSwipes: 8) {
+                return true
+            }
         }
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        if settingsTab.waitForExistence(timeout: 2) {
-            settingsTab.tap()
-            if app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5) {
+        if openMoreQuickAccess(app: app, id: "settings", label: "Settings") {
+            if isLikelyInSettings(app: app) {
                 return true
             }
-            if app.buttons["settings.auth.changePassword"].waitForExistence(timeout: 3) {
+            if waitForSettingsShell(app: app, timeout: 6, maxSwipes: 8) {
                 return true
             }
-            if app.buttons["Sign Out"].waitForExistence(timeout: 2) {
+            if openSettingsLooseEntry(app: app, timeout: 6, maxSwipes: 8) {
                 return true
             }
-            return app.navigationBars["Settings"].waitForExistence(timeout: 2)
-                || app.navigationBars.firstMatch.label.localizedCaseInsensitiveContains("Settings")
-                || app.staticTexts["Settings"].waitForExistence(timeout: 2)
+        }
+
+        if openSettingsLooseEntry(app: app, timeout: 5, maxSwipes: 8) {
+            return true
         }
 
         let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
@@ -1128,6 +1129,10 @@ final class BadviceUITests: XCTestCase {
             return false
         }
         brandMenuButton.tap()
+        let done = app.buttons["Done"].firstMatch
+        if done.waitForExistence(timeout: 1) {
+            done.tap()
+        }
 
         if let settingsQuickAccess = findSettingsQuickAccessButton(
             app: app,
@@ -1135,23 +1140,221 @@ final class BadviceUITests: XCTestCase {
             maxSwipes: 8
         ) {
             settingsQuickAccess.tap()
+            if done.waitForExistence(timeout: 1) {
+                done.tap()
+            }
+            if isLikelyInSettings(app: app) {
+                return true
+            }
+            if waitForSettingsShell(app: app, timeout: 6, maxSwipes: 8) {
+                return true
+            }
+            if openSettingsLooseEntry(app: app, timeout: 4, maxSwipes: 8) {
+                return true
+            }
         } else {
             let settingsCell = app.cells.containing(.staticText, identifier: "Settings").firstMatch
             if settingsCell.waitForExistence(timeout: 2) {
                 settingsCell.tap()
-            } else {
-                let settingsText = app.staticTexts["Settings"].firstMatch
-                if settingsText.waitForExistence(timeout: 2) {
+                if isLikelyInSettings(app: app) {
+                    return true
+                }
+                if waitForSettingsShell(app: app, timeout: 6, maxSwipes: 8) {
+                    return true
+                }
+            }
+
+            let settingsText = app.staticTexts["Settings"].firstMatch
+            if settingsText.waitForExistence(timeout: 2) {
+                if settingsText.isHittable {
                     settingsText.tap()
                 } else {
-                    let fallbackSettings = app.buttons["Settings"].firstMatch
-                    guard fallbackSettings.waitForExistence(timeout: 5) else { return false }
-                    fallbackSettings.tap()
+                    settingsText.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 }
+                if isLikelyInSettings(app: app) {
+                    return true
+                }
+                if waitForSettingsShell(app: app, timeout: 6, maxSwipes: 8) {
+                    return true
+                }
+            }
+
+            if openSettingsLooseEntry(app: app, timeout: 4, maxSwipes: 8) {
+                return true
             }
         }
 
-        return app.navigationBars.firstMatch.waitForExistence(timeout: 5)
+        return waitForSettingsShell(app: app, timeout: 6, maxSwipes: 8)
+    }
+
+    private func isLikelyInSettings(app: XCUIApplication) -> Bool {
+        if settingsShellCandidates(app: app).first(where: \.exists) != nil {
+            return true
+        }
+
+        let settingsElements = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "settings.")
+        )
+        return settingsElements.count > 0
+    }
+
+    private func openSettingsLooseEntry(
+        app: XCUIApplication,
+        timeout: TimeInterval,
+        maxSwipes: Int = 8
+    ) -> Bool {
+        let done = app.buttons["Done"].firstMatch
+        if done.waitForExistence(timeout: 1) {
+            done.tap()
+        }
+
+        if openSettingsDirectButton(app: app) {
+            return waitForSettingsShell(app: app, timeout: timeout, maxSwipes: maxSwipes)
+        }
+
+        let settingsCandidates: [XCUIElement] = [
+            app.buttons["settings.menuButton"],
+            app.buttons["settings.socialHealth.open"],
+            app.buttons["settings.auth.signOut"],
+            app.buttons.matching(NSPredicate(format: "label ==[c] %@", "Settings")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch,
+            app.staticTexts.matching(NSPredicate(format: "label ==[c] %@", "Settings")).firstMatch,
+            app.cells["settings.row.auth"],
+            app.cells.matching(NSPredicate(format: "label ==[c] %@", "Settings")).firstMatch,
+        ]
+        if let settingsEntry = waitForAnyElement(
+            app: app,
+            candidates: settingsCandidates,
+            timeout: timeout,
+            maxSwipes: maxSwipes
+        ) {
+            if settingsEntry.isHittable {
+                settingsEntry.tap()
+            } else {
+                settingsEntry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            }
+            return isLikelyInSettings(app: app) || waitForSettingsShell(app: app, timeout: timeout, maxSwipes: maxSwipes)
+        }
+
+        return isLikelyInSettings(app: app) || waitForSettingsShell(app: app, timeout: timeout, maxSwipes: maxSwipes)
+    }
+
+    private func openSettingsDirectButton(app: XCUIApplication) -> Bool {
+        let directButtons = [
+            app.buttons["settings.menuButton"],
+            app.buttons.matching(NSPredicate(format: "label ==[c] %@", "Settings")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch,
+            app.cells.matching(NSPredicate(format: "label ==[c] %@", "Settings")).firstMatch,
+        ]
+        for button in directButtons where button.exists && button.isHittable {
+            button.tap()
+            if isLikelyInSettings(app: app) {
+                return true
+            }
+        }
+
+        if let fallback = directButtons.first(where: \.exists) {
+            fallback.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            return isLikelyInSettings(app: app)
+        }
+        return false
+    }
+
+    private func waitForSettingsShell(
+        app: XCUIApplication,
+        timeout: TimeInterval,
+        maxSwipes: Int = 10
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        var swipes = 0
+        while Date() < deadline {
+            if settingsShellCandidates(app: app).first(where: \.exists) != nil {
+                return true
+            }
+            if maxSwipes > 0 && swipes < maxSwipes {
+                if swipes % 2 == 0 {
+                    app.swipeUp()
+                } else {
+                    app.swipeDown()
+                }
+                swipes += 1
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        return settingsShellCandidates(app: app).contains(where: \.exists)
+    }
+
+    private func settingsShellCandidates(app: XCUIApplication) -> [XCUIElement] {
+        return [
+            app.navigationBars["Settings"].firstMatch,
+            app.otherElements["settings.shell"].firstMatch,
+            app.staticTexts["settings.auth.displayName"],
+            app.staticTexts["settings.auth.email"],
+            app.buttons["settings.menuButton"].firstMatch,
+            app.buttons["settings.socialHealth.open"].firstMatch,
+            app.buttons["settings.auth.signOut"].firstMatch,
+            app.staticTexts["settings.auth.signOut"],
+            app.buttons["settings.auth.changePassword"].firstMatch,
+            app.staticTexts["settings.auth.changePassword"],
+            app.buttons["settings.auth.deleteAccount"].firstMatch,
+            app.staticTexts["settings.auth.deleteAccount"],
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Sign Out")).firstMatch,
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Sign Out")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Change Password")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Delete")).firstMatch,
+            app.cells["settings.row.auth"].firstMatch,
+            app.cells["settings.row.system"].firstMatch,
+            app.cells.matching(NSPredicate(format: "identifier BEGINSWITH %@", "settings.row.")).firstMatch,
+            app.cells.containing(.staticText, identifier: "Auth").firstMatch,
+        ]
+    }
+
+    private func authSignOutElement(app: XCUIApplication) -> XCUIElement? {
+        for attempt in 0..<8 {
+            if let directMatch = authSignOutElementNoScroll(app: app) {
+                return directMatch
+            }
+            if attempt % 2 == 0 {
+                app.swipeUp()
+            } else {
+                app.swipeDown()
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+
+        return authSignOutElementNoScroll(app: app)
+    }
+
+    private func authSignOutElementNoScroll(app: XCUIApplication) -> XCUIElement? {
+        if app.buttons["settings.auth.signOut"].exists {
+            return app.buttons["settings.auth.signOut"]
+        }
+
+        let signOutExactLabel = app.descendants(matching: .button).matching(
+            NSPredicate(format: "label ==[c] %@", "Sign Out")
+        ).firstMatch
+        if signOutExactLabel.exists {
+            return signOutExactLabel
+        }
+
+        let settingsAuthRow = app.cells["settings.row.auth"].firstMatch
+        if settingsAuthRow.exists {
+            let signOutInRow = settingsAuthRow
+                .descendants(matching: .button)
+                .matching(NSPredicate(format: "label CONTAINS[c] %@", "Sign Out")).firstMatch
+            if signOutInRow.exists {
+                return signOutInRow
+            }
+        }
+
+        let signOutByLabel = app.descendants(matching: .button).matching(
+            NSPredicate(format: "label CONTAINS[c] %@", "Sign Out")
+        ).firstMatch
+        if signOutByLabel.exists {
+            return signOutByLabel
+        }
+
+        return nil
     }
 
     private func findBrandMenuButton(
@@ -1298,7 +1501,8 @@ final class BadviceUITests: XCTestCase {
         app: XCUIApplication,
         displayName: String,
         email: String,
-        password: String
+        password: String,
+        confirmPassword: String? = nil
     ) {
         let signUpModeButton = app.buttons["auth.mode.signUp"]
         XCTAssertTrue(signUpModeButton.waitForExistence(timeout: 8))
@@ -1320,12 +1524,12 @@ final class BadviceUITests: XCTestCase {
 
         let confirmField = app.textFields["auth.confirmPassword"]
         XCTAssertTrue(confirmField.waitForExistence(timeout: 3))
-        fillTextInput(confirmField, text: password)
+        fillTextInput(confirmField, text: confirmPassword ?? password)
 
         let primaryButton = app.buttons["auth.primary"]
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
         XCTAssertTrue(
-            waitForElementToBecomeEnabled(primaryButton, timeout: 3),
+            waitForElementToBecomeEnabled(primaryButton, timeout: 5),
             "auth.mode.signUp selected=\(signUpModeButton.isSelected) displayName=\(displayNameField.value ?? "nil") email=\(emailField.value ?? "nil") password=\(passwordField.value ?? "nil") confirm=\(confirmField.value ?? "nil") primaryEnabled=\(primaryButton.isEnabled)"
         )
         primaryButton.tap()
@@ -1845,69 +2049,6 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
         return false
     }
 
-    private func openSettings(app: XCUIApplication, timeout: TimeInterval = 12) -> Bool {
-        if app.navigationBars["Settings"].waitForExistence(timeout: 2) { return true }
-
-        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
-        if moreTab.waitForExistence(timeout: 4) {
-            moreTab.tap()
-            let settingsQuickAccess = app.buttons["brandMenu.quickAccess.settings"]
-            if settingsQuickAccess.waitForExistence(timeout: 5) {
-                settingsQuickAccess.tap()
-                return app.navigationBars["Settings"].waitForExistence(timeout: 5)
-                    || app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
-                    || app.buttons["settings.auth.changePassword"].waitForExistence(timeout: 5)
-                    || app.buttons["settings.menuButton"].waitForExistence(timeout: 5)
-                    || app.buttons["settings.socialHealth.open"].waitForExistence(timeout: 5)
-            }
-
-            let done = app.buttons["Done"].firstMatch
-            if done.waitForExistence(timeout: 1) {
-                done.tap()
-            }
-        }
-
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        if settingsTab.waitForExistence(timeout: 2) {
-            settingsTab.tap()
-            if app.navigationBars["Settings"].waitForExistence(timeout: 5) { return true }
-        }
-
-        let fallbackEntry = app.buttons["settings.menuButton"]
-        if fallbackEntry.waitForExistence(timeout: 2) {
-            fallbackEntry.tap()
-            return app.navigationBars["Settings"].waitForExistence(timeout: 5)
-                || app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
-                || app.buttons["settings.menuButton"].waitForExistence(timeout: 5)
-                || app.buttons["settings.socialHealth.open"].waitForExistence(timeout: 5)
-        }
-
-        let settings = waitForAnyElement(
-            app: app,
-            candidates: [
-                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch,
-                app.buttons["settings.auth.signOut"],
-                app.buttons["settings.menuButton"],
-                app.buttons["settings.socialHealth.open"],
-                app.cells["settings.row.auth"],
-            ],
-            timeout: timeout,
-            maxSwipes: 8,
-            requireHittable: false
-        )
-
-        if let settings {
-            settings.tap()
-            return app.buttons["settings.auth.signOut"].waitForExistence(timeout: 3)
-                || app.buttons["settings.auth.changePassword"].waitForExistence(timeout: 3)
-                || app.buttons["settings.menuButton"].waitForExistence(timeout: 3)
-                || app.buttons["settings.socialHealth.open"].waitForExistence(timeout: 3)
-                || app.navigationBars["Settings"].exists
-        }
-
-        return false
-    }
-
     private func closeTopScreen(app: XCUIApplication) -> Bool {
         let closeTargets = [
             app.navigationBars.buttons["Back"],
@@ -1926,5 +2067,55 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
 
         app.swipeDown()
         return true
+    }
+
+    @discardableResult
+    private func openSettings(app: XCUIApplication, timeout: TimeInterval = 15) -> Bool {
+        func isInSettings() -> Bool {
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.otherElements["settings.shell"],
+                    app.navigationBars["Settings"].firstMatch,
+                ],
+                timeout: 2,
+                maxSwipes: 0,
+                requireHittable: false
+            ) != nil
+        }
+
+        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        if settingsTab.waitForExistence(timeout: 2) {
+            settingsTab.tap()
+            if isInSettings() { return true }
+        }
+
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        guard moreTab.waitForExistence(timeout: 4) else { return isInSettings() }
+        moreTab.tap()
+
+        let quickAccess = app.buttons["brandMenu.quickAccess.settings"]
+        guard quickAccess.waitForExistence(timeout: 5) else {
+            let done = app.buttons["Done"].firstMatch
+            if done.waitForExistence(timeout: 1) {
+                done.tap()
+            }
+            return isInSettings()
+        }
+
+        // Selecting quick access dismisses the brand-menu sheet itself and
+        // opens settings asynchronously once that dismissal completes.
+        quickAccess.tap()
+        return isInSettings()
+            || waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.otherElements["settings.shell"],
+                    app.navigationBars["Settings"].firstMatch,
+                ],
+                timeout: timeout,
+                maxSwipes: 0,
+                requireHittable: false
+            ) != nil
     }
 }

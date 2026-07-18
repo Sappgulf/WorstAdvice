@@ -823,9 +823,12 @@ struct GenerateTabView: View {
 
                 if viewModel.isGenerating {
                     LoadingAdviceView(theme: settings.theme, reduceMotion: isMotionReduced)
+                        .accessibilityIdentifier("advice.card")
                         .transition(isMotionReduced ? .identity : .opacity.combined(with: .scale(scale: 0.98)))
                 }
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("advice.card")
             .frame(maxWidth: .infinity)
             .animation(
                 isMotionReduced ? nil : .spring(response: 0.35, dampingFraction: 0.86),

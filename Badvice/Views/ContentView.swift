@@ -113,6 +113,7 @@ struct ContentView: View {
     @State private var authDisplayNameDraft = ""
     @State private var showingSettingsRoot = false
     @State private var showingShellMenu = false
+    @State private var pendingShellMenuTab: AppTab? = nil
     @State private var shellToast: ToastMessage? = nil
     @State private var appLoadingMessageTick = 0
     @State private var appLoadingMessageTask: Task<Void, Never>?
@@ -526,10 +527,10 @@ struct ContentView: View {
     }
 
     private func signOutCurrentAccount(_ auth: AuthViewModel) {
-        resetSessionPresentationState()
         auth.signOut()
+        resetSessionPresentationState()
         session = nil
-        authMode = .signIn
+        authMode = auth.hasAccounts ? .signIn : .signUp
         syncAuthDrafts(with: auth)
     }
 
@@ -677,7 +678,9 @@ struct ContentView: View {
             // Confetti overlay — fires on streak milestones
             ConfettiView(isActive: $showConfetti, lowPowerMode: effectiveLowPowerMode)
         }
-        .sheet(isPresented: $showingShellMenu) {
+        .sheet(isPresented: $showingShellMenu, onDismiss: {
+            handleShellMenuDismiss(session: session)
+        }) {
             #if DEBUG
                 GenerateBrandMenuView(
                     social: session.social,
@@ -686,7 +689,7 @@ struct ContentView: View {
                     isPresented: $showingShellMenu,
                     activeToast: $shellToast,
                     onSelectQuickAccessTab: { tab in
-                        openShellMenuTab(tab, session: session)
+                        pendingShellMenuTab = tab
                     },
                     onResetAllLocalAccounts: {
                         await resetAllLocalAccounts(using: auth, session: session)
@@ -706,7 +709,7 @@ struct ContentView: View {
                     isPresented: $showingShellMenu,
                     activeToast: $shellToast,
                     onSelectQuickAccessTab: { tab in
-                        openShellMenuTab(tab, session: session)
+                        pendingShellMenuTab = tab
                     },
                     onResetAllLocalAccounts: {
                         await resetAllLocalAccounts(using: auth, session: session)
@@ -1196,12 +1199,27 @@ struct ContentView: View {
     }
 
     private func openShellMenuTab(_ tab: AppTab, session: AppSessionViewModel) {
+        setTabFromMenuSelection(tab, session: session)
+    }
+
+    private func handleShellMenuDismiss(session: AppSessionViewModel?) {
+        guard let session, let tab = pendingShellMenuTab else {
+            return
+        }
+        pendingShellMenuTab = nil
+        DispatchQueue.main.async {
+            openShellMenuTab(tab, session: session)
+        }
+    }
+
+    private func setTabFromMenuSelection(_ tab: AppTab, session: AppSessionViewModel) {
+        tabBarVisible = true
         if tab == .settings {
             showingSettingsRoot = true
-            tabBarVisible = true
             return
         }
 
+        showingSettingsRoot = false
         setSelectedTab(tab, session: session)
     }
 

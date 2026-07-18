@@ -1,6 +1,15 @@
 import Foundation
 import NaturalLanguage
 
+private extension String {
+    /// Action templates are authored capitalized so they also read well standalone,
+    /// but every composed shape always places them mid-sentence after `opener`.
+    func lowercasingFirstLetter() -> String {
+        guard let first else { return self }
+        return first.lowercased() + dropFirst()
+    }
+}
+
 struct AdviceEngine {
     let store: AdviceStore
     let moderation: ContentModeration
@@ -54,7 +63,7 @@ struct AdviceEngine {
             let ending = rng.pick(voice.ending)
             let toneDirective = rng.pick(store.toneDirectiveVocabulary(for: resolvedTone))
             let categoryDirective = rng.pick(store.categoryDirectiveVocabulary(for: resolvedCategory))
-            let filledAction = actionTemplate.replacingOccurrences(of: "%@", with: selectedTopic)
+            let filledAction = actionTemplate.replacingOccurrences(of: "%@", with: selectedTopic).lowercasingFirstLetter()
 
             var advice = "\(opener), \(filledAction) \(confidence) \(toneDirective) \(categoryDirective). \(ending)"
             if containsForbidden(advice, forbidden: rules.forbiddenPatterns) {
@@ -134,7 +143,7 @@ struct AdviceEngine {
         let normalizedToneDirective = toneDirective.normalizedForFiltering
         let normalizedCategoryDirective = categoryDirective.normalizedForFiltering
         // Safe substitution — avoids String(format:) crash when selectedTopic contains '%'
-        let filledAction = actionTemplate.replacingOccurrences(of: "%@", with: selectedTopic)
+        let filledAction = actionTemplate.replacingOccurrences(of: "%@", with: selectedTopic).lowercasingFirstLetter()
 
         let adviceShapes = [
             "\(opener), \(filledAction) \(confidence) \(directiveClause) Keep the \(tick) high and the \(slang) higher. \(ending)",

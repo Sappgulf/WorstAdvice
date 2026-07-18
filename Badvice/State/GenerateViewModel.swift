@@ -130,6 +130,8 @@ final class GenerateViewModel {
         let streakFreezeBonus: Int
     }
     private var retentionSnapshot: RetentionSnapshot?
+    private var cachedDailyMissionState: ChaosMissionState?
+    private var cachedWeeklyMissionState: WeeklyMissionState?
 
     /// Dynamically picks the ML weight profile based on accumulated signal richness.
     private var adaptiveRanker: AdaptiveRanker {
@@ -1199,13 +1201,16 @@ final class GenerateViewModel {
     }
 
     var dailyMissionState: ChaosMissionState {
+        if let cachedDailyMissionState {
+            return cachedDailyMissionState
+        }
         let now = Date()
         let spec = DailyMissionSpec.current(for: now)
         let matchingCount = repository.todayHistoryCount(
             category: spec.category, tone: spec.tone, referenceDate: now)
         let title = "Daily Mission: \(spec.targetCount)x \(spec.tone.title)"
         let subtitle = "Run \(spec.category.title) chaos builds before midnight."
-        return ChaosMissionState(
+        let state = ChaosMissionState(
             key: spec.key,
             category: spec.category,
             tone: spec.tone,
@@ -1214,10 +1219,17 @@ final class GenerateViewModel {
             title: title,
             subtitle: subtitle
         )
+        cachedDailyMissionState = state
+        return state
     }
 
     var weeklyMissionState: WeeklyMissionState {
-        weeklyMissionState(for: Date())
+        if let cachedWeeklyMissionState {
+            return cachedWeeklyMissionState
+        }
+        let state = weeklyMissionState(for: Date())
+        cachedWeeklyMissionState = state
+        return state
     }
 
     func weeklyMissionState(for referenceDate: Date) -> WeeklyMissionState {
@@ -1465,6 +1477,7 @@ final class GenerateViewModel {
             targetCount: mission.targetCount,
             by: 1
         )
+        cachedWeeklyMissionState = nil
 
         guard previousCount < mission.targetCount, updated.progressCount >= mission.targetCount
         else { return }
@@ -1579,6 +1592,8 @@ final class GenerateViewModel {
 
     func invalidateRetentionSnapshot() {
         retentionSnapshot = nil
+        cachedDailyMissionState = nil
+        cachedWeeklyMissionState = nil
     }
 
     private func syncLiveActivityState() {

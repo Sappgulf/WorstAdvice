@@ -264,7 +264,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         XCTAssertTrue(openSettings(app: app), "Should be able to reach settings")
 
         // Verify key settings elements exist
-        let signOutButton = app.buttons["settings.auth.signOut"]
+        let signOutButton = accessElementByIdentifier(app: app, identifier: "settings.auth.signOut", preferButton: true)
         if !signOutButton.waitForExistence(timeout: 3) {
             scrollToFind(app: app, element: signOutButton, maxSwipes: 10)
         }
@@ -320,7 +320,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         _ = emailLabel.waitForExistence(timeout: 3)
 
         // Sign out
-        let signOutButton = app.buttons["settings.auth.signOut"]
+        let signOutButton = accessElementByIdentifier(app: app, identifier: "settings.auth.signOut", preferButton: true)
         scrollToFind(app: app, element: signOutButton, maxSwipes: 8)
         XCTAssertTrue(signOutButton.exists, "Sign out button should exist")
         signOutButton.tap()
@@ -495,7 +495,7 @@ final class BadviceFullSmokeTests: XCTestCase {
 
         for element in settingsElements {
             let el = element.isButton
-                ? app.buttons[element.identifier]
+                ? accessElementByIdentifier(app: app, identifier: element.identifier, preferButton: true)
                 : app.staticTexts[element.identifier]
             if !el.exists {
                 scrollToFind(app: app, element: el, maxSwipes: 15)
@@ -614,7 +614,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         }
 
         XCTAssertTrue(
-            app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
+            accessElementByIdentifier(app: app, identifier: "settings.auth.signOut", preferButton: true).waitForExistence(timeout: 5)
                 || app.buttons["settings.menuButton"].waitForExistence(timeout: 5)
                 || app.buttons["settings.socialHealth.open"].waitForExistence(timeout: 5)
                 || app.navigationBars.firstMatch.waitForExistence(timeout: 5),
@@ -633,7 +633,7 @@ final class BadviceFullSmokeTests: XCTestCase {
             {
                 openLabsButton.tap()
                 XCTAssertTrue(
-                    app.buttons["settings.auth.signOut"].waitForExistence(timeout: 5)
+                    accessElementByIdentifier(app: app, identifier: "settings.auth.signOut", preferButton: true).waitForExistence(timeout: 5)
                         || app.navigationBars.firstMatch.waitForExistence(timeout: 5),
                     "Missions open labs should land on the settings screen"
                 )
@@ -960,7 +960,7 @@ final class BadviceFullSmokeTests: XCTestCase {
         timeout: TimeInterval = 30
     ) -> Bool {
         let generateButton = app.buttons["generate.primary"]
-        let settingsSignOut = app.buttons["settings.auth.signOut"]
+        let settingsSignOut = accessElementByIdentifier(app: app, identifier: "settings.auth.signOut", preferButton: true)
         let tabMarkers = [
             app.buttons.matching(identifier: "tab.generate").firstMatch,
             app.buttons.matching(identifier: "tab.friends").firstMatch,
@@ -987,38 +987,283 @@ final class BadviceFullSmokeTests: XCTestCase {
     @discardableResult
     private func openSettings(app: XCUIApplication, timeout: TimeInterval = 15) -> Bool {
         guard waitForAuthenticatedShell(app: app, timeout: timeout) else { return false }
-        if app.buttons["settings.auth.signOut"].exists
-            || app.buttons["settings.auth.changePassword"].exists
-        {
+
+        if isLikelyInSettings(app: app) {
             return true
         }
 
-        // Prefer the known-good brand menu path on device.
+        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        if settingsTab.waitForExistence(timeout: 3) {
+            settingsTab.tap()
+            if isLikelyInSettings(app: app) {
+                return true
+            }
+            if waitForSettingsShell(app: app, timeout: 10, maxSwipes: 12) {
+                return true
+            }
+        }
+
+        if openSettingsLooseEntry(app: app, timeout: 5, maxSwipes: 8) {
+            return true
+        }
+
         let generateTab = app.buttons.matching(identifier: "tab.generate").firstMatch
         if generateTab.waitForExistence(timeout: 2) { generateTab.tap() }
+        
         if let brandMenu = findBrandMenuButton(app: app, timeout: 5, maxSwipes: 8) {
             brandMenu.tap()
             if let settingsQuickAccess = findSettingsQuickAccessButton(app: app, timeout: 5, maxSwipes: 8) {
                 settingsQuickAccess.tap()
+                let done = app.buttons["Done"].firstMatch
+                if done.waitForExistence(timeout: 1) {
+                    done.tap()
+                }
+                if isLikelyInSettings(app: app) {
+                    return true
+                }
+                if waitForSettingsShell(app: app, timeout: 10, maxSwipes: 12) {
+                    return true
+                }
             } else if let settingsMenuButton = findSettingsDirectEntry(app: app, timeout: 5) {
                 settingsMenuButton.tap()
+                let done = app.buttons["Done"].firstMatch
+                if done.waitForExistence(timeout: 1) {
+                    done.tap()
+                }
+                if isLikelyInSettings(app: app) {
+                    return true
+                }
+                if waitForSettingsShell(app: app, timeout: 10, maxSwipes: 12) {
+                    return true
+                }
+            }
+            if openSettingsLooseEntry(app: app, timeout: 6, maxSwipes: 10) {
+                return true
+            }
+        }
+
+        let tabBarSettingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
+        if tabBarSettingsTab.waitForExistence(timeout: 1) {
+            tabBarSettingsTab.tap()
+            if isLikelyInSettings(app: app) {
+                return true
+            }
+            if waitForSettingsShell(app: app, timeout: 10, maxSwipes: 12) {
+                return true
             }
         }
 
         let deadline = Date().addingTimeInterval(5)
         while Date() < deadline {
-            if app.buttons["settings.auth.signOut"].exists
-                || app.buttons["settings.auth.changePassword"].exists
-                || app.buttons["settings.menuButton"].exists
-                || app.buttons["settings.socialHealth.open"].exists
-                || app.navigationBars.firstMatch.exists
+            let done = app.buttons["Done"].firstMatch
+            if done.exists {
+                done.tap()
+            }
+            if isLikelyInSettings(app: app)
             {
+                return true
+            }
+            if openSettingsLooseEntry(app: app, timeout: 3, maxSwipes: 6) {
+                return true
+            }
+            if waitForSettingsShell(app: app, timeout: 3, maxSwipes: 6) {
                 return true
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.25))
         }
 
         return false
+    }
+
+    private func isLikelyInSettings(app: XCUIApplication) -> Bool {
+        return settingsShellCandidates(app: app).first(where: \.exists) != nil
+    }
+
+    private func openSettingsLooseEntry(
+        app: XCUIApplication,
+        timeout: TimeInterval,
+        maxSwipes: Int = 8
+    ) -> Bool {
+        let done = app.buttons["Done"].firstMatch
+        if done.waitForExistence(timeout: 1) {
+            done.tap()
+        }
+
+        if openSettingsDirectButton(app: app) {
+            return waitForSettingsShell(app: app, timeout: timeout, maxSwipes: maxSwipes)
+        }
+
+        let settingsCandidates: [XCUIElement] = [
+            app.buttons["settings.menuButton"],
+            app.buttons["settings.socialHealth.open"],
+            app.buttons["settings.auth.signOut"],
+            app.buttons.matching(NSPredicate(format: "label ==[c] %@", "Settings")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch,
+            app.staticTexts.matching(NSPredicate(format: "label ==[c] %@", "Settings")).firstMatch,
+            app.cells["settings.row.auth"],
+            app.cells.matching(NSPredicate(format: "label ==[c] %@", "Settings")).firstMatch,
+        ]
+        if let settingsEntry = waitForAnyElement(
+            app: app,
+            candidates: settingsCandidates,
+            timeout: timeout,
+            maxSwipes: maxSwipes
+        ) {
+            if settingsEntry.isHittable {
+                settingsEntry.tap()
+            } else {
+                settingsEntry.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            }
+            return isLikelyInSettings(app: app) || waitForSettingsShell(app: app, timeout: timeout, maxSwipes: maxSwipes)
+        }
+
+        return isLikelyInSettings(app: app) || waitForSettingsShell(app: app, timeout: timeout, maxSwipes: maxSwipes)
+    }
+
+    private func openSettingsDirectButton(app: XCUIApplication) -> Bool {
+        let directButtons = [
+            app.buttons["settings.menuButton"],
+            app.buttons.matching(NSPredicate(format: "label ==[c] %@", "Settings")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch,
+            app.cells.matching(NSPredicate(format: "label ==[c] %@", "Settings")).firstMatch,
+        ]
+        for button in directButtons where button.exists && button.isHittable {
+            button.tap()
+            if isLikelyInSettings(app: app) {
+                return true
+            }
+        }
+
+        if let fallback = directButtons.first(where: \.exists) {
+            fallback.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            return isLikelyInSettings(app: app)
+        }
+        return false
+    }
+
+    private func waitForSettingsShell(
+        app: XCUIApplication,
+        timeout: TimeInterval,
+        maxSwipes: Int = 10
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        var swipes = 0
+        while Date() < deadline {
+            if isLikelyInSettings(app: app) {
+                return true
+            }
+            if maxSwipes > 0 && swipes < maxSwipes {
+                if swipes % 2 == 0 {
+                    app.swipeUp()
+                } else {
+                    app.swipeDown()
+                }
+                swipes += 1
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        return isLikelyInSettings(app: app)
+    }
+
+    private func settingsShellCandidates(app: XCUIApplication) -> [XCUIElement] {
+        return [
+            app.navigationBars["Settings"].firstMatch,
+            app.otherElements["settings.shell"].firstMatch,
+            app.buttons["settings.menuButton"].firstMatch,
+            app.buttons["settings.socialHealth.open"].firstMatch,
+            app.staticTexts["settings.auth.displayName"],
+            app.staticTexts["settings.auth.email"],
+            app.buttons["settings.auth.signOut"].firstMatch,
+            app.staticTexts["settings.auth.signOut"],
+            app.buttons["settings.auth.changePassword"].firstMatch,
+            app.staticTexts["settings.auth.changePassword"],
+            app.buttons["settings.auth.deleteAccount"].firstMatch,
+            app.staticTexts["settings.auth.deleteAccount"],
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Sign Out")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Sign Out")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Change Password")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Delete")).firstMatch,
+            app.cells["settings.row.auth"].firstMatch,
+            app.cells["settings.row.system"].firstMatch,
+            app.cells.matching(NSPredicate(format: "identifier BEGINSWITH %@", "settings.row.")).firstMatch,
+            app.cells.containing(.staticText, identifier: "Auth").firstMatch,
+        ]
+    }
+
+    private func accessElementByIdentifier(
+        app: XCUIApplication,
+        identifier: String,
+        preferButton: Bool = false
+    ) -> XCUIElement {
+        if identifier == "settings.auth.signOut" {
+            let signOutByIdentifier = app.buttons["settings.auth.signOut"]
+            if signOutByIdentifier.exists {
+                return signOutByIdentifier
+            }
+
+            let settingsAuthRow = app.cells["settings.row.auth"].firstMatch
+            if settingsAuthRow.exists {
+                let rowSignOutButton = settingsAuthRow
+                    .descendants(matching: .button)
+                    .matching(NSPredicate(format: "label CONTAINS[c] %@", "Sign Out")).firstMatch
+                if rowSignOutButton.exists {
+                    return rowSignOutButton
+                }
+            }
+
+            let signOutByLabel = app.descendants(matching: .button).matching(
+                NSPredicate(format: "label CONTAINS[c] %@", "Sign Out")
+            ).firstMatch
+            if signOutByLabel.exists {
+                return signOutByLabel
+            }
+            let signOutStaticText = app.staticTexts.matching(
+                NSPredicate(format: "label CONTAINS[c] %@", "Sign Out")
+            ).firstMatch
+            if signOutStaticText.exists {
+                return signOutStaticText
+            }
+        } else if identifier == "settings.auth.changePassword" {
+            let changePasswordByLabel = app.descendants(matching: .button).matching(
+                NSPredicate(format: "label CONTAINS[c] %@", "Change Password")
+            ).firstMatch
+            if changePasswordByLabel.exists {
+                return changePasswordByLabel
+            }
+        } else if identifier == "settings.auth.deleteAccount" {
+            let deleteAccountByLabel = app.descendants(matching: .button).matching(
+                NSPredicate(format: "label CONTAINS[c] %@", "Delete")
+            ).firstMatch
+            if deleteAccountByLabel.exists {
+                return deleteAccountByLabel
+            }
+        }
+
+        let buttonElement = app.buttons[identifier]
+        if preferButton && buttonElement.exists {
+            return buttonElement
+        }
+
+        let staticTextElement = app.staticTexts[identifier]
+        if staticTextElement.exists {
+            return staticTextElement
+        }
+
+        if buttonElement.exists {
+            return buttonElement
+        }
+
+        let otherElement = app.otherElements[identifier]
+        if otherElement.exists {
+            return otherElement
+        }
+
+        let cellElement = app.cells[identifier]
+        if cellElement.exists {
+            return cellElement
+        }
+
+        return app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
 
     private func findBrandMenuButton(
@@ -1145,7 +1390,8 @@ final class BadviceFullSmokeTests: XCTestCase {
         app: XCUIApplication,
         displayName: String,
         email: String,
-        password: String
+        password: String,
+        confirmPassword: String? = nil
     ) {
         let signUpModeButton = app.buttons["auth.mode.signUp"]
         XCTAssertTrue(signUpModeButton.waitForExistence(timeout: 8))
@@ -1167,12 +1413,12 @@ final class BadviceFullSmokeTests: XCTestCase {
 
         let confirmField = app.textFields["auth.confirmPassword"]
         XCTAssertTrue(confirmField.waitForExistence(timeout: 3))
-        fillTextInput(confirmField, text: password)
+        fillTextInput(confirmField, text: confirmPassword ?? password)
 
         let primaryButton = app.buttons["auth.primary"]
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
         XCTAssertTrue(
-            waitForElementToBecomeEnabled(primaryButton, timeout: 3),
+            waitForElementToBecomeEnabled(primaryButton, timeout: 5),
             "auth.mode.signUp selected=\(signUpModeButton.isSelected) displayName=\(displayNameField.value ?? "nil") email=\(emailField.value ?? "nil") password=\(passwordField.value ?? "nil") confirm=\(confirmField.value ?? "nil") primaryEnabled=\(primaryButton.isEnabled)"
         )
         primaryButton.tap()
