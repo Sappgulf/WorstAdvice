@@ -22,7 +22,6 @@ struct GenerateTabView: View {
     @State private var pendingBrandMenuTab: AppTab? = nil
     @State private var showingBracket = false        // #2 Advice Battles entry point
     @State private var gifExportInProgress = false
-    @State private var generateButtonPulsing = false
     @State private var activeToast: ToastMessage? = nil
     @State private var headerPulseScale: CGFloat = 1.0
     @State private var headerRotation: Double = 0
@@ -716,7 +715,6 @@ struct GenerateTabView: View {
                             ? .identity
                             : .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity)
                     )
-                    .scaleEffect(generateButtonPulsing ? 0.98 : 1.0)
                     .animation(
                         isMotionReduced ? nil : .spring(response: 0.2, dampingFraction: 0.5),
                         value: viewModel.hapticTrigger
@@ -1445,9 +1443,8 @@ struct GenerateTabView: View {
     private var primaryActionButtonsContent: some View {
         let hasCurrent = viewModel.current != nil
         return VStack(spacing: 10) {
-            // Primary generate button — pulses when idle (no advice yet)
+            // Primary generate button
             Button {
-                generateButtonPulsing = false
                 Task {
                     await viewModel.generate()
                     onDataChanged()
@@ -1463,34 +1460,6 @@ struct GenerateTabView: View {
             .tint(accent)
             .foregroundStyle(buttonText)
             .disabled(viewModel.isGenerating)
-            .scaleEffect(generateButtonPulsing && !isMotionReduced ? 1.03 : 1.0)
-            .animation(
-                isMotionReduced
-                    ? .easeOut(duration: 0.2)
-                    : (
-                        generateButtonPulsing
-                            ? .easeInOut(duration: 1.1).repeatForever(autoreverses: true)
-                            : .easeOut(duration: 0.2)
-                    ),
-                value: generateButtonPulsing
-            )
-            .onAppear {
-                if viewModel.current == nil && !isMotionReduced {
-                    generateButtonPulsing = true
-                } else {
-                    generateButtonPulsing = false
-                }
-            }
-            .onChange(of: viewModel.current == nil) { _, isNil in
-                generateButtonPulsing = isNil && !isMotionReduced
-            }
-            .onChange(of: isMotionReduced) { _, reduced in
-                if reduced {
-                    generateButtonPulsing = false
-                } else if viewModel.current == nil {
-                    generateButtonPulsing = true
-                }
-            }
 
             // Quick-fire secondary row — always visible
             HStack(spacing: 10) {

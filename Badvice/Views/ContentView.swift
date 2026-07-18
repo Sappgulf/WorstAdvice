@@ -20,51 +20,16 @@ extension EnvironmentValues {
 }
 
 // MARK: - Scroll-Aware Tab Bar Helper
-
+//
+// Previously this hid/showed the tab bar in response to scroll direction,
+// using either a DragGesture (which risked eating taps on buttons inside
+// the same ScrollView) or scroll-offset tracking (which shifted the
+// ScrollView's own bottom safe-area padding mid-scroll, producing visible
+// content jumps). Neither was worth the instability — the tab bar now
+// simply stays put, which is also simpler and more predictable to use.
 extension View {
     func trackScrollForTabBar() -> some View {
-        self.modifier(ScrollTrackingModifier())
-    }
-}
-
-private struct ScrollTrackingModifier: ViewModifier {
-    @Environment(\.tabBarVisible) private var tabBarVisible
-    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
-    @State private var lastOffset: CGFloat = 0
-
-    private var isUITesting: Bool {
-        ProcessInfo.processInfo.arguments.contains("-ui-testing")
-    }
-
-    func body(content: Content) -> some View {
-        if isUITesting {
-            content
-        } else {
-            content
-                .onScrollGeometryChange(for: CGFloat.self) { geometry in
-                    geometry.contentOffset.y
-                } action: { _, newOffset in
-                    let delta = newOffset - lastOffset
-                    let nextVisibility: Bool?
-                    if delta >= 18 {
-                        nextVisibility = false
-                    } else if delta <= -14 {
-                        nextVisibility = true
-                    } else {
-                        nextVisibility = nil
-                    }
-                    lastOffset = newOffset
-
-                    guard let nextVisibility, nextVisibility != tabBarVisible.wrappedValue else { return }
-                    if accessibilityReduceMotion {
-                        tabBarVisible.wrappedValue = nextVisibility
-                    } else {
-                        withAnimation(.easeInOut(duration: Theme.animMedium)) {
-                            tabBarVisible.wrappedValue = nextVisibility
-                        }
-                    }
-                }
-        }
+        self
     }
 }
 

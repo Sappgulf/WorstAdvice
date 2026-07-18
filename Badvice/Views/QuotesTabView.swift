@@ -69,11 +69,6 @@ struct QuotesTabView: View {
                         quotesCommandCard
                             .padding(.horizontal, 16)
 
-                        if !isFocusMode {
-                            quoteHeaderCard
-                                .padding(.horizontal, 16)
-                        }
-
                         dailyQuoteHero
                             .padding(.horizontal, 16)
 
@@ -378,76 +373,6 @@ struct QuotesTabView: View {
         .accessibilityIdentifier("quotes.dailyRitual")
     }
 
-    private var quoteHeaderCard: some View {
-        let filteredCount = viewModel.filteredQuotes.count
-        let libraryCount = viewModel.allQuotes.count
-        return SectionShell(accent: accent, cardColor: cardColor) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Quote Desk")
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(primaryText)
-                    Text("Daily line first. Library, search, and signals after that.")
-                        .font(.footnote)
-                        .foregroundStyle(secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "quote.bubble.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .padding(10)
-                    .background(
-                        Circle()
-                            .fill(accent.opacity(0.12))
-                    )
-            }
-        }
-        content: {
-            HStack(spacing: 10) {
-                quoteMetricPill(title: "Visible", value: "\(filteredCount)")
-                quoteMetricPill(title: "Library", value: "\(libraryCount)")
-                quoteMetricPill(title: "Votes", value: "\(viewModel.likedCount + viewModel.dislikedCount)")
-            }
-        }
-    }
-
-    private func quoteMetricPill(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.subheadline.weight(.bold).monospacedDigit())
-                .foregroundStyle(primaryText)
-            Text(title.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(secondaryText)
-                .tracking(0.6)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [accent.opacity(0.2), accent.opacity(0.05)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.18), lineWidth: 1)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-                .fill(accent.opacity(0.06))
-                .frame(height: 1.1),
-            alignment: .top
-        )
-    }
 
     private func quoteRow(_ quote: BadQuote) -> some View {
         let spotlight = viewModel.quoteSpotlightInsight(for: quote)
