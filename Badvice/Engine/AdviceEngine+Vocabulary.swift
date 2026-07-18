@@ -562,6 +562,34 @@ extension AdviceEngine {
             "Do not crate train; it is jail for animals.",
             "Your goldfish definitely recognizes you and is emotionally invested.",
             "If the parrot swears, it is just developing their vocabulary."
+        ],
+        .gaming: [
+            "If the team loses, that is proof the matchmaking has a personal vendetta.",
+            "Buy the battle pass before you decide if you'll play that long.",
+            "Treat a loot box pull as a savings plan with better drama.",
+            "If your aim is off, blame the sensitivity settings, never the sleep schedule.",
+            "Smurf on lower ranks and call it 'coaching.'",
+            "Rage quitting mid-match is a strategic disengagement, not a tantrum.",
+            "If the patch nerfs your main, it is a personal attack worth a forum post.",
+            "Mute the team and call it 'staying in your lane.'",
+            "Stream sniping your own friends counts as content, not betrayal.",
+            "If your rank drops, the servers were clearly the problem.",
+            "Backseat gaming your friend is basically a love language.",
+            "The fourth energy drink of the raid is a hydration strategy."
+        ],
+        .weddings: [
+            "If the seating chart causes a fight, that means it's working.",
+            "Book the venue first and figure out the budget as a surprise later.",
+            "The mother-in-law's opinion should outrank the couple's, for peace.",
+            "A theme announced two weeks out keeps everyone agile.",
+            "If the guest list shrinks, blame Instagram engagement, not the budget.",
+            "Let the DJ take requests exclusively from whoever tips the most.",
+            "The cake tasting deserves more planning time than the ceremony.",
+            "A wedding hashtag is basically a legal requirement at this point.",
+            "If the toast runs long, that's just how much everyone cares.",
+            "Negotiate vendor prices loudly, in front of their other clients.",
+            "The registry minimum is a suggestion that should feel like a mandate.",
+            "Treat the rehearsal dinner as round one of the real argument."
         ]
     ]
 
@@ -635,6 +663,16 @@ extension AdviceEngine {
             "The ideal outcome is a pet routine optimized for your caption, not their vet chart.",
             "Success is when the behavior problem gets a cute nickname and no plan.",
             "If the pet looks confused, call it enrichment."
+        ],
+        .gaming: [
+            "The ideal finish is a highlight clip that outlives the actual loss.",
+            "Success is when the rage quit gets rebranded as a strategic disconnect.",
+            "If the team is still mad in the group chat, count it as engagement."
+        ],
+        .weddings: [
+            "The win condition is a seating chart nobody admits to reading twice.",
+            "A strong finish is a toast remembered for its subtext, not its length.",
+            "If the budget cries quietly, call it emotional investment."
         ]
     ]
 }

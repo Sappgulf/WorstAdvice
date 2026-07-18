@@ -508,9 +508,9 @@ struct AdviceEngine {
             return 0.86
         case .toxicBestFriend, .influencer, .genZ:
             return 0.78
-        case .corporateConsultant, .lifeCoach, .linkedInInfluencer:
+        case .corporateConsultant, .lifeCoach, .linkedInInfluencer, .oldMoney:
             return 0.6
-        case .wizard, .conspiracyTheorist:
+        case .wizard, .conspiracyTheorist, .astrologyGirlie:
             return 0.7
         case .friendRoast:
             return 0.65

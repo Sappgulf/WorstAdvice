@@ -781,8 +781,8 @@ final class PersistenceTests: XCTestCase {
 
         XCTAssertEqual(toneExplorer.target, ToneMode.concrete.count)
         XCTAssertEqual(categoryMaster.target, AdviceCategory.concrete.count)
-        XCTAssertEqual(ToneMode.concrete.count, 14)
-        XCTAssertEqual(AdviceCategory.concrete.count, 14)
+        XCTAssertEqual(ToneMode.concrete.count, 16)
+        XCTAssertEqual(AdviceCategory.concrete.count, 16)
     }
 
     func testAchievementProgressPersistsAcrossManagerInstances() throws {

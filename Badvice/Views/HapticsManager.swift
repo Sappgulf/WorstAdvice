@@ -81,7 +81,7 @@ enum HapticsManager {
                 play(style: .rigid, isEnabled: true)
             }
             
-        case .corporateConsultant, .lifeCoach:
+        case .corporateConsultant, .lifeCoach, .oldMoney:
             // Professional single medium
             play(style: .medium, isEnabled: true)
             
@@ -95,7 +95,7 @@ enum HapticsManager {
                 play(style: .light, isEnabled: true)
             }
             
-        case .wizard:
+        case .wizard, .astrologyGirlie:
             // Mysterious slow double
             play(style: .soft, isEnabled: true)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {

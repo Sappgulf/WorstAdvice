@@ -308,6 +308,10 @@ final class AppleOnDeviceAdviceBridge {
             return "Manifest everything, ignore evidence, and blame the stars for your mistakes."
         case .financeCrypto:
             return "Invest based on FOMO, ignore all warnings, and call every loss a learning experience."
+        case .gaming:
+            return "Rage quit, blame teammates, and treat loot boxes as a savings plan."
+        case .weddings:
+            return "Turn one day into a hostage negotiation between budget, family, and Pinterest."
         case .random:
             return "Pick a clearly bad pattern and commit with total certainty."
         }
@@ -343,6 +347,10 @@ final class AppleOnDeviceAdviceBridge {
             return "Blame the stars, manifest without effort, and skip therapy."
         case .financeCrypto:
             return "Call every loss a learning experience and invest based on memes."
+        case .gaming:
+            return "Sound like a Discord rant that thinks it's strategy."
+        case .weddings:
+            return "Sound like a toast that overstays its welcome."
         case .random:
             return "Sound quotable, wrong, and overly certain."
         }
@@ -381,6 +389,10 @@ final class AppleOnDeviceAdviceBridge {
             return "Wall of text, cites sources nobody asked for, condescending tone."
         case .linkedInInfluencer:
             return "Corporate buzzwords, humble brags, inspirational platitudes, emoji mastery."
+        case .astrologyGirlie:
+            return "Mercury-retrograde logic, manifestation confidence, cosmic scapegoating for every bad decision."
+        case .oldMoney:
+            return "Quiet-luxury disdain, generational-wealth assumptions, and effortless condescension."
         case .random:
             return "Choose one strong comedic persona and stay consistent."
         }
@@ -416,6 +428,10 @@ final class AppleOnDeviceAdviceBridge {
             return "Quote sounds like a smug paragraph with unnecessary citations."
         case .linkedInInfluencer:
             return "Quote sounds like a humbler-brags with corporate emojis."
+        case .astrologyGirlie:
+            return "Quote sounds like a caption under a moon phase infographic."
+        case .oldMoney:
+            return "Quote sounds like an heirloom aphorism delivered at a yacht club."
         case .random:
             return "Pick one strong persona and keep the quote voice consistent."
         }
@@ -631,6 +647,8 @@ final class AppleOnDeviceAdviceBridge {
         case .relationships: return "romantic relationships, partnerships, and interpersonal dynamics"
         case .spirituality: return "spiritual growth, manifestation, and mystical beliefs"
         case .financeCrypto: return "cryptocurrency, trading, and speculative finance"
+        case .gaming: return "video games, esports, streaming, and gaming culture"
+        case .weddings: return "wedding planning, engagements, and family politics around getting married"
         case .random: return "mixed category context"
         }
     }
@@ -665,6 +683,10 @@ final class AppleOnDeviceAdviceBridge {
             return "A smug redditor who cites studies nobody asked for"
         case .linkedInInfluencer:
             return "A corporate influencer with humble brags and emoji mastery"
+        case .astrologyGirlie:
+            return "A manifestation-obsessed astrology girlie who blames every outcome on the planets"
+        case .oldMoney:
+            return "A trust-fund heir who assumes everyone has a family accountant"
         case .random:
             return "A rotating comedic persona"
         }

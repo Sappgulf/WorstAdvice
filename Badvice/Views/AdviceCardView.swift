@@ -422,6 +422,10 @@ struct AdviceCardView: View {
             return "Use reflection to become more honest and useful, not to escape feedback."
         case .financeCrypto:
             return "Assume volatility is real, size risk conservatively, and never let hype replace diligence."
+        case .gaming:
+            return "Take the loss, mute the tilt, and step away before the next queue if you need to."
+        case .weddings:
+            return "Set the budget together first, protect one non-negotiable each, and let the rest be optional."
         case .random:
             return "Pause long enough to name the real problem, then choose the least dramatic useful action."
         }

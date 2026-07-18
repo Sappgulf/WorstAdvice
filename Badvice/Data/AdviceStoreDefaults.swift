@@ -729,6 +729,116 @@ extension AdviceStore {
                 "Every loss is tuition until you have to explain it to someone offline.",
                 "The best time to understand a protocol is after your funds are already in motion."
             ]
+        ),
+        .gaming: CategoryRuleSet(
+            badPrinciples: [
+                "Skill issue is a personality trait, not feedback",
+                "Blame the teammate before you blame the ping",
+                "Rage quitting preserves your win rate's dignity",
+                "A loot box is a savings account with better odds",
+                "Touching grass is a sign of low commitment",
+                "Smurfing is just generosity toward the algorithm",
+                "Your K/D ratio is a valid personality trait",
+                "Muting the team is the same as strategizing",
+                "Every patch note is a personal attack",
+                "If you paid for the skin, the loss doesn't count",
+                "A 40-hour weekend grind is basically cardio",
+                "Reporting toxicity is slower than becoming it",
+                "Backseat gaming is a love language",
+                "Streaks matter more than sleep schedules"
+            ],
+            keywords: ["ranked lobby", "loot box pull", "controller throw", "clutch play", "team wipe", "patch notes rant", "smurf account", "voice chat meltdown", "loading screen tilt", "battle pass grind", "matchmaking rage", "respawn timer", "guild drama", "raid night", "microtransaction spiral", "stream sniping", "keybind overhaul", "queue dodge"],
+            forbiddenPatterns: ["cheat", "hack", "swat", "dox"],
+            actionTemplates: [
+                "For %@, blame your teammates immediately and loudly in voice chat.",
+                "Handle %@ by buying the battle pass you'll finish never.",
+                "During %@, rage quit right before the comeback arc starts.",
+                "Use %@ to smurf on newer players and call it 'practice.'",
+                "For %@, mute everyone and call it 'focus mode.'",
+                "Handle %@ by throwing the controller and blaming the ping.",
+                "During %@, buy the skin before you fix your aim.",
+                "Use %@ to start a guild drama thread instead of sleeping.",
+                "For %@, insist your rank is 'hard stuck' due to teammates only.",
+                "Handle %@ by opening seventeen loot boxes 'for value.'",
+                "During %@, stream snipe your own friends 'for content.'",
+                "Use %@ to argue patch notes ruined your entire personality.",
+                "For %@, requeue immediately after a loss to 'fix the algorithm.'",
+                "Handle %@ by benching sleep for one more ranked game.",
+                "During %@, backseat game your friend until they mute you.",
+                "Use %@ to justify the fourth energy drink of the raid.",
+                "For %@, treat a loss streak as evidence of a rigged matchmaking conspiracy.",
+                "Handle %@ by changing your keybinds mid-tournament for 'a fresh feeling.'"
+            ],
+            rationaleTemplates: [
+                "A team wipe builds more character than a win ever could.",
+                "Tilt is just passion without a cooldown timer.",
+                "The matchmaking system clearly has a personal vendetta.",
+                "Confidence looks identical to a hard stuck rank from a distance.",
+                "Sleep is a debuff nobody asked for.",
+                "A loot box pull is basically a savings plan with drama.",
+                "Every rage quit is a strategic disengagement.",
+                "If the ping spikes, the loss was never really yours.",
+                "Streaming is just accountability with better lighting.",
+                "A guild argument at 2am is basically team building.",
+                "Skill issues sound better described as 'meta problems.'",
+                "Grinding the battle pass is self-care with extra steps.",
+                "The real bug was the friendships lost along the way."
+            ]
+        ),
+        .weddings: CategoryRuleSet(
+            badPrinciples: [
+                "The guest list is a power ranking, not an invitation",
+                "A seating chart is the final form of passive aggression",
+                "Debt is romantic if the flowers are nice enough",
+                "The mother-in-law's opinion outranks the couple's",
+                "A theme should override everyone's comfort",
+                "Open bar hours are a personality test",
+                "The registry is where boundaries go to die",
+                "A destination wedding filters out the guests who matter least",
+                "Bridesmaids exist to fund the dream, not attend it",
+                "The cake tasting is the only decision that matters",
+                "Every toast should include a subtle score-settling",
+                "The dress budget is non-negotiable, everything else is",
+                "A wedding hashtag is basically a legal requirement",
+                "The DJ takes requests from whoever tips loudest"
+            ],
+            keywords: ["seating chart standoff", "guest list politics", "mother-in-law demands", "open bar budget", "destination wedding logistics", "bridesmaid dress drama", "registry etiquette", "wedding hashtag debate", "cake tasting spiral", "vendor negotiation", "plus-one policy", "rehearsal dinner drama", "toast rehearsal", "day-of timeline", "wedding party group chat", "budget blowout", "venue walkthrough", "engagement photo shoot"],
+            forbiddenPatterns: ["blackmail", "extort", "threat", "harass"],
+            actionTemplates: [
+                "For %@, seat the exes together and call it 'closure.'",
+                "Handle %@ by letting the mother-in-law approve the final guest list.",
+                "During %@, add a surprise theme two weeks before the date.",
+                "Use %@ to settle old family scores through the seating chart.",
+                "For %@, book the venue before agreeing on a budget.",
+                "Handle %@ by making the bridesmaids fund their own dresses and the honeymoon.",
+                "During %@, schedule the open bar to start before the ceremony.",
+                "Use %@ to announce the registry has a 'suggested minimum.'",
+                "For %@, plan a destination wedding nobody asked to travel to.",
+                "Handle %@ by changing the dress code the week of the event.",
+                "During %@, let the DJ take requests exclusively from whoever tips.",
+                "Use %@ to turn the toast into a public grievance session.",
+                "For %@, cut the guest list based on who never liked your Instagram post.",
+                "Handle %@ by scheduling the cake tasting longer than the actual ceremony.",
+                "During %@, insist the whole wedding party match a color nobody owns.",
+                "Use %@ to negotiate vendor prices in front of the vendor's other clients.",
+                "For %@, treat the rehearsal dinner as round one of the real argument.",
+                "Handle %@ by making the hashtag mandatory in every guest's caption."
+            ],
+            rationaleTemplates: [
+                "A seating chart is basically diplomacy with place cards.",
+                "Debt spent on flowers is still technically an investment in vibes.",
+                "If the mother-in-law is happy, the marriage is 90% solved.",
+                "A theme gives strangers something to talk about besides the couple.",
+                "An open bar is generosity with a built-in time limit.",
+                "The registry exists so guests know exactly how much they mean to you.",
+                "A destination wedding is really just a loyalty test with better weather.",
+                "Every toast deserves at least one unresolved plotline.",
+                "The dress budget matters more because everyone will see it in photos forever.",
+                "A wedding hashtag makes the day legally memorable.",
+                "Vendor negotiations build the same skills as marriage: patience and mild resentment.",
+                "The cake tasting is the last decision anyone will agree on peacefully.",
+                "A rehearsal dinner is just the wedding's rough draft, argument included."
+            ]
         )
     ]
 
@@ -1806,6 +1916,94 @@ extension AdviceStore {
                 "The opportunity is already in the next conversation."
             ],
             slang: ["high-signal", "career capital", "operator energy", "network effect", "leadership muscle", "ownership loop", "growth stack", "clarity leverage"]
+        ),
+        .astrologyGirlie: ToneProfile(
+            opener: [
+                "Bestie, Mercury is in retrograde so",
+                "The universe literally sent me this download",
+                "As a Scorpio rising, I have to say",
+                "My tarot pull this morning was very clear",
+                "Venus is doing something and honestly it shows",
+                "The moon is in a chaotic house right now",
+                "Manifestation update:",
+                "My astrologer would want you to know",
+                "This is giving full-moon energy and",
+                "Not the planets aligning for exactly this"
+            ],
+            confidenceTag: [
+                "The universe doesn't miss.",
+                "This is astrologically confirmed.",
+                "The chart doesn't lie, bestie.",
+                "Mercury retrograde explains everything, always.",
+                "This is just cosmic math at this point.",
+                "The stars already RSVP'd yes.",
+                "Manifestation is basically a spreadsheet with vibes.",
+                "Venus approved this energetically.",
+                "The moon phase confirms this is correct.",
+                "This is giving destined, not decided."
+            ],
+            rhetoricalTick: [
+                "retrograde", "manifest", "alignment", "energy",
+                "chart", "frequency", "cosmic", "placement",
+                "houses", "transit", "vibration", "portal"
+            ],
+            ending: [
+                "Journal it, then let the universe handle logistics.",
+                "Light a candle and proceed with cosmic confidence.",
+                "The full moon will clean up whatever this breaks.",
+                "Trust the timeline, not the calendar.",
+                "Say it out loud three times under the moon.",
+                "The retrograde made you do it, not you.",
+                "Manifest now, explain never.",
+                "The universe doesn't do refunds, only lessons.",
+                "Chart your rising sign before you second-guess this.",
+                "This is between you, Venus, and consequences."
+            ],
+            slang: ["main character placement", "cosmic download", "retrograde excuse", "moon-phase logic", "energetically correct", "chart-approved", "vibrational alignment"]
+        ),
+        .oldMoney: ToneProfile(
+            opener: [
+                "One simply does not",
+                "My family has always believed",
+                "As my grandfather's accountant used to say",
+                "It's rather common, but",
+                "Darling, the trust exists for a reason",
+                "At the club, we tend to",
+                "Generational wisdom suggests",
+                "Quietly, and without a logo, one should",
+                "My estate attorney would agree that",
+                "This was never something we discussed loudly, but"
+            ],
+            confidenceTag: [
+                "It's simply how it's done.",
+                "The family office would concur.",
+                "New money would panic here. We don't.",
+                "This was decided three generations ago.",
+                "One doesn't explain taste, only exhibits it.",
+                "The accountant handles the details; we handle the vision.",
+                "It's not arrogance if the portfolio agrees.",
+                "Old houses don't need new opinions.",
+                "This is inherited certainty, not learned.",
+                "Quiet confidence is the only kind worth having."
+            ],
+            rhetoricalTick: [
+                "heirloom", "legacy", "estate", "discreet",
+                "generational", "understated", "trust", "provenance",
+                "inherited", "quiet", "family office", "portfolio"
+            ],
+            ending: [
+                "Handle it the way the family always has: quietly.",
+                "Let the accountant explain it later, if anyone asks.",
+                "This is what the trust is for.",
+                "Old money doesn't announce, it just proceeds.",
+                "Wear the outcome the way you'd wear the watch — without comment.",
+                "The estate will sort out the details eventually.",
+                "One does not chase. One inherits the outcome.",
+                "Keep the receipts in the family safe, not the group chat.",
+                "This decision was never really up for discussion.",
+                "Quiet now, legendary at the reading of the will."
+            ],
+            slang: ["quiet luxury", "generational ease", "family office energy", "heirloom logic", "understated flex", "old house manners", "trust fund composure"]
         )
     ]
 
@@ -1824,6 +2022,8 @@ extension AdviceStore {
         .genZ: ["brainrot sincerity", "skibidi certainty", "rizz-based confidence", "NPC energy", "sigma grindset framing", "mewing authority"],
         .redditCommenter: ["downvote-proof framing", "karma-whoring certainty", "award-seeking depth", "throwRA expertise", "subreddit authority", "edit: clarity"],
         .linkedInInfluencer: ["thought-leadership theater", "network effect confidence", "icebreaker authority", "DM slide energy", "endorsement positioning", "KPI gospel"],
+        .astrologyGirlie: ["retrograde blame", "manifestation certainty", "cosmic alignment energy", "moon phase authority", "venus-ruled confidence", "birth chart diagnosis"],
+        .oldMoney: ["quiet luxury certainty", "generational wealth assumption", "heirloom authority", "trust fund composure", "understated superiority", "legacy positioning"],
         .random: ["chaos blend", "voice roulette", "multi-tone volatility"]
     ]
 
@@ -1842,6 +2042,8 @@ extension AdviceStore {
         .spirituality: ["manifestation intensity", "crystal energy", "birth chart alignment", "universe trusting", "cosmic timing conviction"],
         .financeCrypto: ["bull market confidence", "diamond hands energy", "FOMO positioning", "altcoin roulette", "defi degen certainty", "HODL conviction"],
         .pets: ["puppy tax reporting", "vet denial energy", "fur baby advocacy", "treat-based training", "zoomies appreciation"],
+        .gaming: ["ranked-lobby bravado", "loot box optimism", "matchmaking conspiracy", "clutch-play mythology", "tilt denial", "smurf-account ethics"],
+        .weddings: ["guest-list politics", "seating-chart diplomacy", "registry entitlement", "open-bar generosity theater", "vendor negotiation bravado", "toast score-settling"],
         .random: ["category roulette", "domain swapping", "chaos blend", "mixed vertical strategy"]
     ]
 

@@ -16,6 +16,8 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     case relationships
     case spirituality
     case financeCrypto
+    case gaming
+    case weddings
     /// Resolves to a random concrete category at generation time
     case random
 
@@ -37,6 +39,8 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         case .relationships: return "Relationships"
         case .spirituality: return "Spirituality"
         case .financeCrypto: return "Crypto"
+        case .gaming: return "Gaming"
+        case .weddings: return "Weddings"
         case .random: return "Random Mix"
         }
     }
@@ -57,13 +61,15 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         case .relationships: return "heart.circle"
         case .spirituality: return "star.fill"
         case .financeCrypto: return "bitcoinsign.circle"
+        case .gaming: return "gamecontroller.fill"
+        case .weddings: return "heart.text.square.fill"
         case .random: return "shuffle"
         }
     }
 
     var isPremium: Bool {
         switch self {
-        case .pets, .relationships, .spirituality, .financeCrypto: return true
+        case .pets, .relationships, .spirituality, .financeCrypto, .gaming, .weddings: return true
         default: return false
         }
     }
@@ -96,6 +102,8 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case genZ
     case redditCommenter
     case linkedInInfluencer
+    case astrologyGirlie
+    case oldMoney
     /// Resolves to a random concrete tone at generation time
     case random
 
@@ -117,13 +125,15 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
         case .genZ: return "Gen Z"
         case .redditCommenter: return "Reddit Commenter"
         case .linkedInInfluencer: return "LinkedIn Influencer"
+        case .astrologyGirlie: return "Astrology Girlie"
+        case .oldMoney: return "Old Money"
         case .random: return "Random Mix"
         }
     }
 
     var isPremium: Bool {
         switch self {
-        case .genZ, .redditCommenter, .linkedInInfluencer: return true
+        case .genZ, .redditCommenter, .linkedInInfluencer, .astrologyGirlie, .oldMoney: return true
         default: return false
         }
     }
@@ -613,6 +623,8 @@ extension AdviceCategory: AppEnum {
         .relationships: "Relationships",
         .spirituality: "Spirituality",
         .financeCrypto: "Crypto",
+        .gaming: "Gaming",
+        .weddings: "Weddings",
         .random: "Random Mix",
     ]
 }
@@ -637,6 +649,8 @@ extension ToneMode: AppEnum {
         .genZ: "Gen Z",
         .redditCommenter: "Reddit Commenter",
         .linkedInInfluencer: "LinkedIn Influencer",
+        .astrologyGirlie: "Astrology Girlie",
+        .oldMoney: "Old Money",
         .random: "Random Mix",
     ]
 }
