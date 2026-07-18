@@ -93,14 +93,9 @@ struct FloatingTabBarView: View {
         } label: {
             VStack(spacing: 2) {
                 ZStack(alignment: .topTrailing) {
-                    Circle()
-                        .fill(isSelected || isHighlighted ? accent.opacity(0.18) : secondaryText.opacity(0.12))
-                        .frame(width: 30, height: 30)
-                        .scaleEffect(isHighlighted && !isSelected ? 1.06 : 1.0)
                     Image(systemName: tab.systemImage)
                         .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
                         .symbolVariant(isSelected ? .fill : .none)
-                        .scaleEffect(isHighlighted && !isSelected ? 1.12 : 1.0)
                         .foregroundStyle(
                             isSelected
                                 ? accent
@@ -132,28 +127,16 @@ struct FloatingTabBarView: View {
                     : (isHighlighted ? accent.opacity(0.58) : secondaryText.opacity(0.74))
             )
             .frame(maxWidth: .infinity)
-            .frame(minHeight: Theme.floatingTabItemMinHeight + (isSelected ? 4 : 0))
+            .frame(minHeight: Theme.floatingTabItemMinHeight)
             .padding(.top, 5)
             .padding(.bottom, 5)
-            .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
                 .background {
                     if isSelected || isHighlighted {
                         Capsule(style: .continuous)
-                            .fill(
-                                accent.opacity(
-                                isSelected
-                                    ? tabBarStyle.selectedFillOpacity
-                                    : tabBarStyle.highlightedFillOpacity
-                            )
-                        )
-                        .padding(.horizontal, max(4, tabBarStyle.indicatorInset + 3))
-                        .padding(.vertical, 1)
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(accent.opacity(0.38), lineWidth: isSelected ? 0.8 : 0)
-                        )
-                        .shadow(color: accent.opacity(0.2), radius: 6, x: 0, y: 3)
-                        .animation(.spring(response: Theme.animFast, dampingFraction: 0.8), value: isSelected)
+                            .fill(accent.opacity(isSelected ? 0.16 : 0.08))
+                            .padding(.horizontal, max(4, tabBarStyle.indicatorInset + 3))
+                            .padding(.vertical, 1)
+                            .animation(.spring(response: Theme.animFast, dampingFraction: 0.8), value: isSelected)
                     }
                 }
         }
@@ -174,19 +157,10 @@ struct FloatingTabBarView: View {
             showingShellMenu = true
         } label: {
             VStack(spacing: 2) {
-                ZStack {
-                    Circle()
-                        .fill(isSelected ? accent.opacity(0.18) : secondaryText.opacity(0.12))
-                        .frame(width: 30, height: 30)
-                    Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
-                        .symbolEffect(.bounce.up.byLayer, value: isSelected)
-                }
-                .foregroundStyle(
-                    isSelected
-                        ? accent
-                        : secondaryText.opacity(0.74)
-                )
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
+                    .symbolEffect(.bounce.up.byLayer, value: isSelected)
+                    .foregroundStyle(isSelected ? accent : secondaryText.opacity(0.74))
 
                 Text("More")
                     .font(.system(size: 9, weight: isSelected ? .semibold : .regular, design: .rounded))
@@ -199,18 +173,12 @@ struct FloatingTabBarView: View {
             .frame(minHeight: Theme.floatingTabItemMinHeight)
             .padding(.top, 5)
             .padding(.bottom, 5)
-                .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1.0)
                 .background {
                 if isSelected {
                     Capsule(style: .continuous)
-                        .fill(accent.opacity(tabBarStyle.selectedFillOpacity))
+                        .fill(accent.opacity(0.16))
                         .padding(.horizontal, max(4, tabBarStyle.indicatorInset + 3))
                         .padding(.vertical, 1)
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .stroke(accent.opacity(0.38), lineWidth: 0.7)
-                        )
-                        .shadow(color: accent.opacity(0.22), radius: 5, x: 0, y: 2)
                 }
             }
         }
@@ -253,96 +221,13 @@ struct FloatingTabBarView: View {
     }
 
     private var tabBarBackground: some View {
-        ZStack {
-            if lowPowerModeEnabled || reduceMotion {
+        RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
+            .fill(Theme.tabBarBackground(for: theme))
+            .overlay(
                 RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
-                    .fill(Theme.tabBarBackground(for: theme).opacity(0.98))
-                    .shadow(
-                        color: tabBarStyle.shadow,
-                        radius: tabBarStyle.shadowRadius * 0.75,
-                        x: 0,
-                        y: 6
-                    )
-            } else if #available(iOS 26.0, *) {
-                RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
-                    .fill(.clear)
-                    .glassEffect(
-                        .regular.tint(tabBarStyle.backgroundTint.opacity(0.16)),
-                        in: .rect(cornerRadius: Theme.floatingTabBarCornerRadius)
-                    )
-                    .shadow(color: tabBarStyle.shadow, radius: tabBarStyle.shadowRadius, x: 0, y: 8)
-            } else {
-                RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
-                            .fill(tabBarStyle.backgroundTint.opacity(tabBarStyle.materialOverlayOpacity))
-                    }
-                    .shadow(color: tabBarStyle.shadow, radius: tabBarStyle.shadowRadius, x: 0, y: 8)
-            }
-
-            if !reduceMotion, !lowPowerModeEnabled {
-                RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                accent.opacity(0.3),
-                                .clear,
-                                .clear,
-                                accent.opacity(0.1),
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .blur(radius: 2)
-            }
-
-            RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            tabBarStyle.borderTop,
-                            tabBarStyle.borderBottom,
-                            tabBarStyle.borderTop.opacity(0.55),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.8
-                )
-
-            RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [.white.opacity(0.22), .white.opacity(0.04), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .blendMode(.screen)
-
-            if let glow = tabBarStyle.glow, !reduceMotion, !lowPowerModeEnabled {
-                RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
-                    .stroke(glow.opacity(0.25), lineWidth: 1)
-                    .blur(radius: 2)
-            }
-
-            RoundedRectangle(cornerRadius: Theme.floatingTabBarCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            accent.opacity(0.35),
-                            .clear,
-                            .clear,
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .blendMode(.plusLighter)
-                .padding(1.2)
-        }
+                    .stroke(tabBarStyle.borderTop, lineWidth: 0.8)
+            )
+            .shadow(color: tabBarStyle.shadow, radius: tabBarStyle.shadowRadius * 0.6, x: 0, y: 4)
     }
 
     private func handleTap(on tab: AppTab) {
