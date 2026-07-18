@@ -412,7 +412,7 @@ struct QuotesTabView: View {
                     .foregroundStyle(secondaryText)
                     .padding(.top, 10)
 
-                HStack(spacing: 10) {
+                VStack(spacing: 8) {
                     HStack(spacing: 8) {
                         let heroVote = viewModel.vote(for: dailyQuote)
                         TabCommandActionButton(
@@ -440,44 +440,46 @@ struct QuotesTabView: View {
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         }
                         .accessibilityLabel("Dislike quote")
-                    }
-                    Spacer()
-                    TabCommandActionButton(
-                        title: "Spotlight",
-                        systemImage: "sparkle.magnifyingglass",
-                        accent: accent,
-                        buttonText: buttonText,
-                        prominent: false,
-                        minHeight: 38
-                    ) {
-                        showQuoteSpotlight = true
-                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    }
-                    .accessibilityLabel("Open quote spotlight")
 
-                    TabCommandActionButton(
-                        title: "Copy Quote",
-                        systemImage: "doc.on.doc",
-                        accent: accent,
-                        buttonText: buttonText,
-                        prominent: false,
-                        minHeight: 38
-                    ) {
-                        copyQuote(dailyQuote, isDaily: true)
+                        TabCommandActionButton(
+                            title: "Spotlight",
+                            systemImage: "sparkle.magnifyingglass",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: false,
+                            minHeight: 38
+                        ) {
+                            showQuoteSpotlight = true
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        }
+                        .accessibilityLabel("Open quote spotlight")
                     }
-                    .accessibilityLabel("Copy quote")
 
-                    TabCommandActionButton(
-                        title: "Share Quote",
-                        systemImage: "square.and.arrow.up",
-                        accent: accent,
-                        buttonText: buttonText,
-                        prominent: true,
-                        minHeight: 38
-                    ) {
-                        shareQuote(dailyQuote, isDaily: true)
+                    HStack(spacing: 8) {
+                        TabCommandActionButton(
+                            title: "Copy Quote",
+                            systemImage: "doc.on.doc",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: false,
+                            minHeight: 38
+                        ) {
+                            copyQuote(dailyQuote, isDaily: true)
+                        }
+                        .accessibilityLabel("Copy quote")
+
+                        TabCommandActionButton(
+                            title: "Share Quote",
+                            systemImage: "square.and.arrow.up",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: true,
+                            minHeight: 38
+                        ) {
+                            shareQuote(dailyQuote, isDaily: true)
+                        }
+                        .accessibilityLabel("Share quote")
                     }
-                    .accessibilityLabel("Share quote")
                 }
                 .padding(.top, 16)
 

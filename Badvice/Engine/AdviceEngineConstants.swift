@@ -28,8 +28,8 @@ enum AdviceEngineConstants {
     // MARK: - Candidate generation
 
     /// Multiplier applied to requested count to produce the initial candidate pool.
-    /// A value of 5 means 5× candidates are generated before deduplication.
-    static let candidatePoolMultiplier: Int = 5
+    /// A value of 6 means 6× candidates are generated before deduplication.
+    static let candidatePoolMultiplier: Int = 6
     /// Minimum extra candidates generated beyond the requested count.
     static let candidatePoolMinExtra: Int = 8
     /// Prime used to stride seeds across candidates to avoid collisions.
@@ -55,7 +55,7 @@ enum AdviceEngineConstants {
     static let rationaleOutputMaxLength: Int = 118
 
     /// Minimum quality score required for advice to be accepted before fallback.
-    static let minimumAdviceQualityScore: Double = 0.42
+    static let minimumAdviceQualityScore: Double = 0.5
 
     /// Amount of template-intensity increase when the quality guard triggers a forced recovery.
     ///
