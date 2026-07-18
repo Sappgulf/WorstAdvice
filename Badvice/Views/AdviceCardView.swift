@@ -195,17 +195,7 @@ struct AdviceCardView: View {
                 RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                     .fill(cardColor)
 
-                if #available(iOS 26.0, *) {
-                    RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
-                        .fill(.clear)
-                        .glassEffect(
-                            .regular.tint(
-                                accent.opacity(theme == .minimal ? 0.14 : 0.18)
-                            ),
-                            in: .rect(cornerRadius: cardRadius)
-                        )
-                } else if theme != .minimal {
-                    // Legacy fallback for pre-Liquid Glass systems.
+                if theme != .minimal {
                     RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                         .fill(.ultraThinMaterial)
                         .opacity(glassOpacity)

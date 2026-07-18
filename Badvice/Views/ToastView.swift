@@ -49,15 +49,8 @@ struct ToastView: View {
 
     @ViewBuilder
     private var toastSurface: some View {
-        let tint = toast.style.tintColor(accent: accentColor)
-
-        if #available(iOS 26.0, *) {
-            toastContent
-                .glassEffect(.regular.tint(tint.opacity(0.18)), in: .capsule)
-        } else {
-            toastContent
-                .background(.ultraThinMaterial, in: Capsule(style: .continuous))
-        }
+        toastContent
+            .background(.ultraThinMaterial, in: Capsule(style: .continuous))
     }
 
     private var toastContent: some View {

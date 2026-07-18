@@ -132,6 +132,7 @@ final class GenerateViewModel {
     private var retentionSnapshot: RetentionSnapshot?
     private var cachedDailyMissionState: ChaosMissionState?
     private var cachedWeeklyMissionState: WeeklyMissionState?
+    private var cachedContractMissionStates: [String: ContractMissionState] = [:]
 
     /// Dynamically picks the ML weight profile based on accumulated signal richness.
     private var adaptiveRanker: AdaptiveRanker {
@@ -895,6 +896,9 @@ final class GenerateViewModel {
     }
 
     func contractMissionState(for contract: ChaosContract) -> ContractMissionState {
+        if let cached = cachedContractMissionStates[contract.id] {
+            return cached
+        }
         let key = contractMissionKey(for: contract)
         let record = repository.ensureMissionProgress(
             missionKey: key,
@@ -903,7 +907,7 @@ final class GenerateViewModel {
             tone: contract.tone ?? .random,
             targetCount: 1
         )
-        return ContractMissionState(
+        let state = ContractMissionState(
             key: key,
             contractID: contract.id,
             currentCount: record.progressCount,
@@ -911,6 +915,8 @@ final class GenerateViewModel {
             isActive: activeChaosContractID == contract.id && !record.rewardClaimed,
             rewardClaimed: record.rewardClaimed
         )
+        cachedContractMissionStates[contract.id] = state
+        return state
     }
 
     func acceptChaosContract(_ contract: ChaosContract) {
@@ -932,6 +938,7 @@ final class GenerateViewModel {
             targetCount: 1
         )
         UserDefaults.standard.set(contract.id, forKey: Self.activeChaosContractStorageKey)
+        cachedContractMissionStates.removeValue(forKey: contract.id)
         generationNotice = "Contract accepted: \(contract.title). Generate once to claim \(contract.reward)."
         analyticsTracker.track(
             "chaos_contract_accept",
@@ -1594,6 +1601,7 @@ final class GenerateViewModel {
         retentionSnapshot = nil
         cachedDailyMissionState = nil
         cachedWeeklyMissionState = nil
+        cachedContractMissionStates.removeAll()
     }
 
     private func syncLiveActivityState() {

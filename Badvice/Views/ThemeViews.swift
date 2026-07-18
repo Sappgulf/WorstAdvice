@@ -113,20 +113,10 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
         }
         .padding(Theme.mediumCornerRadius)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            ZStack {
-                RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                    .fill(cardColor)
-                if #available(iOS 26.0, *) {
-                    RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                        .fill(.clear)
-                        .glassEffect(
-                            .regular.tint(accent.opacity(0.10)),
-                            in: .rect(cornerRadius: Theme.shellSectionCornerRadius)
-                        )
-                }
-            }
-        }
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .fill(cardColor)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.22), lineWidth: 1)
@@ -264,20 +254,10 @@ struct SectionShell<Header: View, Content: View>: View {
         }
         .padding(Theme.shellPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            ZStack {
-                RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                    .fill(cardColor)
-                if #available(iOS 26.0, *) {
-                    RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                        .fill(.clear)
-                        .glassEffect(
-                            .regular.tint(accent.opacity(0.10)),
-                            in: .rect(cornerRadius: Theme.shellSectionCornerRadius)
-                        )
-                }
-            }
-        }
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .fill(cardColor)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.20), lineWidth: 1)
