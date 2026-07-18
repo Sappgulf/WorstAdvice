@@ -386,29 +386,42 @@ struct TabEmptyStatePanel<Actions: View>: View {
     var body: some View {
         VStack(spacing: 20) {
             ZStack {
+                // Thin arc behind the badge for depth, not a full second circle
                 Circle()
-                    .fill(accent.opacity(0.1))
-                    .frame(width: 112, height: 112)
-                    .scaleEffect(appeared ? 1.0 : 0.8)
+                    .trim(from: 0.08, to: 0.62)
+                    .stroke(accent.opacity(0.22), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                    .frame(width: 108, height: 108)
+                    .rotationEffect(.degrees(-40))
                     .opacity(appeared ? 1.0 : 0)
+                    .scaleEffect(appeared ? 1.0 : 0.8)
+
+                // Small satellite accent, offset for an asymmetric, hand-placed feel
                 Circle()
-                    .fill(accent.opacity(0.14))
-                    .frame(width: 84, height: 84)
+                    .fill(accent.opacity(0.5))
+                    .frame(width: 10, height: 10)
+                    .offset(x: 34, y: -30 + floatOffset * 0.4)
+                    .opacity(appeared ? 1.0 : 0)
+
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(accent.opacity(0.13))
+                    .frame(width: 76, height: 76)
+                    .rotationEffect(.degrees(-6))
                     .offset(y: floatOffset)
 
                 if reduceMotion {
                     Image(systemName: icon)
-                        .font(.system(size: 38, weight: .semibold))
+                        .font(.system(size: 34, weight: .semibold))
                         .foregroundStyle(accent)
                         .offset(y: floatOffset)
                 } else {
                     Image(systemName: icon)
-                        .font(.system(size: 38, weight: .semibold))
+                        .font(.system(size: 34, weight: .semibold))
                         .foregroundStyle(accent)
                         .offset(y: floatOffset)
                         .symbolEffect(.bounce, options: .repeating, value: appeared)
                 }
             }
+            .frame(height: 112)
 
             VStack(spacing: 8) {
                 Text(title)
@@ -434,28 +447,10 @@ struct TabEmptyStatePanel<Actions: View>: View {
         .background(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
                 .fill(cardColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [accent.opacity(0.16), .clear],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .blendMode(.screen)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .stroke(accent.opacity(0.18), lineWidth: 1)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .fill(accent.opacity(0.07))
-                        .frame(height: 1.4),
-                    alignment: .top
-                )
-                .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 8)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
         )
         .onAppear {
             guard !appeared else { return }
