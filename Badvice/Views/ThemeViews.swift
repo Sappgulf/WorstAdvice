@@ -319,31 +319,34 @@ struct AdviceCategoryFilterChips: View {
         accessibilityID: String,
         action: @escaping () -> Void
     ) -> some View {
-        Button {
-            action()
-            HapticsManager.playSelection(isEnabled: hapticsEnabled)
-        } label: {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .frame(minHeight: 34)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
-                )
-                .foregroundStyle(isSelected ? accent : secondaryText)
-                .scaleEffect(isSelected ? 1.04 : 1.0)
-                .animation(
-                    reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.68),
-                    value: isSelected
-                )
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(accessibilityID)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        Text(title)
+            .font(.caption.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .frame(minHeight: 34)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
+            )
+            .foregroundStyle(isSelected ? accent : secondaryText)
+            .scaleEffect(isSelected ? 1.04 : 1.0)
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.68),
+                value: isSelected
+            )
+            // Buttons inside a horizontal ScrollView nested in a vertical one
+            // lose touch arbitration to the outer scroll's pan recognizer on
+            // real hardware. A direct tap gesture on an explicit content shape
+            // wins arbitration reliably (see GenerateTabView.selectorChip).
+            .contentShape(Capsule())
+            .onTapGesture {
+                action()
+                HapticsManager.playSelection(isEnabled: hapticsEnabled)
+            }
+            .accessibilityIdentifier(accessibilityID)
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 

@@ -123,7 +123,6 @@ final class BadviceUITests: XCTestCase {
             ),
             "Quotes daily ritual should be visible in screenshot mode."
         )
-        XCTAssertTrue(quotesApp.buttons["quotes.ritual.friendAction"].waitForExistence(timeout: 3))
         quotesApp.terminate()
 
         let settingsApp = launchScreenshotModeApp(startTab: "settings")

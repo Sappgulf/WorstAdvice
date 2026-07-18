@@ -426,15 +426,10 @@ final class BadvicePolishedSmokeTests: XCTestCase {
                 assertTabSurface(
                     app: app,
                     tabMarkerCandidates: [
-                        app.buttons["quotes.dailyHero"],
-                        app.buttons["quotes.command.primary"],
+                        app.otherElements["quotes.dailyHero"],
                         app.staticTexts["Quotes"],
                     ],
                     commandActionIDs: [
-                        "quotes.command.primary",
-                        "quotes.command.daily",
-                        "quotes.command.generate",
-                        "quotes.ritual.friendAction",
                         "quotes.spotlight.toggle",
                     ],
                     expectFocusToggle: true

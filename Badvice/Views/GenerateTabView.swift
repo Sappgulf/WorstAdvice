@@ -1139,48 +1139,52 @@ struct GenerateTabView: View {
         accessibilityID: String,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                if let icon {
-                    Image(systemName: icon)
-                        .font(.caption.weight(.bold))
-                }
-                Text(label)
-                    .font(.caption.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-
-                if isPremium {
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(isSelected ? buttonText : accent.opacity(0.85))
-                }
+        HStack(spacing: 5) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.caption.weight(.bold))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(isSelected ? accent.opacity(0.18) : secondaryText.opacity(0.12))
-            )
-            .foregroundStyle(isSelected ? buttonText : primaryText)
-            .scaleEffect(isSelected ? 1.03 : 1.0)
-            .animation(
-                isMotionReduced ? nil : .spring(response: 0.24, dampingFraction: 0.72),
-                value: isSelected
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(
-                        isSelected
-                            ? accent.opacity(0.35)
-                            : secondaryText.opacity(0.18),
-                        lineWidth: 1
-                    )
-            )
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            if isPremium {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(isSelected ? buttonText : accent.opacity(0.85))
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(
+            Capsule(style: .continuous)
+                .fill(isSelected ? accent.opacity(0.18) : secondaryText.opacity(0.12))
+        )
+        .foregroundStyle(isSelected ? buttonText : primaryText)
+        .scaleEffect(isSelected ? 1.03 : 1.0)
+        .animation(
+            isMotionReduced ? nil : .spring(response: 0.24, dampingFraction: 0.72),
+            value: isSelected
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .stroke(
+                    isSelected
+                        ? accent.opacity(0.35)
+                        : secondaryText.opacity(0.18),
+                    lineWidth: 1
+                )
+        )
+        // Real chips live inside a horizontal ScrollView nested in a vertical one.
+        // A Button's gesture recognizer loses touch arbitration to the outer
+        // ScrollView's pan recognizer on real hardware (simulator taps have no
+        // analog jitter, so this never reproduced there). A direct tap gesture
+        // on an explicit content shape wins arbitration reliably.
+        .contentShape(Capsule())
+        .onTapGesture(perform: action)
         .accessibilityIdentifier(accessibilityID)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     private func statChip(title: String, value: String) -> some View {
