@@ -916,20 +916,20 @@ struct SettingsTabView: View {
                                     .foregroundStyle(isTileSelected ? accent : secondaryText)
 
                                 Text(mood)
-                                    .font(.system(size: 8, weight: .medium, design: .rounded))
+                                    .font(.system(.caption2, design: .rounded).weight(.medium))
                                     .foregroundStyle(secondaryText.opacity(isTileSelected ? 0.95 : 0.72))
                                     .multilineTextAlignment(.center)
                                     .lineLimit(1)
 
                                 Text(bestFor)
-                                    .font(.system(size: 8, weight: .medium, design: .rounded))
+                                    .font(.system(.caption2, design: .rounded).weight(.medium))
                                     .foregroundStyle(secondaryText.opacity(isTileSelected ? 0.9 : 0.65))
                                     .multilineTextAlignment(.center)
                                     .lineLimit(2)
 
                                 if isTileSelected {
                                     Text(personality.descriptor)
-                                        .font(.system(size: 9, weight: .regular, design: .rounded))
+                                        .font(.system(.caption2, design: .rounded))
                                         .foregroundStyle(secondaryText.opacity(0.75))
                                         .multilineTextAlignment(.center)
                                         .lineLimit(2)

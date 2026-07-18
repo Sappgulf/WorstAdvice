@@ -653,6 +653,11 @@ struct FavoritesTabView: View {
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         activeToast = ToastMessage(message: "Removed from Favorites", style: .deleted)
                     }
+                    .accessibilityAction(named: "Unsave") {
+                        viewModel.remove(record)
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        activeToast = ToastMessage(message: "Removed from Favorites", style: .deleted)
+                    }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) { viewModel.delete(record) } label: {
                             Label("Delete", systemImage: "trash")
@@ -715,6 +720,11 @@ struct FavoritesTabView: View {
                             Button("Delete", role: .destructive) { viewModel.delete(record) }
                         }
                         .onTapGesture(count: 2) {
+                            viewModel.remove(record)
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                            activeToast = ToastMessage(message: "Removed from Favorites", style: .deleted)
+                        }
+                        .accessibilityAction(named: "Unsave") {
                             viewModel.remove(record)
                             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                             activeToast = ToastMessage(message: "Removed from Favorites", style: .deleted)

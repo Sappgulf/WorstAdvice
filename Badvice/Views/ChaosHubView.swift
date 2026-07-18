@@ -368,7 +368,7 @@ struct ChaosHubTabView: View {
 
                     VStack(spacing: 2) {
                         Text("\(chaosScore)")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .font(.system(.title2, design: .rounded).weight(.bold))
                             .foregroundStyle(primaryText)
                         Text("Score")
                             .font(.caption2.weight(.semibold))

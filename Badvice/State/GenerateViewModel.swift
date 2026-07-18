@@ -103,6 +103,7 @@ final class GenerateViewModel {
     var current: AdviceRecord?
     var lastWhyTerrible: String = "Why this is awful: confidence is replacing good judgment."
     var generationNotice: String?
+    var generationNoticeStyle: ToastStyle = .info
     var generationSourceBadgeText: String?
     var primaryActionTitle: String = "Advise Me"
     var hapticTrigger: Int = 0
@@ -192,6 +193,7 @@ final class GenerateViewModel {
         if shouldAutoGenerate {
             isGenerating = true
             generationNotice = Self.bootstrapGenerationNotice
+            generationNoticeStyle = .info
         }
         adviceBootstrapTask = Task(priority: .utility) { [weak self] in
             async let scorerWarmup: Void = shouldPrewarmScorer
@@ -304,6 +306,7 @@ final class GenerateViewModel {
         isGenerating = true
         defer { isGenerating = false }
         generationNotice = nil
+        generationNoticeStyle = .info
         generationSourceBadgeText = nil
         let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
         if let current {
@@ -317,6 +320,7 @@ final class GenerateViewModel {
         let normalizedSituation = situation?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let blockingNotice = generationBlockingNotice(for: normalizedSituation) {
             generationNotice = blockingNotice
+            generationNoticeStyle = .error
             return
         }
         let shouldEnforceGlobalUniqueness = settingsViewModel.strictNoRepeats
@@ -357,6 +361,7 @@ final class GenerateViewModel {
            (await suggestionCandidates(for: resolvedCategory, situation: situation)).isEmpty {
             generationNotice =
                 "Community-only mode is on. Add suggestions in Settings > Suggestion Lab."
+            generationNoticeStyle = .error
             analyticsTracker.track(
                 "generate_blocked",
                 properties: [
@@ -491,6 +496,7 @@ final class GenerateViewModel {
 
         guard !candidatePool.isEmpty else {
             generationNotice = "Community suggestions were filtered by safety checks."
+            generationNoticeStyle = .error
             analyticsTracker.track(
                 "generate_blocked",
                 properties: [
@@ -610,6 +616,7 @@ final class GenerateViewModel {
 
         guard var output = chosen?.candidate ?? ranked.first?.candidate else {
             generationNotice = "Unable to rank candidates right now."
+            generationNoticeStyle = .error
             return
         }
         let source = chosen?.source ?? ranked.first?.source ?? "engine"
@@ -940,6 +947,7 @@ final class GenerateViewModel {
         UserDefaults.standard.set(contract.id, forKey: Self.activeChaosContractStorageKey)
         cachedContractMissionStates.removeValue(forKey: contract.id)
         generationNotice = "Contract accepted: \(contract.title). Generate once to claim \(contract.reward)."
+        generationNoticeStyle = .success
         analyticsTracker.track(
             "chaos_contract_accept",
             properties: [
@@ -1492,6 +1500,7 @@ final class GenerateViewModel {
 
         repository.markMissionRewardClaimed(missionKey: mission.key)
         generationNotice = "Weekly mission complete. Reward unlocked: \(ThemeMode.cosmic.title)."
+        generationNoticeStyle = .success
         if settingsViewModel.theme != .cosmic {
             settingsViewModel.theme = .cosmic
         }
@@ -1564,6 +1573,7 @@ final class GenerateViewModel {
         } else {
             generationNotice = message
         }
+        generationNoticeStyle = .info
     }
 
     private func applyStreakFreezeIfNeeded(referenceDate: Date) {
@@ -1582,6 +1592,7 @@ final class GenerateViewModel {
         guard settingsViewModel.consumeStreakFreezeIfAvailable(for: today) else { return }
 
         generationNotice = "Streak Freeze activated. Your streak is protected for today."
+        generationNoticeStyle = .success
         NotificationManager.updateStreakFreezeAvailability(
             hasAvailable: settingsViewModel.streakFreezeAvailableThisWeek)
         analyticsTracker.track(

@@ -154,7 +154,7 @@ struct GenerateTabView: View {
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.orange)
                         Text("\(viewModel.challengeStreakDays)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .font(.system(.caption2, design: .rounded).weight(.bold))
                             .foregroundStyle(.orange)
                     }
                     .padding(.horizontal, 7)
@@ -453,13 +453,23 @@ struct GenerateTabView: View {
                         if !isFocusMode && (viewModel.current != nil || viewModel.todayGeneratedCount > 0) {
                             dailyProgressCard
                         }
-                        if !isFocusMode,
-                           let notice = viewModel.generationNotice,
-                           !notice.isEmpty
-                        {
-                            Text(notice)
-                                .font(.caption)
-                                .foregroundStyle(secondaryText)
+                        if let notice = viewModel.generationNotice, !notice.isEmpty {
+                            let noticeColor = viewModel.generationNoticeStyle.tintColor(accent: accent)
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: viewModel.generationNoticeStyle.systemImage)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(noticeColor)
+                                Text(notice)
+                                    .font(.caption)
+                                    .foregroundStyle(primaryText)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(noticeColor.opacity(0.12))
+                            )
+                            .accessibilityElement(children: .combine)
                         }
                         if !isFocusMode {
                             generateToolsSection
@@ -816,6 +826,9 @@ struct GenerateTabView: View {
                         }
                     }
                     .onTapGesture(count: 2) {
+                        toggleCurrentFavorite()
+                    }
+                    .accessibilityAction(named: viewModel.isCurrentFavorite ? "Unsave" : "Save") {
                         toggleCurrentFavorite()
                     }
                 } else {

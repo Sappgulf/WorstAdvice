@@ -503,6 +503,12 @@ struct HistoryTabView: View {
             HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
             activeToast = ToastMessage(message: "Saved!", style: .success)
         }
+        .accessibilityAction(named: "Save") {
+            viewModel.saveFromHistory(record)
+            onDataChanged()
+            HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+            activeToast = ToastMessage(message: "Saved!", style: .success)
+        }
     }
 
     private var historyCommandCard: some View {

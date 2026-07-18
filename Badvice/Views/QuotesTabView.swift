@@ -549,6 +549,10 @@ struct QuotesTabView: View {
             viewModel.toggleVote(.like, for: quote)
             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
         }
+        .accessibilityAction(named: "Like") {
+            viewModel.toggleVote(.like, for: quote)
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        }
     }
 
     private var dailyQuoteHero: some View {
@@ -687,6 +691,10 @@ struct QuotesTabView: View {
         .accessibilityIdentifier("quotes.dailyHero")
         .accessibilityLabel("Bad quote of the day: \(dailyQuote.text) by \(dailyQuote.source)")
         .onTapGesture(count: 2) {
+            showQuoteSpotlight = true
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        }
+        .accessibilityAction(named: "Open Spotlight") {
             showQuoteSpotlight = true
             HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
         }
