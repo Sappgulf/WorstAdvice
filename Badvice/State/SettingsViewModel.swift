@@ -437,8 +437,12 @@ final class SettingsViewModel {
     }
 
     var streakFreezeAvailableThisWeek: Bool {
-        normalizeStreakFreezeState(for: Date())
-        return !(settings.streakFreezeUsedRaw ?? false)
+        // Deliberately a pure read: normalization (which can write to `settings` and
+        // save) happens once at session start and before mutating actions. Calling it
+        // here too used to run it on every access, including from view bodies — a
+        // conditional write inside a property SwiftUI reads while rendering, which
+        // triggered a genuine render-invalidation loop that froze the Missions tab.
+        !(settings.streakFreezeUsedRaw ?? false)
     }
 
     func isStreakFreezeActive(for date: Date = Date()) -> Bool {
