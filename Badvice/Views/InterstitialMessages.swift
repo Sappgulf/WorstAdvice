@@ -1914,35 +1914,11 @@ struct SettingsTabView: View {
                 .padding(Theme.sectionSpacing)
                 .background(
                     RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [cardColor, cardColor.opacity(0.85), cardColor.opacity(0.75)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                                .fill(accent.opacity(0.06))
-                                .frame(height: 1),
-                            alignment: .top
-                        )
-                        .shadow(color: .black.opacity(0.04), radius: 8, y: 4)
+                        .fill(cardColor)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
                         .stroke(accent.opacity(0.12), lineWidth: 1)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                        .stroke(
-                            LinearGradient(
-                                colors: [accent.opacity(0.4), accent.opacity(0.08)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
                 )
         }
     }

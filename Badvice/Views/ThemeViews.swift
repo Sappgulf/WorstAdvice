@@ -121,20 +121,6 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.22), lineWidth: 1)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [accent.opacity(0.18), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .blendMode(.screen)
-                .mask(
-                    RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                )
-        )
         .overlay(alignment: .top) {
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .fill(
@@ -149,7 +135,6 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
                 .padding(.top, 1)
         }
         .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
-        .shadow(color: .black.opacity(0.07), radius: 10, x: 0, y: 4)
     }
 }
 
@@ -260,34 +245,6 @@ struct SectionShell<Header: View, Content: View>: View {
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.20), lineWidth: 1)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [accent.opacity(0.12), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .blendMode(.screen)
-                .mask(
-                    RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                )
-        )
-        .overlay(alignment: .top) {
-            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [accent.opacity(0.30), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(height: 1.5)
-                .padding(.horizontal, 16)
-                .padding(.top, 1)
-        }
-        .shadow(color: .black.opacity(0.08), radius: 9, x: 0, y: 4)
     }
 }
 
