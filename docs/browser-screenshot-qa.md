@@ -7,8 +7,10 @@ Use this checklist for browser-visible simulator proof and App Store screenshot 
 - Generate: command card, selected lane/tone, situation field, primary action, and a generated advice card.
 - Missions: Mission Command, Progression Path, Daily Mission, Weekly Mission, and Season Status.
 - Quotes: Daily pick, Daily Ritual, Quote Spotlight, and visible quote rows.
-- Friends: Friends Command, Setup Path, section picker, and either setup or first-friend state.
-- Library: Saved and History with at least one card when seeded data is available.
+- Explore: Explore Ideas, starter filters, and at least one seeded idea.
+- Challenges: Group Challenge Command, active/completed challenge state, and create/join actions.
+- Library: Quotes and Saved with at least one seeded card when available.
+- History: History command, filters, and at least one seeded history card when available.
 - Settings: theme picker, share settings, upgrade entry, and diagnostics surfaces.
 
 ## Browser Proof
@@ -16,7 +18,7 @@ Use this checklist for browser-visible simulator proof and App Store screenshot 
 1. Build and install Badvice on the selected iOS Simulator.
 2. Launch with screenshot-mode UI-test arguments for deterministic startup:
    `-ui-testing -skip-onboarding -skip-splash -ui-testing-auth-reset -ui-testing-auth-skip -screenshot-mode -debug-polish-seed 424242`.
-   Add `-screenshot-start-tab generate`, `chaosHub`, `friends`, `quotes`, `favorites`, `history`, or `settings` for the first frame you want.
+   Add `-screenshot-start-tab generate`, `chaosHub`, `explore`, `groupChallenges`, `quotes`, `favorites`, `history`, or `settings` for the first frame you want.
 3. Start `serve-sim` pinned to the same Simulator UDID.
 4. Open the printed local URL in the Codex in-app browser.
 5. Confirm the browser shows the real running app frame, not just the helper page.
@@ -34,7 +36,8 @@ By default it builds with the beta Xcode toolchain, installs on the `iPhone 17 P
 
 - `.build/screenshots/screenshot-mode/badvice-generate.png`
 - `.build/screenshots/screenshot-mode/badvice-chaosHub.png`
-- `.build/screenshots/screenshot-mode/badvice-friends.png`
+- `.build/screenshots/screenshot-mode/badvice-explore.png`
+- `.build/screenshots/screenshot-mode/badvice-groupChallenges.png`
 - `.build/screenshots/screenshot-mode/badvice-quotes.png`
 - `.build/screenshots/screenshot-mode/badvice-favorites.png`
 - `.build/screenshots/screenshot-mode/badvice-history.png`
@@ -43,7 +46,7 @@ By default it builds with the beta Xcode toolchain, installs on the `iPhone 17 P
 Pass tab raw values to capture a smaller set, for example:
 
 ```bash
-BUILD=0 scripts/capture_screenshot_mode.sh generate chaosHub quotes
+  BUILD=0 scripts/capture_screenshot_mode.sh generate chaosHub explore groupChallenges quotes
 ```
 
 The exporter waits 24 seconds for the first tab on each simulator and 12 seconds for later tabs so fresh simulator launches, screenshot-mode fixtures, and tab routing can settle. Override with `FIRST_CAPTURE_DELAY` and `CAPTURE_DELAY=6` only after checking the requested tab is captured reliably.

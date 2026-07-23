@@ -111,11 +111,11 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
             actions()
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(Theme.mediumCornerRadius)
+        .padding(Theme.cardInnerSpacing + 2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(cardColor)
+                .fill(cardColor.opacity(0.78))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
@@ -134,7 +134,6 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 1)
         }
-        .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
     }
 }
 
@@ -164,23 +163,22 @@ struct TabCommandActionButton: View {
                 .padding(.horizontal, 10)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(prominent ? buttonText : accent)
-        .opacity(isDisabled ? 0.7 : 1.0)
+        .foregroundStyle(isDisabled ? accent.opacity(0.72) : (prominent ? buttonText : accent))
         .tint(accent)
         .disabled(isDisabled)
         .modifier(ConditionalAccessibilityIdentifier(accessibilityIdentifier: accessibilityIdentifier))
         .accessibilityLabel(title)
-        .contentShape(Capsule(style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous))
         .background {
             ZStack {
-                Capsule(style: .continuous)
-                    .fill(prominent ? (isDisabled ? accent.opacity(0.10) : accent.opacity(0.16)) : .clear)
+                RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                    .fill(prominent ? (isDisabled ? accent.opacity(0.10) : accent.opacity(0.86)) : .clear)
                 if !isDisabled {
-                    Capsule(style: .continuous)
+                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    accent.opacity(prominent ? 0.24 : 0.14),
+                                    accent.opacity(prominent ? 0.18 : 0.14),
                                     accent.opacity(prominent ? 0.08 : 0.0),
                                 ],
                                 startPoint: .topLeading,
@@ -191,9 +189,9 @@ struct TabCommandActionButton: View {
                 }
             }
             .overlay(
-                Capsule(style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                         .stroke(
-                            isDisabled ? accent.opacity(0.22) : accent.opacity(prominent ? 0.48 : 0.3),
+                            isDisabled ? accent.opacity(0.24) : accent.opacity(prominent ? 0.72 : 0.3),
                             lineWidth: 1
                         )
             )
@@ -327,7 +325,7 @@ struct AdviceCategoryFilterChips: View {
             .padding(.vertical, 7)
             .frame(minHeight: 34)
             .background(
-                Capsule(style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                     .fill(isSelected ? accent.opacity(0.2) : secondaryText.opacity(0.12))
             )
             .foregroundStyle(isSelected ? accent : secondaryText)
@@ -340,7 +338,7 @@ struct AdviceCategoryFilterChips: View {
             // lose touch arbitration to the outer scroll's pan recognizer on
             // real hardware. A direct tap gesture on an explicit content shape
             // wins arbitration reliably (see GenerateTabView.selectorChip).
-            .contentShape(Capsule())
+            .contentShape(RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous))
             .onTapGesture {
                 action()
                 HapticsManager.playSelection(isEnabled: hapticsEnabled)
@@ -490,7 +488,7 @@ struct TabFocusModeToggle: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(
-                Capsule(style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                     .fill((isEnabled ? accent : accent.opacity(0.12)).opacity(isEnabled ? 0.16 : 0.08))
             )
             .foregroundStyle(isEnabled ? accent : accent)

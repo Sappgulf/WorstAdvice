@@ -64,6 +64,7 @@ struct GroupChallengesTabView: View {
                 .trackScrollForTabBar()
             }
             .navigationTitle("Group Challenges")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar { focusModeToolbar }
             .sheet(isPresented: $showCreateSheet) {

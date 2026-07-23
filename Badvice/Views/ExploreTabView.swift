@@ -73,6 +73,7 @@ struct ExploreTabView: View {
                 .trackScrollForTabBar()
             }
             .navigationTitle("Explore")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { exploreToolbar }
             .toolbarBackground(.hidden, for: .navigationBar)
             .searchable(text: $searchText, prompt: "Search starter ideas")

@@ -20,7 +20,7 @@ APP_BUNDLE_ID="${APP_BUNDLE_ID:-com.worstadvice.app}"
 if [[ "$#" -gt 0 ]]; then
   TABS=("$@")
 else
-  TABS=(generate chaosHub friends quotes favorites history settings)
+  TABS=(generate chaosHub explore groupChallenges quotes favorites history settings)
 fi
 
 APP_PATH="$DERIVED_DATA_PATH/Build/Products/Debug-iphonesimulator/Badvice.app"
