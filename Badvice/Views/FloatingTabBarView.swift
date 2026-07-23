@@ -52,7 +52,7 @@ struct FloatingTabBarView: View {
                         LinearGradient(
                             colors: [
                                 Theme.canvasColor(for: theme).opacity(0),
-                                Theme.canvasColor(for: theme).opacity(0.92),
+                                Theme.canvasColor(for: theme).opacity(0.72),
                                 Theme.canvasColor(for: theme),
                                 Theme.canvasColor(for: theme),
                             ],
@@ -61,8 +61,8 @@ struct FloatingTabBarView: View {
                         )
                             .frame(
                                 height: Theme.floatingTabBarReservedHeight
-                                    + max(42, proxy.safeAreaInsets.bottom + 32)
-                                    + 34
+                                    + max(26, proxy.safeAreaInsets.bottom + 16)
+                                    + 18
                             )
                             .frame(maxWidth: .infinity)
                             .ignoresSafeArea(.container, edges: .bottom)

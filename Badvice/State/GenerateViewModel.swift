@@ -524,6 +524,9 @@ final class GenerateViewModel {
                 poolKey: String, seenHistorically: Bool
             )] = []
         var learningCacheByScope: [String: LearningStatSnapshot] = [:]
+        // The profile is derived from the repository's aggregate learning cache. Resolve it
+        // once per generation pass instead of once for every candidate in the ranking loop.
+        let ranker = adaptiveRanker
         for (index, item) in candidatePool.enumerated() {
             let fingerprint = fingerprint(for: item.candidate)
             let candidatePoolKey = poolKey(
@@ -576,7 +579,7 @@ final class GenerateViewModel {
                 contentPack: selectedPack,
                 requestedProvider: generationProvider
             )
-            let score = adaptiveRanker.adviceScore(
+            let score = ranker.adviceScore(
                 semanticRelevance: safetyAdjustedRelevance,
                 stats: blendedLearning,
                 noveltyPenalty: noveltyPenalty,

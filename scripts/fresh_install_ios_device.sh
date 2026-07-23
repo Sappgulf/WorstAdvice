@@ -4,7 +4,21 @@ set -euo pipefail
 PROJECT_PATH="${PROJECT_PATH:-Badvice.xcodeproj}"
 SCHEME="${SCHEME:-Badvice}"
 CONFIGURATION="${CONFIGURATION:-Debug}"
-XCODE_DEVICE_ID="${XCODE_DEVICE_ID:-${DEVICE_UDID:-00008140-001404583444801C}}"
+DEFAULT_DEVICE_UDID="00008140-001404583444801C"
+if [[ -n "${XCODE_DEVICE_ID:-}" ]]; then
+  XCODE_DEVICE_ID="$XCODE_DEVICE_ID"
+elif [[ -n "${DEVICE_UDID:-}" ]]; then
+  XCODE_DEVICE_ID="$DEVICE_UDID"
+else
+  XCODE_DEVICE_ID="$(
+    xcrun xctrace list devices 2>/dev/null \
+      | sed -n '/== Devices ==/,/== Devices Offline ==/{
+          /MacBook/! s/.*(\([A-F0-9-]\{20,\}\)).*/\1/p;
+        }' \
+      | head -n 1
+  )"
+  XCODE_DEVICE_ID="${XCODE_DEVICE_ID:-$DEFAULT_DEVICE_UDID}"
+fi
 INSTALL_DEVICE_ID="${INSTALL_DEVICE_ID:-${CORE_DEVICE_ID:-$XCODE_DEVICE_ID}}"
 BUNDLE_ID="${BUNDLE_ID:-com.worstadvice.app}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PWD/.build/DeviceInstall}"

@@ -722,6 +722,9 @@ struct ContentView: View {
         }
         if isUITesting, launchArguments.contains("-ui-testing-reset-data"), !hasResetUITestData {
             activeSession?.repository.purgeCurrentAccountData()
+            for tab in AppTab.allCases {
+                UserDefaults.standard.removeObject(forKey: tab.focusModeStorageKey)
+            }
             hasResetUITestData = true
         }
         if isUITesting, launchArguments.contains("-skip-onboarding") || isScreenshotMode {
