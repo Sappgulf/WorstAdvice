@@ -42,9 +42,15 @@ struct FloatingTabBarView: View {
                 .background(widthReader)
                 .simultaneousGesture(slideGesture)
                 .padding(.horizontal, Theme.floatingTabBarInnerPadding)
-                .padding(.bottom, Theme.floatingTabBarInnerPadding)
-                .frame(minHeight: Theme.floatingTabBarReservedHeight - 10)
-                .background { tabBarBackground }
+            .padding(.bottom, Theme.floatingTabBarInnerPadding)
+            .frame(minHeight: Theme.floatingTabBarReservedHeight - 10)
+            .background { tabBarBackground }
+            .shadow(
+                color: tabBarStyle.shadow,
+                radius: tabBarStyle.shadowRadius,
+                x: 0,
+                y: -2
+            )
                 .padding(.horizontal, Theme.floatingTabBarHorizontalPadding)
                 .padding(.bottom, max(8, proxy.safeAreaInsets.bottom * 0.24))
                 .background(alignment: .bottom) {
@@ -112,17 +118,37 @@ struct FloatingTabBarView: View {
             .frame(minHeight: Theme.floatingTabItemMinHeight)
             .padding(.top, 5)
             .padding(.bottom, 5)
-                .background {
-                    if isSelected || isHighlighted {
-                        Rectangle()
-                            .fill(accent.opacity(isSelected ? 0.9 : 0.45))
-                            .frame(height: isSelected ? 3 : 2)
-                            .padding(.horizontal, max(12, tabBarStyle.indicatorInset + 10))
-                            .frame(maxHeight: .infinity, alignment: .top)
-                            .padding(.top, 1)
-                            .animation(.spring(response: Theme.animFast, dampingFraction: 0.8), value: isSelected)
-                    }
+            .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1)
+            .background {
+                if isSelected || isHighlighted {
+                    RoundedRectangle(
+                        cornerRadius: tabBarStyle.indicatorCornerRadius,
+                        style: .continuous
+                    )
+                    .fill(
+                        accent.opacity(
+                            isSelected
+                                ? tabBarStyle.selectedFillOpacity
+                                : tabBarStyle.highlightedFillOpacity
+                        )
+                    )
+                    .padding(.horizontal, 4)
+                    .transition(.opacity)
                 }
+            }
+            .overlay(alignment: .top) {
+                if isSelected || isHighlighted {
+                    Capsule(style: .continuous)
+                        .fill(accent.opacity(isSelected ? 0.9 : 0.45))
+                        .frame(height: isSelected ? 3 : 2)
+                        .padding(.horizontal, max(12, tabBarStyle.indicatorInset + 10))
+                        .padding(.top, 1)
+                        .animation(
+                            .spring(response: Theme.animFast, dampingFraction: 0.8),
+                            value: isSelected
+                        )
+                }
+            }
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -163,13 +189,23 @@ struct FloatingTabBarView: View {
             .frame(minHeight: Theme.floatingTabItemMinHeight)
             .padding(.top, 5)
             .padding(.bottom, 5)
-                .background {
+            .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1)
+            .background {
                 if isSelected {
-                    Rectangle()
+                    RoundedRectangle(
+                        cornerRadius: tabBarStyle.indicatorCornerRadius,
+                        style: .continuous
+                    )
+                    .fill(accent.opacity(tabBarStyle.selectedFillOpacity))
+                    .padding(.horizontal, 4)
+                }
+            }
+            .overlay(alignment: .top) {
+                if isSelected {
+                    Capsule(style: .continuous)
                         .fill(accent.opacity(0.9))
                         .frame(height: 3)
                         .padding(.horizontal, max(12, tabBarStyle.indicatorInset + 10))
-                        .frame(maxHeight: .infinity, alignment: .top)
                         .padding(.top, 1)
                 }
             }
@@ -214,11 +250,21 @@ struct FloatingTabBarView: View {
 
     private var tabBarBackground: some View {
         Rectangle()
-            .fill(Theme.tabBarBackground(for: theme))
+            .fill(tabBarStyle.backgroundTint)
+            .overlay {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .opacity(tabBarStyle.materialOverlayOpacity)
+            }
             .overlay(alignment: .top) {
                 Rectangle()
                     .fill(tabBarStyle.borderTop)
                     .frame(height: 0.8)
+            }
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(tabBarStyle.borderBottom)
+                    .frame(height: 0.6)
             }
     }
 

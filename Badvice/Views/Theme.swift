@@ -381,7 +381,7 @@ enum Theme {
     static func secondaryText(for mode: ThemeMode) -> Color {
         switch mode {
         case .badvice: return Color(hex: "D0C0D0") // Lighter, better contrast
-        case .minimal: return Color(hex: "8E8E93")
+        case .minimal: return Color(hex: "636366")
         case .ember: return Color(hex: "FFCAB0") // Warmer, more visible
         case .slate: return Color(hex: "CBD5E1") // Cooler, higher contrast
         case .evergreen: return Color(hex: "A5D6A7") // Lighter Green-Grey
@@ -399,14 +399,14 @@ enum Theme {
         switch mode {
         case .badvice: return Color(hex: "2D1B2E")
         case .minimal: return .white
-        case .ember: return .white
+        case .ember: return Color(hex: "24110E")
         case .slate: return Color(hex: "2C3E50")
         case .evergreen: return Color(hex: "142119")
         case .fallout: return Color(hex: "0B1008")
         case .neon: return .black
         case .midnight: return .black
         case .sunset: return .black
-        case .cosmic: return .black
+        case .cosmic: return Color(hex: "170C22")
         case .retro: return .black
         case .cybernetic: return .black
         }
