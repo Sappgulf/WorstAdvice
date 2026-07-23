@@ -41,6 +41,33 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertNotEqual(first.adviceLine, second.adviceLine)
     }
 
+    func testSeededAdviceQualityBenchmarkMaintainsVarietyAndSafety() async {
+        let engine = AdviceEngine()
+        let categories: [AdviceCategory] = [.career, .dating, .money, .social, .tech]
+        let tones: [ToneMode] = [.wizard, .influencer, .cryptoBro, .friendRoast, .corporateConsultant]
+        var outputs: [GeneratedAdvice] = []
+        let start = ContinuousClock.now
+
+        for index in 0..<8 {
+            let output = await engine.generate(
+                category: categories[index % categories.count],
+                tone: tones[index % tones.count],
+                includeRationale: true,
+                situation: "benchmark pass \(index)",
+                seed: 10_000 + index
+            )
+            outputs.append(output)
+        }
+
+        let elapsed = ContinuousClock.now - start
+        let fingerprints = Set(outputs.map { ($0.adviceLine + "|" + ($0.rationaleLine ?? "")).normalizedForFiltering })
+
+        XCTAssertGreaterThanOrEqual(fingerprints.count, 7, "Seeded generation should preserve variety across an 8-result smoke sample.")
+        XCTAssertTrue(outputs.allSatisfy { engine.validateOutput($0, for: $0.category) })
+        XCTAssertTrue(outputs.allSatisfy { $0.category != .random && $0.tone != .random })
+        XCTAssertLessThan(elapsed, .seconds(30), "Engine benchmark regressed beyond the interactive generation budget.")
+    }
+
     func testNegativeSeedStillGeneratesDeterministically() async {
         let engine = AdviceEngine()
 
