@@ -83,36 +83,20 @@ struct FloatingTabBarView: View {
     private func tabButton(_ tab: AppTab) -> some View {
         let isSelected = selectedTab == tab || (tab == .settings && showingSettingsRoot)
         let isHighlighted = tabDragHighlight == tab
-        let badgeCount = 0
-        let badgeDescription = accessibilityBadgeDescription(for: tab, badgeCount: badgeCount)
         let titleText = isSelected ? tab.title : tab.compactTitle
 
         return Button {
             handleTap(on: tab)
         } label: {
             VStack(spacing: 2) {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: tab.systemImage)
-                        .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
-                        .symbolVariant(isSelected ? .fill : .none)
-                        .foregroundStyle(
-                            isSelected
-                                ? accent
-                                : (isHighlighted ? accent.opacity(0.78) : secondaryText.opacity(0.74))
-                        )
-
-                    if badgeCount > 0 {
-                        Text(badgeCount > 99 ? "99+" : "\(badgeCount)")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .frame(minWidth: 16, minHeight: 16)
-                            .background(Capsule(style: .continuous).fill(.red))
-                            .offset(x: 10, y: -7)
-                            .accessibilityIdentifier("tab.\(tab.rawValue).badge")
-                    }
-                }
+                Image(systemName: tab.systemImage)
+                    .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
+                    .symbolVariant(isSelected ? .fill : .none)
+                    .foregroundStyle(
+                        isSelected
+                            ? accent
+                            : (isHighlighted ? accent.opacity(0.78) : secondaryText.opacity(0.74))
+                    )
 
                 Text(titleText)
                     .font(.system(size: isSelected ? 10 : 9, weight: isSelected ? .semibold : .regular, design: .rounded))
@@ -143,7 +127,7 @@ struct FloatingTabBarView: View {
         .contentShape(Rectangle())
         .accessibilityLabel(tab.title)
         .accessibilityIdentifier("tab.\(tab.rawValue)")
-        .accessibilityValue("\(isSelected ? "Selected" : "Not selected")\(badgeDescription)")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
@@ -242,16 +226,6 @@ struct FloatingTabBarView: View {
         showingSettingsRoot = false
         HapticsManager.playSelection(isEnabled: hapticsEnabled)
         onPrimaryTabSelected(tab)
-    }
-
-    private func accessibilityBadgeDescription(for tab: AppTab, badgeCount: Int) -> String {
-        if badgeCount == 0 { return "" }
-        switch tab {
-        case .chaosHub:
-            return ", daily mission needs attention"
-        default:
-            return ", \(badgeCount) new item\(badgeCount == 1 ? "" : "s")"
-        }
     }
 
     private func beginTabSlide() {

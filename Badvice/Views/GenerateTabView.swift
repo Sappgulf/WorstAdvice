@@ -1958,26 +1958,6 @@ struct GenerateTabView: View {
         }
     }
 
-    private var keywordSuggestionsRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(viewModel.keywordSuggestions, id: \.self) { suggestion in
-                    TabCommandActionButton(
-                        title: suggestion,
-                        systemImage: "sparkle",
-                        accent: accent,
-                        buttonText: buttonText,
-                        prominent: false,
-                        minHeight: 32
-                    ) {
-                        viewModel.applySuggestion(suggestion)
-                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    }
-                }
-            }
-        }
-    }
-
     private var emptyState: some View {
         TabEmptyStatePanel(
             icon: "sparkles",
