@@ -119,7 +119,7 @@ struct GroupChallengesTabView: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
                             .background(accent)
-                            .clipShape(Capsule())
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous))
                             .padding(.bottom, 32)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                             .accessibilityIdentifier("groupChallenges.copyStatus")
@@ -130,7 +130,7 @@ struct GroupChallengesTabView: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
                             .background(Color.red.opacity(0.85))
-                            .clipShape(Capsule())
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous))
                             .padding(.bottom, 32)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
@@ -559,7 +559,7 @@ private struct CompletedChallengeCard: View {
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(Color.secondary.opacity(0.15))
-                    .clipShape(Capsule())
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous))
             }
             if let winner {
                 HStack(spacing: 6) {
@@ -722,7 +722,7 @@ struct ChallengeCard: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(
-                            Capsule(style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                                 .fill(
                                     LinearGradient(
                                         colors: [Color.green.opacity(0.9), Color.green.opacity(0.5)],
@@ -731,7 +731,7 @@ struct ChallengeCard: View {
                                     )
                                 )
                         )
-                        .clipShape(Capsule())
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous))
                 }
             }
 

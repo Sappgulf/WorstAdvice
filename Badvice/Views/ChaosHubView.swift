@@ -403,7 +403,7 @@ struct ChaosHubTabView: View {
                         .padding(.horizontal, 9)
                         .padding(.vertical, 5)
                         .background(
-                            Capsule(style: .continuous)
+                            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                                 .fill(seasonStatusTint.opacity(0.12))
                         )
                 }
@@ -550,36 +550,36 @@ struct ChaosHubTabView: View {
                 }
 
                 HStack(spacing: 10) {
-                    Button {
+                    TabCommandActionButton(
+                        title: mission.isComplete ? "Run Again" : "Run Mission",
+                        systemImage: "bolt.fill",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: true,
+                        isDisabled: generateViewModel.isGenerating,
+                        accessibilityIdentifier: "chaos.mission.run",
+                        minHeight: 42
+                    ) {
                         generateViewModel.trackChaosHubAction("run_mission")
                         generateViewModel.runDailyMissionGeneration()
                         HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
                         onDataChanged()
                         onOpenTab(.generate)
-                    } label: {
-                        Label(mission.isComplete ? "Run Again" : "Run Mission", systemImage: "bolt.fill")
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 42)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(accent)
-                    .foregroundStyle(buttonText)
-                    .disabled(generateViewModel.isGenerating)
-                    .accessibilityLabel(mission.isComplete ? "Run mission again: \(mission.title)" : "Run daily mission: \(mission.title)")
-                    .accessibilityIdentifier("chaos.mission.run")
 
-                    Button {
+                    TabCommandActionButton(
+                        title: "Open Advice",
+                        systemImage: "sparkles",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        accessibilityIdentifier: "chaos.openAdvice",
+                        minHeight: 42
+                    ) {
                         generateViewModel.trackChaosHubAction("open_advice")
                         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                         onOpenTab(.generate)
-                    } label: {
-                        Label("Open Advice", systemImage: "sparkles")
-                            .font(.subheadline.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 42)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(accent)
-                    .accessibilityIdentifier("chaos.openAdvice")
                 }
             }
         }
@@ -607,7 +607,10 @@ struct ChaosHubTabView: View {
                         .foregroundStyle(accent)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 5)
-                        .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+                        .background(
+                            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                                .fill(accent.opacity(0.12))
+                        )
                 }
 
                 VStack(spacing: 9) {
@@ -915,45 +918,48 @@ struct ChaosHubTabView: View {
                     .foregroundStyle(primaryText)
 
                 HStack(spacing: 10) {
-                    Button {
+                    TabCommandActionButton(
+                        title: "Daily Drop",
+                        systemImage: "calendar.badge.clock",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        isDisabled: generateViewModel.isGenerating,
+                        accessibilityIdentifier: "chaos.quickActions.dailyDrop",
+                        minHeight: 38
+                    ) {
                         generateViewModel.trackChaosHubAction("daily_drop")
                         generateViewModel.generateDailyDrop()
                         HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
                         onDataChanged()
                         onOpenTab(.generate)
-                    } label: {
-                        Label("Daily Drop", systemImage: "calendar.badge.clock")
-                            .font(.caption.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 38)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(accent)
-                    .disabled(generateViewModel.isGenerating)
-                    .accessibilityIdentifier("chaos.quickActions.dailyDrop")
 
-                    Button {
+                    TabCommandActionButton(
+                        title: "Open Labs",
+                        systemImage: "gearshape",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        accessibilityIdentifier: "chaos.quickActions.openLabs",
+                        minHeight: 38
+                    ) {
                         openSettingsTab()
-                    } label: {
-                        Label("Open Labs", systemImage: "gearshape")
-                            .font(.caption.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 38)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(accent)
-                    .accessibilityIdentifier("chaos.quickActions.openLabs")
                 }
 
-                Button {
+                TabCommandActionButton(
+                    title: "Advice Brackets",
+                    systemImage: "trophy.fill",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    accessibilityIdentifier: "chaos.quickActions.adviceBrackets",
+                    minHeight: 38
+                ) {
                     HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
                     showingBracket = true
-                } label: {
-                    Label("Advice Brackets", systemImage: "trophy.fill")
-                        .font(.caption.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 38)
                 }
-                .buttonStyle(.bordered)
-                .tint(accent)
-                .accessibilityIdentifier("chaos.quickActions.adviceBrackets")
             }
         }
         .sheet(isPresented: $showingBracket) {
@@ -1061,7 +1067,7 @@ struct ChaosHubTabView: View {
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
         .background(
-            Capsule(style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.12))
         )
     }
@@ -1249,7 +1255,10 @@ struct ChaosHubTabView: View {
                         .font(.caption.weight(.bold))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Capsule().fill(state.isComplete ? secondaryText.opacity(0.12) : accent))
+                        .background(
+                            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                                .fill(state.isComplete ? secondaryText.opacity(0.12) : accent)
+                        )
                         .foregroundStyle(state.isComplete ? secondaryText : buttonText)
                 }
                 .disabled(state.isComplete)
