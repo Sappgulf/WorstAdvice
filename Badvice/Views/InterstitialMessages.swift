@@ -24,7 +24,7 @@ struct SettingsTabView: View {
     var achievementsManager: AchievementsManager
     var onSignOut: () -> Void
     var onDeleteAccount: (_ password: String) async -> Void
-    @AppStorage(AppTab.settings.focusModeStorageKey) private var isFocusMode = false
+    private let isFocusMode = false
 
     @State private var sectionsAppeared = false
     @State private var gearWobble = false
@@ -309,22 +309,6 @@ struct SettingsTabView: View {
                 changePasswordSheet
             case .deleteAccount:
                 deleteAccountSheet
-            }
-        }
-        .toolbar { focusModeToolbar }
-    }
-
-    @ToolbarContentBuilder
-    private var focusModeToolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            TabFocusModeToggle(
-                isEnabled: isFocusMode,
-                accent: accent
-            ) {
-                HapticsManager.playSelection(isEnabled: viewModel.hapticsEnabled)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isFocusMode.toggle()
-                }
             }
         }
     }

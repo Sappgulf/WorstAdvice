@@ -382,7 +382,7 @@ struct FavoritesTabView: View {
     @State private var listContentAppeared = false
     @State private var activeToast: ToastMessage? = nil
     @State private var isFavoritesLoading = false
-    @AppStorage(AppTab.favorites.focusModeStorageKey) private var isFocusMode = false
+    private let isFocusMode = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -582,18 +582,6 @@ struct FavoritesTabView: View {
 
     @ToolbarContentBuilder
     private var layoutToolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            TabFocusModeToggle(
-                isEnabled: isFocusMode,
-                accent: accent
-            ) {
-                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isFocusMode.toggle()
-                }
-            }
-        }
-
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button {

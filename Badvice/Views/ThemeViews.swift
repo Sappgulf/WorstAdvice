@@ -486,32 +486,6 @@ struct TabEmptyStatePanel<Actions: View>: View {
     }
 }
 
-struct TabFocusModeToggle: View {
-    let isEnabled: Bool
-    let accent: Color
-    let onToggle: () -> Void
-
-    var body: some View {
-        Button(action: onToggle) {
-            Label(
-                isEnabled ? "Focus" : "Focus",
-                systemImage: isEnabled ? "eye.slash.fill" : "eye"
-            )
-            .font(.caption.weight(.semibold))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
-                    .fill((isEnabled ? accent : accent.opacity(0.12)).opacity(isEnabled ? 0.16 : 0.08))
-            )
-            .foregroundStyle(isEnabled ? accent : accent)
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("focus.mode.toggle")
-        .accessibilityLabel(isEnabled ? "Disable focus mode" : "Enable focus mode")
-    }
-}
-
 struct ThemeBackgroundView: View {
     let mode: ThemeMode
     var budget: RenderBudget = .balanced

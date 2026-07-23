@@ -11,7 +11,7 @@ struct GroupChallengesTabView: View {
     let generateViewModel: GenerateViewModel
     let settings: SettingsViewModel
     let onOpenTab: (AppTab) -> Void
-    @AppStorage(AppTab.groupChallenges.focusModeStorageKey) private var isFocusMode = false
+    private let isFocusMode = false
 
     @State private var activeChallenges: [GroupChallenge] = Self.demoActiveChallenges
     @State private var completedChallenges: [GroupChallenge] = Self.demoCompletedChallenges
@@ -66,7 +66,6 @@ struct GroupChallengesTabView: View {
             .navigationTitle("Group Challenges")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar { focusModeToolbar }
             .sheet(isPresented: $showCreateSheet) {
                 CreateChallengeSheet(onCreate: { challenge in
                     activeChallenges.append(challenge)
@@ -288,21 +287,6 @@ struct GroupChallengesTabView: View {
             }
         }
         .accessibilityIdentifier("groupChallenges.command.card")
-    }
-
-    @ToolbarContentBuilder
-    private var focusModeToolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            TabFocusModeToggle(
-                isEnabled: isFocusMode,
-                accent: accent
-            ) {
-                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isFocusMode.toggle()
-                }
-            }
-        }
     }
 
     private var emptyStateView: some View {

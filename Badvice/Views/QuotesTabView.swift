@@ -11,7 +11,7 @@ struct QuotesTabView: View {
     @State private var showingShareSheet = false
     @State private var activeToast: ToastMessage? = nil
     @State private var showQuoteSpotlight = false
-    @AppStorage(AppTab.quotes.focusModeStorageKey) private var isFocusMode = false
+    private let isFocusMode = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -89,7 +89,6 @@ struct QuotesTabView: View {
             .navigationTitle("Quotes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar { toolbarContent }
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 Task(priority: .utility) {
@@ -105,21 +104,6 @@ struct QuotesTabView: View {
             ActivityShareSheet(items: shareItems)
         }
         .toast(item: $activeToast, accentColor: accent)
-    }
-
-    @ToolbarContentBuilder
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            TabFocusModeToggle(
-                isEnabled: isFocusMode,
-                accent: accent
-            ) {
-                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isFocusMode.toggle()
-                }
-            }
-        }
     }
 
     private var quotesFilterWorkspace: some View {

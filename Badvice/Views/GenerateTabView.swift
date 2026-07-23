@@ -33,7 +33,7 @@ struct GenerateTabView: View {
     @State private var loadingCompletionHapticArmed = false
     @State private var lastGeneratedAdviceIDForHaptics: UUID? = nil
     @State private var lastKnownStreakDays: Int = 0
-    @AppStorage(AppTab.generate.focusModeStorageKey) private var isFocusMode = false
+    private let isFocusMode = false
     @AppStorage("hasDismissedWhatsNewCard_2026_02c") private var hasDismissedWhatsNewCard = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -280,21 +280,6 @@ struct GenerateTabView: View {
         )
     }
 
-    @ToolbarContentBuilder
-    private var focusModeToolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            TabFocusModeToggle(
-                isEnabled: isFocusMode,
-                accent: accent
-            ) {
-                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isFocusMode.toggle()
-                }
-            }
-        }
-    }
-
     private var generateToolsSection: some View {
         DisclosureGroup(
             isExpanded: $showingAdvanced.animation(
@@ -440,7 +425,6 @@ struct GenerateTabView: View {
                 .scrollDismissesKeyboard(.interactively)
                 .coordinateSpace(name: "scroll")
                 .trackScrollForTabBar()
-                .toolbar { focusModeToolbar }
                 .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 24)
                 .refreshable {
                     // Pull to generate new advice

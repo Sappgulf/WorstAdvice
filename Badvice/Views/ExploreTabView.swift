@@ -9,7 +9,7 @@ struct ExploreTabView: View {
     @State private var searchText = ""
     @State private var selectedCategory: AdviceCategory?
     @State private var selectedTone: ToneMode?
-    @AppStorage(AppTab.explore.focusModeStorageKey) private var isFocusMode = false
+    private let isFocusMode = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
@@ -74,7 +74,6 @@ struct ExploreTabView: View {
             }
             .navigationTitle("Explore")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { exploreToolbar }
             .toolbarBackground(.hidden, for: .navigationBar)
             .searchable(text: $searchText, prompt: "Search starter ideas")
             .onAppear {
@@ -371,21 +370,6 @@ struct ExploreTabView: View {
             return "Clear Filters"
         }
         return "Use First Idea"
-    }
-
-    @ToolbarContentBuilder
-    private var exploreToolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            TabFocusModeToggle(
-                isEnabled: isFocusMode,
-                accent: accent
-            ) {
-                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isFocusMode.toggle()
-                }
-            }
-        }
     }
 
     private func loadTrending() async {

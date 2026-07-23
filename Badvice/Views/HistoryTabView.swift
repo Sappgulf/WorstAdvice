@@ -23,7 +23,7 @@ struct HistoryTabView: View {
     @Bindable var generateViewModel: GenerateViewModel
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
-    @AppStorage(AppTab.history.focusModeStorageKey) private var isFocusMode = false
+    private let isFocusMode = false
     var onUseRecord: (AdviceRecord) -> Void
     var onDataChanged: () -> Void
     var onJumpToGenerate: (() -> Void)? = nil
@@ -213,7 +213,6 @@ struct HistoryTabView: View {
             }
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { focusModeToolbar }
             .toolbarBackground(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .confirmationDialog(
@@ -242,21 +241,6 @@ struct HistoryTabView: View {
             }
         }
         .toast(item: $activeToast, accentColor: accent)
-    }
-
-    @ToolbarContentBuilder
-    private var focusModeToolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            TabFocusModeToggle(
-                isEnabled: isFocusMode,
-                accent: accent
-            ) {
-                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isFocusMode.toggle()
-                }
-            }
-        }
     }
 
     // MARK: - Hall of Fame
