@@ -19,7 +19,6 @@ struct FloatingTabBarView: View {
     @State private var tabDragHighlight: AppTab? = nil
     @State private var tabSlideModeActive = false
     @State private var tabSlideLastIndex: Int?
-    @State private var tabSlideLastSwitchX: CGFloat = 0
     @State private var tabSlideLastHapticTab: AppTab?
     @State private var tabSlideLastSwitchAt: Date = .distantPast
 
@@ -140,10 +139,16 @@ struct FloatingTabBarView: View {
             showingShellMenu = true
         } label: {
             VStack(spacing: 2) {
-                Image(systemName: "ellipsis.circle")
-                    .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
-                    .symbolEffect(.bounce.up.byLayer, value: isSelected)
-                    .foregroundStyle(isSelected ? accent : secondaryText.opacity(0.74))
+                Group {
+                    if reduceMotion {
+                        Image(systemName: "ellipsis.circle")
+                    } else {
+                        Image(systemName: "ellipsis.circle")
+                            .symbolEffect(.bounce.up.byLayer, value: isSelected)
+                    }
+                }
+                .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
+                .foregroundStyle(isSelected ? accent : secondaryText.opacity(0.74))
 
                 Text("More")
                     .font(.system(size: 9, weight: isSelected ? .semibold : .regular, design: .rounded))
@@ -237,12 +242,6 @@ struct FloatingTabBarView: View {
         }
         tabDragHighlight = selectedTab
         tabSlideLastIndex = tabs.firstIndex(of: selectedTab) ?? 0
-        if tabBarWidth > 0 {
-            let tabWidth = tabBarWidth / CGFloat(tabs.count + 1)
-            tabSlideLastSwitchX = (CGFloat(tabSlideLastIndex ?? 0) + 0.5) * tabWidth
-        } else {
-            tabSlideLastSwitchX = 0
-        }
         tabSlideLastSwitchAt = Date()
         tabSlideLastHapticTab = selectedTab
         HapticsManager.playSelection(isEnabled: hapticsEnabled)
@@ -281,7 +280,6 @@ struct FloatingTabBarView: View {
 
         guard let lastIndex = tabSlideLastIndex else {
             tabSlideLastIndex = hoveredIndex
-            tabSlideLastSwitchX = clampedX
             return
         }
 
@@ -300,7 +298,6 @@ struct FloatingTabBarView: View {
         }
 
         tabSlideLastIndex = hoveredIndex
-        tabSlideLastSwitchX = clampedX
         tabSlideLastSwitchAt = now
         if tabSlideLastHapticTab != hoveredTab {
             HapticsManager.playSelection(isEnabled: hapticsEnabled)
@@ -319,7 +316,6 @@ struct FloatingTabBarView: View {
         tabSlideModeActive = false
         tabSlideLastIndex = nil
         tabSlideLastHapticTab = nil
-        tabSlideLastSwitchX = 0
         tabSlideLastSwitchAt = .distantPast
     }
 }
