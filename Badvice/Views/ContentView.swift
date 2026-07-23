@@ -973,7 +973,7 @@ struct ContentView: View {
                 settingsPresented: showingSettingsRoot,
                 quickAccessTabs: brandMenuTabs(),
                 onResetAllLocalAccounts: {
-                    await resetAllLocalAccounts(using: auth!, session: session)
+                    await resetAllLocalAccounts(using: auth, session: session)
                 }
             )
         case .chaosHub:

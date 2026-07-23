@@ -748,6 +748,20 @@ struct SettingsTabView: View {
                     settingsNavRow("Community Pulse", systemImage: "chart.bar.xaxis", badge: nil)
                 }
                 .buttonStyle(.plain)
+
+                settingsDivider
+
+                NavigationLink {
+                    SocialDiagnosticsView(social: social, settings: viewModel)
+                } label: {
+                    settingsNavRow(
+                        "Social Diagnostics",
+                        systemImage: "waveform.path.ecg",
+                        badge: social.queuedActionCount > 0 ? "\(social.queuedActionCount)" : nil,
+                        accessibilityIdentifier: "settings.socialHealth.open"
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -1921,5 +1935,143 @@ struct SettingsTabView: View {
                         .stroke(accent.opacity(0.12), lineWidth: 1)
                 )
         }
+    }
+}
+
+struct SocialDiagnosticsView: View {
+    @Bindable var social: SocialViewModel
+    @Bindable var settings: SettingsViewModel
+
+    @State private var isCopyingReport = false
+
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var diagnostics: SocialCloudKitDiagnostics { social.availability.diagnostics }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                statusCard
+                reportCard
+                actionCard
+            }
+            .padding(16)
+            .padding(.bottom, Theme.tabContentBottomInset)
+        }
+        .navigationTitle("Social Diagnostics")
+        .navigationBarTitleDisplayMode(.inline)
+        .preferredColorScheme(Theme.colorScheme(for: settings.theme))
+        .task {
+            await social.refreshAvailability()
+        }
+    }
+
+    private var statusCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Social Health", systemImage: "waveform.path.ecg")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(primaryText)
+
+            Text(social.availability.message)
+                .font(.subheadline)
+                .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("settings.socialHealth.status")
+
+            HStack(spacing: 8) {
+                diagnosticValue("Account", diagnostics.accountStatusLabel)
+                diagnosticValue("Queued", "\(social.queuedActionCount)")
+                diagnosticValue("Reports", "\(social.queuedModerationReportCount)")
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private var reportCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Diagnostic Report")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(primaryText)
+
+            Text(diagnostics.text(includeDebugDetails: false))
+                .font(.caption.monospaced())
+                .foregroundStyle(secondaryText)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("settings.socialHealth.report")
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme).opacity(0.76))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .stroke(secondaryText.opacity(0.14), lineWidth: 1)
+        )
+    }
+
+    private var actionCard: some View {
+        VStack(spacing: 10) {
+            TabCommandActionButton(
+                title: social.isRefreshingSocialData ? "Refreshing..." : "Retry Queue",
+                systemImage: "arrow.clockwise",
+                accent: accent,
+                buttonText: Theme.buttonText(for: settings.theme),
+                isDisabled: social.isRefreshingSocialData,
+                accessibilityIdentifier: "settings.socialHealth.retryQueue"
+            ) {
+                Task {
+                    await social.retryAvailabilityStatus()
+                    await social.retryQueuedActions()
+                }
+            }
+
+            TabCommandActionButton(
+                title: isCopyingReport ? "Copied" : "Copy Report",
+                systemImage: isCopyingReport ? "checkmark" : "doc.on.doc",
+                accent: accent,
+                buttonText: Theme.buttonText(for: settings.theme),
+                prominent: false,
+                accessibilityIdentifier: "settings.socialHealth.copyReport"
+            ) {
+                UIPasteboard.general.string = diagnostics.text(includeDebugDetails: true)
+                isCopyingReport = true
+                Task {
+                    try? await Task.sleep(for: .seconds(1.4))
+                    isCopyingReport = false
+                }
+            }
+        }
+    }
+
+    private func diagnosticValue(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.caption.weight(.bold).monospaced())
+                .foregroundStyle(primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
+                .fill(accent.opacity(0.08))
+        )
     }
 }
