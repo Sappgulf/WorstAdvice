@@ -172,7 +172,7 @@ struct TabCommandActionButton: View {
         .background {
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-                    .fill(prominent ? (isDisabled ? accent.opacity(0.08) : accent.opacity(0.72)) : .clear)
+                    .fill(prominent ? (isDisabled ? accent.opacity(0.08) : accent.opacity(0.62)) : .clear)
                 if !isDisabled {
                     RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                         .fill(
@@ -237,11 +237,11 @@ struct SectionShell<Header: View, Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(cardColor.opacity(0.74))
+                .fill(cardColor.opacity(0.58))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.14), lineWidth: 1)
+                .stroke(accent.opacity(0.10), lineWidth: 1)
         )
         .overlay(alignment: .top) {
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
@@ -252,7 +252,7 @@ struct SectionShell<Header: View, Content: View>: View {
                         endPoint: .trailing
                     )
                 )
-                .frame(height: 1)
+                .frame(height: 0.8)
                 .padding(.horizontal, 18)
                 .padding(.top, 1)
         }

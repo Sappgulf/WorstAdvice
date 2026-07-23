@@ -119,23 +119,6 @@ struct FloatingTabBarView: View {
             .padding(.top, 5)
             .padding(.bottom, 5)
             .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1)
-            .background {
-                if isSelected || isHighlighted {
-                    RoundedRectangle(
-                        cornerRadius: tabBarStyle.indicatorCornerRadius,
-                        style: .continuous
-                    )
-                    .fill(
-                        accent.opacity(
-                            isSelected
-                                ? tabBarStyle.selectedFillOpacity
-                                : tabBarStyle.highlightedFillOpacity
-                        )
-                    )
-                    .padding(.horizontal, 4)
-                    .transition(.opacity)
-                }
-            }
             .overlay(alignment: .top) {
                 if isSelected || isHighlighted {
                     Capsule(style: .continuous)
@@ -190,16 +173,6 @@ struct FloatingTabBarView: View {
             .padding(.top, 5)
             .padding(.bottom, 5)
             .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1)
-            .background {
-                if isSelected {
-                    RoundedRectangle(
-                        cornerRadius: tabBarStyle.indicatorCornerRadius,
-                        style: .continuous
-                    )
-                    .fill(accent.opacity(tabBarStyle.selectedFillOpacity))
-                    .padding(.horizontal, 4)
-                }
-            }
             .overlay(alignment: .top) {
                 if isSelected {
                     Capsule(style: .continuous)

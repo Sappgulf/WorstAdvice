@@ -540,28 +540,13 @@ struct ExploreTabView: View {
                 .foregroundStyle(secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [accent.opacity(0.18), accent.opacity(0.06)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.24), lineWidth: 1)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
-                .fill(accent.opacity(0.08))
-                .frame(height: 1.2),
-            alignment: .top
-        )
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(accent.opacity(0.18))
+                .frame(height: 1)
+        }
     }
 
     private static var demoTrendingAdvice: [TrendingAdvice] {

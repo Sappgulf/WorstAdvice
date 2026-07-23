@@ -555,7 +555,6 @@ enum Theme {
                 surfaceMood: "Velvet Paper",
                 bestFor: "Best for the core Badvice vibe",
                 effectIntensity: 0.62,
-                indicatorCornerRadius: 16,
                 indicatorInset: 2
             )
         case .minimal:
@@ -564,7 +563,6 @@ enum Theme {
                 surfaceMood: "Studio Flat",
                 bestFor: "Best for focus and readability",
                 effectIntensity: 0.12,
-                indicatorCornerRadius: 10,
                 indicatorInset: 3
             )
         case .ember:
@@ -573,7 +571,6 @@ enum Theme {
                 surfaceMood: "Kiln Glow",
                 bestFor: "Best for warm, dramatic contrast",
                 effectIntensity: 0.58,
-                indicatorCornerRadius: 14,
                 indicatorInset: 2
             )
         case .slate:
@@ -582,7 +579,6 @@ enum Theme {
                 surfaceMood: "Steel Glass",
                 bestFor: "Best for calm dashboards",
                 effectIntensity: 0.4,
-                indicatorCornerRadius: 12,
                 indicatorInset: 2
             )
         case .evergreen:
@@ -591,7 +587,6 @@ enum Theme {
                 surfaceMood: "Canopy Grain",
                 bestFor: "Best for longer sessions",
                 effectIntensity: 0.55,
-                indicatorCornerRadius: 15,
                 indicatorInset: 2
             )
         case .fallout:
@@ -600,7 +595,6 @@ enum Theme {
                 surfaceMood: "Pip-Boy Phosphor",
                 bestFor: "Best for terminal-flavored UI",
                 effectIntensity: 0.7,
-                indicatorCornerRadius: 10,
                 indicatorInset: 2
             )
         case .neon:
@@ -609,7 +603,6 @@ enum Theme {
                 surfaceMood: "Arcade Grid",
                 bestFor: "Best for high-energy browsing",
                 effectIntensity: 0.9,
-                indicatorCornerRadius: 8,
                 indicatorInset: 1
             )
         case .midnight:
@@ -618,7 +611,6 @@ enum Theme {
                 surfaceMood: "Nocturne Film",
                 bestFor: "Best for late-night sessions",
                 effectIntensity: 0.68,
-                indicatorCornerRadius: 18,
                 indicatorInset: 2
             )
         case .sunset:
@@ -627,7 +619,6 @@ enum Theme {
                 surfaceMood: "Amber Bloom",
                 bestFor: "Best for rich gradients",
                 effectIntensity: 0.64,
-                indicatorCornerRadius: 20,
                 indicatorInset: 3
             )
         case .cosmic:
@@ -636,7 +627,6 @@ enum Theme {
                 surfaceMood: "Starfield Mist",
                 bestFor: "Best for dramatic depth",
                 effectIntensity: 0.84,
-                indicatorCornerRadius: 6,
                 indicatorInset: 1
             )
         case .retro:
@@ -645,7 +635,6 @@ enum Theme {
                 surfaceMood: "Synth Scan",
                 bestFor: "Best for playful nostalgia",
                 effectIntensity: 0.78,
-                indicatorCornerRadius: 4,
                 indicatorInset: 1
             )
         case .cybernetic:
@@ -654,7 +643,6 @@ enum Theme {
                 surfaceMood: "Liquid Wired",
                 bestFor: "Best for sharp tech contrast",
                 effectIntensity: 0.88,
-                indicatorCornerRadius: 2,
                 indicatorInset: 1
             )
         }
@@ -675,9 +663,6 @@ enum Theme {
             borderBottom: .white.opacity(0.06 + personality.effectIntensity * 0.04),
             shadow: cardShadow(for: mode).color.opacity(0.28),
             shadowRadius: CGFloat(8 + personality.effectIntensity * 5),
-            selectedFillOpacity: 0.10 + personality.effectIntensity * 0.08,
-            highlightedFillOpacity: 0.05 + personality.effectIntensity * 0.05,
-            indicatorCornerRadius: personality.indicatorCornerRadius,
             indicatorInset: personality.indicatorInset,
             selectedScale: CGFloat(1.02 + personality.effectIntensity * 0.015),
             glow: nil
@@ -690,7 +675,6 @@ struct ThemePersonality: Sendable {
     let surfaceMood: String
     let bestFor: String
     let effectIntensity: Double
-    let indicatorCornerRadius: CGFloat
     let indicatorInset: CGFloat
 }
 
@@ -701,9 +685,6 @@ struct ThemeTabBarStyle: Sendable {
     let borderBottom: Color
     let shadow: Color
     let shadowRadius: CGFloat
-    let selectedFillOpacity: Double
-    let highlightedFillOpacity: Double
-    let indicatorCornerRadius: CGFloat
     let indicatorInset: CGFloat
     let selectedScale: CGFloat
     let glow: Color?
