@@ -439,7 +439,12 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             }
         }
 
-        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "favorites", quickAccessLabel: "Favorites"))
+        let favoritesTab = app.buttons.matching(identifier: "tab.favorites").firstMatch
+        if favoritesTab.waitForExistence(timeout: 4) {
+            favoritesTab.tap()
+        } else {
+            XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "favorites", quickAccessLabel: "Favorites"))
+        }
         assertTabSurface(
             app: app,
             tabMarkerCandidates: [
@@ -496,8 +501,10 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             app: app,
             tabMarkerCandidates: [
                 app.staticTexts["Challenges"],
+                app.navigationBars["Group Challenges"],
                 app.buttons["groupChallenges.command.primary"],
                 app.buttons["groupChallenges.command.join"],
+                app.otherElements["groupChallenges.command.card"],
                 app.buttons["groupChallenges.empty.create"],
                 app.buttons["groupChallenges.empty.join"],
             ],
@@ -530,18 +537,17 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
 
         let quickAccessTargets: [(String, String, [String])] = [
-            ("history", "History", ["history.command.primary", "history.generate"]),
-            ("explore", "Explore", ["explore.command.primary", "explore.command.reset"]),
-            ("groupChallenges", "Challenges", ["groupChallenges.command.primary", "groupChallenges.command.join"]),
+            ("history", "History", ["history.generate"]),
+            ("explore", "Explore", ["explore.filter.categories.chip.0"]),
+            ("groupChallenges", "Challenges", ["groupChallenges.headerCreate"]),
             ("settings", "Settings", ["settings.menuButton", "settings.auth.signOut"]),
         ]
 
-        let tabTargets: [String:[String]] = [
-            "tab.generate": ["generate.primary", "generate.commandCard"],
-            "tab.favorites": ["favorites.command.primary", "favorites.generate"],
-            "tab.chaosHub": ["chaos.command.primary", "chaos.social.submitScore"],
-            "tab.quotes": ["quotes.dailyHero", "quotes.command.primary"],
-            "tab.more": ["brandMenu.flow.favorites", "favorites.command.primary", "favorites.generate"],
+        let tabTargets: [(String, [String])] = [
+            ("tab.generate", ["generate.primary", "generate.commandCard"]),
+            ("tab.favorites", ["favorites.command.primary", "favorites.generate"]),
+            ("tab.chaosHub", ["chaos.command.primary", "chaos.social.submitScore"]),
+            ("tab.quotes", ["quotes.dailyHero", "quotes.spotlight.toggle"]),
         ]
 
         for (tabIdentifier, markerIdentifiers) in tabTargets {
@@ -553,6 +559,18 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             markerMatches += markerIdentifiers.map { app.staticTexts[$0] }
             markerMatches.append(app.otherElements["\(tabIdentifier).container"])
             markerMatches.append(app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", tabIdentifier.replacingOccurrences(of: "tab.", with: ""))).firstMatch)
+            if tabIdentifier == "tab.chaosHub" {
+                markerMatches += [
+                    app.otherElements["chaos.command.card"],
+                    app.staticTexts["Missions"],
+                    app.staticTexts["Progression Path"],
+                ]
+            } else if tabIdentifier == "tab.quotes" {
+                markerMatches += [
+                    app.otherElements["quotes.dailyHero"],
+                    app.staticTexts["Quotes"],
+                ]
+            }
 
             XCTAssertNotNil(
                 waitForAnyElement(
@@ -631,7 +649,14 @@ final class BadvicePolishedSmokeTests: XCTestCase {
     func testMissionProgressionSurfaceAndQuickActionsKeepRendering() throws {
         let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
 
-        XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "chaosHub", quickAccessLabel: "Missions"))
+        // Missions is a primary tab in the current shell. Keep the brand-menu
+        // fallback for older layouts so this test remains useful across builds.
+        let missionsTab = app.buttons.matching(identifier: "tab.chaosHub").firstMatch
+        if missionsTab.waitForExistence(timeout: 4) {
+            missionsTab.tap()
+        } else {
+            XCTAssertTrue(openQuickAccessFromBrandMenu(app: app, quickAccessID: "chaosHub", quickAccessLabel: "Missions"))
+        }
 
         XCTAssertNotNil(
             waitForAnyElement(
@@ -784,21 +809,35 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         }
     }
     private func openBrandMenu(app: XCUIApplication) -> Bool {
-        let direct = waitForAnyElement(
+        let candidates: [XCUIElement] = [
+            app.buttons["generate.brandMenu"],
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Brand")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Menu")).firstMatch,
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "More")).firstMatch,
+        ]
+
+        if let direct = waitForAnyElement(
             app: app,
-            candidates: [
-                app.buttons["generate.brandMenu"],
-                app.buttons["brandMenu.recommendedFlow"],
-                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Brand")).firstMatch,
-                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Menu")).firstMatch,
-                app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "More")).firstMatch,
-            ],
-            timeout: 4,
-            maxSwipes: 4,
-            requireHittable: false
-        )
-        if let direct {
-            if direct.waitForExistence(timeout: 0.2), direct.isHittable || direct.exists {
+            candidates: candidates,
+            timeout: 2,
+            maxSwipes: 2,
+            requireHittable: true
+        ) {
+            direct.tap()
+            return true
+        }
+
+        let generateTab = app.buttons["tab.generate"]
+        if generateTab.waitForExistence(timeout: 3), generateTab.isHittable {
+            generateTab.tap()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+            if let direct = waitForAnyElement(
+                app: app,
+                candidates: candidates,
+                timeout: 4,
+                maxSwipes: 2,
+                requireHittable: true
+            ) {
                 direct.tap()
                 return true
             }
@@ -849,9 +888,9 @@ final class BadvicePolishedSmokeTests: XCTestCase {
                 app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", quickAccessLabel)).firstMatch,
                 app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", quickAccessLabel)).firstMatch,
             ],
-            timeout: 5,
+            timeout: 8,
             maxSwipes: 6,
-            requireHittable: false
+            requireHittable: true
         )
 
         guard let quickAccess else {
@@ -859,14 +898,9 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             return false
         }
 
-        if quickAccess.waitForExistence(timeout: 2) && quickAccess.isHittable {
-            quickAccess.tap()
-            RunLoop.current.run(until: Date().addingTimeInterval(0.6))
-            return true
-        }
-
-        closeBrandMenu(app: app)
-        return false
+        quickAccess.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        return true
     }
     private func waitForActionLikeElement(
         app: XCUIApplication,

@@ -1126,12 +1126,15 @@ struct ContentView: View {
 
     @ViewBuilder
     private func lazyTabContent(for tab: AppTab, session: AppSessionViewModel) -> some View {
-        if loadedTabs.contains(tab) || selectedTab == tab {
-            tabView(for: tab, session: session)
-        } else {
-            Color.clear
-                .accessibilityHidden(true)
+        Group {
+            if loadedTabs.contains(tab) || selectedTab == tab {
+                tabView(for: tab, session: session)
+            } else {
+                Color.clear
+                    .accessibilityHidden(true)
+            }
         }
+        .accessibilityIdentifier("tab.\(tab.rawValue).container")
     }
 
     private func resetAllLocalAccounts(

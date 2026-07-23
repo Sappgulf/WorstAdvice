@@ -75,10 +75,6 @@ final class BadviceFullSmokeTests: XCTestCase {
             brandMenuButton.tap()
             // Verify brand menu sheet appeared
             let brandMenuDone = app.buttons["Done"]
-            let favoritesQuickAccess = app.buttons["brandMenu.quickAccess.favorites"]
-            let favoritesQuickAccessByLabel = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Favorites")).firstMatch
-            let favoritesQuickAccessCell = app.cells.matching(NSPredicate(format: "label CONTAINS[c] %@", "Favorites")).firstMatch
-            let favoritesQuickAccessText = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Favorites")).firstMatch
             let historyQuickAccess = app.buttons["brandMenu.quickAccess.history"]
             let historyQuickAccessByLabel = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "History")).firstMatch
             let historyQuickAccessCell = app.cells.matching(NSPredicate(format: "label CONTAINS[c] %@", "History")).firstMatch
@@ -87,10 +83,6 @@ final class BadviceFullSmokeTests: XCTestCase {
                 app: app,
                 candidates: [
                     brandMenuDone,
-                    favoritesQuickAccess,
-                    favoritesQuickAccessByLabel,
-                    favoritesQuickAccessCell,
-                    favoritesQuickAccessText,
                     historyQuickAccess,
                     historyQuickAccessByLabel,
                     historyQuickAccessCell,
@@ -104,38 +96,11 @@ final class BadviceFullSmokeTests: XCTestCase {
             )
             XCTAssertNotNil(menuPresented, "Brand menu quick access should appear")
 
-            let favoritesTarget: XCUIElement? = favoritesQuickAccess.exists ? favoritesQuickAccess
-                : (favoritesQuickAccessByLabel.exists ? favoritesQuickAccessByLabel
-                   : (favoritesQuickAccessCell.exists ? favoritesQuickAccessCell : (
-                        favoritesQuickAccessText.exists ? favoritesQuickAccessText : nil)))
-
-            if let favoritesTarget {
-                favoritesTarget.tap()
-            } else {
-                print("Skipping favorites quick access because no favorites entry is visible in this menu style.")
-            }
-
-            if favoritesTarget != nil {
-                XCTAssertTrue(
-                    app.navigationBars["Favorites"].waitForExistence(timeout: 5)
-                        || app.staticTexts["Favorites"].waitForExistence(timeout: 5),
-                    "Favorites tab should open from the brand menu"
-                )
-
-                let generateTabAfterFavorites = app.buttons.matching(identifier: "tab.generate").firstMatch
-                if generateTabAfterFavorites.waitForExistence(timeout: 5) {
-                    generateTabAfterFavorites.tap()
-                }
-            }
-
             if let reopenBrandMenu = findBrandMenuButton(app: app, timeout: 5, maxSwipes: 8) {
                 reopenBrandMenu.tap()
                 _ = waitForAnyElement(
                     app: app,
                     candidates: [
-                        favoritesQuickAccessByLabel,
-                        favoritesQuickAccessCell,
-                        favoritesQuickAccessText,
                         historyQuickAccessByLabel,
                         historyQuickAccessCell,
                         historyQuickAccessText,
@@ -175,6 +140,22 @@ final class BadviceFullSmokeTests: XCTestCase {
                 brandMenuDone.tap()
             } else {
                 dismissTopScreen(app: app)
+            }
+        }
+
+        // ── 2b. Favorites (primary tab, not brand menu) ──
+        let favoritesTab = app.buttons.matching(identifier: "tab.favorites").firstMatch
+        if favoritesTab.waitForExistence(timeout: 5) {
+            favoritesTab.tap()
+            XCTAssertTrue(
+                app.navigationBars["Favorites"].waitForExistence(timeout: 5)
+                    || app.staticTexts["Favorites"].waitForExistence(timeout: 5),
+                "Favorites tab should open from the primary tab bar"
+            )
+
+            let generateTabAfterFavorites = app.buttons.matching(identifier: "tab.generate").firstMatch
+            if generateTabAfterFavorites.waitForExistence(timeout: 5) {
+                generateTabAfterFavorites.tap()
             }
         }
 
