@@ -2042,20 +2042,20 @@ private struct LoadingAdviceView: View {
             VStack(spacing: 14) {
                 ZStack {
                     Circle()
-                        .stroke(accentColor.opacity(0.18), lineWidth: 4)
-                        .frame(width: 48, height: 48)
+                        .stroke(accentColor.opacity(0.14), lineWidth: 5)
+                        .frame(width: 62, height: 62)
 
                     Circle()
-                        .trim(from: 0.12, to: 0.82)
+                        .trim(from: 0.08, to: 0.78)
                         .stroke(
                             LinearGradient(
                                 colors: [.white.opacity(0.9), accentColor],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
-                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                            style: StrokeStyle(lineWidth: 5, lineCap: .round)
                         )
-                        .frame(width: 48, height: 48)
+                        .frame(width: 62, height: 62)
                         .rotationEffect(.degrees(effectiveReduceMotion ? 0 : ringRotation))
                         .animation(
                             effectiveReduceMotion
@@ -2064,8 +2064,16 @@ private struct LoadingAdviceView: View {
                             value: ringRotation
                         )
 
+                    Circle()
+                        .stroke(
+                            accentColor.opacity(0.28),
+                            style: StrokeStyle(lineWidth: 1, lineCap: .round, dash: [2, 7])
+                        )
+                        .frame(width: 48, height: 48)
+                        .rotationEffect(.degrees(effectiveReduceMotion ? 0 : -ringRotation * 0.65))
+
                     Image(systemName: "sparkles")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(accentColor)
                         .scaleEffect(ringPulse ? 1.0 : 0.92)
                     .animation(
@@ -2076,13 +2084,8 @@ private struct LoadingAdviceView: View {
                     )
                 }
 
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .tint(accentColor)
-                    .padding(.bottom, 2)
-
                 Text(phaseTitle)
-                    .font(.caption2.weight(.semibold))
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(primaryTextColor.opacity(0.88))
 
                 Text(currentMessage)
@@ -2091,12 +2094,39 @@ private struct LoadingAdviceView: View {
                     .multilineTextAlignment(.center)
                     .animation(.easeInOut(duration: 0.2), value: messageTick)
 
-                ProgressView(value: loadingProgress, total: 1.0)
-                    .progressViewStyle(.linear)
-                    .tint(accentColor)
-                    .scaleEffect(y: 0.7)
-                    .padding(.top, -2)
-                    .padding(.horizontal, 16)
+                VStack(spacing: 7) {
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule(style: .continuous)
+                                .fill(secondaryTextColor.opacity(0.12))
+                            Capsule(style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [accentColor.opacity(0.72), accentColor],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: max(8, proxy.size.width * loadingProgress))
+                        }
+                    }
+                    .frame(height: 6)
+
+                    HStack(spacing: 5) {
+                        ForEach(0..<4, id: \.self) { index in
+                            Circle()
+                                .fill(index == min(messageTick / 14, 3) ? accentColor : secondaryTextColor.opacity(0.2))
+                                .frame(width: 5, height: 5)
+                        }
+                        Spacer(minLength: 0)
+                        Text("SAFE • DISTINCT • ON BRAND")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .tracking(0.7)
+                            .foregroundStyle(secondaryTextColor.opacity(0.72))
+                    }
+                }
+                .padding(.top, 2)
+                .padding(.horizontal, 16)
 
                 Text("Generating advice")
                     .font(.caption.weight(.medium))

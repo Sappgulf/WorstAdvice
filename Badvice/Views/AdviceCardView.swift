@@ -59,67 +59,64 @@ struct AdviceCardView: View {
         let cardRadius = Theme.cardCornerRadius + 2
 
         VStack(alignment: .leading, spacing: 0) {
-            // Meta row
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
-                    AdviceBadgePill(
-                        text: record.category.title,
-                        systemImage: record.category.icon,
-                        tint: accent,
-                        fill: accent.opacity(0.13),
-                        stroke: .clear,
-                        showsStroke: false,
-                        minWidth: nil,
-                        theme: theme
-                    )
-                    .layoutPriority(1)
+            // Compact context rail: the card has one visual anchor instead of a stack of pills.
+            HStack(spacing: 8) {
+                Image(systemName: record.category.icon)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(accent)
+                Text(record.category.title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(accent)
+                    .lineLimit(1)
 
-                    AdviceBadgePill(
-                        text: record.tone.title,
-                        systemImage: "dial.medium",
-                        tint: toneBadgeTint,
-                        fill: secondaryText.opacity(theme == .minimal ? 0.13 : 0.10),
-                        stroke: secondaryText.opacity(0.12),
-                        showsStroke: true,
-                        minWidth: nil,
-                        theme: theme
-                    )
-                    .layoutPriority(0)
+                Circle()
+                    .fill(secondaryText.opacity(0.35))
+                    .frame(width: 3, height: 3)
 
-                    Spacer(minLength: 0)
-                }
+                Image(systemName: "dial.medium")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(toneBadgeTint)
+                Text(record.tone.title)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(toneBadgeTint)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
 
                 if let sourceBadgeText, !sourceBadgeText.isEmpty {
-                    HStack(spacing: 0) {
-                        AdviceBadgePill(
-                            text: sourceBadgeText,
-                            systemImage: nil,
-                            tint: providerBadgeTint,
-                            fill: providerBadgeTint.opacity(theme == .minimal ? 0.16 : 0.14),
-                            stroke: providerBadgeTint.opacity(0.25),
-                            showsStroke: true,
-                            minWidth: nil,
-                            theme: theme
-                        )
-                        .shadow(
-                            color: isMotionReduced ? .clear : providerBadgeTint.opacity(0.08),
-                            radius: 4,
-                            y: 1
-                        )
+                    Label(sourceBadgeText, systemImage: "cpu")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(providerBadgeTint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                         .accessibilityLabel("Generation source")
                         .accessibilityValue(sourceBadgeText)
-
-                        Spacer(minLength: 0)
-                    }
                 }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(record.category.title), \(record.tone.title)")
 
-            // Decorative quote mark — scales with Dynamic Type
+            Rectangle()
+                .fill(accent.opacity(0.16))
+                .frame(height: 1)
+                .padding(.top, 10)
+
+            HStack(spacing: 8) {
+                Text("THE TAKE")
+                    .font(.caption2.weight(.heavy))
+                    .tracking(1.4)
+                    .foregroundStyle(secondaryText.opacity(0.72))
+                Rectangle()
+                    .fill(secondaryText.opacity(0.18))
+                    .frame(height: 1)
+            }
+            .padding(.top, 14)
+
+            // Decorative quote mark — scales with Dynamic Type.
             Text("\u{201C}")
                 .font(.system(size: quoteFontSize, weight: .heavy, design: .serif))
                 .foregroundStyle(accent.opacity(0.22))
                 .frame(height: 24)
-                .padding(.top, 10)
                 .offset(y: 4)
 
             // Advice text
