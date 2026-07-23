@@ -610,6 +610,9 @@ private struct ChallengeDetailSheet: View {
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var rankedEntries: [ChallengeEntry] {
+        Array(challenge.leaderboard.sorted { $0.score > $1.score }.prefix(3))
+    }
 
     var body: some View {
         NavigationStack {
@@ -636,7 +639,7 @@ private struct ChallengeDetailSheet: View {
                     }
                 }
                 Section("Leaderboard") {
-                    ForEach(Array(challenge.leaderboard.sorted { $0.score > $1.score }.enumerated()), id: \.element.id) { rank, entry in
+                    ForEach(Array(rankedEntries.enumerated()), id: \.element.id) { rank, entry in
                         HStack {
                             Text(rankEmoji(rank + 1))
                             Text(entry.userName).font(.body.weight(.semibold)).foregroundStyle(primaryText)

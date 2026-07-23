@@ -424,15 +424,16 @@ struct ChaosHubTabView: View {
                 }
 
                 if let action = seasonStatusActionTitle {
-                    Button(action) {
+                    TabCommandActionButton(
+                        title: action,
+                        systemImage: action == "Continue Locally" ? "iphone" : (social.leaderboard.isEmpty ? "paperplane.fill" : "arrow.clockwise"),
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: action != "Continue Locally",
+                        accessibilityIdentifier: "chaos.season.primary"
+                    ) {
                         performSeasonStatusAction()
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(accent)
-                    .foregroundStyle(buttonText)
-                    .font(.caption.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 40)
-                    .accessibilityIdentifier("chaos.season.primary")
                 }
             }
         }
@@ -832,7 +833,7 @@ struct ChaosHubTabView: View {
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 } else if social.currentUser == nil {
-                    Text("Create your profile in Friends to compete in leaderboard seasons.")
+                    Text("Social scoring is not ready for this account yet. Continue locally and your mission progress will stay on this device.")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 } else if social.leaderboard.isEmpty {
@@ -841,7 +842,7 @@ struct ChaosHubTabView: View {
                         .foregroundStyle(secondaryText)
                 } else {
                     VStack(spacing: 8) {
-                        ForEach(Array(social.leaderboard.prefix(5).enumerated()), id: \.offset) {
+                        ForEach(Array(social.leaderboard.prefix(5).enumerated()), id: \.element.id) {
                             idx, item in
                             HStack(spacing: 8) {
                                 Text("\(idx + 1).")
@@ -861,35 +862,45 @@ struct ChaosHubTabView: View {
                     }
                 }
 
-                HStack(spacing: 10) {
-                    Button {
-                        Task {
-                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                            await social.submitChaosScore(Int64(chaosScore))
+                if social.socialFeaturesEnabled {
+                    HStack(spacing: 10) {
+                        TabCommandActionButton(
+                            title: "Submit Score",
+                            systemImage: "paperplane.fill",
+                            accent: accent,
+                            buttonText: buttonText,
+                            accessibilityIdentifier: "chaos.social.submitScore"
+                        ) {
+                            Task {
+                                HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                                await social.submitChaosScore(Int64(chaosScore))
+                            }
                         }
-                    } label: {
-                        Label("Submit Score", systemImage: "paperplane.fill")
-                            .font(.caption.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 38)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(accent)
-                    .foregroundStyle(buttonText)
-                    .disabled(!social.socialFeaturesEnabled)
-                    .accessibilityIdentifier("chaos.social.submitScore")
 
-                    Button {
-                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        Task { await social.refreshLeaderboard(force: true) }
-                    } label: {
-                        Label("Refresh", systemImage: "arrow.clockwise")
-                            .font(.caption.weight(.semibold))
-                            .frame(maxWidth: .infinity, minHeight: 38)
+                        TabCommandActionButton(
+                            title: "Refresh",
+                            systemImage: "arrow.clockwise",
+                            accent: accent,
+                            buttonText: buttonText,
+                            prominent: false,
+                            accessibilityIdentifier: "chaos.social.refreshLeaderboard"
+                        ) {
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                            Task { await social.refreshLeaderboard(force: true) }
+                        }
                     }
-                    .buttonStyle(.bordered)
-                    .tint(accent)
-                    .disabled(!social.socialFeaturesEnabled)
-                    .accessibilityIdentifier("chaos.social.refreshLeaderboard")
+                } else {
+                    TabCommandActionButton(
+                        title: "Continue Locally",
+                        systemImage: "iphone",
+                        accent: accent,
+                        buttonText: buttonText,
+                        prominent: false,
+                        accessibilityIdentifier: "chaos.social.continueLocally"
+                    ) {
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        onOpenTab(.generate)
+                    }
                 }
             }
         }
@@ -955,7 +966,7 @@ struct ChaosHubTabView: View {
             return social.availability.message
         }
         if social.currentUser == nil {
-            return "The season leaderboard isn't active for this account yet. Keep running missions — your local score still counts."
+            return "Social scoring is not ready for this account yet. Keep running missions — your local score still counts."
         }
         if social.leaderboard.isEmpty {
             return "You are season-ready. Submit the first score and establish the board instead of waiting for activity to appear."
@@ -990,7 +1001,9 @@ struct ChaosHubTabView: View {
     }
 
     private var seasonStatusActionTitle: String? {
-        guard social.availability.isAvailable, social.currentUser != nil else { return nil }
+        guard social.availability.isAvailable, social.currentUser != nil else {
+            return "Continue Locally"
+        }
         if social.leaderboard.isEmpty {
             return "Submit Opening Score"
         }
@@ -998,8 +1011,11 @@ struct ChaosHubTabView: View {
     }
 
     private func performSeasonStatusAction() {
-        guard social.currentUser != nil else { return }
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        guard social.availability.isAvailable, social.currentUser != nil else {
+            onOpenTab(.generate)
+            return
+        }
         Task {
             if social.leaderboard.isEmpty {
                 await social.submitChaosScore(Int64(chaosScore))
