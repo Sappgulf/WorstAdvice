@@ -294,9 +294,6 @@ struct QuotesTabView: View {
                 Label(quote.category.title, systemImage: quote.category.icon)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(accent)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
 
                 Text("•")
                     .font(.caption2.weight(.bold))
@@ -389,13 +386,8 @@ struct QuotesTabView: View {
                 HStack {
                     Text("Daily Ritual")
                         .font(.caption.weight(.bold))
+                        .tracking(1.0)
                         .foregroundStyle(accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule(style: .continuous)
-                                .fill(accent.opacity(0.12))
-                        )
                         .accessibilityIdentifier("quotes.dailyRitual.title")
                     Spacer()
                 }
@@ -503,10 +495,8 @@ struct QuotesTabView: View {
         .overlay(alignment: .topTrailing) {
             Text("TODAY")
                 .font(.caption2.weight(.bold))
+                .tracking(1.2)
                 .foregroundStyle(accent)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(accent.opacity(0.12), in: Capsule(style: .continuous))
                 .padding(12)
         }
         .overlay(

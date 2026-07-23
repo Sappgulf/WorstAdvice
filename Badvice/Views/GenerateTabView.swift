@@ -1007,12 +1007,7 @@ struct GenerateTabView: View {
                 Text("Keep it tight.")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(accent)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(accent.opacity(0.12))
-                    )
+                    .tracking(0.4)
             }
 
             VStack(alignment: .leading, spacing: 10) {
@@ -1081,12 +1076,7 @@ struct GenerateTabView: View {
                     .foregroundStyle(accent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule(style: .continuous)
-                            .fill(accent.opacity(0.12))
-                    )
+                    .accessibilityLabel("Selected (selectedSummary)")
             }
             .accessibilityIdentifier(accessibilityPrefix)
 
@@ -1120,11 +1110,11 @@ struct GenerateTabView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
         .background(
-            Capsule(style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(accent.opacity(0.2))
         )
         .overlay(
-            Capsule(style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(accent.opacity(0.35), lineWidth: 1)
         )
     }
@@ -1138,6 +1128,11 @@ struct GenerateTabView: View {
         action: @escaping () -> Void
     ) -> some View {
         HStack(spacing: 5) {
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .font(.caption2.weight(.heavy))
+            }
+
             if let icon {
                 Image(systemName: icon)
                     .font(.caption.weight(.bold))
@@ -1156,7 +1151,7 @@ struct GenerateTabView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
         .background(
-            Capsule(style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(isSelected ? accent.opacity(0.18) : secondaryText.opacity(0.12))
         )
         .foregroundStyle(isSelected ? buttonText : primaryText)
@@ -1166,7 +1161,7 @@ struct GenerateTabView: View {
             value: isSelected
         )
         .overlay(
-            Capsule(style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(
                     isSelected
                         ? accent.opacity(0.35)
@@ -1179,7 +1174,7 @@ struct GenerateTabView: View {
         // ScrollView's pan recognizer on real hardware (simulator taps have no
         // analog jitter, so this never reproduced there). A direct tap gesture
         // on an explicit content shape wins arbitration reliably.
-        .contentShape(Capsule())
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onTapGesture(perform: action)
         .accessibilityIdentifier(accessibilityID)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
