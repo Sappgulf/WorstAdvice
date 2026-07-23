@@ -172,14 +172,14 @@ struct TabCommandActionButton: View {
         .background {
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-                    .fill(prominent ? (isDisabled ? accent.opacity(0.10) : accent.opacity(0.86)) : .clear)
+                    .fill(prominent ? (isDisabled ? accent.opacity(0.08) : accent.opacity(0.72)) : .clear)
                 if !isDisabled {
                     RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    accent.opacity(prominent ? 0.18 : 0.14),
-                                    accent.opacity(prominent ? 0.08 : 0.0),
+                                    accent.opacity(prominent ? 0.12 : 0.12),
+                                    accent.opacity(prominent ? 0.03 : 0.0),
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -191,7 +191,7 @@ struct TabCommandActionButton: View {
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
                         .stroke(
-                            isDisabled ? accent.opacity(0.24) : accent.opacity(prominent ? 0.72 : 0.3),
+                            isDisabled ? accent.opacity(0.20) : accent.opacity(prominent ? 0.58 : 0.26),
                             lineWidth: 1
                         )
             )
@@ -237,12 +237,25 @@ struct SectionShell<Header: View, Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(cardColor)
+                .fill(cardColor.opacity(0.74))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.20), lineWidth: 1)
+                .stroke(accent.opacity(0.14), lineWidth: 1)
         )
+        .overlay(alignment: .top) {
+            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.44), accent.opacity(0.04), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(height: 1)
+                .padding(.horizontal, 18)
+                .padding(.top, 1)
+        }
     }
 }
 

@@ -176,15 +176,6 @@ struct QuotesTabView: View {
                 .accessibilityLabel("Filter quotes by category")
             }
 
-            AdviceCategoryFilterChips(
-                selectedCategory: $viewModel.selectedCategory,
-                accent: accent,
-                secondaryText: secondaryText,
-                hapticsEnabled: settings.hapticsEnabled,
-                reduceMotion: isMotionReduced,
-                accessibilityPrefix: "quotes.category"
-            )
-
 #if DEBUG
             HStack(spacing: 10) {
                 Label("Source", systemImage: "ladybug")
@@ -206,7 +197,7 @@ struct QuotesTabView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
-                        Capsule(style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                             .fill(accent.opacity(0.14))
                     )
             }

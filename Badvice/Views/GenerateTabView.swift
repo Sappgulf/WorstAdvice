@@ -119,9 +119,16 @@ struct GenerateTabView: View {
                             )
                         )
 
-                    Image(systemName: headerIconName)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(buttonText)
+                    if settings.theme == .badvice {
+                        Image("BadviceMark")
+                            .resizable()
+                            .scaledToFit()
+                            .padding(9)
+                    } else {
+                        Image(systemName: headerIconName)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(buttonText)
+                    }
                 }
                 .frame(width: 44, height: 44)
                 .shadow(color: accent.opacity(0.18), radius: 10, x: 0, y: 4)
@@ -149,7 +156,7 @@ struct GenerateTabView: View {
                     .padding(.horizontal, 7)
                     .padding(.vertical, 5)
                     .background(
-                        Capsule(style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                             .fill(Color.orange.opacity(0.14))
                     )
                     .accessibilityLabel("\(viewModel.challengeStreakDays) day streak")
@@ -567,7 +574,7 @@ struct GenerateTabView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(
-                        Capsule(style: .continuous)
+                        RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                             .fill(accent.opacity(0.12))
                     )
             }

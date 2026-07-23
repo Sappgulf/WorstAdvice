@@ -228,7 +228,10 @@ private struct FavoriteListRow: View {
                         .foregroundStyle(accent)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+                        .background(
+                            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                                .fill(accent.opacity(0.12))
+                        )
 
                     Text(record.tone.title)
                         .font(.caption)
@@ -303,7 +306,10 @@ private struct FavoriteGridCell: View {
                     .foregroundStyle(accent)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(Capsule(style: .continuous).fill(accent.opacity(0.12)))
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                            .fill(accent.opacity(0.12))
+                    )
                 Spacer(minLength: 0)
                 if record.aftermathNote != nil {
                     Image(systemName: "book.pages")
