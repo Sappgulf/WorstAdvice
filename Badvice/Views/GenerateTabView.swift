@@ -924,66 +924,6 @@ struct GenerateTabView: View {
         .accessibilityLabel("Daily progress")
     }
 
-    private var resultNextStepCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: resultNextStepIcon)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(accent)
-                    .frame(width: 28, height: 28)
-                    .background(Circle().fill(accent.opacity(0.12)))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(resultNextStepTitle)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(primaryText)
-                        .accessibilityIdentifier("generate.resultNextStep.title")
-                    Text(resultNextStepDetail)
-                        .font(.caption)
-                        .foregroundStyle(secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 0)
-            }
-
-            HStack(spacing: 8) {
-                compactResultButton(
-                    title: viewModel.isCurrentFavorite ? "Saved" : "Save",
-                    systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
-                    accessibilityID: "generate.resultNextStep.save"
-                ) {
-                    toggleCurrentFavorite()
-                }
-                compactResultButton(
-                    title: "Share",
-                    systemImage: "square.and.arrow.up",
-                    accessibilityID: "generate.resultNextStep.share"
-                ) {
-                    shareCurrentAdvice()
-                }
-                compactResultButton(
-                    title: "Remix",
-                    systemImage: "bolt.fill",
-                    accessibilityID: "generate.resultNextStep.remix"
-                ) {
-                    remixCurrentAdvice()
-                }
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-                .fill(cardColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-                        .stroke(accent.opacity(0.1), lineWidth: 1)
-                )
-        )
-        .accessibilityIdentifier("generate.resultNextStep")
-    }
-
     private var resultNextStepIcon: String {
         if !viewModel.isCurrentFavorite { return "bookmark" }
         if viewModel.todayGeneratedCount <= 1 { return "square.and.arrow.up" }
@@ -994,36 +934,6 @@ struct GenerateTabView: View {
         if !viewModel.isCurrentFavorite { return "Keep the keeper" }
         if viewModel.todayGeneratedCount <= 1 { return "Send it or remix it" }
         return "Tune the punchline"
-    }
-
-    private var resultNextStepDetail: String {
-        if !viewModel.isCurrentFavorite {
-            return "Save the useful line first so it lands in Favorites and your weekly recap."
-        }
-        if viewModel.todayGeneratedCount <= 1 {
-            return "Share the first hit, then remix only if the tone needs a sharper edge."
-        }
-        return "You have a few runs today. Remix selectively so the result still feels intentional."
-    }
-
-    private func compactResultButton(
-        title: String,
-        systemImage: String,
-        accessibilityID: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        TabCommandActionButton(
-            title: title,
-            systemImage: systemImage,
-            accent: accent,
-            buttonText: buttonText,
-            prominent: false,
-            isDisabled: viewModel.isGenerating,
-            minHeight: 36
-        ) {
-            action()
-        }
-        .accessibilityIdentifier(accessibilityID)
     }
 
     private func progressStep(title: String, systemImage: String, isComplete: Bool) -> some View {
