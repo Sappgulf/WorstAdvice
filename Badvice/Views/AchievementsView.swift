@@ -404,13 +404,17 @@ struct AchievementCelebrationView: View {
                     HapticsManager.playSelection(isEnabled: hapticsEnabled)
                     dismiss()
                 } label: {
-                    Text("Awesome!")
+                    Text("Seal it")
                         .font(.system(.body, design: .rounded, weight: .bold))
-                        .foregroundStyle(Theme.buttonText(for: theme))
+                        .foregroundStyle(Theme.espressoInk)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(Theme.accent(for: theme))
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.tileCornerRadius))
+                        .background(Theme.copperEmbossGradient)
+                        .clipShape(Capsule(style: .continuous))
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                        )
                 }
                 .padding(.horizontal, 40)
             }
@@ -542,7 +546,12 @@ struct AchievementsView: View {
                     .trim(from: 0, to: manager.completionPercentage)
                     .stroke(
                         AngularGradient(
-                            colors: [accent, .yellow, accent],
+                            colors: [
+                                Theme.copperFoilLight,
+                                accent,
+                                Theme.copperFoilDeep,
+                                accent,
+                            ],
                             center: .center
                         ),
                         style: StrokeStyle(lineWidth: 12, lineCap: .round)

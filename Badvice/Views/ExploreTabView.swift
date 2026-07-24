@@ -654,18 +654,20 @@ struct ExploreTabView: View {
     }
 }
 
-    struct FilterChip: View {
-        let title: String
-        var icon: String? = nil
-        let isSelected: Bool
-        var accent: Color = .accentColor
-        var primaryText: Color = .primary
-        var secondaryText: Color = .secondary
-        let accessibilityIdentifier: String
-        let buttonText: Color
-        let action: () -> Void
+// MARK: - Filter chip (shared by Explore + community filters)
 
-        var body: some View {
+struct FilterChip: View {
+    let title: String
+    var icon: String? = nil
+    let isSelected: Bool
+    var accent: Color = .accentColor
+    var primaryText: Color = .primary
+    var secondaryText: Color = .secondary
+    let accessibilityIdentifier: String
+    let buttonText: Color
+    let action: () -> Void
+
+    var body: some View {
         TabCommandActionButton(
             title: title,
             systemImage: icon,

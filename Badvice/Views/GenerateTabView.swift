@@ -844,23 +844,39 @@ struct GenerateTabView: View {
     }
 
     private var generationHeroMetrics: some View {
-        LazyVGrid(
-            columns: [
-                GridItem(.flexible(), spacing: 8),
-                GridItem(.flexible(), spacing: 8),
-            ],
-            spacing: 8
-        ) {
-            generationHeroChip(
-                title: "Lane",
-                value: viewModel.selectedCategory.title,
-                systemImage: "square.grid.2x2"
-            )
-            generationHeroChip(
-                title: "Tone",
-                value: viewModel.selectedTone.title,
-                systemImage: "message.fill"
-            )
+        VStack(alignment: .leading, spacing: 8) {
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 8),
+                    GridItem(.flexible(), spacing: 8),
+                ],
+                spacing: 8
+            ) {
+                generationHeroChip(
+                    title: "Lane",
+                    value: viewModel.selectedCategory.title,
+                    systemImage: "square.grid.2x2"
+                )
+                generationHeroChip(
+                    title: "Tone",
+                    value: viewModel.selectedTone.title,
+                    systemImage: "message.fill"
+                )
+            }
+            HStack(spacing: 8) {
+                Text("INTENSITY")
+                    .font(.caption2.weight(.heavy))
+                    .foregroundStyle(secondaryText.opacity(0.8))
+                    .tracking(0.8)
+                IntensityIndicator(
+                    tone: viewModel.selectedTone,
+                    theme: settings.theme,
+                    reduceMotion: isMotionReduced
+                )
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 4)
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -997,23 +1013,38 @@ struct GenerateTabView: View {
     }
 
     private var toneSelector: some View {
-        chipSelector(
-            title: "Tone",
-            accessibilityPrefix: "generate.tone",
-            selectedSummary: viewModel.selectedTone.title
-        ) {
-            ForEach(Array(ToneMode.allCases.enumerated()), id: \.element.id) { index, tone in
-                selectorChip(
-                    label: tone.title,
-                    icon: tone.isPremium ? "sparkles" : nil,
-                    isPremium: tone.isPremium,
-                    isSelected: viewModel.selectedTone == tone,
-                    accessibilityID: "generate.tone.chip.\(index)"
-                ) {
-                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                    viewModel.updateTone(tone, autoGenerate: false)
+        VStack(alignment: .leading, spacing: 8) {
+            chipSelector(
+                title: "Tone",
+                accessibilityPrefix: "generate.tone",
+                selectedSummary: viewModel.selectedTone.title
+            ) {
+                ForEach(Array(ToneMode.allCases.enumerated()), id: \.element.id) { index, tone in
+                    selectorChip(
+                        label: tone.title,
+                        icon: tone.isPremium ? "sparkles" : nil,
+                        isPremium: tone.isPremium,
+                        isSelected: viewModel.selectedTone == tone,
+                        accessibilityID: "generate.tone.chip.\(index)"
+                    ) {
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        viewModel.updateTone(tone, autoGenerate: false)
+                    }
                 }
             }
+
+            HStack(spacing: 8) {
+                Text("Intensity")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(secondaryText)
+                IntensityIndicator(
+                    tone: viewModel.selectedTone,
+                    theme: settings.theme,
+                    reduceMotion: isMotionReduced
+                )
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 2)
         }
     }
 

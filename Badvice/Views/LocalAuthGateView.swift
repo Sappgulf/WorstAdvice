@@ -60,14 +60,14 @@ struct LocalAuthGateView: View {
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity, minHeight: 38)
-                .foregroundStyle(isSelected ? .white : accent)
+                .foregroundStyle(isSelected ? Theme.espressoInk : accent)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(isSelected ? accent : Color.clear)
+                        .fill(isSelected ? AnyShapeStyle(Theme.copperEmbossGradient) : AnyShapeStyle(Color.clear))
                 )
                 .overlay(
                     Capsule(style: .continuous)
-                        .stroke(accent.opacity(isSelected ? 0 : 0.18), lineWidth: 1)
+                        .stroke(accent.opacity(isSelected ? 0.35 : 0.28), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
@@ -97,42 +97,53 @@ struct LocalAuthGateView: View {
     }
 
     var body: some View {
-        let accent = Color(hex: "8F4A22")
+        let accent = Theme.copperFoilMid
+        let parchment = Theme.parchmentWarm
+        let secondary = Color(hex: "D0C0D0")
 
         ZStack {
-            LinearGradient(
-                colors: [Color(hex: "F7F2E8"), Color(hex: "EBDAC8"), Color(hex: "F8F4EE")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            FloatingParticlesView(theme: .minimal, reduceMotion: true, isGenerating: false)
-                .opacity(0.2)
+            Theme.backgroundGradient(for: .badvice)
                 .ignoresSafeArea()
+
+            FloatingParticlesView(theme: .badvice, reduceMotion: true, isGenerating: false)
+                .opacity(0.28)
+                .ignoresSafeArea()
+
+            CinematicVignetteView()
+                .opacity(0.55)
+                .allowsHitTesting(false)
 
             ScrollView {
                 VStack(spacing: 24) {
                     VStack(spacing: 12) {
                         ZStack {
                             Circle()
-                                .fill(accent.opacity(0.12))
+                                .fill(Theme.copperEmbossGradient)
+                                .frame(width: 92, height: 92)
+                                .shadow(color: Theme.copperFoilDeep.opacity(0.4), radius: 14, y: 6)
+                            Circle()
+                                .stroke(Color.white.opacity(0.28), lineWidth: 1)
                                 .frame(width: 92, height: 92)
                             Image(systemName: "person.crop.circle.badge.checkmark")
-                                .font(.system(size: 42, weight: .semibold))
-                                .foregroundStyle(accent)
+                                .font(.system(size: 40, weight: .semibold))
+                                .foregroundStyle(Theme.espressoInk)
                         }
 
+                        Text("LOCAL SEAL REQUIRED")
+                            .font(.caption2.weight(.heavy))
+                            .tracking(1.3)
+                            .foregroundStyle(accent)
+
                         Text("Local account required")
-                            .font(.system(.title2, design: .rounded, weight: .bold))
-                            .foregroundStyle(Theme.headerColor(for: .minimal))
+                            .font(.system(.title2, design: .serif, weight: .bold))
+                            .foregroundStyle(parchment)
 
                         Text(
                             "Create a Badvice account on this device, or sign back in to keep your chaos behind a real password."
                         )
                         .font(.subheadline)
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(Color.primary.opacity(0.68))
+                        .foregroundStyle(secondary.opacity(0.9))
                         .padding(.horizontal, 12)
 
                         FlexibleChipRow(items: authPills, accent: accent)
@@ -149,7 +160,7 @@ struct LocalAuthGateView: View {
                                 "Use it to protect your history and preserve streak progress on this device."
                             )
                             .font(.caption)
-                            .foregroundStyle(Color.primary.opacity(0.62))
+                            .foregroundStyle(secondary.opacity(0.85))
 
                             HStack(spacing: 10) {
                                 authBenefitMetric(title: "Protected", value: "History")
@@ -161,11 +172,11 @@ struct LocalAuthGateView: View {
                         .padding(16)
                         .background(
                             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(accent.opacity(0.08))
+                                .fill(Theme.cardColor(for: .badvice))
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(accent.opacity(0.12), lineWidth: 1)
+                                .stroke(accent.opacity(0.22), lineWidth: 1)
                         )
 
                         HStack(spacing: 8) {
@@ -222,7 +233,7 @@ struct LocalAuthGateView: View {
                                     : "Accounts are stored only on this device."
                             )
                             .font(.caption)
-                            .foregroundStyle(Color.primary.opacity(0.58))
+                            .foregroundStyle(Color(hex: "D0C0D0").opacity(0.85))
                             if authMode == .signUp,
                                 !trimmedDisplayName.isEmpty,
                                 !LocalAccountValidation.isValidDisplayName(trimmedDisplayName)
@@ -272,16 +283,20 @@ struct LocalAuthGateView: View {
                             HStack(spacing: 10) {
                                 if auth.isSubmitting {
                                     ProgressView()
-                                        .tint(.white)
+                                        .tint(Theme.espressoInk)
                                 }
-                                Text(authMode == .signUp ? "Create Account" : "Sign In")
+                                Text(authMode == .signUp ? "Stamp Account" : "Sign In")
                                     .font(.system(.body, design: .rounded, weight: .bold))
                             }
                             .frame(maxWidth: .infinity, minHeight: 54)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.espressoInk)
                             .background(
-                                RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                                    .fill(accent)
+                                Capsule(style: .continuous)
+                                    .fill(Theme.copperEmbossGradient)
+                            )
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .stroke(Color.white.opacity(0.28), lineWidth: 1)
                             )
                         }
                         .buttonStyle(.plain)
@@ -312,22 +327,18 @@ struct LocalAuthGateView: View {
                     .padding(24)
                     .background(
                         RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
-                            .fill(.ultraThinMaterial)
+                            .fill(Theme.cardColor(for: .badvice))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: Theme.heroCornerRadius, style: .continuous)
-                            .stroke(accent.opacity(0.15), lineWidth: 1)
+                            .stroke(accent.opacity(0.22), lineWidth: 1)
                     )
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 36)
             }
         }
-        // This screen's background/accent are hardcoded to a light, warm palette
-        // (not theme-adaptive like the rest of the app), so it must be pinned to
-        // light appearance — otherwise system-adaptive text/material/fields flip
-        // to dark-mode rendering against the light gradient and become unreadable.
-        .preferredColorScheme(.light)
+        .preferredColorScheme(.dark)
         .onAppear {
             if !auth.hasAccounts {
                 authMode = .signUp
@@ -366,11 +377,11 @@ private struct FlexibleChipRow: View {
             .padding(.vertical, 8)
             .background(
                 Capsule(style: .continuous)
-                    .fill(.white.opacity(0.7))
+                    .fill(Theme.cardColor(for: .badvice).opacity(0.9))
             )
             .overlay(
                 Capsule(style: .continuous)
-                    .stroke(accent.opacity(0.12), lineWidth: 1)
+                    .stroke(accent.opacity(0.28), lineWidth: 1)
             )
     }
 }
@@ -381,10 +392,10 @@ private extension LocalAuthGateView {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.primary.opacity(0.52))
+                .foregroundStyle(Color(hex: "D0C0D0").opacity(0.8))
             Text(value)
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Theme.headerColor(for: .minimal))
+                .foregroundStyle(Theme.parchmentWarm)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
