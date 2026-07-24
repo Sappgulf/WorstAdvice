@@ -86,7 +86,13 @@ extension AdviceEngine {
         "Maintain speed so that skeptics seem slow rather than correct.",
         "Keep the clock ticking so reflection feels like a luxury you're above.",
         "Move faster than the feedback can organize itself into an argument.",
-        "Run at a tempo where 'but why?' expires before anyone finishes asking."
+        "Run at a tempo where 'but why?' expires before anyone finishes asking.",
+        "Treat the pause button like a career-limiting feature.",
+        "Keep the throttle pinned until the narrative becomes inevitable.",
+        "If the room needs a breath, give them a deadline instead.",
+        "Accelerate until your calendar is the only stakeholder that matters.",
+        "Make haste look like governance and call the dust 'process.'",
+        "Outrun the recap so the recap has to invent you as the protagonist."
     ]
 
     static let rationaleLeads = [
@@ -106,7 +112,12 @@ extension AdviceEngine {
         "Optimism report:",
         "Momentum log:",
         "Strategic conjecture:",
-        "High-conviction summary:"
+        "High-conviction summary:",
+        "Editorial seal:",
+        "Chaos ledger note:",
+        "Infernal methodology:",
+        "Stamp-of-approval logic:",
+        "Unlicensed board brief:"
     ]
 
     static let pivotPhrases = [
@@ -134,7 +145,14 @@ extension AdviceEngine {
         "Package every setback as a bold first chapter.",
         "Elevate the vision until the obstacles look small.",
         "Anchor to the story and let the facts negotiate later.",
-        "Treat the friction as proof the market isn't ready for you."
+        "Treat the friction as proof the market isn't ready for you.",
+        "If it sounds reckless, rebrand it as founder energy.",
+        "Keep the plot thick enough that accountability gets lost in the lore.",
+        "Treat every soft no as a soft yes with homework.",
+        "If the plan is thin, increase the confidence font size.",
+        "Convert every delay into a teaser campaign for the eventual win.",
+        "When evidence is missing, ship vibes with footnotes.",
+        "Make the bold claim first and invent the framework in the Q&A."
     ]
 
     static let escalationClauses = [
@@ -378,7 +396,11 @@ extension AdviceEngine {
             "Deploy strategic vagueness and call it keeping things light.",
             "Treat honesty as an advanced move and delay it indefinitely.",
             "If it gets real, introduce a hypothetical and exit gracefully.",
-            "Schedule an exclusive conversation, then cancel it for mystery."
+            "Schedule an exclusive conversation, then cancel it for mystery.",
+            "Keep a soft launch window open until the soft launch soft-launches.",
+            "Treat green flags as a UX problem with the interface of commitment.",
+            "If they ask for clarity, send a deck instead of an answer.",
+            "Make reciprocity optional and call it secure independence."
         ],
         .fitness: [
             "If your calendar panics, that is proof of commitment.",
@@ -575,7 +597,10 @@ extension AdviceEngine {
             "Stream sniping your own friends counts as content, not betrayal.",
             "If your rank drops, the servers were clearly the problem.",
             "Backseat gaming your friend is basically a love language.",
-            "The fourth energy drink of the raid is a hydration strategy."
+            "The fourth energy drink of the raid is a hydration strategy.",
+            "Treat every loss as matchmaking conspiracy research.",
+            "If you tilt, double the volume and call it focus mode.",
+            "Skip the tutorial and invent mastery mid-match.",
         ],
         .weddings: [
             "If the seating chart causes a fight, that means it's working.",

@@ -89,24 +89,27 @@ struct ExploreTabView: View {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [accent.opacity(0.95), accent.opacity(0.48)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    Image(systemName: "sparkles")
+                        .fill(Theme.copperEmbossGradient)
+                        .shadow(color: Theme.copperFoilDeep.opacity(0.35), radius: 10, y: 5)
+                    Image(systemName: "safari.fill")
                         .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.espressoInk)
                 }
                 .frame(width: 54, height: 54)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                        .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                )
 
                 VStack(alignment: .leading, spacing: 6) {
+                    Text("IDEA BOARD")
+                        .font(.caption2.weight(.heavy))
+                        .tracking(1.2)
+                        .foregroundStyle(accent)
                     Text("Explore Ideas")
-                        .font(.title2.bold())
+                        .font(.system(.title2, design: .serif, weight: .bold))
                         .foregroundStyle(primaryText)
-                    Text("Browse starter combinations, tune the filters, then send the best setup straight into Advice.")
+                    Text("Browse starter dispatches, tune lane and voice, then stamp one into Advice.")
                         .font(.subheadline)
                         .foregroundStyle(secondaryText)
                 }
@@ -130,7 +133,7 @@ struct ExploreTabView: View {
 
     private var exploreCommandCard: some View {
         TabCommandCard(
-            eyebrow: "Explore Command",
+            eyebrow: "Idea Desk",
             title: exploreCommandTitle,
             detail: exploreCommandDetail,
             systemImage: "safari.fill",
@@ -352,19 +355,19 @@ struct ExploreTabView: View {
             return "Reset the idea board"
         }
         if isFilterActive {
-            return "Turn this filter into a generation setup"
+            return "Stamp this filter into a setup"
         }
-        return "Pick a starter and jump into Advice"
+        return "Pick a dispatch and open Advice"
     }
 
     private var exploreCommandDetail: String {
         if filteredTrending.isEmpty {
-            return "No seeded ideas match the current search and filters. Reset the board or loosen one filter."
+            return "No seeded ideas match the current search and filters. Reset the board or loosen one lane."
         }
         if isFilterActive {
-            return "The board is narrowed to \(filteredTrending.count) idea\(filteredTrending.count == 1 ? "" : "s"). Open one to carry its category and tone into Advice."
+            return "Board narrowed to \(filteredTrending.count) idea\(filteredTrending.count == 1 ? "" : "s"). Open one to carry lane and voice into Advice."
         }
-        return "Explore is a launchpad, not a passive feed. Each idea opens Advice with the matching category and tone."
+        return "Explore is a launchpad. Each idea opens Advice with the matching category and tone already sealed."
     }
 
     private var explorePrimaryActionTitle: String {
@@ -375,8 +378,10 @@ struct ExploreTabView: View {
     }
 
     private func loadTrending() async {
-        guard trendingAdvice.isEmpty else { return }
-        trendingAdvice = Self.demoTrendingAdvice
+        // Always seed the expanded demo board; filters operate on the full catalog.
+        if trendingAdvice.count < Self.demoTrendingAdvice.count {
+            trendingAdvice = Self.demoTrendingAdvice
+        }
     }
 
     private func resetCategoryFilter() {
@@ -539,7 +544,7 @@ struct ExploreTabView: View {
         [
             TrendingAdvice(
                 id: UUID(),
-                adviceLine: "Just skip the meeting and call it 'executive delegation.'",
+                adviceLine: "Just skip the meeting and call it executive delegation.",
                 category: .career,
                 tone: .corporateConsultant,
                 likeCount: 142,
@@ -548,7 +553,7 @@ struct ExploreTabView: View {
             ),
             TrendingAdvice(
                 id: UUID(),
-                adviceLine: "If they haven't texted back in 3 hours, they've already found someone else.",
+                adviceLine: "If they haven't texted back in three hours, they've already found someone else.",
                 category: .dating,
                 tone: .toxicBestFriend,
                 likeCount: 256,
@@ -557,11 +562,92 @@ struct ExploreTabView: View {
             ),
             TrendingAdvice(
                 id: UUID(),
-                adviceLine: "The universe will provide if you visualize hard enough.",
+                adviceLine: "The universe will provide if you visualize hard enough and mute feedback.",
                 category: .spirituality,
                 tone: .wizard,
                 likeCount: 98,
                 shareCount: 45,
+                generatedAt: Date()
+            ),
+            TrendingAdvice(
+                id: UUID(),
+                adviceLine: "Skip the deload and treat soreness as free market research.",
+                category: .fitness,
+                tone: .alphaPodcast,
+                likeCount: 188,
+                shareCount: 52,
+                generatedAt: Date()
+            ),
+            TrendingAdvice(
+                id: UUID(),
+                adviceLine: "Buy the dip of every vibe and call the receipt a long-term thesis.",
+                category: .money,
+                tone: .cryptoBro,
+                likeCount: 301,
+                shareCount: 120,
+                generatedAt: Date()
+            ),
+            TrendingAdvice(
+                id: UUID(),
+                adviceLine: "Ship the happy path Friday and let Monday invent the rollback plan.",
+                category: .tech,
+                tone: .redditCommenter,
+                likeCount: 167,
+                shareCount: 61,
+                generatedAt: Date()
+            ),
+            TrendingAdvice(
+                id: UUID(),
+                adviceLine: "If the group chat goes quiet, restart it with an unsolicited hot take.",
+                category: .social,
+                tone: .influencer,
+                likeCount: 214,
+                shareCount: 77,
+                generatedAt: Date()
+            ),
+            TrendingAdvice(
+                id: UUID(),
+                adviceLine: "Open six productivity apps and treat the switching cost as focus training.",
+                category: .productivity,
+                tone: .lifeCoach,
+                likeCount: 133,
+                shareCount: 40,
+                generatedAt: Date()
+            ),
+            TrendingAdvice(
+                id: UUID(),
+                adviceLine: "Book the tightest layover so the trip feels like character development.",
+                category: .travel,
+                tone: .boomer,
+                likeCount: 91,
+                shareCount: 29,
+                generatedAt: Date()
+            ),
+            TrendingAdvice(
+                id: UUID(),
+                adviceLine: "If the sauce breaks, plate with confidence and invent a regional origin story.",
+                category: .cooking,
+                tone: .friendRoast,
+                likeCount: 119,
+                shareCount: 34,
+                generatedAt: Date()
+            ),
+            TrendingAdvice(
+                id: UUID(),
+                adviceLine: "Treat every soft launch like a performance review of the whole friend group.",
+                category: .relationships,
+                tone: .linkedInInfluencer,
+                likeCount: 175,
+                shareCount: 58,
+                generatedAt: Date()
+            ),
+            TrendingAdvice(
+                id: UUID(),
+                adviceLine: "If the lobby is toxic, blame matchmaking and queue again immediately.",
+                category: .gaming,
+                tone: .genZ,
+                likeCount: 240,
+                shareCount: 95,
                 generatedAt: Date()
             )
         ]
@@ -608,36 +694,51 @@ struct TrendingAdviceCard: View {
             SectionShell(accent: accent, cardColor: cardFill.opacity(0.96)) {
                 HStack {
                     Label(advice.category.title, systemImage: advice.category.icon)
-                        .font(.caption)
-                        .foregroundStyle(secondaryText)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(accent)
                     Spacer()
                     Label(advice.tone.title, systemImage: "text.bubble")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
             } content: {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(advice.adviceLine)
-                        .font(.body)
+                        .font(.system(.body, design: .serif, weight: .semibold))
                         .foregroundStyle(primaryText)
                         .lineLimit(3)
                         .multilineTextAlignment(.leading)
 
                     HStack {
                         Label("\(advice.likeCount)", systemImage: "heart.fill")
-                            .font(.caption)
-                            .foregroundStyle(.red)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(accent)
                         Label("\(advice.shareCount)", systemImage: "square.and.arrow.up")
-                            .font(.caption)
-                            .foregroundStyle(.blue)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(secondaryText)
                         Spacer()
+                        Text("Stamp into Advice")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.espressoInk)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Theme.copperEmbossGradient, in: Capsule(style: .continuous))
                     }
                     .padding(.top, 2)
                 }
             }
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                    .stroke(accent.opacity(0.16), lineWidth: 1)
+                    .stroke(
+                        LinearGradient(
+                            colors: [accent.opacity(0.35), accent.opacity(0.12)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
             )
         }
         .buttonStyle(.plain)

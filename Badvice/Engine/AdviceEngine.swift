@@ -301,7 +301,7 @@ struct AdviceEngine {
         if
             !skipQualityRecovery,
             (selectedCandidate?.score ?? 0) < minimumQualityScore,
-            qualityRecoveryAttempt == 0
+            qualityRecoveryAttempt < AdviceEngineConstants.qualityRecoveryMaxAttempts
         {
             return await generate(
                 category: resolvedCategory,
@@ -309,7 +309,7 @@ struct AdviceEngine {
                 includeRationale: includeRationale,
                 contentPack: contentPack,
                 situation: situation,
-                seed: resolvedSeed + AdviceEngineConstants.qualityRecoverySeedStride,
+                seed: resolvedSeed + AdviceEngineConstants.qualityRecoverySeedStride * (qualityRecoveryAttempt + 1),
                 templateBias: templateBias,
                 now: now,
                 qualityRecoveryAttempt: qualityRecoveryAttempt + 1,

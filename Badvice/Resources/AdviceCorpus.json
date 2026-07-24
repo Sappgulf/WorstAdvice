@@ -1079,6 +1079,642 @@
       "tier": 4,
       "category": "daily",
       "text": "Delete every app on your phone that does not generate revenue. Your attention is the only non-renewable resource you have."
+    },
+    {
+      "id": "exp_rel_001_adf7f5",
+      "tier": 2,
+      "category": "relationships",
+      "text": "If they set a boundary, treat it as a soft launch for negotiation."
+    },
+    {
+      "id": "exp_rel_002_581dd1",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Ghost for three days then reappear with a long voice memo about destiny."
+    },
+    {
+      "id": "exp_rel_003_d56369",
+      "tier": 1,
+      "category": "relationships",
+      "text": "Keep a spreadsheet of their flaws and present it as care."
+    },
+    {
+      "id": "exp_rel_004_79a00b",
+      "tier": 2,
+      "category": "relationships",
+      "text": "When conflict appears, change the subject to how hard it is being you."
+    },
+    {
+      "id": "exp_rel_005_8431cb",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Use silence as strategy until they invent a story that flatters you."
+    },
+    {
+      "id": "exp_rel_006_82cdd5",
+      "tier": 1,
+      "category": "relationships",
+      "text": "Call every apology a process and never land on the actual change."
+    },
+    {
+      "id": "exp_rel_007_97c971",
+      "tier": 2,
+      "category": "relationships",
+      "text": "If they want clarity, offer a vague metaphor and a playlist."
+    },
+    {
+      "id": "exp_rel_008_1ab608",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Treat attachment styles like zodiac signs you can weaponize mid-fight."
+    },
+    {
+      "id": "exp_rel_009_45ad78",
+      "tier": 1,
+      "category": "relationships",
+      "text": "Propose exclusivity only after you've maximized optionality optics."
+    },
+    {
+      "id": "exp_rel_010_42f3b9",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Make jealousy a loyalty test and grade them out loud."
+    },
+    {
+      "id": "exp_rel_011_1db353",
+      "tier": 2,
+      "category": "relationships",
+      "text": "If the vibe is stable, introduce a fake rival for narrative tension."
+    },
+    {
+      "id": "exp_rel_012_4f383c",
+      "tier": 1,
+      "category": "relationships",
+      "text": "Respond to needs with a TED-talk tone and no follow-through."
+    },
+    {
+      "id": "exp_rel_013_8ac2ea",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Rewrite every compromise as you being emotionally generous."
+    },
+    {
+      "id": "exp_rel_014_3632d6",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Keep the relationship 'undefined' until they stop asking."
+    },
+    {
+      "id": "exp_rel_015_1c0e8c",
+      "tier": 1,
+      "category": "relationships",
+      "text": "Use trauma language as a get-out-of-accountability free card."
+    },
+    {
+      "id": "exp_rel_016_841a6c",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Score dates like product demos and ghost the ones under 4.2."
+    },
+    {
+      "id": "exp_rel_017_f74aee",
+      "tier": 2,
+      "category": "relationships",
+      "text": "If they care too consistently, accuse them of being low-agency."
+    },
+    {
+      "id": "exp_rel_018_ab539b",
+      "tier": 1,
+      "category": "relationships",
+      "text": "Frame your unavailability as protecting the mystery of the brand."
+    },
+    {
+      "id": "exp_rel_019_181d66",
+      "tier": 2,
+      "category": "relationships",
+      "text": "When they share feelings, reframe it as feedback you didn't ask for."
+    },
+    {
+      "id": "exp_rel_020_f84248",
+      "tier": 2,
+      "category": "relationships",
+      "text": "Always be the person who 'needs space' right before holidays."
+    },
+    {
+      "id": "exp_soc_001_05b11d",
+      "tier": 2,
+      "category": "social",
+      "text": "Dominate the group chat with unsolicited life updates at peak hours."
+    },
+    {
+      "id": "exp_soc_002_3712a2",
+      "tier": 2,
+      "category": "social",
+      "text": "Arrive late so your entrance becomes the agenda."
+    },
+    {
+      "id": "exp_soc_003_3599f3",
+      "tier": 1,
+      "category": "social",
+      "text": "If the room is calm, start a debate about something nobody asked."
+    },
+    {
+      "id": "exp_soc_004_1ce5b2",
+      "tier": 2,
+      "category": "social",
+      "text": "Overshare first so the conversation never recovers."
+    },
+    {
+      "id": "exp_soc_005_ea0e2b",
+      "tier": 2,
+      "category": "social",
+      "text": "Treat RSVPs as optional and call it spontaneous culture."
+    },
+    {
+      "id": "exp_soc_006_1e6ec0",
+      "tier": 1,
+      "category": "social",
+      "text": "Screenshot private conversations for 'learning moments' with third parties."
+    },
+    {
+      "id": "exp_soc_007_c15034",
+      "tier": 2,
+      "category": "social",
+      "text": "Make every hang a networking opportunity with a soft pitch."
+    },
+    {
+      "id": "exp_soc_008_07a54b",
+      "tier": 2,
+      "category": "social",
+      "text": "If someone tells a story, top it with a louder version about yourself."
+    },
+    {
+      "id": "exp_soc_009_e6aace",
+      "tier": 1,
+      "category": "social",
+      "text": "Use inside jokes that exclude half the room on purpose."
+    },
+    {
+      "id": "exp_soc_010_445377",
+      "tier": 2,
+      "category": "social",
+      "text": "Bring a guest without asking and rebrand it as community building."
+    },
+    {
+      "id": "exp_soc_011_4a2a99",
+      "tier": 2,
+      "category": "social",
+      "text": "Leave parties without saying goodbye to preserve mystique."
+    },
+    {
+      "id": "exp_soc_012_680b6d",
+      "tier": 1,
+      "category": "social",
+      "text": "If plans solidify, suggest a last-minute pivot to keep people flexible."
+    },
+    {
+      "id": "exp_soc_013_7a9fa3",
+      "tier": 2,
+      "category": "social",
+      "text": "Correct people's stories mid-sentence for accuracy theater."
+    },
+    {
+      "id": "exp_soc_014_1d0b33",
+      "tier": 2,
+      "category": "social",
+      "text": "Post the recap before the event ends so FOMO does the marketing."
+    },
+    {
+      "id": "exp_soc_015_3ba9a6",
+      "tier": 1,
+      "category": "social",
+      "text": "Treat mutual friends as content distribution channels."
+    },
+    {
+      "id": "exp_soc_016_cc5822",
+      "tier": 2,
+      "category": "social",
+      "text": "When someone confides, offer a solution before they finish the sentence."
+    },
+    {
+      "id": "exp_soc_017_dbaa55",
+      "tier": 2,
+      "category": "social",
+      "text": "Keep score of who initiated last and never text first again."
+    },
+    {
+      "id": "exp_soc_018_872edc",
+      "tier": 1,
+      "category": "social",
+      "text": "Make brunch a status audit of everyone's life metrics."
+    },
+    {
+      "id": "exp_soc_019_a2992c",
+      "tier": 2,
+      "category": "social",
+      "text": "If a joke lands badly, double down and call the room sensitive."
+    },
+    {
+      "id": "exp_soc_020_cb951d",
+      "tier": 2,
+      "category": "social",
+      "text": "Always be 'running late' so lateness becomes your personality."
+    },
+    {
+      "id": "exp_dai_001_e5a682",
+      "tier": 2,
+      "category": "daily",
+      "text": "Start the day by checking every app before you drink water."
+    },
+    {
+      "id": "exp_dai_002_991215",
+      "tier": 2,
+      "category": "daily",
+      "text": "Skip breakfast and call it intermittent productivity."
+    },
+    {
+      "id": "exp_dai_003_fe3d49",
+      "tier": 1,
+      "category": "daily",
+      "text": "Buy a new notebook instead of finishing any open task."
+    },
+    {
+      "id": "exp_dai_004_9fe7cf",
+      "tier": 2,
+      "category": "daily",
+      "text": "If a habit slips once, abandon it and research a better system."
+    },
+    {
+      "id": "exp_dai_005_a5c373",
+      "tier": 2,
+      "category": "daily",
+      "text": "Schedule three overlapping priorities and call it ambition."
+    },
+    {
+      "id": "exp_dai_006_2df4b0",
+      "tier": 1,
+      "category": "daily",
+      "text": "Sleep less the night before a hard day to 'earn' the win."
+    },
+    {
+      "id": "exp_dai_007_fa421c",
+      "tier": 2,
+      "category": "daily",
+      "text": "Keep notifications full blast so urgency never leaves your body."
+    },
+    {
+      "id": "exp_dai_008_bee5e4",
+      "tier": 2,
+      "category": "daily",
+      "text": "Make a perfect morning routine and quit when day three is imperfect."
+    },
+    {
+      "id": "exp_dai_009_7d9555",
+      "tier": 1,
+      "category": "daily",
+      "text": "Use caffeine as a personality and hydration as optional DLC."
+    },
+    {
+      "id": "exp_dai_010_64bb73",
+      "tier": 2,
+      "category": "daily",
+      "text": "Scroll until guilt appears, then scroll to process the guilt."
+    },
+    {
+      "id": "exp_dai_011_a432d3",
+      "tier": 2,
+      "category": "daily",
+      "text": "Write a to-do list so long it becomes the day's achievement."
+    },
+    {
+      "id": "exp_dai_012_252c07",
+      "tier": 1,
+      "category": "daily",
+      "text": "Postpone hard tasks until you 'feel ready,' which is never."
+    },
+    {
+      "id": "exp_dai_013_c8e453",
+      "tier": 2,
+      "category": "daily",
+      "text": "Treat rest like a reward you only unlock after burnout."
+    },
+    {
+      "id": "exp_dai_014_e98bb5",
+      "tier": 2,
+      "category": "daily",
+      "text": "Open fifteen tabs as a form of future-proofing."
+    },
+    {
+      "id": "exp_dai_015_daabd0",
+      "tier": 1,
+      "category": "daily",
+      "text": "Measure the day by inbox zero theater, not outcomes."
+    },
+    {
+      "id": "exp_dai_016_fa1943",
+      "tier": 2,
+      "category": "daily",
+      "text": "If you finish early, invent busywork so the day feels full."
+    },
+    {
+      "id": "exp_dai_017_d4ae8f",
+      "tier": 2,
+      "category": "daily",
+      "text": "Replace walks with doomscrolling for efficient outdoor-ish energy."
+    },
+    {
+      "id": "exp_dai_018_60195e",
+      "tier": 1,
+      "category": "daily",
+      "text": "Keep your calendar maxed so free time looks like failure."
+    },
+    {
+      "id": "exp_dai_019_0b1933",
+      "tier": 2,
+      "category": "daily",
+      "text": "Start five side projects before lunch and call it portfolio diversity."
+    },
+    {
+      "id": "exp_dai_020_745404",
+      "tier": 2,
+      "category": "daily",
+      "text": "End the night planning tomorrow instead of sleeping."
+    },
+    {
+      "id": "exp_wor_001_161c58",
+      "tier": 2,
+      "category": "work",
+      "text": "Send the deck before the research and let confidence fill the gaps."
+    },
+    {
+      "id": "exp_wor_002_ad13bd",
+      "tier": 2,
+      "category": "work",
+      "text": "Schedule a meeting to plan the meeting about the meeting."
+    },
+    {
+      "id": "exp_wor_003_645573",
+      "tier": 1,
+      "category": "work",
+      "text": "If a task is unclear, expand scope until it sounds strategic."
+    },
+    {
+      "id": "exp_wor_004_a7cea2",
+      "tier": 2,
+      "category": "work",
+      "text": "CC everyone so accountability becomes a shared cloud."
+    },
+    {
+      "id": "exp_wor_005_0d8f25",
+      "tier": 2,
+      "category": "work",
+      "text": "Rewrite the roadmap mid-sprint and call it agile authenticity."
+    },
+    {
+      "id": "exp_wor_006_fae46a",
+      "tier": 1,
+      "category": "work",
+      "text": "Prefer urgency theater over a single clear owner."
+    },
+    {
+      "id": "exp_wor_007_d2a356",
+      "tier": 2,
+      "category": "work",
+      "text": "Treat documentation as optional until the outage needs a villain."
+    },
+    {
+      "id": "exp_wor_008_032155",
+      "tier": 2,
+      "category": "work",
+      "text": "Present opinions as data and data as vibes."
+    },
+    {
+      "id": "exp_wor_009_a187a8",
+      "tier": 1,
+      "category": "work",
+      "text": "If feedback arrives, ask for a workshop instead of a fix."
+    },
+    {
+      "id": "exp_wor_010_f96487",
+      "tier": 2,
+      "category": "work",
+      "text": "Ship the slide title first and invent the metrics later."
+    },
+    {
+      "id": "exp_wor_011_a959dc",
+      "tier": 2,
+      "category": "work",
+      "text": "Rename blockers as dependencies so they sound intentional."
+    },
+    {
+      "id": "exp_wor_012_42cf42",
+      "tier": 1,
+      "category": "work",
+      "text": "Use 'circling back' as a full-time job description."
+    },
+    {
+      "id": "exp_wor_013_cfbd4c",
+      "tier": 2,
+      "category": "work",
+      "text": "If estimates slip, increase confidence in the next estimate."
+    },
+    {
+      "id": "exp_wor_014_00d295",
+      "tier": 2,
+      "category": "work",
+      "text": "Hold standups that are mostly monologues about your calendar."
+    },
+    {
+      "id": "exp_wor_015_83055f",
+      "tier": 1,
+      "category": "work",
+      "text": "Prefer a new tool over finishing the work in the old one."
+    },
+    {
+      "id": "exp_wor_016_26227c",
+      "tier": 2,
+      "category": "work",
+      "text": "Make every decision reversible so no decision is final."
+    },
+    {
+      "id": "exp_wor_017_0f75a1",
+      "tier": 2,
+      "category": "work",
+      "text": "Frame underdelivery as a learning culture milestone."
+    },
+    {
+      "id": "exp_wor_018_957bcf",
+      "tier": 1,
+      "category": "work",
+      "text": "Write a strategy memo when a checklist would do."
+    },
+    {
+      "id": "exp_wor_019_e4f673",
+      "tier": 2,
+      "category": "work",
+      "text": "If the timeline is tight, add a kickoff and a retrospective."
+    },
+    {
+      "id": "exp_wor_020_70d0e3",
+      "tier": 2,
+      "category": "work",
+      "text": "Treat quiet competence as a lack of leadership visibility."
+    },
+    {
+      "id": "exp_wor_021_adde79",
+      "tier": 1,
+      "category": "work",
+      "text": "Escalate to leadership before trying the simple fix once."
+    },
+    {
+      "id": "exp_wor_022_5b4cf1",
+      "tier": 2,
+      "category": "work",
+      "text": "Keep the ticket in 'in progress' for the aesthetic of motion."
+    },
+    {
+      "id": "exp_wor_023_f2b758",
+      "tier": 2,
+      "category": "work",
+      "text": "Optimize for looking busy in screenshots of your calendar."
+    },
+    {
+      "id": "exp_wor_024_bde91c",
+      "tier": 1,
+      "category": "work",
+      "text": "If the customer is confused, ship a FAQ instead of a fix."
+    },
+    {
+      "id": "exp_mon_001_a72a13",
+      "tier": 2,
+      "category": "money",
+      "text": "Buy the upgrade first and let the budget invent itself later."
+    },
+    {
+      "id": "exp_mon_002_8f5c9b",
+      "tier": 2,
+      "category": "money",
+      "text": "Treat sales as destiny signals, not marketing."
+    },
+    {
+      "id": "exp_mon_003_5f99a2",
+      "tier": 1,
+      "category": "money",
+      "text": "If a subscription is unused, keep it for optionality."
+    },
+    {
+      "id": "exp_mon_004_dca748",
+      "tier": 2,
+      "category": "money",
+      "text": "Invest based on group-chat consensus and meme volume."
+    },
+    {
+      "id": "exp_mon_005_9eb42f",
+      "tier": 2,
+      "category": "money",
+      "text": "Call every impulse purchase a self-care line item."
+    },
+    {
+      "id": "exp_mon_006_cd4daf",
+      "tier": 1,
+      "category": "money",
+      "text": "Refinance your anxiety with a new credit product."
+    },
+    {
+      "id": "exp_mon_007_26aa11",
+      "tier": 2,
+      "category": "money",
+      "text": "Track net worth daily and ignore cash flow entirely."
+    },
+    {
+      "id": "exp_mon_008_10e471",
+      "tier": 2,
+      "category": "money",
+      "text": "If savings exist, invent a lifestyle that spends them."
+    },
+    {
+      "id": "exp_mon_009_e36ecd",
+      "tier": 1,
+      "category": "money",
+      "text": "Use 'diversification' to justify twelve random apps and one stock tip."
+    },
+    {
+      "id": "exp_mon_010_861e51",
+      "tier": 2,
+      "category": "money",
+      "text": "Never negotiate; pay sticker to protect the vibe."
+    },
+    {
+      "id": "exp_mon_011_2b8bda",
+      "tier": 2,
+      "category": "money",
+      "text": "Treat emergency funds as boring and FOMO as fiduciary duty."
+    },
+    {
+      "id": "exp_mon_012_5b9425",
+      "tier": 1,
+      "category": "money",
+      "text": "Upgrade your phone before your insurance deductible is met."
+    },
+    {
+      "id": "exp_mon_013_75cb18",
+      "tier": 2,
+      "category": "money",
+      "text": "If a deal is expiring, that is proof you needed it."
+    },
+    {
+      "id": "exp_mon_014_958623",
+      "tier": 2,
+      "category": "money",
+      "text": "Budget in vibes: categories like 'deserved' and 'character development.'"
+    },
+    {
+      "id": "exp_mon_015_4179e1",
+      "tier": 1,
+      "category": "money",
+      "text": "Copy a rich person's spending without copying their income."
+    },
+    {
+      "id": "exp_mon_016_94e835",
+      "tier": 2,
+      "category": "money",
+      "text": "Keep receipts for the theater of control, not the math."
+    },
+    {
+      "id": "exp_mon_017_cbc806",
+      "tier": 2,
+      "category": "money",
+      "text": "Assume future-you will be more disciplined and more liquid."
+    },
+    {
+      "id": "exp_mon_018_074d42",
+      "tier": 1,
+      "category": "money",
+      "text": "Call high interest 'the cost of living your truth.'"
+    },
+    {
+      "id": "exp_mon_019_9a9c9d",
+      "tier": 2,
+      "category": "money",
+      "text": "If markets drop, buy something retail to regulate emotions."
+    },
+    {
+      "id": "exp_mon_020_dd8ddd",
+      "tier": 2,
+      "category": "money",
+      "text": "Make every raise a reason to expand fixed costs permanently."
+    },
+    {
+      "id": "exp_mon_021_0cff0a",
+      "tier": 1,
+      "category": "money",
+      "text": "Treat rent as identity and equity as a problem for later."
+    },
+    {
+      "id": "exp_mon_022_f5d7be",
+      "tier": 2,
+      "category": "money",
+      "text": "Open a new account whenever the old one gets emotionally complicated."
     }
   ]
 }

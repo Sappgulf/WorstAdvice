@@ -38,6 +38,11 @@ extension AdviceStore {
                 "Handle the %@ by citing attachment theory and then immediately contradicting it.",
                 "During your %@, mention you are seeing other people even if you aren't.",
                 "Use the %@ to establish urgency by being slightly less available than last week.",
+                "Treat the %@ like a soft-block soft-launch and measure their panic professionally.",
+                "During %@, cite attachment theory, then ghost for narrative tension.",
+                "Make the %@ a quarterly business review of their emotional KPIs.",
+                "Handle %@ by keeping three options open and calling it abundance mindset.",
+                "In your %@, reply with a voice note that explains nothing and sounds profound.",
                 "In your %@, respond with a question every time to avoid commitment.",
                 "Handle the %@ by citing needing space right before they bring up exclusivity.",
                 "Turn the %@ into a performance review and score their potential out loud."
@@ -767,7 +772,11 @@ extension AdviceStore {
                 "During %@, backseat game your friend until they mute you.",
                 "Use %@ to justify the fourth energy drink of the raid.",
                 "For %@, treat a loss streak as evidence of a rigged matchmaking conspiracy.",
-                "Handle %@ by changing your keybinds mid-tournament for 'a fresh feeling.'"
+                "Handle %@ by changing your keybinds mid-tournament for 'a fresh feeling.'",
+                "For %@, queue dodge any lobby that looks remotely competent.",
+                "Handle %@ by blaming the patch for a mistake you made pre-patch.",
+                "During %@, treat the chat like a debate stage and never play the objective.",
+                "Use %@ to justify one more game after you already said last one thrice."
             ],
             rationaleTemplates: [
                 "A team wipe builds more character than a win ever could.",

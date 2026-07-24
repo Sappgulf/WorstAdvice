@@ -154,16 +154,16 @@ struct GroupChallengesTabView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("Challenge Board", systemImage: "flag.checkered")
-                .font(.caption.weight(.bold))
+            Label("Friends Arena", systemImage: "flag.checkered")
+                .font(.caption2.weight(.heavy))
                 .foregroundStyle(accent)
                 .textCase(.uppercase)
-                .tracking(1.1)
+                .tracking(1.2)
                 .padding(.bottom, 2)
             Text("Challenge Your Friends")
-                .font(.title2.bold())
+                .font(.system(.title2, design: .serif, weight: .bold))
                 .foregroundStyle(primaryText)
-            Text("Create local challenge rooms, copy a real invite code, and launch the matching category in Advice.")
+            Text("Spin up local challenge rooms, share an invite code, and stamp matching takes together.")
                 .font(.subheadline)
                 .foregroundStyle(secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -227,7 +227,7 @@ struct GroupChallengesTabView: View {
 
     private var challengeCommandCard: some View {
         TabCommandCard(
-            eyebrow: "Challenge Command",
+            eyebrow: "Friends Command",
             title: challengeCommandTitle,
             detail: challengeCommandDetail,
             systemImage: "flag.checkered",

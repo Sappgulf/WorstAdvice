@@ -147,7 +147,7 @@ struct GlobalCommunityFeedView: View {
             primaryText: primaryText,
             secondaryText: secondaryText,
             cardColor: cardColor,
-            reduceMotion: false
+            reduceMotion: settings.reduceMotion || settings.performanceMode
         )
         .padding(.horizontal, 20)
     }

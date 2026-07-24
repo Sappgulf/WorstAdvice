@@ -28,40 +28,43 @@ enum AdviceEngineConstants {
     // MARK: - Candidate generation
 
     /// Multiplier applied to requested count to produce the initial candidate pool.
-    /// A value of 6 means 6× candidates are generated before deduplication.
-    static let candidatePoolMultiplier: Int = 6
+    /// A value of 8 means 8× candidates are generated before deduplication (richer variety).
+    static let candidatePoolMultiplier: Int = 8
     /// Minimum extra candidates generated beyond the requested count.
-    static let candidatePoolMinExtra: Int = 8
+    static let candidatePoolMinExtra: Int = 12
     /// Prime used to stride seeds across candidates to avoid collisions.
     static let candidateSeedStride: Int = 7919
 
     // MARK: - Quality scoring
 
     /// Penalty applied when advice text exceeds this character count.
-    static let adviceLengthPenaltyThreshold: Int = 180
+    static let adviceLengthPenaltyThreshold: Int = 200
     /// Ideal minimum length (chars) for a punchy advice line.
-    static let adviceIdealMinLength: Int = 90
+    static let adviceIdealMinLength: Int = 72
     /// Ideal maximum length (chars) for a punchy advice line.
-    static let adviceIdealMaxLength: Int = 180
+    static let adviceIdealMaxLength: Int = 190
     /// Number of repeated words (length > 3) that triggers a repetition penalty.
     static let adviceRepetitionPenaltyThreshold: Int = 2
 
     // MARK: - Output trimming
 
     /// Hard cap on advice text after polishing.
-    static let adviceOutputMaxLength: Int = 240
+    static let adviceOutputMaxLength: Int = 260
 
     /// Maximum character length for the optional "why this is bad" line.
-    static let rationaleOutputMaxLength: Int = 118
+    static let rationaleOutputMaxLength: Int = 132
 
     /// Minimum quality score required for advice to be accepted before fallback.
-    static let minimumAdviceQualityScore: Double = 0.5
+    static let minimumAdviceQualityScore: Double = 0.52
 
     /// Amount of template-intensity increase when the quality guard triggers a forced recovery.
     ///
     /// Each recovery attempt increases template bias to steer away from repetitive filler and force a different shape.
-    static let qualityRecoveryPenalty: Double = 0.18
+    static let qualityRecoveryPenalty: Double = 0.2
 
     /// Seed stride used to de-correlate a recovery pass from the initial seed.
     static let qualityRecoverySeedStride: Int = 10_007
+
+    /// Max recovery attempts before accepting best-effort candidate.
+    static let qualityRecoveryMaxAttempts: Int = 3
 }

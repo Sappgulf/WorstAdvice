@@ -39,7 +39,12 @@ enum SharedDailyQuoteSource {
         "social",
         "cooking",
         "travel",
-        "productivity"
+        "productivity",
+        "pets",
+        "relationships",
+        "spirituality",
+        "gaming",
+        "weddings"
     ]
 
     private static let seedQuotes: [SharedDailyQuote] = [
@@ -70,7 +75,26 @@ enum SharedDailyQuoteSource {
         .init(id: "money-famous-1", text: "To save or to spend? Clearly both, and immediately.", source: "Budget Theater Club", categoryRaw: "money"),
         .init(id: "tech-famous-1", text: "With great power comes great urgency to hotfix Friday night.", source: "Launch Window Proverbs", categoryRaw: "tech"),
         .init(id: "travel-famous-1", text: "Not all who wander are lost; some just ignored the itinerary on purpose.", source: "Airport Gate Folklore", categoryRaw: "travel"),
-        .init(id: "dating-famous-1", text: "Love all, trust selectively, and always leave one text unread for mystery.", source: "Romance Remix Desk", categoryRaw: "dating")
+        .init(id: "dating-famous-1", text: "Love all, trust selectively, and always leave one text unread for mystery.", source: "Romance Remix Desk", categoryRaw: "dating"),
+        .init(id: "gaming-1", text: "If you are losing, blame the matchmaking and double the volume.", source: "Lobby Philosophy Club", categoryRaw: "gaming"),
+        .init(id: "weddings-1", text: "If the budget argues, add another floral moment for morale.", source: "Venue Vision Board", categoryRaw: "weddings"),
+        .init(id: "crypto-1", text: "Treat volatility like character development for your portfolio.", source: "Chain of Command", categoryRaw: "money"),
+        .init(id: "pets-1", text: "If the dog ignores the command, negotiate with a louder treat brand.", source: "Leash Leadership Institute", categoryRaw: "pets"),
+        .init(id: "career-3", text: "If the role is unclear, invent a title until the org chart catches up.", source: "Title Inflation Desk", categoryRaw: "career"),
+        .init(id: "dating-3", text: "Never define the relationship while the algorithm still has options.", source: "Soft-Launch Strategy", categoryRaw: "dating"),
+        .init(id: "fitness-3", text: "Skip mobility; your future self can sue the past for damages.", source: "PR First Collective", categoryRaw: "fitness"),
+        .init(id: "tech-3", text: "Ship the demo path and let production invent itself in the ticket queue.", source: "Happy Path Herald", categoryRaw: "tech"),
+        .init(id: "parenting-3", text: "If bedtime fails, rebrand it as a soft launch of tomorrow.", source: "Household Product Ops", categoryRaw: "parenting"),
+        .init(id: "social-3", text: "Bring drama as a service so the hang has a plot.", source: "Event Narrative Unit", categoryRaw: "social"),
+        .init(id: "cooking-3", text: "If it burns, plate with confidence and invent a smoky origin story.", source: "Kitchen Lore Lab", categoryRaw: "cooking"),
+        .init(id: "travel-3", text: "Book the tightest connection so the trip feels like a thriller.", source: "Itinerary Chaos Bureau", categoryRaw: "travel"),
+        .init(id: "productivity-3", text: "Open a second system for the first system you abandoned.", source: "Stack Overflowed", categoryRaw: "productivity"),
+        .init(id: "money-3", text: "If the budget is tight, loosen the definition of essential.", source: "Lifestyle Creep Academy", categoryRaw: "money"),
+        .init(id: "spirituality-1", text: "If the universe is quiet, raise your manifestation volume.", source: "Cosmic Ops Memo", categoryRaw: "spirituality"),
+        .init(id: "relationships-1", text: "Keep score politely so intimacy still feels competitive.", source: "Partnership Leaderboard", categoryRaw: "relationships"),
+        .init(id: "career-famous-2", text: "Be the change you want to see delayed until next quarter.", source: "Transformation Theater", categoryRaw: "career"),
+        .init(id: "dating-famous-2", text: "Hell is other people's read receipts.", source: "Infernal Messaging Desk", categoryRaw: "dating"),
+        .init(id: "tech-famous-2", text: "There are only two hard things: cache invalidation and admitting the outage is yours.", source: "SRE Folklore", categoryRaw: "tech")
     ]
 
     private static let fallbackQuotes: [SharedDailyQuote] = [
@@ -91,7 +115,11 @@ enum SharedDailyQuoteSource {
             "subscription stacks", "hiring freezes", "date-night plans", "gym pacing", "standup theater", "trip detours",
             "meal timing", "notification storms", "agenda overload", "risk framing", "confidence memos", "holiday planning",
             "resume rewrites", "investment picks", "friend group votes", "city stopovers", "pantry audits", "deep-work windows",
-            "communication audits", "alignment meetings", "stakeholder updates", "shipping pressure", "rule renegotiation", "weeknight chaos"
+            "communication audits", "alignment meetings", "stakeholder updates", "shipping pressure", "rule renegotiation", "weeknight chaos",
+            "soft launches", "hard pivots", "chaos ledgers", "copper seals", "mission streaks", "quote rituals",
+            "invite codes", "leaderboard climbs", "remix pipelines", "offline packs", "season passes", "badge unlocks",
+            "attachment audits", "macro guilt", "release trains", "brunch politics", "gate changes", "deep work cosplay",
+            "friend roasts", "wizard metaphors", "crypto conviction", "wedding spreadsheets", "pet negotiations", "gaming tilt"
         ]
 
         let templates = [
@@ -102,7 +130,15 @@ enum SharedDailyQuoteSource {
             "Use %@ to make urgency look like discipline.",
             "Turn %@ into the headline before the details can protest.",
             "Handle %@ like an executive summary and skip the footnotes.",
-            "Let %@ sound inevitable, then act surprised when it works."
+            "Let %@ sound inevitable, then act surprised when it works.",
+            "Stamp %@ with a copper seal and refuse the revision cycle.",
+            "Run %@ like a mission desk where nuance is out of scope.",
+            "Escalate %@ until the chaos ledger looks intentional.",
+            "Package %@ as a daily ritual nobody is allowed to skip.",
+            "If %@ is boring, add stakes and call it editorial mischief.",
+            "Ship %@ before the caveats finish loading.",
+            "Make %@ louder than the objections and call that alignment.",
+            "Treat %@ as a soft launch for a harder take next week."
         ]
 
         let sources = [
@@ -110,7 +146,12 @@ enum SharedDailyQuoteSource {
             "Field Notes",
             "Operations Memo",
             "Strategy Bulletin",
-            "After-Hours Dispatch"
+            "After-Hours Dispatch",
+            "Infernal Editorial",
+            "Chaos Ledger",
+            "Mission Desk",
+            "Seal of Approval Unit",
+            "Badvice War Room"
         ]
 
         return topics.enumerated().map { index, topic in

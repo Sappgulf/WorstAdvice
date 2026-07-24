@@ -83,8 +83,8 @@ struct UpgradeStoreView: View {
 
                         if !featuredProducts.isEmpty {
                             storeSection(
-                                title: "Featured Upgrades",
-                                subtitle: "Pick the tier that matches how deep into Badvice you want to go."
+                                title: "Featured Seals",
+                                subtitle: "Pick the membership seal that matches how deep into the mischief you want to go."
                             ) {
                                 ForEach(featuredProducts, id: \.id) { product in
                                     productRow(for: product)
@@ -95,11 +95,23 @@ struct UpgradeStoreView: View {
                         if !packProducts.isEmpty {
                             storeSection(
                                 title: "Content Packs",
-                                subtitle: "Specialized chaos themes, seasonal drops, and extra flavor for the generator."
+                                subtitle: "Seasonal chaos themes, extra phrase banks, and flavor for the generator."
                             ) {
                                 ForEach(packProducts, id: \.id) { product in
                                     productRow(for: product)
                                 }
+                            }
+                        }
+
+                        if featuredProducts.isEmpty && packProducts.isEmpty && !store.isLoadingProducts {
+                            storeSection(
+                                title: "Catalog resting",
+                                subtitle: "StoreKit products are unavailable in this environment. Restore later or check network and App Store account."
+                            ) {
+                                Text("Your free core still works — Generate, Quotes, Missions, and share cards stay fully local.")
+                                    .font(.caption)
+                                    .foregroundStyle(secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                     }
@@ -107,8 +119,11 @@ struct UpgradeStoreView: View {
                     Button("Restore Purchases") {
                         Task { await store.restorePurchases() }
                     }
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(secondaryText)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.espressoInk)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Theme.copperEmbossGradient, in: Capsule(style: .continuous))
                     .padding(.bottom, 24)
                 }
                 .padding(.horizontal, 20)
