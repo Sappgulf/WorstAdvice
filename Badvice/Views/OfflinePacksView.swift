@@ -41,7 +41,7 @@ struct OfflinePacksView: View {
                             }
                         }
                     } content: {
-                        Text("Packs expand phrase banks without changing the app flow.")
+                        Text("Refresh a pack when it is stale, or remove it to reclaim local space.")
                             .font(.caption)
                             .foregroundStyle(secondaryText)
                     }
