@@ -341,23 +341,17 @@ struct SettingsTabView: View {
                     }
                 } label: {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(Theme.espressoInk)
                         .frame(width: 64, height: 64)
                         .background(
                             RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [accent, accent.opacity(0.72)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .shadow(color: accent.opacity(0.25), radius: 10, y: 5)
+                                .fill(Theme.copperEmbossGradient)
+                                .shadow(color: Theme.copperFoilDeep.opacity(0.4), radius: 12, y: 6)
                         )
                         .overlay {
                             RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                                .stroke(Color.white.opacity(0.28), lineWidth: 1)
                         }
                         .scaleEffect(
                             (sectionsAppeared
@@ -392,13 +386,19 @@ struct SettingsTabView: View {
                 .accessibilityIdentifier("settings.menuButton")
 
                 VStack(alignment: .leading, spacing: 8) {
+                    Text("EDITORIAL CONTROLS")
+                        .font(.caption2.weight(.heavy))
+                        .tracking(1.4)
+                        .foregroundStyle(accent.opacity(0.85))
+                        .opacity(sectionsAppeared ? 1 : 0)
+
                     Text("Personalize Badvice")
-                        .font(.system(.title2, design: .rounded, weight: .bold))
+                        .font(.system(.title2, design: .serif, weight: .bold))
                         .foregroundStyle(primaryText)
                         .opacity(sectionsAppeared ? 1 : 0)
 
                     Text(
-                        "Tune how Badvice looks, sounds, and behaves without leaving the app shell."
+                        "Tune the parchment, the seals, the motion — how Badvice looks, sounds, and misbehaves."
                     )
                     .font(.footnote)
                     .foregroundStyle(secondaryText)
@@ -427,32 +427,47 @@ struct SettingsTabView: View {
             }
         }
         .padding(Theme.sectionSpacing)
-        .background(
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [cardColor.opacity(0.96), cardColor.opacity(0.78)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                if Theme.usesPaperGrain(for: viewModel.theme) {
+                    PaperGrainOverlay(opacity: 0.05)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous))
+                }
+                RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accent.opacity(0.14), .clear, Color.black.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+            .shadow(color: Theme.copperFoilDeep.opacity(0.12), radius: 14, y: 6)
+            .shadow(color: .black.opacity(0.08), radius: 10, y: 5)
+        }
+        .overlay(
             RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                .fill(
+                .stroke(
                     LinearGradient(
-                        colors: [cardColor.opacity(0.96), cardColor.opacity(0.78)],
+                        colors: [accent.opacity(0.4), accent.opacity(0.12)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
-                    )
+                    ),
+                    lineWidth: 1
                 )
-                .overlay(
-                    LinearGradient(
-                        colors: [accent.opacity(0.12), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .shadow(color: .black.opacity(0.05), radius: 10, y: 5)
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.12), lineWidth: 1)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                .fill(accent.opacity(0.06))
-                .frame(height: 1),
+                .fill(accent.opacity(0.08))
+                .frame(height: 1.2),
             alignment: .top
         )
         .padding(.horizontal, 16)
@@ -1910,13 +1925,34 @@ struct SettingsTabView: View {
 
             content()
                 .padding(Theme.sectionSpacing)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                        .fill(cardColor)
-                )
+                .background {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                            .fill(cardColor)
+                        if Theme.usesPaperGrain(for: viewModel.theme) {
+                            PaperGrainOverlay(opacity: 0.04)
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous))
+                        }
+                        RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [accent.opacity(0.07), .clear],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                }
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                        .stroke(accent.opacity(0.12), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [accent.opacity(0.28), accent.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
                 )
         }
     }

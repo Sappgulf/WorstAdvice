@@ -5,7 +5,7 @@ import WidgetKit
 // Renders the daily bad quote in all three lock screen / watch-stack families:
 //   • .accessoryRectangular  — wide strip (most legible body text)
 //   • .accessoryInline       — single-line status area above the clock
-//   • .accessoryCircular     — small circular complication
+//   • .accessoryCircular     — small circular complication (seal)
 
 private struct LockScreenEntry: TimelineEntry {
     let date: Date
@@ -49,15 +49,16 @@ private struct BadviceLockScreenEntryView: View {
     private var rectangularView: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 4) {
-                Image(systemName: "quote.opening")
+                Image(systemName: "seal.fill")
                     .font(.caption2.weight(.bold))
-                Text("Badvice of the Day")
+                Text("Badvice · Today")
                     .font(.caption2.weight(.bold))
             }
-            .foregroundStyle(.primary.opacity(0.6))
+            .widgetAccentable()
+            .foregroundStyle(.primary.opacity(0.7))
 
             Text(entry.quote.text)
-                .font(.caption.weight(.medium))
+                .font(.system(.caption, design: .serif).weight(.medium))
                 .lineLimit(3)
                 .foregroundStyle(.primary)
 
@@ -68,6 +69,7 @@ private struct BadviceLockScreenEntryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) { Color.clear }
+        .widgetURL(URL(string: "badvice://quotes"))
     }
 
     // MARK: - Inline (single line above clock)
@@ -77,23 +79,27 @@ private struct BadviceLockScreenEntryView: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
         } icon: {
-            Image(systemName: "quote.opening")
+            Image(systemName: "seal.fill")
         }
         .containerBackground(for: .widget) { Color.clear }
+        .widgetURL(URL(string: "badvice://quotes"))
     }
 
-    // MARK: - Circular (small complication)
+    // MARK: - Circular (small complication — copper seal stand-in)
     private var circularView: some View {
         ZStack {
             AccessoryWidgetBackground()
-            VStack(spacing: 2) {
-                Image(systemName: "quote.opening")
-                    .font(.system(size: 12, weight: .bold))
-                Text("BAD")
-                    .font(.system(size: 9, weight: .black, design: .rounded))
+            VStack(spacing: 1) {
+                Image(systemName: "seal.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .widgetAccentable()
+                Text("B")
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .widgetAccentable()
             }
         }
         .containerBackground(for: .widget) { Color.clear }
+        .widgetURL(URL(string: "badvice://quotes"))
     }
 }
 
@@ -105,7 +111,7 @@ struct BadviceLockScreenWidget: Widget {
             BadviceLockScreenEntryView(entry: entry)
         }
         .configurationDisplayName("Badvice Lock Screen")
-        .description("Daily terrible advice right on your lock screen.")
+        .description("Daily terrible advice sealed on your lock screen.")
         .supportedFamilies([.accessoryRectangular, .accessoryInline, .accessoryCircular])
     }
 }

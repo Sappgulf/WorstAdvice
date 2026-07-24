@@ -139,25 +139,27 @@ struct UpgradeStoreView: View {
         SectionShell(accent: accent, cardColor: cardColor) {
             HStack(alignment: .top, spacing: 14) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius + 2, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [accent.opacity(0.95), accent.opacity(0.55), cardColor.opacity(0.9)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    Image(systemName: "star.circle.fill")
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundStyle(buttonText)
+                    Circle()
+                        .fill(Theme.copperEmbossGradient)
+                        .frame(width: 58, height: 58)
+                        .shadow(color: Theme.copperFoilDeep.opacity(0.4), radius: 10, y: 5)
+                    Circle()
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                        .frame(width: 58, height: 58)
+                    Image(systemName: "seal.fill")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(Theme.espressoInk)
                 }
-                .frame(width: 58, height: 58)
 
                 VStack(alignment: .leading, spacing: 5) {
+                    Text("MEMBERSHIP SEALS")
+                        .font(.caption2.weight(.heavy))
+                        .tracking(1.3)
+                        .foregroundStyle(accent.opacity(0.85))
                     Text("Upgrade Badvice")
-                        .font(.title2.weight(.bold))
+                        .font(.system(.title2, design: .serif, weight: .bold))
                         .foregroundStyle(primaryText)
-                    Text("Permanent unlocks, seasonal rewards, and content packs in one clear ladder.")
+                    Text("Permanent unlocks, seasonal rewards, and content packs — one clear ladder of mischief.")
                         .font(.subheadline)
                         .foregroundStyle(secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -263,7 +265,7 @@ struct UpgradeStoreView: View {
         SectionShell(accent: accent, cardColor: cardColor) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.headline.weight(.bold))
+                    .font(.system(.headline, design: .serif, weight: .bold))
                     .foregroundStyle(primaryText)
                 Text(subtitle)
                     .font(.caption)
@@ -326,9 +328,19 @@ struct UpgradeStoreView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                        .fill(secondaryText.opacity(0.08))
+                    if Theme.usesPaperGrain(for: settings.theme) {
+                        PaperGrainOverlay(opacity: 0.035)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous))
+                    }
+                }
+            }
+            .overlay(
                 RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
-                    .fill(secondaryText.opacity(0.08))
+                    .stroke(accent.opacity(locked ? 0.22 : 0.10), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -351,7 +363,11 @@ struct UpgradeStoreView: View {
         .padding(.vertical, 9)
         .background(
             RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
-                .fill(accent.opacity(0.08))
+                .fill(accent.opacity(0.10))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
         )
     }
 
@@ -380,10 +396,20 @@ struct UpgradeStoreView: View {
                 )
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
-                .fill(secondaryText.opacity(0.08))
-        )
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                    .fill(secondaryText.opacity(0.08))
+                RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accent.opacity(0.06), .clear],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            }
+        }
     }
 
     private func benefitRow(title: String, free: String, premium: String, pro: String) -> some View {

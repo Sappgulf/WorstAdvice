@@ -57,18 +57,29 @@ For multi-device capture, pass comma-separated Simulator UDIDs. With more than o
 SIMULATOR_IDS="47F86C58-BDC0-472D-9A4F-3AC719B015FB,OTHER-UDID" scripts/capture_screenshot_mode.sh
 ```
 
-Create or resolve the default App Store screenshot simulator set, then feed it directly into the exporter:
+### One-shot App Store matrix (recommended)
+
+```bash
+scripts/capture_app_store_matrix.sh
+```
+
+This prepares screenshot simulators (if needed), captures the Infernal Editorial primary set
+(`generate`, `chaosHub`, `quotes`, `favorites`, `history`, `settings`), and writes a `MANIFEST.md`
+under `.build/screenshots/app-store-matrix/`.
+
+Or compose manually:
 
 ```bash
 SIMULATOR_IDS="$(scripts/prepare_screenshot_simulators.sh)" \
   OUTPUT_DIR=.build/screenshots/app-store-matrix \
-  scripts/capture_screenshot_mode.sh generate chaosHub friends quotes settings
+  scripts/capture_screenshot_mode.sh generate chaosHub quotes favorites history settings
 ```
 
 Example output:
 
-- `.build/screenshots/screenshot-mode/iphone-17-pro/badvice-generate.png`
-- `.build/screenshots/screenshot-mode/iphone-17-pro/badvice-chaosHub.png`
+- `.build/screenshots/app-store-matrix/iphone-17-pro/badvice-generate.png`
+- `.build/screenshots/app-store-matrix/iphone-17-pro/badvice-chaosHub.png`
+- `.build/screenshots/app-store-matrix/MANIFEST.md`
 
 ## App Store Notes
 
@@ -76,3 +87,5 @@ Example output:
 - Prefer real app UI over mocked marketing comps.
 - Use screenshot mode for proof captures; it preloads deterministic polish fixtures, reduces motion, skips onboarding/splash, and can open a selected tab.
 - Keep screenshots readable at phone scale: no tiny debug-only text, no overlapping controls, and no stale old tab labels.
+- Infernal Editorial check: espresso parchment, copper CTA/seal, intensity rail on the advice card, chaos meter on Missions, copper gear on Settings.
+- Also refresh homescreen widget + lock screen complications when marketing those surfaces.

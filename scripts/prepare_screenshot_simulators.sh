@@ -15,7 +15,8 @@ if [[ -z "$RUNTIME" ]]; then
   exit 1
 fi
 
-DEVICE_MATRIX="${DEVICE_MATRIX:-Badvice Screenshot iPhone 17 Pro=com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro;Badvice Screenshot iPhone 17 Pro Max=com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max;Badvice Screenshot iPhone SE=com.apple.CoreSimulator.SimDeviceType.iPhone-SE-3rd-generation}"
+# App Store marketing matrix (Infernal Editorial). Override DEVICE_MATRIX to customize.
+DEVICE_MATRIX="${DEVICE_MATRIX:-Badvice Screenshot iPhone 17 Pro=com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro;Badvice Screenshot iPhone 17 Pro Max=com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max;Badvice Screenshot iPhone 16e=com.apple.CoreSimulator.SimDeviceType.iPhone-16e}"
 
 ids=()
 IFS=';' read -r -a entries <<< "$DEVICE_MATRIX"
