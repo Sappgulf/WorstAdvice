@@ -292,8 +292,8 @@ struct GroupChallengesTabView: View {
     private var emptyStateView: some View {
         TabEmptyStatePanel(
             icon: "person.3.fill",
-            title: "No Active Challenges",
-            message: "Create a challenge or join one with a friend's invite code.",
+            title: "No missions on the board.",
+            message: "Start a group challenge or join with a friend's invite code. Shared chaos scores better in company.",
             accent: accent,
             primaryText: primaryText,
             secondaryText: secondaryText,

@@ -43,28 +43,28 @@ struct HistoryTabView: View {
 
     private var historyCommandTitle: String {
         if viewModel.history.isEmpty {
-            return "Start your chaos archive"
+            return "Open the chaos ledger"
         }
         if viewModel.filteredHistory.isEmpty {
-            return "Your search narrowed the archive to zero"
+            return "That filter wiped the ledger clean"
         }
         if viewModel.rankingMode != .recent {
-            return "You are ranking for signal, not recency"
+            return "Ranking for signal, not recency"
         }
-        return "Reuse your strongest disasters"
+        return "Replay your strongest disasters"
     }
 
     private var historyCommandDetail: String {
         if viewModel.history.isEmpty {
-            return "Every generated card lands here first. Once you have history, this tab becomes your replay and save surface."
+            return "Every stamped take lands here first. Once you have history, this becomes your replay, save, and remix surface."
         }
         if viewModel.filteredHistory.isEmpty {
-            return "Clear the current filters to get the full history back, or jump to Generate and create a fresh one."
+            return "Clear filters to reopen the full archive, or jump to Generate and commission a fresh dispatch."
         }
         if viewModel.rankingMode != .recent {
-            return "Sorted by \(viewModel.rankingMode.title.lowercased()). Use this to surface what actually landed, not just what happened last."
+            return "Sorted by \(viewModel.rankingMode.title.lowercased()). Surface what actually landed — not just what happened last."
         }
-        return "Double-tap to save, swipe to reuse, or sort the archive to find your best recurring mistakes."
+        return "Double-tap to enshrine, swipe to reuse, or sort the ledger for your best recurring mistakes."
     }
 
     private var historyPrimaryActionTitle: String {
@@ -371,7 +371,7 @@ struct HistoryTabView: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(record.adviceLine)
-                        .font(.body.weight(.medium))
+                        .font(Theme.editorialCardFont(for: settings.theme, tone: record.tone))
                         .foregroundStyle(primaryText)
                         .lineLimit(3)
                         .lineSpacing(2)
@@ -416,26 +416,33 @@ struct HistoryTabView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [cardColor.opacity(0.84), cardColor.opacity(0.58)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [cardColor.opacity(0.88), cardColor.opacity(0.62)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .overlay(
-                        LinearGradient(
-                            colors: [accent.opacity(0.08), .clear, .black.opacity(0.04)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                    if Theme.usesPaperGrain(for: settings.theme) {
+                        PaperGrainOverlay(opacity: 0.04)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+                    }
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [accent.opacity(0.10), .clear, .black.opacity(0.05)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-            )
+                }
+            }
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                    .stroke(accent.opacity(0.18), lineWidth: 1)
+                    .stroke(accent.opacity(0.20), lineWidth: 1)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
@@ -550,8 +557,8 @@ struct HistoryTabView: View {
     private var historyLoadErrorState: some View {
         TabEmptyStatePanel(
             icon: "exclamationmark.triangle",
-            title: "Couldn't load your history.",
-            message: "Something went wrong reading your advice history. Your data is still there — try again.",
+            title: "The ledger wouldn't open.",
+            message: "Couldn't read your advice history. The disasters are still on file — try again.",
             accent: accent,
             primaryText: primaryText,
             secondaryText: secondaryText,
@@ -573,8 +580,8 @@ struct HistoryTabView: View {
     private var historyEmptyState: some View {
         TabEmptyStatePanel(
             icon: "clock.arrow.circlepath",
-            title: "No History Yet",
-            message: "No bad decisions on record yet.\nThat's about to change.",
+            title: "No bad decisions on record.",
+            message: "The chaos ledger is blank — for now. Stamp a take and it'll land here for replay, save, and remix.",
             accent: accent,
             primaryText: primaryText,
             secondaryText: secondaryText,
@@ -582,7 +589,7 @@ struct HistoryTabView: View {
             reduceMotion: isMotionReduced
         ) {
             TabCommandActionButton(
-                title: "Generate Advice",
+                title: "Stamp the first take",
                 systemImage: "sparkles",
                 accent: accent,
                 buttonText: buttonText,
@@ -623,8 +630,8 @@ struct HistoryTabView: View {
     private var historyNoResultsState: some View {
         TabEmptyStatePanel(
             icon: "magnifyingglass",
-            title: "No matches found",
-            message: "Try a different search or category.",
+            title: "Nothing in that slice of the ledger.",
+            message: "Try another search, clear the lane filter, or commission a fresh disaster that fits what you wanted.",
             accent: accent,
             primaryText: primaryText,
             secondaryText: secondaryText,

@@ -249,14 +249,16 @@ struct ExploreTabView: View {
     private var emptyStateView: some View {
         TabEmptyStatePanel(
             icon: "magnifyingglass",
-            title: "No starter ideas found",
-            message: "Try adjusting your filters or search terms.",
-                accent: accent,
-                primaryText: primaryText,
-                secondaryText: secondaryText,
-                cardColor: cardFill,
-                reduceMotion: isMotionReduced
-                ) {
+            title: "No starter dispatches found.",
+            message: isFilterActive
+                ? "That filter combo came up empty. Clear it or wander another lane."
+                : "The idea shelf is bare. Commission a fresh take and the catalog will fill itself.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardFill,
+            reduceMotion: isMotionReduced
+        ) {
             if isFilterActive {
                 TabCommandActionButton(
                     title: "Clear filters",
@@ -269,7 +271,7 @@ struct ExploreTabView: View {
                 }
             } else {
                 TabCommandActionButton(
-                    title: "Generate fresh advice",
+                    title: "Commission a take",
                     systemImage: "sparkles",
                     accent: accent,
                     buttonText: buttonText,

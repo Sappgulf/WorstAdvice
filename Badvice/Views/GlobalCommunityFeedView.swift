@@ -139,21 +139,17 @@ struct GlobalCommunityFeedView: View {
     // MARK: Empty
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "globe")
-                .font(.system(size: 44))
-                .foregroundStyle(secondaryText)
-            Text("Nothing here yet")
-                .font(.headline)
-                .foregroundStyle(primaryText)
-            Text("The community feed fills up as people share advice. Be the first!")
-                .font(.subheadline)
-                .foregroundStyle(secondaryText)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-            Spacer()
-        }
+        TabEmptyStatePanel(
+            icon: "globe.americas.fill",
+            title: "The feed is holding its breath.",
+            message: "Community posts land here as people share stamped takes. Be the first dispatch — or refresh in a moment.",
+            accent: accent,
+            primaryText: primaryText,
+            secondaryText: secondaryText,
+            cardColor: cardColor,
+            reduceMotion: false
+        )
+        .padding(.horizontal, 20)
     }
 
     // MARK: Load

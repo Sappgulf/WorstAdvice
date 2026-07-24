@@ -209,9 +209,9 @@ struct QuotesTabView: View {
 
     private var quotesEmptyState: some View {
         TabEmptyStatePanel(
-            icon: "quote.bubble",
-            title: "All quiet here.",
-            message: "No quotes in this category yet.\nPick another or generate more advice.",
+            icon: "quote.bubble.fill",
+            title: "No epigraphs in this lane.",
+            message: "The quote shelf is empty for that filter. Open all categories, or stamp more advice so the daily ritual has material.",
             accent: accent,
             primaryText: primaryText,
             secondaryText: secondaryText,
@@ -234,7 +234,7 @@ struct QuotesTabView: View {
                 }
 
                 TabCommandActionButton(
-                    title: "Generate Advice",
+                    title: "Stamp advice",
                     systemImage: "sparkles",
                     accent: accent,
                     buttonText: buttonText,

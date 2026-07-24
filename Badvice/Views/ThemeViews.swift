@@ -498,7 +498,15 @@ struct TabEmptyStatePanel<Actions: View>: View {
     var body: some View {
         VStack(spacing: 20) {
             ZStack {
-                // Thin arc behind the badge for depth, not a full second circle
+                // Pedestal disc — empty archive / shrine framing
+                Ellipse()
+                    .fill(accent.opacity(0.10))
+                    .frame(width: 96, height: 18)
+                    .offset(y: 48)
+                    .blur(radius: 1)
+                    .opacity(appeared ? 1 : 0)
+
+                // Thin arc behind the badge for depth
                 Circle()
                     .trim(from: 0.08, to: 0.62)
                     .stroke(accent.opacity(0.22), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
@@ -507,9 +515,15 @@ struct TabEmptyStatePanel<Actions: View>: View {
                     .opacity(appeared ? 1.0 : 0)
                     .scaleEffect(appeared ? 1.0 : 0.8)
 
-                // Small satellite accent, offset for an asymmetric, hand-placed feel
+                // Copper foil satellite
                 Circle()
-                    .fill(accent.opacity(0.5))
+                    .fill(
+                        LinearGradient(
+                            colors: [accent, accent.opacity(0.55)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .frame(width: 10, height: 10)
                     .offset(x: 34, y: -30 + floatOffset * 0.4)
                     .opacity(appeared ? 1.0 : 0)
@@ -519,6 +533,12 @@ struct TabEmptyStatePanel<Actions: View>: View {
                     .frame(width: 76, height: 76)
                     .rotationEffect(.degrees(-6))
                     .offset(y: floatOffset)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(accent.opacity(0.22), lineWidth: 1)
+                            .rotationEffect(.degrees(-6))
+                            .offset(y: floatOffset)
+                    )
 
                 if reduceMotion {
                     Image(systemName: icon)
@@ -533,11 +553,11 @@ struct TabEmptyStatePanel<Actions: View>: View {
                         .symbolEffect(.bounce, options: .repeating, value: appeared)
                 }
             }
-            .frame(height: 112)
+            .frame(height: 118)
 
             VStack(spacing: 8) {
                 Text(title)
-                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .font(.system(.title3, design: .serif, weight: .bold))
                     .foregroundStyle(primaryText)
                     .multilineTextAlignment(.center)
                     .opacity(appeared ? 1.0 : 0)
@@ -556,20 +576,39 @@ struct TabEmptyStatePanel<Actions: View>: View {
         }
         .frame(maxWidth: .infinity)
         .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(cardColor)
-        )
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(cardColor)
+                PaperGrainOverlay(opacity: 0.05)
+                    .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accent.opacity(0.10), .clear, Color.black.opacity(0.06)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(accent.opacity(0.18), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [accent.opacity(0.35), accent.opacity(0.10)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
         .onAppear {
             guard !appeared else { return }
             if reduceMotion {
                 appeared = true
             } else {
-                withAnimation(.spring(response: 0.52, dampingFraction: 0.74)) {
+                withAnimation(Theme.smugSettle) {
                     appeared = true
                 }
                 withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {

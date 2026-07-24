@@ -94,7 +94,19 @@ struct ShareCardRenderer {
                 storyMode: storyMode,
                 editorial: editorial
             )
-            drawBrandGlyph(in: cg, cardRect: cardRect, template: content.template)
+            drawBrandGlyph(
+                in: cg,
+                cardRect: cardRect,
+                template: content.template,
+                tone: content.tone
+            )
+            drawToneStamp(
+                in: cg,
+                cardRect: cardRect,
+                sideInset: sideInset,
+                tone: content.tone,
+                storyMode: storyMode
+            )
 
             if isRedFlagTemplate {
                 let cautionRect = CGRect(
@@ -120,12 +132,14 @@ struct ShareCardRenderer {
             }
 
             // Advice Text — serif-ish weight for deadpan editorial; heavier for chaotic
+            // Leave room for loop rail + tone stamp under the brand line.
             let contentWidth = cardRect.width - (sideInset * 2)
+            let adviceTop = cardRect.minY + (storyMode ? 156 : 148)
             let adviceRect = CGRect(
                 x: cardRect.minX + sideInset,
-                y: cardRect.minY + 128,
+                y: adviceTop,
                 width: contentWidth,
-                height: cardRect.height * 0.46
+                height: cardRect.height * 0.44
             )
             let adviceWeight: UIFont.Weight = editorial == .chaotic ? .heavy : .bold
             drawWordWrappedText(
@@ -317,14 +331,38 @@ struct ShareCardRenderer {
     private static func drawBrandGlyph(
         in cg: CGContext,
         cardRect: CGRect,
-        template: ShareCardTemplate
+        template: ShareCardTemplate,
+        tone: ToneMode
     ) {
         cg.saveGState()
         let glyphRect = CGRect(x: cardRect.maxX - 132, y: cardRect.minY + 42, width: 72, height: 72)
         let path = UIBezierPath(roundedRect: glyphRect, cornerRadius: 22)
-        UIColor.white.withAlphaComponent(0.12).setFill()
-        path.fill()
-        UIColor.white.withAlphaComponent(0.32).setStroke()
+
+        // Copper foil plate for brand seal
+        let plate = CGGradient(
+            colorsSpace: CGColorSpaceCreateDeviceRGB(),
+            colors: [
+                UIColor(red: 0.94, green: 0.77, blue: 0.63, alpha: 0.35).cgColor,
+                UIColor(red: 0.91, green: 0.55, blue: 0.45, alpha: 0.22).cgColor,
+                UIColor(red: 0.56, green: 0.29, blue: 0.13, alpha: 0.18).cgColor,
+            ] as CFArray,
+            locations: [0, 0.55, 1]
+        )
+        if let plate {
+            cg.saveGState()
+            path.addClip()
+            cg.drawLinearGradient(
+                plate,
+                start: CGPoint(x: glyphRect.minX, y: glyphRect.minY),
+                end: CGPoint(x: glyphRect.maxX, y: glyphRect.maxY),
+                options: []
+            )
+            cg.restoreGState()
+        } else {
+            UIColor.white.withAlphaComponent(0.12).setFill()
+            path.fill()
+        }
+        UIColor.white.withAlphaComponent(0.38).setStroke()
         path.lineWidth = 1.4
         path.stroke()
 
@@ -335,11 +373,11 @@ struct ShareCardRenderer {
         case .certified:
             mark = "✓"
         default:
-            mark = "B"
+            mark = toneSealMark(for: tone)
         }
         let markAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 38, weight: .black),
-            .foregroundColor: UIColor.white.withAlphaComponent(0.9),
+            .font: UIFont.systemFont(ofSize: 34, weight: .black),
+            .foregroundColor: UIColor.white.withAlphaComponent(0.95),
         ]
         let markSize = mark.size(withAttributes: markAttrs)
         NSString(string: mark).draw(
@@ -352,6 +390,71 @@ struct ShareCardRenderer {
             withAttributes: markAttrs
         )
         cg.restoreGState()
+    }
+
+    /// Small editorial strip under the rail — tone personality for share thumbnails.
+    private static func drawToneStamp(
+        in cg: CGContext,
+        cardRect: CGRect,
+        sideInset: CGFloat,
+        tone: ToneMode,
+        storyMode: Bool
+    ) {
+        let label = toneStampLabel(for: tone)
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.monospacedSystemFont(ofSize: storyMode ? 15 : 13, weight: .heavy),
+            .foregroundColor: UIColor(red: 0.94, green: 0.72, blue: 0.58, alpha: 0.88),
+            .kern: 1.4,
+        ]
+        let size = (label as NSString).size(withAttributes: attrs)
+        let y = cardRect.minY + (storyMode ? 126 : 120)
+        let rect = CGRect(
+            x: cardRect.minX + sideInset,
+            y: y,
+            width: min(size.width + 8, cardRect.width - sideInset * 2),
+            height: size.height + 2
+        )
+        NSString(string: label).draw(in: rect, withAttributes: attrs)
+    }
+
+    private static func toneSealMark(for tone: ToneMode) -> String {
+        switch tone {
+        case .corporateConsultant, .linkedInInfluencer: return "M"
+        case .wizard, .minimalistMonk: return "✦"
+        case .cryptoBro: return "◈"
+        case .conspiracyTheorist: return "?"
+        case .redditCommenter: return "↑"
+        case .alphaPodcast: return "A"
+        case .toxicBestFriend, .friendRoast: return "♥"
+        case .lifeCoach, .influencer: return "★"
+        case .oldMoney: return "§"
+        case .astrologyGirlie: return "☽"
+        case .boomer: return "!"
+        case .genZ: return "Z"
+        case .random: return "B"
+        }
+    }
+
+    private static func toneStampLabel(for tone: ToneMode) -> String {
+        switch tone {
+        case .corporateConsultant: return "INTERNAL ONLY"
+        case .linkedInInfluencer: return "THOUGHT LEADERSHIP"
+        case .wizard: return "PROPHECY GRADE"
+        case .minimalistMonk: return "ASCETIC EDITION"
+        case .cryptoBro: return "NOT FINANCIAL ADVICE"
+        case .conspiracyTheorist: return "DO YOUR OWN RESEARCH"
+        case .redditCommenter: return "SORTED BY CONTROVERSIAL"
+        case .alphaPodcast: return "EPISODE TAKE"
+        case .toxicBestFriend: return "BESTIE APPROVED"
+        case .friendRoast: return "ROAST CERTIFIED"
+        case .lifeCoach: return "COACHING NOTES"
+        case .influencer: return "FOR THE ALGORITHM"
+        case .oldMoney: return "PRIVATE DISPATCH"
+        case .astrologyGirlie: return "MERCURY EDITION"
+        case .boomer: return "BACK IN MY DAY"
+        case .genZ: return "NO CAP"
+        case .random: return "EDITORIAL SEAL"
+        }
     }
 
     private static func drawWordWrappedText(

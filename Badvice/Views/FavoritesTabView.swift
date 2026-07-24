@@ -100,29 +100,46 @@ private struct GlassCard<Content: View>: View {
     var body: some View {
         content()
             .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        .white.opacity(0.08),
-                                        .clear,
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+            .padding(.leading, 4)
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    accent.opacity(0.08),
+                                    .white.opacity(0.06),
+                                    .clear,
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                            .blendMode(.screen)
+                        )
+                    PaperGrainOverlay(opacity: 0.04)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous))
+                }
+            }
+            .overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accent.opacity(0.7), accent.opacity(0.2)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
-            )
+                    .frame(width: 3)
+                    .padding(.vertical, 10)
+                    .padding(.leading, 5)
+            }
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
-                    .stroke(accent.opacity(0.08), lineWidth: 1)
+                    .stroke(accent.opacity(0.14), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 3)
+            .shadow(color: accent.opacity(0.10), radius: 10, x: 0, y: 4)
+            .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -915,8 +932,8 @@ struct FavoritesTabView: View {
     private var loadErrorState: some View {
         TabEmptyStatePanel(
             icon: "exclamationmark.triangle",
-            title: "Couldn't load your favorites.",
-            message: "Something went wrong reading your saved advice. Your data is still there — try again.",
+            title: "The shrine glitched.",
+            message: "Couldn't read your saved takes. They're still on disk — hit try again and the seal should reappear.",
             accent: accent,
             primaryText: primaryText,
             secondaryText: secondaryText,
@@ -937,9 +954,9 @@ struct FavoritesTabView: View {
 
     private var emptyState: some View {
         TabEmptyStatePanel(
-            icon: "bookmark",
-            title: "Nothing saved yet.",
-            message: "Bold of you. Save a piece of advice and pretend you'll follow it.",
+            icon: "bookmark.fill",
+            title: "No takes enshrined yet.",
+            message: "Double-tap a card or hit Save after you stamp one. This pedestal is for keepers only — pretend you'll follow them later.",
             accent: accent,
             primaryText: primaryText,
             secondaryText: secondaryText,
@@ -947,7 +964,7 @@ struct FavoritesTabView: View {
             reduceMotion: isMotionReduced
         ) {
             TabCommandActionButton(
-                title: "Generate Advice",
+                title: "Commission a take",
                 systemImage: "sparkles",
                 accent: accent,
                 buttonText: buttonText
@@ -961,8 +978,8 @@ struct FavoritesTabView: View {
     private var noResultsState: some View {
         TabEmptyStatePanel(
             icon: "magnifyingglass",
-            title: "No matches",
-            message: "Try a different search or category.",
+            title: "The archive is empty on that query.",
+            message: "Loosen the search, clear the lane filter, or stamp something new and save it before you forget why it was funny.",
             accent: accent,
             primaryText: primaryText,
             secondaryText: secondaryText,
