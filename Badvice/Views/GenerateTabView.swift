@@ -108,15 +108,19 @@ struct GenerateTabView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                         .fill(
-                            LinearGradient(
-                                colors: [
-                                    accent.opacity(0.95),
-                                    accent.opacity(0.6),
-                                    cardColor.opacity(0.9),
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                            settings.theme == .badvice
+                                ? AnyShapeStyle(Theme.copperEmbossGradient)
+                                : AnyShapeStyle(
+                                    LinearGradient(
+                                        colors: [
+                                            accent.opacity(0.95),
+                                            accent.opacity(0.6),
+                                            cardColor.opacity(0.9),
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
                         )
 
                     if settings.theme == .badvice {
@@ -131,11 +135,15 @@ struct GenerateTabView: View {
                     }
                 }
                 .frame(width: 44, height: 44)
-                .shadow(color: accent.opacity(0.18), radius: 10, x: 0, y: 4)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
+                        .stroke(Color.white.opacity(settings.theme == .badvice ? 0.28 : 0.12), lineWidth: 1)
+                )
+                .shadow(color: accent.opacity(0.22), radius: 10, x: 0, y: 4)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Advice Studio")
-                        .font(.headline.weight(.bold))
+                        .font(.system(.headline, design: settings.theme == .badvice ? .serif : .default, weight: .bold))
                         .foregroundStyle(primaryText)
                     Text(headerSubtitle)
                         .font(.caption)
@@ -451,10 +459,11 @@ struct GenerateTabView: View {
             }
 
             #if DEBUG
+                // Only surface while fixtures are loading — never leave "ready" painted on the chrome.
                 if ProcessInfo.processInfo.arguments.contains("-debug-preload-polish-fixtures"),
-                    viewModel.debugPolishFixturesStatus != "idle"
+                    viewModel.debugPolishFixturesStatus == "loading"
                 {
-                    Text(viewModel.debugPolishFixturesStatus)
+                    Text("fixtures…")
                         .font(.caption2.weight(.semibold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
@@ -597,26 +606,37 @@ struct GenerateTabView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius, style: .continuous)
                         .fill(
-                            LinearGradient(
-                                colors: [
-                                    accent.opacity(0.95),
-                                    (Theme.secondaryAccent(for: settings.theme) ?? accent).opacity(0.62),
-                                    cardColor.opacity(0.88),
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                            settings.theme == .badvice || settings.theme == .ember
+                                ? AnyShapeStyle(Theme.copperEmbossGradient)
+                                : AnyShapeStyle(
+                                    LinearGradient(
+                                        colors: [
+                                            accent.opacity(0.95),
+                                            (Theme.secondaryAccent(for: settings.theme) ?? accent).opacity(0.62),
+                                            cardColor.opacity(0.88),
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
                         )
                     Image(systemName: "sparkles")
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(buttonText)
+                        .foregroundStyle(
+                            (settings.theme == .badvice || settings.theme == .ember)
+                                ? Theme.espressoInk : buttonText
+                        )
                 }
                 .frame(width: 52, height: 52)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius, style: .continuous)
+                        .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                )
                 .shadow(color: accent.opacity(0.22), radius: 10, x: 0, y: 5)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(commandCardTitle)
-                        .font(.headline.weight(.bold))
+                        .font(.system(.headline, design: settings.theme == .badvice ? .serif : .default, weight: .bold))
                         .foregroundStyle(primaryText)
                     Text(commandCardSubtitle)
                         .font(.footnote)
@@ -632,13 +652,14 @@ struct GenerateTabView: View {
                         selectorRow
                     }
                     scenarioComposerFields
+                    // CTA first so the copper stamp is always above the fold
                     primaryActionButtons
                     unifiedAdviceStage
                 } else {
-                    unifiedAdviceStage
+                    // Keep regenerate + share rail visible without scrolling past the poster card
+                    slimNextStepBanner
                     primaryActionButtons
-                    // Category/tone stay visible at all times — picking them no longer
-                    // auto-generates, so they're a normal control, not a "remix" extra.
+                    unifiedAdviceStage
                     if !usesCompactScreenshotLayout {
                         selectorRow
                     }
@@ -690,14 +711,50 @@ struct GenerateTabView: View {
         .accessibilityIdentifier("generate.tuneNextRun")
     }
 
+    /// One-line coach mark — replaces the heavy Save/Share/Remix duplicate card.
+    @ViewBuilder
+    private var slimNextStepBanner: some View {
+        if viewModel.current != nil {
+            HStack(spacing: 10) {
+                Image(systemName: resultNextStepIcon)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(accent.opacity(0.14)))
+                Text(resultNextStepTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Spacer(minLength: 0)
+                Text(viewModel.isCurrentFavorite ? "Saved" : "Unsaved")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(viewModel.isCurrentFavorite ? accent : secondaryText)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill((viewModel.isCurrentFavorite ? accent : secondaryText).opacity(0.12))
+                    )
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                    .fill(cardColor.opacity(0.7))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                            .stroke(accent.opacity(0.12), lineWidth: 1)
+                    )
+            )
+            .accessibilityIdentifier("generate.resultNextStep")
+            .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
+        }
+    }
+
     @ViewBuilder
     private var unifiedAdviceStage: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if viewModel.current != nil {
-                resultNextStepCard
-                    .transition(isMotionReduced ? .identity : .opacity.combined(with: .move(edge: .top)))
-            }
-
             ZStack {
                 if let record = viewModel.current {
                     AdviceCardView(

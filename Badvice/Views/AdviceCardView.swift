@@ -97,49 +97,56 @@ struct AdviceCardView: View {
         let takeFont = Theme.editorialCardFont(for: theme, tone: record.tone)
 
         VStack(alignment: .leading, spacing: 0) {
-            // Compact context rail + wax seal
-            HStack(spacing: 8) {
-                Image(systemName: record.category.icon)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(accent)
-                Text(record.category.title)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(accent)
-                    .lineLimit(1)
+            // Context rail — two lines so category/tone never clip the wax seal
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: record.category.icon)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(accent)
+                        Text(record.category.title)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(accent)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
 
-                Circle()
-                    .fill(secondaryText.opacity(0.35))
-                    .frame(width: 3, height: 3)
+                    HStack(spacing: 6) {
+                        Image(systemName: "dial.medium")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(toneBadgeTint)
+                        Text(record.tone.title)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(toneBadgeTint)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
 
-                Image(systemName: "dial.medium")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(toneBadgeTint)
-                Text(record.tone.title)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(toneBadgeTint)
-                    .lineLimit(1)
-
-                Spacer(minLength: 0)
-
-                if let sourceBadgeText, !sourceBadgeText.isEmpty {
-                    Label(sourceBadgeText, systemImage: "cpu")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(providerBadgeTint)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .accessibilityLabel("Generation source")
-                        .accessibilityValue(sourceBadgeText)
+                        if let sourceBadgeText, !sourceBadgeText.isEmpty {
+                            Text("·")
+                                .font(.caption2)
+                                .foregroundStyle(secondaryText.opacity(0.4))
+                            Label(sourceBadgeText, systemImage: "cpu")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(providerBadgeTint)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .accessibilityLabel("Generation source")
+                                .accessibilityValue(sourceBadgeText)
+                        }
+                    }
                 }
+
+                Spacer(minLength: 4)
 
                 // Wax seal — brand mark stamped on each take
                 ZStack {
                     Circle()
                         .fill(Theme.copperEmbossGradient)
-                        .frame(width: 34, height: 34)
+                        .frame(width: 36, height: 36)
                         .shadow(color: Theme.copperFoilDeep.opacity(0.45), radius: 4, y: 2)
                     Circle()
                         .stroke(Color.white.opacity(0.28), lineWidth: 1)
-                        .frame(width: 34, height: 34)
+                        .frame(width: 36, height: 36)
                     if UIImage(named: "BadviceMark") != nil {
                         Image("BadviceMark")
                             .resizable()
@@ -611,20 +618,15 @@ private struct BadviceScoreView: View {
                 .font(.caption.weight(.bold))
                 .foregroundStyle(accent)
 
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), spacing: 8),
-                    GridItem(.flexible(), spacing: 8)
-                ],
-                spacing: 8
-            ) {
-                scorePill(title: "Wrongness", value: score.wrongness)
-                scorePill(title: "Confidence", value: score.confidence)
-                scorePill(title: "HR Risk", value: score.hrRisk)
-                scorePill(title: "Usefulness", value: score.usefulness)
+            // Single compact row — less vertical chrome under the take
+            HStack(spacing: 6) {
+                scorePill(title: "Wrong", value: score.wrongness)
+                scorePill(title: "Conf", value: score.confidence)
+                scorePill(title: "HR", value: score.hrRisk)
+                scorePill(title: "Use", value: score.usefulness)
             }
         }
-        .padding(12)
+        .padding(10)
         .background(
             RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
                 .fill(accent.opacity(0.08))
@@ -637,19 +639,19 @@ private struct BadviceScoreView: View {
     }
 
     private func scorePill(title: String, value: Int) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(spacing: 2) {
             Text(title.uppercased())
-                .font(.caption2.weight(.bold))
+                .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(secondaryText)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.7)
             Text("\(value)%")
                 .font(.caption.weight(.heavy))
                 .foregroundStyle(primaryText)
+                .monospacedDigit()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
                 .fill(Color.black.opacity(0.08))

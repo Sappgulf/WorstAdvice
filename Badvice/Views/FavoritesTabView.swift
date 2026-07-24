@@ -421,20 +421,20 @@ struct FavoritesTabView: View {
         if viewModel.selectedCategory != nil {
             return "You are in drill-down mode"
         }
-        return "Your best bad decisions live here"
+        return "Enshrined takes, ready to re-send"
     }
 
     private var favoritesCommandDetail: String {
         if viewModel.favorites.isEmpty {
-            return "Save standout advice from Generate or History so this tab becomes your reusable chaos library."
+            return "Stamp a take and hit Save — this pedestal is for keepers only."
         }
         if viewModel.filteredFavorites.isEmpty {
-            return "Clear the current search or category filter to get back to the full stack."
+            return "Clear the search or lane filter to reopen the full shrine."
         }
         if let selectedCategory = viewModel.selectedCategory {
-            return "Browsing saved \(selectedCategory.title.lowercased()) advice. Use this pass to spot patterns worth revisiting."
+            return "Browsing saved \(selectedCategory.title.lowercased()) takes. Spot patterns worth another stamp."
         }
-        return "You have \(viewModel.favorites.count) saved cards. Search them, switch layouts, or jump back to Generate for fresh material."
+        return "\(viewModel.favorites.count) keepers on the shelf. Search, switch layouts, or commission fresh material."
     }
 
     private var favoritesPrimaryActionTitle: String {
@@ -800,7 +800,7 @@ struct FavoritesTabView: View {
 
     private var favoritesCommandCard: some View {
         TabCommandCard(
-            eyebrow: "Favorites Command",
+            eyebrow: "Keeper Shelf",
             title: favoritesCommandTitle,
             detail: favoritesCommandDetail,
             systemImage: "bookmark.circle.fill",

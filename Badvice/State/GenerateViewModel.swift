@@ -805,12 +805,13 @@ final class GenerateViewModel {
         }
     }
 
-    private func generationSourceBadgeLabel(for source: String) -> String {
+    private func generationSourceBadgeLabel(for source: String) -> String? {
+        // Default engine path is silent chrome — only non-default sources earn a badge.
         switch source {
         case "apple_on_device":
-            return "Apple On-Device"
+            return "On-Device"
         case "engine":
-            return "Classic"
+            return nil
         case "ml_remix":
             return "Remix"
         case "community":
