@@ -260,7 +260,7 @@ struct ChaosHubTabView: View {
 
     private var hubCommandCard: some View {
         TabCommandCard(
-            eyebrow: "Mission Command",
+            eyebrow: "Mission Desk",
             title: primaryNextStepTitle,
             detail: primaryNextStepDetail,
             systemImage: "flame.fill",
@@ -308,56 +308,60 @@ struct ChaosHubTabView: View {
         Group {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .stroke(secondaryText.opacity(0.18), lineWidth: 10)
-                    Circle()
-                        .trim(from: 0, to: chaosScoreProgress)
-                        .stroke(
-                            AngularGradient(
-                                gradient: Gradient(colors: [accent.opacity(0.6), accent, accent.opacity(0.9)]),
-                                center: .center
-                            ),
-                            style: StrokeStyle(lineWidth: 10, lineCap: .round)
-                        )
-                        .rotationEffect(.degrees(-90))
-                        .animation(
-                            isMotionReduced ? nil : Theme.smugSettle,
-                            value: chaosScoreProgress
-                        )
+                    ZStack {
+                        Circle()
+                            .stroke(secondaryText.opacity(0.18), lineWidth: 10)
+                        Circle()
+                            .trim(from: 0, to: chaosScoreProgress)
+                            .stroke(
+                                AngularGradient(
+                                    gradient: Gradient(colors: [
+                                        Theme.copperFoilLight.opacity(0.7),
+                                        accent,
+                                        Theme.copperFoilDeep.opacity(0.9),
+                                    ]),
+                                    center: .center
+                                ),
+                                style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                            )
+                            .rotationEffect(.degrees(-90))
+                            .animation(
+                                isMotionReduced ? nil : Theme.smugSettle,
+                                value: chaosScoreProgress
+                            )
 
-                    VStack(spacing: 2) {
-                        Text("\(chaosScore)")
-                            .font(.system(.title2, design: .rounded).weight(.bold))
+                        VStack(spacing: 2) {
+                            Text("\(chaosScore)")
+                                .font(.system(.title2, design: .rounded).weight(.bold))
+                                .foregroundStyle(primaryText)
+                            Text("Score")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(secondaryText)
+                        }
+                    }
+                    .frame(width: 78, height: 78)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(chaosScoreHeadline)
+                            .font(.system(.headline, design: .serif, weight: .bold))
                             .foregroundStyle(primaryText)
-                        Text("Score")
-                            .font(.caption2.weight(.semibold))
+                        Text(chaosScoreCaption)
+                            .font(.caption)
                             .foregroundStyle(secondaryText)
                     }
-                }
-                .frame(width: 78, height: 78)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(chaosScoreHeadline)
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(primaryText)
-                    Text(chaosScoreCaption)
-                        .font(.caption)
-                        .foregroundStyle(secondaryText)
-                }
+                    Spacer(minLength: 0)
 
-                Spacer(minLength: 0)
-
-                Button {
-                    showingChaosFormula = true
-                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                } label: {
-                    Image(systemName: "info.circle")
-                        .font(.body)
-                        .foregroundStyle(secondaryText.opacity(0.7))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("How is Mission Score calculated?")
+                    Button {
+                        showingChaosFormula = true
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.body)
+                            .foregroundStyle(secondaryText.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("How is Mission Score calculated?")
                 }
 
                 ChaosMeterBar(
@@ -1153,28 +1157,38 @@ struct ChaosHubTabView: View {
         content()
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                    .fill(cardColor)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        accent.opacity(0.10),
-                                        .clear,
-                                        .black.opacity(0.04),
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .fill(cardColor)
+                    if Theme.usesPaperGrain(for: settings.theme) {
+                        PaperGrainOverlay(opacity: 0.04)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+                    }
+                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    accent.opacity(0.12),
+                                    .clear,
+                                    .black.opacity(0.05),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                            .blendMode(.screen)
-                    )
-            )
+                        )
+                }
+            }
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                    .stroke(accent.opacity(0.12), lineWidth: 1)
+                    .stroke(
+                        LinearGradient(
+                            colors: [accent.opacity(0.28), accent.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
             )
             .overlay(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 2, style: .continuous)

@@ -73,6 +73,7 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
     let primaryText: Color
     let secondaryText: Color
     let cardColor: Color
+    var useEditorialType: Bool = true
     @ViewBuilder let metrics: () -> Metrics
     @ViewBuilder let actions: () -> Actions
 
@@ -81,19 +82,28 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(accent.opacity(0.12))
-                        .frame(width: 40, height: 40)
+                        .fill(Theme.copperEmbossGradient)
+                        .frame(width: 42, height: 42)
+                        .shadow(color: Theme.copperFoilDeep.opacity(0.28), radius: 6, y: 3)
+                    Circle()
+                        .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                        .frame(width: 42, height: 42)
                     Image(systemName: systemImage)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(accent)
+                        .foregroundStyle(Theme.espressoInk)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(eyebrow)
-                        .font(.caption.weight(.bold))
+                    Text(eyebrow.uppercased())
+                        .font(.caption2.weight(.heavy))
+                        .tracking(1.1)
                         .foregroundStyle(accent)
                     Text(title)
-                        .font(.subheadline.weight(.bold))
+                        .font(
+                            useEditorialType
+                                ? .system(.subheadline, design: .serif, weight: .bold)
+                                : .subheadline.weight(.bold)
+                        )
                         .foregroundStyle(primaryText)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(detail)
@@ -113,19 +123,38 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
         }
         .padding(Theme.cardInnerSpacing + 2)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(cardColor.opacity(0.78))
-        )
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                    .fill(cardColor.opacity(0.82))
+                PaperGrainOverlay(opacity: 0.045)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous))
+                RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accent.opacity(0.10), .clear, Color.black.opacity(0.04)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.22), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [accent.opacity(0.38), accent.opacity(0.12)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
         .overlay(alignment: .top) {
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [accent.opacity(0.75), accent.opacity(0.12), .clear],
+                        colors: [accent.opacity(0.8), accent.opacity(0.14), .clear],
                         startPoint: .topLeading,
                         endPoint: .trailing
                     )
@@ -163,39 +192,42 @@ struct TabCommandActionButton: View {
                 .padding(.horizontal, 10)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(isDisabled ? accent.opacity(0.72) : (prominent ? buttonText : accent))
+        .foregroundStyle(
+            isDisabled
+                ? accent.opacity(0.72)
+                : (prominent ? Theme.espressoInk : accent)
+        )
         .tint(accent)
         .disabled(isDisabled)
         .modifier(ConditionalAccessibilityIdentifier(accessibilityIdentifier: accessibilityIdentifier))
         .accessibilityLabel(title)
-        .contentShape(RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous))
+        .contentShape(Capsule(style: .continuous))
         .background {
             ZStack {
-                RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-                    .fill(prominent ? (isDisabled ? accent.opacity(0.08) : accent.opacity(0.62)) : .clear)
-                if !isDisabled {
-                    RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
+                if prominent {
+                    Capsule(style: .continuous)
                         .fill(
-                            LinearGradient(
-                                colors: [
-                                    accent.opacity(prominent ? 0.12 : 0.12),
-                                    accent.opacity(prominent ? 0.03 : 0.0),
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                            isDisabled
+                                ? AnyShapeStyle(accent.opacity(0.18))
+                                : AnyShapeStyle(Theme.copperEmbossGradient)
                         )
-                        .opacity(prominent ? 0.45 : 0.16)
+                    if !isDisabled {
+                        Capsule(style: .continuous)
+                            .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                    }
+                } else {
+                    Capsule(style: .continuous)
+                        .fill(accent.opacity(isDisabled ? 0.06 : 0.10))
+                    Capsule(style: .continuous)
+                        .stroke(accent.opacity(isDisabled ? 0.14 : 0.22), lineWidth: 1)
                 }
             }
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.mediumCornerRadius, style: .continuous)
-                        .stroke(
-                            isDisabled ? accent.opacity(0.20) : accent.opacity(prominent ? 0.58 : 0.26),
-                            lineWidth: 1
-                        )
-            )
         }
+        .shadow(
+            color: prominent && !isDisabled ? Theme.copperFoilDeep.opacity(0.28) : .clear,
+            radius: 8,
+            y: 3
+        )
     }
 
     @ViewBuilder

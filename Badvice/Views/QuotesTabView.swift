@@ -257,7 +257,7 @@ struct QuotesTabView: View {
                     .offset(y: -2)
 
                 Text(quote.text)
-                    .font(.body.weight(.medium))
+                    .font(.system(.body, design: .serif, weight: .semibold))
                     .foregroundStyle(primaryText)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -292,20 +292,41 @@ struct QuotesTabView: View {
             }
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .fill(cardColor.opacity(0.97))
-                .overlay(
+        .padding(.leading, 4)
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                    .fill(cardColor.opacity(0.97))
+                if Theme.usesPaperGrain(for: settings.theme) {
+                    PaperGrainOverlay(opacity: 0.04)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+                }
+                RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accent.opacity(0.10), .clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+        }
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(
                     LinearGradient(
-                        colors: [accent.opacity(0.08), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                        colors: [accent.opacity(0.7), accent.opacity(0.2)],
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
                 )
-        )
+                .frame(width: 3)
+                .padding(.vertical, 14)
+                .padding(.leading, 6)
+        }
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.12), lineWidth: 1)
+                .stroke(accent.opacity(0.16), lineWidth: 1)
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
@@ -338,7 +359,7 @@ struct QuotesTabView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            accent.opacity(0.18),
+                            accent.opacity(0.20),
                             cardColor,
                             cardColor.opacity(0.95)
                         ],
@@ -346,25 +367,62 @@ struct QuotesTabView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
-                        .stroke(accent.opacity(0.14), lineWidth: 1)
+            if Theme.usesPaperGrain(for: settings.theme) {
+                PaperGrainOverlay(opacity: 0.055)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous))
+            }
+            RoundedRectangle(cornerRadius: Theme.cardCornerRadius + 4, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [accent.opacity(0.4), accent.opacity(0.12)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
                 )
+
+            // Intensity rail
+            HStack(spacing: 0) {
+                LinearGradient(
+                    colors: [accent.opacity(0.85), accent.opacity(0.25)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(width: 3)
+                .padding(.vertical, 18)
+                Spacer(minLength: 0)
+            }
 
             Text("\u{201C}")
                 .font(.system(size: 92, weight: .heavy, design: .serif))
                 .foregroundStyle(accent.opacity(0.18))
-                .offset(x: 14, y: -10)
+                .offset(x: 18, y: -10)
                 .allowsHitTesting(false)
 
             VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    Text("Daily Ritual")
-                        .font(.caption.weight(.bold))
-                        .tracking(1.0)
+                HStack(spacing: 8) {
+                    Text("DAILY RITUAL")
+                        .font(.caption2.weight(.heavy))
+                        .tracking(1.3)
                         .foregroundStyle(accent)
                         .accessibilityIdentifier("quotes.dailyRitual.title")
                     Spacer()
+                    // Wax seal + TODAY
+                    ZStack {
+                        Circle()
+                            .fill(Theme.copperEmbossGradient)
+                            .frame(width: 28, height: 28)
+                        Text("B")
+                            .font(.system(size: 12, weight: .black, design: .rounded))
+                            .foregroundStyle(Theme.espressoInk)
+                    }
+                    Text("TODAY")
+                        .font(.caption2.weight(.heavy))
+                        .tracking(0.8)
+                        .foregroundStyle(Theme.espressoInk)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Theme.copperEmbossGradient, in: Capsule(style: .continuous))
                 }
                 .padding(.bottom, 12)
 
@@ -466,13 +524,7 @@ struct QuotesTabView: View {
                 .accessibilityIdentifier("quotes.tomorrowCue")
             }
             .padding(22)
-        }
-        .overlay(alignment: .topTrailing) {
-            Text("TODAY")
-                .font(.caption2.weight(.bold))
-                .tracking(1.2)
-                .foregroundStyle(accent)
-                .padding(12)
+            .padding(.leading, 4)
         }
         .overlay(
             Color.clear

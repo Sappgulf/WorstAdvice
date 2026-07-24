@@ -157,10 +157,6 @@ struct HistoryTabView: View {
 
                                 historyCategoryChips
 
-                                // Hall of Fame card
-                                hallOfFameSection
-                                    .padding(.horizontal, 0)
-
                                 // Stats strip
                                 let filtersActive = viewModel.selectedCategory != nil || !viewModel.searchText.isEmpty
                                 HStack {
@@ -200,6 +196,11 @@ struct HistoryTabView: View {
                         .padding(.bottom, 12)
 
                         historyCommandCard
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 8)
+
+                        // Hall of Fame sits under the command card so the ledger lead is first
+                        hallOfFameSection
                             .padding(.horizontal, 16)
                             .padding(.bottom, 8)
 
@@ -506,7 +507,7 @@ struct HistoryTabView: View {
 
     private var historyCommandCard: some View {
         TabCommandCard(
-            eyebrow: "History Command",
+            eyebrow: "Chaos Ledger",
             title: historyCommandTitle,
             detail: historyCommandDetail,
             systemImage: "clock.arrow.circlepath",
