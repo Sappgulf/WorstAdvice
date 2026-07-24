@@ -767,23 +767,23 @@ struct GenerateTabView: View {
     }
 
     private var commandCardTitle: String {
-        if viewModel.isGenerating { return "Writing the bad idea" }
-        if viewModel.current == nil { return "Build one bad idea" }
-        if viewModel.isCurrentFavorite { return "Saved. Now send it." }
-        return "Tune the next take"
+        if viewModel.isGenerating { return "Stamping the take" }
+        if viewModel.current == nil { return "Commission a bad idea" }
+        if viewModel.isCurrentFavorite { return "Sealed. Now send it." }
+        return "Tune the next dispatch"
     }
 
     private var commandCardSubtitle: String {
         if viewModel.isGenerating {
-            return "Category, tone, and your one detail are locked in for this run."
+            return "Lane, voice, and your one detail are locked. The seal is warming."
         }
         if viewModel.current == nil {
-            return "Choose a lane, set the voice, add one detail, then generate."
+            return "Pick a lane, set the voice, optional detail — then press the copper button."
         }
         if viewModel.isCurrentFavorite {
             return "Share the keeper or remix only when the tone needs a sharper edge."
         }
-        return "Save the line if it works, or adjust the prompt before the next run."
+        return "Save the line if it works, or adjust before the next editorial run."
     }
 
     private var generationHeroMetrics: some View {
@@ -1436,26 +1436,38 @@ struct GenerateTabView: View {
         }
     }
 
+    @ViewBuilder
+    private var primaryGenerateButton: some View {
+        let useCopperCTA = settings.theme == .badvice || settings.theme == .ember
+        let label = Label(viewModel.primaryActionTitle, systemImage: "sparkles")
+            .font(Theme.bodyFont(for: settings.theme).weight(.bold))
+            .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)
+
+        Button {
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+            Task {
+                await viewModel.generate()
+                onDataChanged()
+            }
+        } label: {
+            label
+        }
+        .disabled(viewModel.isGenerating)
+        .accessibilityIdentifier("generate.primary")
+        .accessibilityHint("Generates a new advice card using the selected category and tone")
+        .modifier(CopperOrGlassCTA(
+            useCopper: useCopperCTA,
+            isEnabled: !viewModel.isGenerating,
+            reduceMotion: isMotionReduced,
+            accent: accent,
+            buttonText: buttonText
+        ))
+    }
+
     private var primaryActionButtonsContent: some View {
         let hasCurrent = viewModel.current != nil
         return VStack(spacing: 10) {
-            // Primary generate button
-            Button {
-                Task {
-                    await viewModel.generate()
-                    onDataChanged()
-                }
-            } label: {
-                Label(viewModel.primaryActionTitle, systemImage: "sparkles")
-                    .font(Theme.bodyFont(for: settings.theme).weight(.bold))
-                    .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)
-            }
-            .adaptiveGlassButtonStyle(prominent: true)
-            .accessibilityIdentifier("generate.primary")
-            .accessibilityHint("Generates a new advice card using the selected category and tone")
-            .tint(accent)
-            .foregroundStyle(buttonText)
-            .disabled(viewModel.isGenerating)
+            primaryGenerateButton
 
             // Quick-fire secondary row — always visible
             HStack(spacing: 10) {
@@ -1595,7 +1607,7 @@ struct GenerateTabView: View {
             }
 
             Text(
-                "New: Missions combines daily progress, community pulse, and your wins. ML Remix now sharpens tone and category variety."
+                "Infernal Editorial: copper-stamped takes, paper grain, deadpan/chaotic/faux-expert share cards, and a chaos meter that actually feels like one."
             )
             .font(.footnote)
             .foregroundStyle(secondaryText)
@@ -1923,8 +1935,12 @@ struct GenerateTabView: View {
                     onDataChanged()
                     HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
                 }
+                .modifier(PettyShakeOnDislike(
+                    isDisliked: viewModel.currentVote == .dislike,
+                    reduceMotion: isMotionReduced
+                ))
                 .animation(
-                    isMotionReduced ? nil : .spring(response: Theme.animFast, dampingFraction: 0.7),
+                    isMotionReduced ? nil : Theme.pettyShake,
                     value: viewModel.currentVote)
             }
             .padding(.horizontal, 14)
@@ -1946,9 +1962,9 @@ struct GenerateTabView: View {
 
     private var emptyState: some View {
         TabEmptyStatePanel(
-            icon: "sparkles",
-            title: "Start with one bad idea.",
-            message: "Pick a category and tone, add one optional detail, then generate, save, copy, share, or remix.",
+            icon: "scroll.fill",
+            title: "No take sealed yet.",
+            message: "Pick a lane and a voice, optional detail, then hit the copper button. Confidence guaranteed. Wisdom not included.",
             accent: accent,
             primaryText: primaryText,
             secondaryText: secondaryText,
@@ -1957,7 +1973,7 @@ struct GenerateTabView: View {
         ) {
             HStack(spacing: 8) {
                 emptyStateStep("1", "Pick")
-                emptyStateStep("2", "Generate")
+                emptyStateStep("2", "Stamp")
                 emptyStateStep("3", "Save")
                 emptyStateStep("4", "Share")
             }
@@ -1980,6 +1996,45 @@ struct GenerateTabView: View {
                 .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Primary CTA chrome
+
+private struct CopperOrGlassCTA: ViewModifier {
+    let useCopper: Bool
+    let isEnabled: Bool
+    let reduceMotion: Bool
+    let accent: Color
+    let buttonText: Color
+
+    func body(content: Content) -> some View {
+        if useCopper {
+            content
+                .buttonStyle(CopperPillButtonStyle(isEnabled: isEnabled, reduceMotion: reduceMotion))
+        } else {
+            content
+                .adaptiveGlassButtonStyle(prominent: true)
+                .tint(accent)
+                .foregroundStyle(buttonText)
+        }
+    }
+}
+
+private struct PettyShakeOnDislike: ViewModifier {
+    let isDisliked: Bool
+    let reduceMotion: Bool
+    @State private var shakeTick: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .modifier(Shake(amount: reduceMotion ? 0 : 5, shakesPerUnit: 3, animatableData: shakeTick))
+            .onChange(of: isDisliked) { _, disliked in
+                guard disliked, !reduceMotion else { return }
+                withAnimation(Theme.pettyShake) {
+                    shakeTick += 1
+                }
+            }
     }
 }
 
@@ -2006,6 +2061,7 @@ private struct LoadingAdviceView: View {
     @State private var messageRotationTask: Task<Void, Never>?
     @State private var progressTask: Task<Void, Never>?
     @State private var loadingProgress: Double = 0.04
+    @State private var sealPulse: CGFloat = 1
 
     var body: some View {
         let currentMessage = GenerationLoadingMessages.message(forTick: messageTick)
@@ -2014,8 +2070,14 @@ private struct LoadingAdviceView: View {
             RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
                 .fill(cardColor.opacity(0.98))
                 .overlay {
+                    if Theme.usesPaperGrain(for: theme) {
+                        PaperGrainOverlay(opacity: 0.06)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
+                    }
+                }
+                .overlay {
                     LinearGradient(
-                        colors: [accentColor.opacity(0.08), .clear, .black.opacity(0.03)],
+                        colors: [accentColor.opacity(0.10), .clear, .black.opacity(0.04)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -2058,10 +2120,16 @@ private struct LoadingAdviceView: View {
                         .frame(width: 48, height: 48)
                         .rotationEffect(.degrees(effectiveReduceMotion ? 0 : -ringRotation * 0.65))
 
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(accentColor)
-                        .scaleEffect(ringPulse ? 1.0 : 0.92)
+                    ZStack {
+                        Circle()
+                            .fill(Theme.copperEmbossGradient)
+                            .frame(width: 28, height: 28)
+                            .scaleEffect(sealPulse)
+                        Text("B")
+                            .font(.system(size: 13, weight: .black, design: .rounded))
+                            .foregroundStyle(Theme.espressoInk)
+                    }
+                    .scaleEffect(ringPulse ? 1.0 : 0.92)
                     .animation(
                         effectiveReduceMotion
                                 ? nil
@@ -2081,22 +2149,13 @@ private struct LoadingAdviceView: View {
                     .animation(.easeInOut(duration: 0.2), value: messageTick)
 
                 VStack(spacing: 7) {
-                    GeometryReader { proxy in
-                        ZStack(alignment: .leading) {
-                            Capsule(style: .continuous)
-                                .fill(secondaryTextColor.opacity(0.12))
-                            Capsule(style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [accentColor.opacity(0.72), accentColor],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .frame(width: max(8, proxy.size.width * loadingProgress))
-                        }
-                    }
-                    .frame(height: 6)
+                    ChaosMeterBar(
+                        progress: loadingProgress,
+                        accent: accentColor,
+                        track: secondaryTextColor.opacity(0.12),
+                        height: 6,
+                        reduceMotion: effectiveReduceMotion
+                    )
 
                     HStack(spacing: 5) {
                         ForEach(0..<4, id: \.self) { index in
@@ -2105,7 +2164,7 @@ private struct LoadingAdviceView: View {
                                 .frame(width: 5, height: 5)
                         }
                         Spacer(minLength: 0)
-                        Text("SAFE • DISTINCT • ON BRAND")
+                        Text("CONFIDENTLY WRONG")
                             .font(.system(size: 8, weight: .bold, design: .rounded))
                             .tracking(0.7)
                             .foregroundStyle(secondaryTextColor.opacity(0.72))

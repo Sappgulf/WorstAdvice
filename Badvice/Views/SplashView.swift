@@ -84,10 +84,10 @@ struct SplashView: View {
 
                     Spacer().frame(height: 14)
 
-                    Text("confidence in every bad take")
+                    Text("infernal editorial · confidently wrong")
                         .font(.system(.subheadline, design: .rounded, weight: .semibold))
                         .foregroundStyle(loadingColor)
-                        .tracking(1.2)
+                        .tracking(1.0)
                         .textCase(.uppercase)
                         .multilineTextAlignment(.center)
                         .offset(y: taglineOffset)

@@ -67,6 +67,20 @@ enum Theme {
     /// Slow: page-level transitions — 0.45s
     static let animSlow: Double = 0.45
 
+    // MARK: - Signature motion language (Infernal Editorial)
+    /// Primary CTA / new take lands with a confident bounce.
+    static var badBounce: Animation {
+        .spring(response: 0.38, dampingFraction: 0.58, blendDuration: 0.12)
+    }
+    /// Card content locks in after generation.
+    static var smugSettle: Animation {
+        .spring(response: 0.52, dampingFraction: 0.84, blendDuration: 0.22)
+    }
+    /// Dislike / “wrong again” micro-reaction (pair with reduce-motion checks).
+    static var pettyShake: Animation {
+        .spring(response: 0.22, dampingFraction: 0.32, blendDuration: 0.05)
+    }
+
     // MARK: - Spring Animations (Organic)
     
     static var springSnappy: Animation {
@@ -81,6 +95,35 @@ enum Theme {
         .spring(response: 0.55, dampingFraction: 0.8, blendDuration: 0.3)
     }
 
+    // MARK: - Infernal copper foil (brand metal)
+
+    static let copperFoilLight = Color(hex: "F0C4A0")
+    static let copperFoilMid = Color(hex: "E88D72")
+    static let copperFoilDeep = Color(hex: "8F4A22")
+    static let espressoInk = Color(hex: "1C130A")
+    static let parchmentWarm = Color(hex: "FFF8F0")
+
+    static var copperFoilGradient: LinearGradient {
+        LinearGradient(
+            colors: [copperFoilLight, copperFoilMid, copperFoilDeep],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    static var copperEmbossGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color.white.opacity(0.35),
+                copperFoilLight.opacity(0.9),
+                copperFoilMid,
+                copperFoilDeep.opacity(0.95),
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
     static let headlineFont: Font = headlineFont(for: .badvice)
     static let cardFont: Font = cardFont(for: .badvice)
     static let bodyFont: Font = bodyFont(for: .badvice)
@@ -92,6 +135,8 @@ enum Theme {
             return .system(.largeTitle, design: .monospaced, weight: .bold)
         case .minimal, .slate, .evergreen:
             return .system(.largeTitle, design: .rounded, weight: .bold)
+        case .badvice, .ember, .sunset:
+            return .system(.largeTitle, design: .serif, weight: .bold)
         default:
             return .system(.largeTitle, design: .serif, weight: .bold)
         }
@@ -103,10 +148,27 @@ enum Theme {
             return .system(.title3, design: .monospaced, weight: .semibold)
         case .minimal, .slate:
             return .system(.title3, design: .rounded, weight: .semibold)
-        case .sunset, .cosmic, .ember:
+        case .badvice, .sunset, .cosmic, .ember:
+            // Editorial serif for the take — the product poster typeface.
             return .system(.title3, design: .serif, weight: .semibold)
         default:
             return .system(.title3, design: .default, weight: .semibold)
+        }
+    }
+
+    /// Tone-linked micro type for advice body (lighter skin over theme).
+    static func editorialCardFont(for mode: ThemeMode, tone: ToneMode) -> Font {
+        switch tone {
+        case .corporateConsultant, .linkedInInfluencer:
+            return .system(.title3, design: .default, weight: .semibold)
+        case .wizard, .minimalistMonk, .lifeCoach, .oldMoney:
+            return .system(.title3, design: .serif, weight: .semibold)
+        case .cryptoBro, .genZ, .redditCommenter, .influencer:
+            return .system(.title3, design: .rounded, weight: .bold)
+        case .conspiracyTheorist, .alphaPodcast:
+            return .system(.title3, design: .monospaced, weight: .semibold)
+        default:
+            return cardFont(for: mode)
         }
     }
 
@@ -115,6 +177,8 @@ enum Theme {
         case .fallout, .retro, .cybernetic:
             return .system(.body, design: .monospaced, weight: .regular)
         case .minimal, .slate, .evergreen:
+            return .system(.body, design: .rounded, weight: .regular)
+        case .badvice:
             return .system(.body, design: .rounded, weight: .regular)
         default:
             return .system(.body, design: .default, weight: .regular)
@@ -129,6 +193,22 @@ enum Theme {
             return .system(.subheadline, design: .rounded, weight: .medium)
         }
     }
+
+    /// Whether default/editorial surfaces should show paper grain.
+    static func usesPaperGrain(for mode: ThemeMode) -> Bool {
+        switch mode {
+        case .badvice, .ember, .evergreen, .midnight:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Intensity rail width from a 0…100 chaos/wrongness score.
+    static func intensityRailWidth(score: Int) -> CGFloat {
+        let clamped = min(100, max(0, score))
+        return 2.5 + CGFloat(clamped) / 100.0 * 4.5
+    }
     
     // MARK: - Performance: Gradient Cache
     
@@ -138,7 +218,7 @@ enum Theme {
     static func cardShadow(for theme: ThemeMode) -> (color: Color, radius: CGFloat, y: CGFloat) {
         switch theme {
         case .badvice:
-            return (Color.black.opacity(0.45), 18, 7)
+            return (Color.black.opacity(0.52), 22, 10)
         case .minimal:
             return (Color.black.opacity(0.06), 8, 3)
         case .ember:
@@ -167,6 +247,9 @@ enum Theme {
     /// Returns a secondary shadow for enhanced depth (used for layered shadow effects)
     static func cardSecondaryShadow(for theme: ThemeMode) -> (color: Color, radius: CGFloat, y: CGFloat)? {
         switch theme {
+        case .badvice:
+            // Copper foil bloom under the poster card
+            return (Color(hex: "E88D72").opacity(0.18), 14, 4)
         case .neon:
             return (Color(hex: "00FFFF").opacity(0.2), 12, 5)
         case .cosmic:
@@ -175,6 +258,8 @@ enum Theme {
             return (Color(hex: "FFD700").opacity(0.2), 10, 3)
         case .retro:
             return (Color(hex: "FF1493").opacity(0.2), 10, 3)
+        case .ember:
+            return (Color(hex: "FF6B47").opacity(0.16), 12, 4)
         default:
             return nil
         }
@@ -189,8 +274,14 @@ enum Theme {
             let gradient: LinearGradient
             switch mode {
             case .badvice:
+                // Deeper vignette espresso with warm copper lift at the top
                 gradient = LinearGradient(
-                    colors: [Color(hex: "20121D"), Color(hex: "151116"), Color(hex: "0E0A0F")],
+                    colors: [
+                        Color(hex: "2A1816"),
+                        Color(hex: "1A1218"),
+                        Color(hex: "120E12"),
+                        Color(hex: "0A080B"),
+                    ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -269,7 +360,7 @@ enum Theme {
 
     static func canvasColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "0F0D11")
+        case .badvice: return Color(hex: "0C0A0E")
         case .minimal: return Color(hex: "F4F4F6")
         case .ember: return Color(hex: "1B100F")
         case .slate: return Color(hex: "1A2430")
@@ -289,7 +380,7 @@ enum Theme {
             return custom
         }
         switch mode {
-        case .badvice: return Color(hex: "E88D72") // Brighter Coral with more saturation
+        case .badvice: return copperFoilMid // Brand copper
         case .minimal: return Color(hex: "1C1C1E") // Black
         case .ember: return Color(hex: "FF6B47") // Vibrant Ember Orange
         case .slate: return Color(hex: "8EC5FC") // Cool Blue accent for better contrast
@@ -307,6 +398,8 @@ enum Theme {
     /// Returns a secondary accent color for enhanced visual interest
     static func secondaryAccent(for mode: ThemeMode) -> Color? {
         switch mode {
+        case .badvice:
+            return copperFoilLight // Foil highlight
         case .sunset:
             return Color(hex: "FF6B35") // Coral complement to gold
         case .cosmic:
@@ -321,6 +414,8 @@ enum Theme {
             return Color(hex: "4CAF50") // Forest complement
         case .fallout:
             return Color(hex: "E1C95C") // Vault-Tec amber highlight
+        case .ember:
+            return Color(hex: "FFB088")
         default:
             return nil
         }
@@ -328,7 +423,7 @@ enum Theme {
 
     static func cardColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "342336").opacity(0.84)
+        case .badvice: return Color(hex: "2C1C28").opacity(0.92)
         case .minimal: return Color.white
         case .ember: return Color(hex: "4F2728").opacity(0.84)
         case .slate: return Color(hex: "314355").opacity(0.84)
@@ -478,7 +573,7 @@ enum Theme {
     /// Returns whether a theme should use glow effects
     static func shouldUseGlow(for mode: ThemeMode) -> Bool {
         switch mode {
-        case .neon, .cosmic, .retro, .midnight, .cybernetic, .fallout:
+        case .neon, .cosmic, .retro, .midnight, .cybernetic, .fallout, .badvice:
             return true
         default:
             return false
@@ -489,6 +584,8 @@ enum Theme {
     static func glowColor(for mode: ThemeMode) -> Color? {
         guard shouldUseGlow(for: mode) else { return nil }
         switch mode {
+        case .badvice:
+            return copperFoilMid
         case .neon:
             return Color(hex: "FF00FF")
         case .cosmic:
@@ -508,6 +605,7 @@ enum Theme {
 
     static func headerColor(for mode: ThemeMode) -> Color {
         switch mode {
+        case .badvice: return copperFoilMid
         case .retro: return Color(hex: "00FF9F")
         case .neon: return Color(hex: "FF00FF")
         case .cosmic: return Color(hex: "C77DFF")
@@ -524,6 +622,7 @@ enum Theme {
     static func headerShadowColor(for mode: ThemeMode) -> Color {
         switch mode {
         case .minimal: return .clear
+        case .badvice: return copperFoilMid.opacity(0.55)
         case .neon: return Color(hex: "FF00FF").opacity(0.9)
         case .retro: return Color(hex: "00FF9F").opacity(0.9)
         case .cosmic: return Color(hex: "C77DFF").opacity(0.8)
@@ -551,10 +650,10 @@ enum Theme {
         switch mode {
         case .badvice:
             return ThemePersonality(
-                descriptor: "Editorial mischief with warm grain",
-                surfaceMood: "Velvet Paper",
+                descriptor: "Infernal editorial — copper foil on espresso paper",
+                surfaceMood: "Velvet Parchment",
                 bestFor: "Best for the core Badvice vibe",
-                effectIntensity: 0.62,
+                effectIntensity: 0.68,
                 indicatorInset: 2
             )
         case .minimal:
@@ -656,8 +755,15 @@ enum Theme {
     static func tabBarStyle(for mode: ThemeMode) -> ThemeTabBarStyle {
         let personality = personality(for: mode)
         let glassStrength = glassMorphismOpacity(for: mode)
+        let glow: Color? = {
+            switch mode {
+            case .badvice: return copperFoilMid.opacity(0.35)
+            case .neon, .cosmic, .cybernetic, .fallout: return accent(for: mode).opacity(0.28)
+            default: return nil
+            }
+        }()
         return ThemeTabBarStyle(
-            backgroundTint: tabBarBackground(for: mode).opacity(0.66),
+            backgroundTint: tabBarBackground(for: mode).opacity(mode == .badvice ? 0.78 : 0.66),
             materialOverlayOpacity: min(max(glassStrength, 0.12), 0.52),
             borderTop: accent(for: mode).opacity(0.18 + personality.effectIntensity * 0.08),
             borderBottom: .white.opacity(0.06 + personality.effectIntensity * 0.04),
@@ -665,7 +771,7 @@ enum Theme {
             shadowRadius: CGFloat(8 + personality.effectIntensity * 5),
             indicatorInset: personality.indicatorInset,
             selectedScale: CGFloat(1.02 + personality.effectIntensity * 0.015),
-            glow: nil
+            glow: glow
         )
     }
 }

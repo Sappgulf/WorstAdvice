@@ -61,16 +61,25 @@ struct ShareCardRenderer {
             let isRedFlagTemplate = content.template == .redFlag
             let storyMode = content.aspectRatio == .story
 
-            // Top Brand Watermark
+            // Top Brand Watermark — editorial templates read distinctly at thumbnail size
+            let editorial = content.template.editorialKind
+            let brandTitle: String
+            let brandFont: UIFont
+            switch editorial {
+            case .deadpan:
+                brandTitle = isCertifiedTemplate ? "BADVICE CERTIFIED" : "BADVICE"
+                brandFont = UIFont.systemFont(ofSize: 34, weight: .heavy)
+            case .chaotic:
+                brandTitle = isRedFlagTemplate ? "BADVICE RED FLAG" : "BADVICE · CHAOS"
+                brandFont = UIFont.systemFont(ofSize: 32, weight: .black)
+            case .fauxExpert:
+                brandTitle = "OFFICIAL BADVICE MEMO"
+                brandFont = UIFont.systemFont(ofSize: 28, weight: .bold)
+            }
             let titleAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 34, weight: .heavy),
+                .font: brandFont,
                 .foregroundColor: UIColor.white.withAlphaComponent(0.95),
             ]
-            let brandTitle = isCertifiedTemplate
-                ? "BADVICE CERTIFIED"
-                : isRedFlagTemplate
-                    ? "BADVICE RED FLAG"
-                    : "BADVICE"
             NSString(string: brandTitle).draw(
                 in: CGRect(
                     x: cardRect.minX + sideInset, y: cardRect.minY + 48, width: cardRect.width - 104,
@@ -78,7 +87,13 @@ struct ShareCardRenderer {
                 withAttributes: titleAttributes
             )
 
-            drawLoopRail(in: cg, cardRect: cardRect, sideInset: sideInset, storyMode: storyMode)
+            drawLoopRail(
+                in: cg,
+                cardRect: cardRect,
+                sideInset: sideInset,
+                storyMode: storyMode,
+                editorial: editorial
+            )
             drawBrandGlyph(in: cg, cardRect: cardRect, template: content.template)
 
             if isRedFlagTemplate {
@@ -104,7 +119,7 @@ struct ShareCardRenderer {
                 )
             }
 
-            // Advice Text
+            // Advice Text — serif-ish weight for deadpan editorial; heavier for chaotic
             let contentWidth = cardRect.width - (sideInset * 2)
             let adviceRect = CGRect(
                 x: cardRect.minX + sideInset,
@@ -112,6 +127,7 @@ struct ShareCardRenderer {
                 width: contentWidth,
                 height: cardRect.height * 0.46
             )
+            let adviceWeight: UIFont.Weight = editorial == .chaotic ? .heavy : .bold
             drawWordWrappedText(
                 content.adviceLine,
                 in: cg,
@@ -121,9 +137,10 @@ struct ShareCardRenderer {
                 ),
                 baseFontSize: adviceFontSize,
                 minFontSize: 24,
-                fontWeight: .bold,
+                fontWeight: adviceWeight,
                 paragraph: paragraph,
-                color: UIColor.white
+                color: UIColor.white,
+                design: editorial == .deadpan || editorial == .fauxExpert ? .serif : .default
             )
 
             // Rationale Text
@@ -164,12 +181,12 @@ struct ShareCardRenderer {
                 withAttributes: metaAttributes
             )
 
-            // Bottom Right App Watermark
+            // Bottom Right App Watermark — copper-tinted white for brand foil feel
             let watermarkAttrs: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 28, weight: .black),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.6),
+                .foregroundColor: UIColor(red: 0.95, green: 0.72, blue: 0.58, alpha: 0.72),
             ]
-            let watermarkStr = "badvice.app"
+            let watermarkStr = "badvice"
             let watermarkSize = watermarkStr.size(withAttributes: watermarkAttrs)
             NSString(string: watermarkStr).draw(
                 in: CGRect(
@@ -204,22 +221,25 @@ struct ShareCardRenderer {
         let colors: [CGColor]
         switch template {
         case .bold:
+            // Chaotic — hotter copper stamp energy
             colors = [
-                UIColor(red: 0.85, green: 0.35, blue: 0.17, alpha: 1).cgColor,
-                UIColor(red: 0.64, green: 0.2, blue: 0.14, alpha: 1).cgColor,
-                UIColor(red: 0.37, green: 0.12, blue: 0.12, alpha: 1).cgColor,
+                UIColor(red: 0.92, green: 0.38, blue: 0.18, alpha: 1).cgColor,
+                UIColor(red: 0.55, green: 0.14, blue: 0.12, alpha: 1).cgColor,
+                UIColor(red: 0.18, green: 0.06, blue: 0.08, alpha: 1).cgColor,
             ]
         case .minimal:
+            // Deadpan — espresso editorial paper
             colors = [
-                UIColor(red: 0.35, green: 0.23, blue: 0.18, alpha: 1).cgColor,
-                UIColor(red: 0.26, green: 0.17, blue: 0.15, alpha: 1).cgColor,
-                UIColor(red: 0.18, green: 0.12, blue: 0.11, alpha: 1).cgColor,
+                UIColor(red: 0.22, green: 0.14, blue: 0.12, alpha: 1).cgColor,
+                UIColor(red: 0.14, green: 0.10, blue: 0.11, alpha: 1).cgColor,
+                UIColor(red: 0.08, green: 0.06, blue: 0.07, alpha: 1).cgColor,
             ]
         case .gradient:
+            // Faux Expert — letterhead warmth with copper → plum
             colors = [
-                UIColor(red: 0.97, green: 0.56, blue: 0.32, alpha: 1).cgColor,
-                UIColor(red: 0.92, green: 0.36, blue: 0.45, alpha: 1).cgColor,
-                UIColor(red: 0.49, green: 0.2, blue: 0.48, alpha: 1).cgColor,
+                UIColor(red: 0.94, green: 0.58, blue: 0.36, alpha: 1).cgColor,
+                UIColor(red: 0.72, green: 0.28, blue: 0.32, alpha: 1).cgColor,
+                UIColor(red: 0.22, green: 0.10, blue: 0.20, alpha: 1).cgColor,
             ]
         case .certified:
             colors = [
@@ -268,9 +288,18 @@ struct ShareCardRenderer {
         in cg: CGContext,
         cardRect: CGRect,
         sideInset: CGFloat,
-        storyMode: Bool
+        storyMode: Bool,
+        editorial: ShareEditorialKind
     ) {
-        let railText = "COMMAND  ->  GENERATE  ->  SHARE"
+        let railText: String
+        switch editorial {
+        case .deadpan:
+            railText = "PICK  ·  STAMP  ·  SHARE"
+        case .chaotic:
+            railText = "GENERATE  →  PANIC  →  POST"
+        case .fauxExpert:
+            railText = "MEMO  ·  CERTIFY  ·  DISTRIBUTE"
+        }
         let railAttrs: [NSAttributedString.Key: Any] = [
             .font: UIFont.monospacedSystemFont(ofSize: storyMode ? 18 : 16, weight: .bold),
             .foregroundColor: UIColor.white.withAlphaComponent(0.68),
@@ -333,7 +362,8 @@ struct ShareCardRenderer {
         minFontSize: CGFloat,
         fontWeight: UIFont.Weight,
         paragraph: NSMutableParagraphStyle,
-        color: UIColor
+        color: UIColor,
+        design: UIFontDescriptor.SystemDesign = .default
     ) {
         let safeText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !safeText.isEmpty else { return }
@@ -344,11 +374,12 @@ struct ShareCardRenderer {
             baseFontSize: baseFontSize,
             minFontSize: minFontSize,
             weight: fontWeight,
-            paragraph: paragraph
+            paragraph: paragraph,
+            design: design
         )
 
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: fittedFontSize, weight: fontWeight),
+            .font: font(size: fittedFontSize, weight: fontWeight, design: design),
             .paragraphStyle: paragraph,
             .foregroundColor: color,
         ]
@@ -360,6 +391,16 @@ struct ShareCardRenderer {
         )
     }
 
+    private static func font(
+        size: CGFloat,
+        weight: UIFont.Weight,
+        design: UIFontDescriptor.SystemDesign
+    ) -> UIFont {
+        let base = UIFont.systemFont(ofSize: size, weight: weight)
+        guard let descriptor = base.fontDescriptor.withDesign(design) else { return base }
+        return UIFont(descriptor: descriptor, size: size)
+    }
+
     private static func fitFontSize(
         _ text: String,
         width: CGFloat,
@@ -367,15 +408,16 @@ struct ShareCardRenderer {
         baseFontSize: CGFloat,
         minFontSize: CGFloat,
         weight: UIFont.Weight,
-        paragraph: NSMutableParagraphStyle
+        paragraph: NSMutableParagraphStyle,
+        design: UIFontDescriptor.SystemDesign = .default
     ) -> CGFloat {
         var fontSize = baseFontSize
         while fontSize > minFontSize {
-            let font = UIFont.systemFont(ofSize: fontSize, weight: weight)
+            let resolved = font(size: fontSize, weight: weight, design: design)
             let rect = (text as NSString).boundingRect(
                 with: CGSize(width: width, height: .greatestFiniteMagnitude),
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
-                attributes: [.font: font, .paragraphStyle: paragraph],
+                attributes: [.font: resolved, .paragraphStyle: paragraph],
                 context: nil
             )
             if rect.height <= maxHeight {

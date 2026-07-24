@@ -241,21 +241,119 @@ struct SectionShell<Header: View, Content: View>: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.10), lineWidth: 1)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
         )
         .overlay(alignment: .top) {
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [accent.opacity(0.44), accent.opacity(0.04), .clear],
+                        colors: [accent.opacity(0.55), accent.opacity(0.08), .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
                 )
-                .frame(height: 0.8)
-                .padding(.horizontal, 18)
+                .frame(height: 1.1)
+                .padding(.horizontal, 16)
                 .padding(.top, 1)
         }
+    }
+}
+
+/// Subtle deterministic paper grain for editorial surfaces (no asset).
+struct PaperGrainOverlay: View {
+    var opacity: Double = 0.06
+
+    var body: some View {
+        Canvas { context, size in
+            let cols = Int(size.width / 3)
+            let rows = Int(size.height / 3)
+            guard cols > 0, rows > 0 else { return }
+            for i in 0..<(cols * rows / 4) {
+                let x = CGFloat((i * 47) % max(cols, 1)) * 3
+                let y = CGFloat((i * 89) % max(rows, 1)) * 3
+                let a = Double((i % 5) + 1) / 40.0
+                context.fill(
+                    Path(CGRect(x: x, y: y, width: 1.5, height: 1.5)),
+                    with: .color(Color.white.opacity(a))
+                )
+            }
+        }
+        .opacity(opacity)
+        .blendMode(.overlay)
+        .allowsHitTesting(false)
+    }
+}
+
+/// Thermometer-style chaos / mission meter (Infernal Editorial).
+struct ChaosMeterBar: View {
+    let progress: Double
+    let accent: Color
+    let track: Color
+    var height: CGFloat = 10
+    var reduceMotion: Bool = false
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = max(0, min(1, progress)) * geo.size.width
+            ZStack(alignment: .leading) {
+                Capsule(style: .continuous)
+                    .fill(track)
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                accent.opacity(0.55),
+                                accent,
+                                (Theme.secondaryAccent(for: .badvice) ?? accent).opacity(0.95),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: max(height, w))
+                    .shadow(color: accent.opacity(0.35), radius: 6, y: 0)
+            }
+        }
+        .frame(height: height)
+        .animation(reduceMotion ? nil : Theme.smugSettle, value: progress)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Copper foil primary CTA for editorial default.
+struct CopperPillButtonStyle: ButtonStyle {
+    var isEnabled: Bool = true
+    var reduceMotion: Bool = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.bold))
+            .foregroundStyle(Theme.espressoInk)
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, minHeight: Theme.largeTapTargetHeight)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(Theme.copperEmbossGradient)
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.45), Theme.copperFoilDeep.opacity(0.5)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(
+                color: Theme.copperFoilDeep.opacity(configuration.isPressed ? 0.15 : 0.35),
+                radius: configuration.isPressed ? 4 : 12,
+                y: configuration.isPressed ? 2 : 6
+            )
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .opacity(isEnabled ? 1 : 0.55)
+            .animation(reduceMotion ? nil : Theme.badBounce, value: configuration.isPressed)
     }
 }
 

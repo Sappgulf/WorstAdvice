@@ -94,14 +94,24 @@ struct FloatingTabBarView: View {
             handleTap(on: tab)
         } label: {
             VStack(spacing: 2) {
-                Image(systemName: tab.systemImage)
-                    .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
-                    .symbolVariant(isSelected ? .fill : .none)
-                    .foregroundStyle(
-                        isSelected
-                            ? accent
-                            : (isHighlighted ? accent.opacity(0.78) : secondaryText.opacity(0.74))
-                    )
+                ZStack {
+                    if isSelected, let glow = tabBarStyle.glow {
+                        Circle()
+                            .fill(glow)
+                            .frame(width: 28, height: 16)
+                            .blur(radius: 8)
+                            .offset(y: 2)
+                    }
+                    Image(systemName: tab.systemImage)
+                        .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
+                        .symbolVariant(isSelected ? .fill : .none)
+                        .foregroundStyle(
+                            isSelected
+                                ? accent
+                                : (isHighlighted ? accent.opacity(0.78) : secondaryText.opacity(0.62))
+                        )
+                        .scaleEffect(isSelected ? 1.04 : (isHighlighted ? 1.02 : 0.96))
+                }
 
                 Text(titleText)
                     .font(.system(size: isSelected ? 10 : 9, weight: isSelected ? .semibold : .regular, design: .rounded))
@@ -112,7 +122,7 @@ struct FloatingTabBarView: View {
             .foregroundStyle(
                 isSelected
                     ? accent
-                    : (isHighlighted ? accent.opacity(0.58) : secondaryText.opacity(0.74))
+                    : (isHighlighted ? accent.opacity(0.58) : secondaryText.opacity(0.62))
             )
             .frame(maxWidth: .infinity)
             .frame(minHeight: Theme.floatingTabItemMinHeight)
@@ -122,12 +132,22 @@ struct FloatingTabBarView: View {
             .overlay(alignment: .top) {
                 if isSelected || isHighlighted {
                     Capsule(style: .continuous)
-                        .fill(accent.opacity(isSelected ? 0.9 : 0.45))
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    accent.opacity(isSelected ? 1 : 0.5),
+                                    (Theme.secondaryAccent(for: theme) ?? accent).opacity(isSelected ? 0.85 : 0.35),
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                         .frame(height: isSelected ? 3 : 2)
+                        .shadow(color: accent.opacity(isSelected ? 0.45 : 0), radius: 4, y: 0)
                         .padding(.horizontal, max(12, tabBarStyle.indicatorInset + 10))
                         .padding(.top, 1)
                         .animation(
-                            .spring(response: Theme.animFast, dampingFraction: 0.8),
+                            reduceMotion ? nil : Theme.badBounce,
                             value: isSelected
                         )
                 }

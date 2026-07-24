@@ -197,14 +197,31 @@ enum ShareCardTemplate: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .minimal: return "Minimal"
-        case .gradient: return "Gradient"
-        case .bold: return "Bold"
+        case .minimal: return "Deadpan"
+        case .gradient: return "Faux Expert"
+        case .bold: return "Chaotic"
         case .certified: return "Badvice Certified"
         case .cinematic: return "Cinematic"
         case .redFlag: return "Red Flag"
         }
     }
+
+    /// Editorial share personality used by ShareKit layout rails.
+    var editorialKind: ShareEditorialKind {
+        switch self {
+        case .minimal: return .deadpan
+        case .bold: return .chaotic
+        case .gradient, .certified: return .fauxExpert
+        case .cinematic: return .deadpan
+        case .redFlag: return .chaotic
+        }
+    }
+}
+
+enum ShareEditorialKind: String, Sendable {
+    case deadpan
+    case chaotic
+    case fauxExpert
 }
 
 enum ShareAspectRatio: String, CaseIterable, Codable, Identifiable, Sendable {

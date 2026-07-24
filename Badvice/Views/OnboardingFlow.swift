@@ -34,24 +34,32 @@ struct OnboardingFlow: View {
     // better discovered by using the app than by swiping through slides about it.
     private let pages: [Page] = [
         Page(
-            icon: "sparkles",
-            title: "Confidently wrong\nadvice, on command.",
-            subtitle: "Pick a category and tone, generate instantly, then save, share, or remix whatever lands.",
-            kicker: "One tap. Zero good advice.",
-            previewTitle: "Command card",
-            previewAdvice: "Career + Corporate Consultant is ready for the first run.",
-            accent: Color(hex: "8F4A22"),
-            background: LinearGradient(colors: [Color(hex: "F7F2E8"), Color(hex: "F1E4D4")], startPoint: .topLeading, endPoint: .bottomTrailing)
+            icon: "scroll.fill",
+            title: "Confidently wrong\nadvice, stamped.",
+            subtitle: "Pick a lane and a voice, hit the copper button, then save, share, or remix the take.",
+            kicker: "One seal. Zero good advice.",
+            previewTitle: "Sample take",
+            previewAdvice: "“Reply-all with your feelings. Transparency is a lifestyle brand.”",
+            accent: Color(hex: "E88D72"),
+            background: LinearGradient(
+                colors: [Color(hex: "2A1816"), Color(hex: "151116"), Color(hex: "0A080B")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         ),
         Page(
-            icon: "map.fill",
+            icon: "flame.fill",
             title: "Start with a\nreal preset.",
-            subtitle: "Choose a starter category and tone. Badvice opens on Generate with your first command ready.",
-            kicker: "Command. Generate. Keep moving.",
+            subtitle: "Choose a starter category and tone. Generate opens ready for the first dispatch.",
+            kicker: "Pick. Stamp. Share.",
             previewTitle: "Starter preset",
-            previewAdvice: "Your setup is applied immediately so the first tap already has a point.",
-            accent: Color(hex: "3C4E7A"),
-            background: LinearGradient(colors: [Color(hex: "EAF0FB"), Color(hex: "DDE6F6")], startPoint: .topLeading, endPoint: .bottomTrailing)
+            previewAdvice: "Your lane and voice are locked in so the first tap already has a point.",
+            accent: Color(hex: "F0C4A0"),
+            background: LinearGradient(
+                colors: [Color(hex: "1C130A"), Color(hex: "20121D"), Color(hex: "0E0A0F")],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         )
     ]
 
@@ -73,17 +81,16 @@ struct OnboardingFlow: View {
                 .animation(isMotionReduced ? nil : .easeInOut(duration: 0.6), value: currentPage)
 
             FloatingParticlesView(
-                theme: .minimal,
+                theme: .badvice,
                 reduceMotion: isMotionReduced,
                 isGenerating: false,
                 budget: .reduced,
                 lowPowerMode: isMotionReduced
             )
-                .opacity(0.32)
+                .opacity(0.38)
 
             CinematicVignetteView()
-                .opacity(0.18)
-                .blendMode(.multiply)
+                .opacity(0.55)
 
             LinearGradient(
                 colors: [
@@ -135,14 +142,14 @@ struct OnboardingFlow: View {
     private var onboardingControlDock: some View {
         VStack(spacing: 14) {
             HStack {
-                Text("Command loop")
+                Text("Editorial loop")
                     .font(.caption2.weight(.bold))
                     .textCase(.uppercase)
                     .tracking(1.4)
-                    .foregroundStyle(pages[currentPage].accent.opacity(0.72))
+                    .foregroundStyle(pages[currentPage].accent.opacity(0.85))
                 Text("Step \(currentPage + 1) of \(pages.count)")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.white.opacity(0.55))
                 Spacer()
                 Text(currentPage < pages.count - 1 ? "Swipe or tap Next" : "Start in Generate")
                     .font(.caption)
@@ -174,18 +181,18 @@ struct OnboardingFlow: View {
             Button {
                 advanceOnboarding()
             } label: {
-                Text(currentPage < pages.count - 1 ? "Next" : "Get Started")
+                Text(currentPage < pages.count - 1 ? "Next" : "Stamp my first take")
                     .font(.system(.body, design: .rounded, weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 54)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Theme.espressoInk)
                     .background(
-                        RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                            .fill(pages[currentPage].accent)
-                            .shadow(color: pages[currentPage].accent.opacity(0.3), radius: 10, y: 5)
+                        Capsule(style: .continuous)
+                            .fill(Theme.copperEmbossGradient)
+                            .shadow(color: Theme.copperFoilDeep.opacity(0.4), radius: 12, y: 6)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                        Capsule(style: .continuous)
+                            .stroke(Color.white.opacity(0.28), lineWidth: 1)
                     )
             }
             .buttonStyle(.plain)
@@ -428,9 +435,9 @@ private struct OnboardingPageView: View {
             Spacer().frame(height: 30)
 
             Text(title)
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .font(.system(.largeTitle, design: .serif, weight: .bold))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(Theme.headerColor(for: .minimal))
+                .foregroundStyle(Color(hex: "FFF8F0"))
                 .lineSpacing(2)
                 .offset(y: appeared ? 0 : 24)
                 .opacity(appeared ? 1 : 0)
@@ -441,7 +448,7 @@ private struct OnboardingPageView: View {
             Text(subtitle)
                 .font(.system(.body, design: .rounded))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(accent.opacity(0.6))
+                .foregroundStyle(Color(hex: "D0C0D0").opacity(0.92))
                 .lineSpacing(4)
                 .padding(.horizontal, 34)
                 .offset(y: appeared ? 0 : 20)
@@ -497,9 +504,9 @@ private struct OnboardingPageView: View {
                         .font(.caption.weight(.bold))
                         .foregroundStyle(accent.opacity(0.76))
                         .textCase(.uppercase)
-                    Text("One card carries setup, loading, and the result.")
+                    Text("One card carries setup, loading, and the stamped take.")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.white.opacity(0.55))
                 }
                 Spacer(minLength: 0)
             }
@@ -510,8 +517,8 @@ private struct OnboardingPageView: View {
             }
 
             Text(previewAdvice)
-                .font(.system(.callout, design: .rounded, weight: .semibold))
-                .foregroundStyle(.primary)
+                .font(.system(.callout, design: .serif, weight: .semibold))
+                .foregroundStyle(Color(hex: "FFF8F0"))
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
 

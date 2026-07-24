@@ -24,26 +24,62 @@ struct AdviceCardView: View {
     @State private var lastRecordID: UUID = UUID()
     @State private var isAdviceExpanded = false
     @State private var isGoodAdviceRevealed = false
-    
-    // Keep one signature refresh flourish. Interactive tilt is intentionally off
-    // so scrolling cards do not fight the main feed gesture.
+
     @State private var rotationX: Double = 0
     @State private var rotationY: Double = 0
     @State private var rippleScale: CGFloat = 0.5
     @State private var rippleOpacity: Double = 0
     @State private var rotationResetTask: Task<Void, Never>?
 
-    // Performance: skip tilt recalc when drag movement is sub-threshold
+    // Infernal editorial: seal + reveal
+    @State private var sealScale: CGFloat = 0.4
+    @State private var sealOpacity: Double = 0
+    @State private var sealRotation: Double = -18
+    @State private var revealProgress: CGFloat = 1
+    @State private var takeBlur: CGFloat = 0
+
     @State private var lastTiltTranslation: CGSize = .zero
     private static let tiltUpdateThreshold: CGFloat = 2.0
 
-    // Dynamic Type: decorative quote mark scales with user text size
     @ScaledMetric(relativeTo: .title) private var quoteFontSize: CGFloat = 56
 
     private var isMotionReduced: Bool {
         reduceMotion || accessibilityReduceMotion
     }
     private var allowsInteractiveTilt: Bool { false }
+
+    private var score: BadviceScore { BadviceScore(record: record) }
+    private var intensityScore: Int { score.wrongness }
+    private var railWidth: CGFloat { Theme.intensityRailWidth(score: intensityScore) }
+
+    private var takeLabel: String {
+        switch record.tone {
+        case .corporateConsultant, .linkedInInfluencer:
+            return "INTERNAL MEMO"
+        case .wizard, .minimalistMonk:
+            return "THE PROPHECY"
+        case .cryptoBro:
+            return "ALPHA TAKE"
+        case .conspiracyTheorist:
+            return "CLASSIFIED"
+        case .redditCommenter:
+            return "TOP COMMENT"
+        case .lifeCoach, .influencer, .astrologyGirlie:
+            return "THE HOT TAKE"
+        case .oldMoney:
+            return "DISPATCH"
+        default:
+            return "THE TAKE"
+        }
+    }
+
+    private var takeLineSpacing: CGFloat {
+        switch record.tone {
+        case .corporateConsultant, .linkedInInfluencer: return 3
+        case .wizard, .oldMoney: return 6
+        default: return 5
+        }
+    }
 
     var body: some View {
         let accent = Theme.accent(for: theme)
@@ -53,13 +89,15 @@ struct AdviceCardView: View {
         let cardColor = Theme.cardColor(for: theme)
         let glassOpacity = Theme.glassMorphismOpacity(for: theme)
         let shadow = Theme.cardShadow(for: theme)
+        let secondaryShadow = Theme.cardSecondaryShadow(for: theme)
         let glowColor = Theme.glowColor(for: theme)
         let providerBadgeTint = Theme.secondaryAccent(for: theme) ?? accent
         let toneBadgeTint = secondaryText
         let cardRadius = Theme.cardCornerRadius + 2
+        let takeFont = Theme.editorialCardFont(for: theme, tone: record.tone)
 
         VStack(alignment: .leading, spacing: 0) {
-            // Compact context rail: the card has one visual anchor instead of a stack of pills.
+            // Compact context rail + wax seal
             HStack(spacing: 8) {
                 Image(systemName: record.category.icon)
                     .font(.caption.weight(.bold))
@@ -92,6 +130,31 @@ struct AdviceCardView: View {
                         .accessibilityLabel("Generation source")
                         .accessibilityValue(sourceBadgeText)
                 }
+
+                // Wax seal — brand mark stamped on each take
+                ZStack {
+                    Circle()
+                        .fill(Theme.copperEmbossGradient)
+                        .frame(width: 34, height: 34)
+                        .shadow(color: Theme.copperFoilDeep.opacity(0.45), radius: 4, y: 2)
+                    Circle()
+                        .stroke(Color.white.opacity(0.28), lineWidth: 1)
+                        .frame(width: 34, height: 34)
+                    if UIImage(named: "BadviceMark") != nil {
+                        Image("BadviceMark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 22, height: 22)
+                    } else {
+                        Text("B")
+                            .font(.system(size: 15, weight: .black, design: .rounded))
+                            .foregroundStyle(Theme.espressoInk)
+                    }
+                }
+                .scaleEffect(sealScale)
+                .opacity(sealOpacity)
+                .rotationEffect(.degrees(sealRotation))
+                .accessibilityHidden(true)
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(record.category.title), \(record.tone.title)")
@@ -102,30 +165,34 @@ struct AdviceCardView: View {
                 .padding(.top, 10)
 
             HStack(spacing: 8) {
-                Text("THE TAKE")
+                Text(takeLabel)
                     .font(.caption2.weight(.heavy))
                     .tracking(1.4)
                     .foregroundStyle(secondaryText.opacity(0.72))
                 Rectangle()
                     .fill(secondaryText.opacity(0.18))
                     .frame(height: 1)
+                Text("\(intensityScore)%")
+                    .font(.caption2.weight(.heavy))
+                    .foregroundStyle(accent.opacity(0.75))
+                    .accessibilityLabel("Wrongness intensity \(intensityScore) percent")
             }
             .padding(.top, 14)
 
-            // Decorative quote mark — scales with Dynamic Type.
             Text("\u{201C}")
                 .font(.system(size: quoteFontSize, weight: .heavy, design: .serif))
                 .foregroundStyle(accent.opacity(0.22))
                 .frame(height: 24)
                 .offset(y: 4)
 
-            // Advice text
             Text(displayAdviceLine)
-                .font(Theme.cardFont(for: theme))
+                .font(takeFont)
                 .foregroundStyle(primaryText)
-                .lineSpacing(5)
+                .lineSpacing(takeLineSpacing)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)
+                .blur(radius: takeBlur)
+                .opacity(Double(revealProgress))
                 .accessibilityLabel("Advice")
                 .accessibilityValue(record.adviceLine)
 
@@ -186,6 +253,7 @@ struct AdviceCardView: View {
             .accessibilityIdentifier("advice.card.goodAdvice")
         }
         .padding(Theme.cardPadding)
+        .padding(.leading, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
@@ -198,10 +266,30 @@ struct AdviceCardView: View {
                         .opacity(glassOpacity)
                 }
 
-                // Add subtle inner glow for glow-supporting themes
+                // Soft top copper wash for default editorial theme
+                if theme == .badvice {
+                    RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Theme.copperFoilMid.opacity(0.12),
+                                    .clear,
+                                    Color.black.opacity(0.12),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
+
+                if Theme.usesPaperGrain(for: theme) {
+                    PaperGrainOverlay(opacity: theme == .minimal ? 0.04 : 0.07)
+                        .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
+                }
+
                 if let glowColor, !isMotionReduced {
                     RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
-                        .stroke(glowColor.opacity(0.08), lineWidth: 1.5)
+                        .stroke(glowColor.opacity(0.10), lineWidth: 1.5)
                         .blur(radius: 3)
                 }
             }
@@ -212,8 +300,8 @@ struct AdviceCardView: View {
                 .stroke(
                     LinearGradient(
                         colors: [
-                            accent.opacity(0.5),
-                            accent.opacity(0.15),
+                            accent.opacity(0.55),
+                            accent.opacity(0.18),
                             tertiaryStroke
                         ],
                         startPoint: .topLeading,
@@ -222,39 +310,39 @@ struct AdviceCardView: View {
                     lineWidth: 1.5
                 )
         )
+        // Intensity rail — wrongness drives copper edge weight
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 2, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [
-                            accent.opacity(theme == .minimal ? 0.18 : 0.55),
-                            (Theme.secondaryAccent(for: theme) ?? accent).opacity(theme == .minimal ? 0.12 : 0.35),
-                            .clear
+                            accent.opacity(theme == .minimal ? 0.18 : 0.75),
+                            (Theme.secondaryAccent(for: theme) ?? accent).opacity(theme == .minimal ? 0.12 : 0.45),
+                            accent.opacity(0.15),
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                 )
-                .frame(width: theme == .minimal ? 2 : 3)
-                .padding(.vertical, Theme.cardPadding * 0.75)
-                .padding(.leading, 8)
+                .frame(width: theme == .minimal ? 2 : railWidth)
+                .padding(.vertical, Theme.cardPadding * 0.65)
+                .padding(.leading, 6)
                 .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
         .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
         .overlay {
-            // Shimmer effect
             RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [.white.opacity(0.0), .white.opacity(0.25), .white.opacity(0.0)],
+                        colors: [.white.opacity(0.0), .white.opacity(0.22), .white.opacity(0.0)],
                         startPoint: UnitPoint(x: shimmerOffset - 0.3, y: 0.5),
                         endPoint: UnitPoint(x: shimmerOffset + 0.3, y: 0.5)
                     )
                 )
                 .allowsHitTesting(false)
                 .opacity(isMotionReduced ? 0 : (shimmerOffset >= 0 && shimmerOffset <= 1.0 ? 1 : 0))
-            
-            // Cybernetic Ripple Effect
+
             if theme == .cybernetic {
                 Circle()
                     .stroke(accent.opacity(rippleOpacity), lineWidth: 2)
@@ -262,12 +350,12 @@ struct AdviceCardView: View {
                     .allowsHitTesting(false)
             }
         }
+        .shadow(color: shadow.color, radius: shadow.radius, y: shadow.y)
         .shadow(
-            color: shadow.color,
-            radius: shadow.radius,
-            y: shadow.y
+            color: secondaryShadow?.color ?? .clear,
+            radius: secondaryShadow?.radius ?? 0,
+            y: secondaryShadow?.y ?? 0
         )
-        // Apply 3D rotation based on drag position
         .rotation3DEffect(.degrees(isMotionReduced ? 0 : rotationX), axis: (x: 1, y: 0, z: 0))
         .rotation3DEffect(.degrees(isMotionReduced ? 0 : rotationY), axis: (x: 0, y: 1, z: 0))
         .simultaneousGesture(
@@ -283,7 +371,6 @@ struct AdviceCardView: View {
                     let maxRotation: Double = 5
                     let horizontalWeight = abs(t.width)
                     let verticalWeight   = abs(t.height)
-                    // Keep vertical list scrolling responsive by only reacting to mostly horizontal drags.
                     guard horizontalWeight >= verticalWeight * 0.8 else { return }
 
                     withAnimation(Theme.springSnappy) {
@@ -296,7 +383,7 @@ struct AdviceCardView: View {
                 .onEnded { _ in
                     guard !isMotionReduced, allowsInteractiveTilt else { return }
                     lastTiltTranslation = .zero
-                    withAnimation(Theme.springSmooth) {
+                    withAnimation(Theme.smugSettle) {
                         rotationX = 0
                         rotationY = 0
                     }
@@ -307,40 +394,22 @@ struct AdviceCardView: View {
             lastRecordID = newID
             isAdviceExpanded = false
             isGoodAdviceRevealed = false
-
-            guard !isMotionReduced else {
-                shimmerOffset = -1.0
-                rotationX = 0
-                rotationY = 0
-                return
-            }
-            
-            // Keep the refresh animation short and clean instead of stacking multiple flourishes.
-            shimmerOffset = -0.3
-            withAnimation(.easeInOut(duration: 0.55)) {
-                shimmerOffset = 1.15
-            }
-            
-            withAnimation(Theme.springSmooth) {
-                rotationX = -5
-            }
-            
-            // Trigger Cybernetic Ripple
-            if theme == .cybernetic {
-                rippleScale = 0.5
-                rippleOpacity = 0.55
-                withAnimation(.easeOut(duration: 0.45)) {
-                    rippleScale = 2.0
-                    rippleOpacity = 0
-                }
-            }
-            
-            scheduleRotationReset(after: 0.18)
+            playNewTakeFlourish()
         }
         .onAppear {
             lastRecordID = record.id
             if isMotionReduced {
                 shimmerOffset = -1.0
+                sealScale = 1
+                sealOpacity = 1
+                sealRotation = 0
+                revealProgress = 1
+                takeBlur = 0
+            } else {
+                // First appear: settle seal without full reveal drama
+                sealScale = 1
+                sealOpacity = 1
+                sealRotation = 0
             }
         }
         .onDisappear {
@@ -357,15 +426,63 @@ struct AdviceCardView: View {
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: "Animate card") {
             guard !isMotionReduced else { return }
-            withAnimation(Theme.springSmooth) {
-                rotationX = -5
-            }
-            scheduleRotationReset(after: 0.2)
-            shimmerOffset = -0.3
-            withAnimation(.easeInOut(duration: 0.55)) {
-                shimmerOffset = 1.15
+            playNewTakeFlourish()
+        }
+    }
+
+    private func playNewTakeFlourish() {
+        guard !isMotionReduced else {
+            shimmerOffset = -1.0
+            rotationX = 0
+            rotationY = 0
+            sealScale = 1
+            sealOpacity = 1
+            sealRotation = 0
+            revealProgress = 1
+            takeBlur = 0
+            return
+        }
+
+        // Reveal: blur → clear
+        revealProgress = 0.15
+        takeBlur = 4
+        withAnimation(Theme.smugSettle) {
+            revealProgress = 1
+            takeBlur = 0
+        }
+
+        // Seal stamp
+        sealScale = 0.35
+        sealOpacity = 0
+        sealRotation = -22
+        withAnimation(Theme.badBounce) {
+            sealScale = 1.08
+            sealOpacity = 1
+            sealRotation = 0
+        }
+        withAnimation(Theme.smugSettle.delay(0.12)) {
+            sealScale = 1.0
+        }
+
+        shimmerOffset = -0.3
+        withAnimation(.easeInOut(duration: 0.55)) {
+            shimmerOffset = 1.15
+        }
+
+        withAnimation(Theme.springSmooth) {
+            rotationX = -5
+        }
+
+        if theme == .cybernetic {
+            rippleScale = 0.5
+            rippleOpacity = 0.55
+            withAnimation(.easeOut(duration: 0.45)) {
+                rippleScale = 2.0
+                rippleOpacity = 0
             }
         }
+
+        scheduleRotationReset(after: 0.18)
     }
 
     private func scheduleRotationReset(after delay: TimeInterval) {
@@ -373,7 +490,7 @@ struct AdviceCardView: View {
         rotationResetTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             guard !Task.isCancelled else { return }
-            withAnimation(Theme.springSmooth) {
+            withAnimation(Theme.smugSettle) {
                 rotationX = 0
                 rotationY = 0
             }

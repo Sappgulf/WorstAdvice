@@ -306,7 +306,8 @@ struct ChaosHubTabView: View {
 
     private var chaosMeterCard: some View {
         Group {
-            HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 16) {
                 ZStack {
                     Circle()
                         .stroke(secondaryText.opacity(0.18), lineWidth: 10)
@@ -321,7 +322,7 @@ struct ChaosHubTabView: View {
                         )
                         .rotationEffect(.degrees(-90))
                         .animation(
-                            isMotionReduced ? nil : .spring(response: Theme.animMedium, dampingFraction: 0.78),
+                            isMotionReduced ? nil : Theme.smugSettle,
                             value: chaosScoreProgress
                         )
 
@@ -345,7 +346,7 @@ struct ChaosHubTabView: View {
                         .foregroundStyle(secondaryText)
                 }
 
-                Spacer()
+                Spacer(minLength: 0)
 
                 Button {
                     showingChaosFormula = true
@@ -357,6 +358,17 @@ struct ChaosHubTabView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("How is Mission Score calculated?")
+                }
+
+                ChaosMeterBar(
+                    progress: chaosScoreProgress,
+                    accent: accent,
+                    track: secondaryText.opacity(0.14),
+                    height: 10,
+                    reduceMotion: isMotionReduced
+                )
+                .accessibilityLabel("Mission score meter")
+                .accessibilityValue("\(chaosScore) percent")
             }
         }
         .sheet(isPresented: $showingChaosFormula) {
