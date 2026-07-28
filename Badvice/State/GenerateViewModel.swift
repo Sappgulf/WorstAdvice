@@ -195,7 +195,10 @@ final class GenerateViewModel {
             generationNotice = Self.bootstrapGenerationNotice
             generationNoticeStyle = .info
         }
-        adviceBootstrapTask = Task(priority: .utility) { [weak self] in
+        // The initial take is visible, user-facing launch work. Keeping this task at
+        // utility priority allowed it to be starved by model warmups and other
+        // background work during busy launches.
+        adviceBootstrapTask = Task(priority: .userInitiated) { [weak self] in
             async let scorerWarmup: Void = shouldPrewarmScorer
             ? SemanticTextScorer.shared.prewarm()
             : ()

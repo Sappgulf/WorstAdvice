@@ -42,15 +42,28 @@ struct FloatingTabBarView: View {
                 .background(widthReader)
                 .simultaneousGesture(slideGesture)
                 .padding(.horizontal, Theme.floatingTabBarInnerPadding)
-            .padding(.bottom, Theme.floatingTabBarInnerPadding)
-            .frame(minHeight: Theme.floatingTabBarReservedHeight - 10)
-            .background { tabBarBackground }
-            .shadow(
-                color: tabBarStyle.shadow,
-                radius: tabBarStyle.shadowRadius,
-                x: 0,
-                y: -2
-            )
+                .padding(.vertical, Theme.floatingTabBarInnerPadding)
+                .frame(minHeight: Theme.floatingTabBarReservedHeight - 10)
+                .background { tabBarBackground }
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: Theme.floatingTabBarCornerRadius,
+                        style: .continuous
+                    )
+                )
+                .overlay {
+                    RoundedRectangle(
+                        cornerRadius: Theme.floatingTabBarCornerRadius,
+                        style: .continuous
+                    )
+                    .stroke(tabBarStyle.borderTop.opacity(0.7), lineWidth: 0.8)
+                }
+                .shadow(
+                    color: tabBarStyle.shadow,
+                    radius: tabBarStyle.shadowRadius,
+                    x: 0,
+                    y: 5
+                )
                 .padding(.horizontal, Theme.floatingTabBarHorizontalPadding)
                 .padding(.bottom, max(8, proxy.safeAreaInsets.bottom * 0.24))
                 .background(alignment: .bottom) {
@@ -129,6 +142,13 @@ struct FloatingTabBarView: View {
             .padding(.top, 5)
             .padding(.bottom, 5)
             .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(accent.opacity(0.09))
+                        .padding(.horizontal, 3)
+                }
+            }
             .overlay(alignment: .top) {
                 if isSelected || isHighlighted {
                     Capsule(style: .continuous)
@@ -193,6 +213,13 @@ struct FloatingTabBarView: View {
             .padding(.top, 5)
             .padding(.bottom, 5)
             .scaleEffect(isSelected ? tabBarStyle.selectedScale : 1)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(accent.opacity(0.09))
+                        .padding(.horizontal, 3)
+                }
+            }
             .overlay(alignment: .top) {
                 if isSelected {
                     Capsule(style: .continuous)
@@ -242,22 +269,18 @@ struct FloatingTabBarView: View {
     }
 
     private var tabBarBackground: some View {
-        Rectangle()
+        RoundedRectangle(
+            cornerRadius: Theme.floatingTabBarCornerRadius,
+            style: .continuous
+        )
             .fill(tabBarStyle.backgroundTint)
             .overlay {
-                Rectangle()
+                RoundedRectangle(
+                    cornerRadius: Theme.floatingTabBarCornerRadius,
+                    style: .continuous
+                )
                     .fill(.ultraThinMaterial)
                     .opacity(tabBarStyle.materialOverlayOpacity)
-            }
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(tabBarStyle.borderTop)
-                    .frame(height: 0.8)
-            }
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(tabBarStyle.borderBottom)
-                    .frame(height: 0.6)
             }
     }
 

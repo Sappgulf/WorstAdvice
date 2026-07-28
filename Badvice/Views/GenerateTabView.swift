@@ -458,22 +458,6 @@ struct GenerateTabView: View {
                 }
             }
 
-            #if DEBUG
-                // Only surface while fixtures are loading — never leave "ready" painted on the chrome.
-                if ProcessInfo.processInfo.arguments.contains("-debug-preload-polish-fixtures"),
-                    viewModel.debugPolishFixturesStatus == "loading"
-                {
-                    Text("fixtures…")
-                        .font(.caption2.weight(.semibold))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(.black.opacity(0.25))
-                        .foregroundStyle(.white)
-                        .accessibilityIdentifier("debug.polishFixtures.status")
-                        .padding(.top, 8)
-                        .padding(.leading, 12)
-                }
-            #endif
         }
         .overlay {
             if gifExportInProgress {
