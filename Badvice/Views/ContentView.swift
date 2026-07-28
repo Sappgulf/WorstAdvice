@@ -442,9 +442,7 @@ struct ContentView: View {
         }
         authPasswordDraft = ""
         authConfirmPasswordDraft = ""
-        if authDisplayNameDraft.isEmpty {
-            authDisplayNameDraft = auth.displayName
-        }
+        authDisplayNameDraft = auth.currentSession?.displayName ?? ""
     }
 
     private func resetSessionPresentationState() {

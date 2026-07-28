@@ -710,6 +710,7 @@ struct SettingsTabView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.row.advice.suggestion.lab")
 
                 settingsDivider
 
@@ -724,6 +725,7 @@ struct SettingsTabView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.row.achievements")
 
                 settingsDivider
 
@@ -738,6 +740,7 @@ struct SettingsTabView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.row.quote.suggestion.lab")
 
                 settingsDivider
 
@@ -747,6 +750,7 @@ struct SettingsTabView: View {
                     settingsNavRow("Community Pulse", systemImage: "chart.bar.xaxis", badge: nil)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.row.community.pulse")
 
                 settingsDivider
 
@@ -756,11 +760,11 @@ struct SettingsTabView: View {
                     settingsNavRow(
                         "Social Diagnostics",
                         systemImage: "waveform.path.ecg",
-                        badge: social.queuedActionCount > 0 ? "\(social.queuedActionCount)" : nil,
-                        accessibilityIdentifier: "settings.socialHealth.open"
+                        badge: social.queuedActionCount > 0 ? "\(social.queuedActionCount)" : nil
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.socialHealth.open")
             }
         }
     }
@@ -1075,11 +1079,11 @@ struct SettingsTabView: View {
                     settingsNavRow(
                         "Upgrade & Store",
                         systemImage: "star.fill",
-                        badge: nil,
-                        accessibilityIdentifier: "settings.upgradeStore"
+                        badge: nil
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.upgradeStore")
 
                 settingsDivider
 
@@ -1089,6 +1093,7 @@ struct SettingsTabView: View {
                     settingsNavRow("Offline Packs", systemImage: "arrow.down.circle.fill", badge: nil)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.row.offline.packs")
 
                 settingsDivider
 
@@ -1098,6 +1103,7 @@ struct SettingsTabView: View {
                     settingsNavRow("Suggestion Pipeline", systemImage: "arrow.triangle.2.circlepath.circle.fill", badge: nil)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.row.suggestion.pipeline")
             }
         }
     }
@@ -1866,8 +1872,7 @@ struct SettingsTabView: View {
     private func settingsNavRow(
         _ label: String,
         systemImage: String,
-        badge: String?,
-        accessibilityIdentifier: String? = nil
+        badge: String?
     ) -> some View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
@@ -1898,17 +1903,6 @@ struct SettingsTabView: View {
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, minHeight: Theme.minimumTapTarget, alignment: .leading)
         .contentShape(Rectangle())
-        .accessibilityIdentifier(accessibilityIdentifier ?? settingsRowAccessibilityID(for: label))
-    }
-
-    private func settingsRowAccessibilityID(for label: String) -> String {
-        let normalized = label
-            .lowercased()
-            .replacingOccurrences(of: "&", with: "and")
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-            .joined(separator: ".")
-        return "settings.row.\(normalized)"
     }
 
     // MARK: - Card container

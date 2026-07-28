@@ -740,6 +740,38 @@ final class BadviceUITests: XCTestCase {
         XCTAssertTrue(waitForAuthenticatedShell(app: app))
     }
 
+    func testLocalAuthGateStartsPrivacySafeAndGuidesValidSignup() throws {
+        let app = launchTestApp(includeAuthSkip: false)
+        XCTAssertTrue(waitForAuthGateToBecomeReady(app: app, timeout: 20))
+
+        let displayNameField = app.textFields["auth.displayName"]
+        XCTAssertTrue(displayNameField.waitForExistence(timeout: 5))
+        let initialDisplayName = displayNameField.value as? String ?? ""
+        XCTAssertFalse(
+            shouldClearTextInputValue(initialDisplayName, for: displayNameField),
+            "A fresh account form should not expose or prefill the device name."
+        )
+
+        fillTextInput(displayNameField, text: "A")
+        fillTextInput(app.textFields["auth.email"], text: "guided@example.com")
+        fillTextInput(app.textFields["auth.password"], text: "Badvice123")
+        fillTextInput(app.textFields["auth.confirmPassword"], text: "Badvice123")
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["auth.passwordRequirements"]
+                .waitForExistence(timeout: 3)
+        )
+        let primaryButton = app.buttons["auth.primary"]
+        XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
+        XCTAssertFalse(
+            primaryButton.isEnabled,
+            "An invalid one-character display name should keep account creation disabled."
+        )
+
+        fillTextInput(displayNameField, text: "Guided User")
+        XCTAssertTrue(waitForElementToBecomeEnabled(primaryButton, timeout: 5))
+    }
+
     func testLocalAuthPasswordChangeAndDeleteFlow() throws {
         let app = XCUIApplication()
         app.launchArguments += defaultLaunchArguments.filter { $0 != "-ui-testing-auth-skip" }

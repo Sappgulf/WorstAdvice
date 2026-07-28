@@ -2,6 +2,19 @@ import SwiftUI
 import UIKit
 
 struct LocalAuthGateView: View {
+    private enum AuthField: Hashable {
+        case displayName
+        case email
+        case password
+        case confirmPassword
+    }
+
+    private struct PasswordRequirement: Identifiable {
+        let id: String
+        let title: String
+        let isSatisfied: Bool
+    }
+
     @Bindable var auth: AuthViewModel
     let isUITesting: Bool
     @Binding var authMode: LocalAuthMode
@@ -10,6 +23,7 @@ struct LocalAuthGateView: View {
     @Binding var authConfirmPasswordDraft: String
     @Binding var authDisplayNameDraft: String
     let onAuthenticated: @MainActor @Sendable () -> Void
+    @FocusState private var focusedField: AuthField?
 
     private var normalizedEmail: String {
         LocalAccountValidation.normalizedEmail(authEmailDraft)
@@ -23,10 +37,48 @@ struct LocalAuthGateView: View {
         LocalAccountValidation.isValidEmail(normalizedEmail) && !authPasswordDraft.isEmpty
     }
 
+    private var isDisplayNameValid: Bool {
+        trimmedDisplayName.isEmpty
+            || LocalAccountValidation.isValidDisplayName(trimmedDisplayName)
+    }
+
     private var canSubmitSignUp: Bool {
         LocalAccountValidation.isValidEmail(normalizedEmail)
+            && isDisplayNameValid
             && LocalAccountValidation.isStrongPassword(authPasswordDraft)
             && authPasswordDraft == authConfirmPasswordDraft
+    }
+
+    private var passwordRequirements: [PasswordRequirement] {
+        [
+            PasswordRequirement(
+                id: "length",
+                title: "8+ characters",
+                isSatisfied: authPasswordDraft.count >= 8
+            ),
+            PasswordRequirement(
+                id: "letter",
+                title: "One letter",
+                isSatisfied: authPasswordDraft.range(
+                    of: "[A-Za-z]",
+                    options: .regularExpression
+                ) != nil
+            ),
+            PasswordRequirement(
+                id: "number",
+                title: "One number",
+                isSatisfied: authPasswordDraft.range(
+                    of: "[0-9]",
+                    options: .regularExpression
+                ) != nil
+            ),
+            PasswordRequirement(
+                id: "match",
+                title: "Passwords match",
+                isSatisfied: !authConfirmPasswordDraft.isEmpty
+                    && authPasswordDraft == authConfirmPasswordDraft
+            ),
+        ]
     }
 
     struct AuthPill: Identifiable {
@@ -45,10 +97,56 @@ struct LocalAuthGateView: View {
 
     private func selectAuthMode(_ newMode: LocalAuthMode) {
         guard authMode != newMode else { return }
+        focusedField = nil
         authMode = newMode
         auth.statusMessage = nil
         authPasswordDraft = ""
         authConfirmPasswordDraft = ""
+    }
+
+    private func advanceFocus(after field: AuthField) {
+        switch field {
+        case .displayName:
+            focusedField = .email
+        case .email:
+            focusedField = .password
+        case .password:
+            if authMode == .signUp {
+                focusedField = .confirmPassword
+            } else {
+                authenticate()
+            }
+        case .confirmPassword:
+            authenticate()
+        }
+    }
+
+    private func authenticate() {
+        let canSubmit = authMode == .signIn ? canSubmitSignIn : canSubmitSignUp
+        guard canSubmit, !auth.isSubmitting else { return }
+        focusedField = nil
+
+        Task {
+            let didAuthenticate: Bool
+            switch authMode {
+            case .signIn:
+                didAuthenticate = await auth.signIn(
+                    email: normalizedEmail,
+                    password: authPasswordDraft
+                )
+            case .signUp:
+                didAuthenticate = await auth.signUp(
+                    email: normalizedEmail,
+                    displayName: trimmedDisplayName,
+                    password: authPasswordDraft,
+                    confirmPassword: authConfirmPasswordDraft
+                )
+            }
+
+            if didAuthenticate {
+                await MainActor.run(body: onAuthenticated)
+            }
+        }
     }
 
     @ViewBuilder
@@ -80,7 +178,9 @@ struct LocalAuthGateView: View {
         title: String,
         text: Binding<String>,
         identifier: String,
-        contentType: UITextContentType
+        contentType: UITextContentType,
+        field: AuthField,
+        submitLabel: SubmitLabel
     ) -> some View {
         if isUITesting {
             TextField(title, text: text)
@@ -89,10 +189,16 @@ struct LocalAuthGateView: View {
                 .textContentType(contentType)
                 .autocorrectionDisabled()
                 .accessibilityIdentifier(identifier)
+                .focused($focusedField, equals: field)
+                .submitLabel(submitLabel)
+                .onSubmit { advanceFocus(after: field) }
         } else {
             SecureField(title, text: text)
                 .textContentType(contentType)
                 .accessibilityIdentifier(identifier)
+                .focused($focusedField, equals: field)
+                .submitLabel(submitLabel)
+                .onSubmit { advanceFocus(after: field) }
         }
     }
 
@@ -199,6 +305,9 @@ struct LocalAuthGateView: View {
                                     .textInputAutocapitalization(.words)
                                     .textContentType(.name)
                                     .accessibilityIdentifier("auth.displayName")
+                                    .focused($focusedField, equals: .displayName)
+                                    .submitLabel(.next)
+                                    .onSubmit { advanceFocus(after: .displayName) }
                             }
 
                             TextField("Email", text: $authEmailDraft)
@@ -207,12 +316,17 @@ struct LocalAuthGateView: View {
                                 .textContentType(.emailAddress)
                                 .autocorrectionDisabled()
                                 .accessibilityIdentifier("auth.email")
+                                .focused($focusedField, equals: .email)
+                                .submitLabel(.next)
+                                .onSubmit { advanceFocus(after: .email) }
 
                             passwordField(
                                 title: authMode == .signUp ? "Create password" : "Password",
                                 text: $authPasswordDraft,
                                 identifier: "auth.password",
-                                contentType: authMode == .signUp ? .newPassword : .password
+                                contentType: authMode == .signUp ? .newPassword : .password,
+                                field: .password,
+                                submitLabel: authMode == .signUp ? .next : .go
                             )
 
                             if authMode == .signUp {
@@ -220,23 +334,58 @@ struct LocalAuthGateView: View {
                                     title: "Confirm password",
                                     text: $authConfirmPasswordDraft,
                                     identifier: "auth.confirmPassword",
-                                    contentType: .newPassword
+                                    contentType: .newPassword,
+                                    field: .confirmPassword,
+                                    submitLabel: .go
                                 )
                             }
                         }
                         .textFieldStyle(.roundedBorder)
 
                         VStack(alignment: .leading, spacing: 6) {
-                            Text(
-                                authMode == .signUp
-                                    ? "Passwords need at least 8 characters, plus a letter and a number."
-                                    : "Accounts are stored only on this device."
-                            )
-                            .font(.caption)
-                            .foregroundStyle(Color(hex: "D0C0D0").opacity(0.85))
+                            if authMode == .signUp {
+                                LazyVGrid(
+                                    columns: [
+                                        GridItem(.flexible(), alignment: .leading),
+                                        GridItem(.flexible(), alignment: .leading),
+                                    ],
+                                    alignment: .leading,
+                                    spacing: 8
+                                ) {
+                                    ForEach(passwordRequirements) { requirement in
+                                        Label(
+                                            requirement.title,
+                                            systemImage: requirement.isSatisfied
+                                                ? "checkmark.circle.fill" : "circle"
+                                        )
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(
+                                            requirement.isSatisfied
+                                                ? accent : secondary.opacity(0.72)
+                                        )
+                                        .accessibilityLabel(
+                                            "\(requirement.title): \(requirement.isSatisfied ? "met" : "not met")"
+                                        )
+                                    }
+                                }
+                                .accessibilityIdentifier("auth.passwordRequirements")
+                            } else {
+                                Text("Accounts are stored only on this device.")
+                                    .font(.caption)
+                                    .foregroundStyle(secondary.opacity(0.85))
+                            }
+
+                            if !authEmailDraft.isEmpty,
+                                !LocalAccountValidation.isValidEmail(normalizedEmail)
+                            {
+                                Text("Enter a valid email address.")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+
                             if authMode == .signUp,
                                 !trimmedDisplayName.isEmpty,
-                                !LocalAccountValidation.isValidDisplayName(trimmedDisplayName)
+                                !isDisplayNameValid
                             {
                                 Text("Display name must be 2-40 characters.")
                                     .font(.caption)
@@ -257,29 +406,7 @@ struct LocalAuthGateView: View {
                                 .accessibilityIdentifier("auth.status")
                         }
 
-                        Button {
-                            Task {
-                                let didAuthenticate: Bool
-                                switch authMode {
-                                case .signIn:
-                                    didAuthenticate = await auth.signIn(
-                                        email: normalizedEmail,
-                                        password: authPasswordDraft
-                                    )
-                                case .signUp:
-                                    didAuthenticate = await auth.signUp(
-                                        email: normalizedEmail,
-                                        displayName: trimmedDisplayName,
-                                        password: authPasswordDraft,
-                                        confirmPassword: authConfirmPasswordDraft
-                                    )
-                                }
-
-                                if didAuthenticate {
-                                    await MainActor.run(body: onAuthenticated)
-                                }
-                            }
-                        } label: {
+                        Button(action: authenticate) {
                             HStack(spacing: 10) {
                                 if auth.isSubmitting {
                                     ProgressView()
@@ -337,6 +464,7 @@ struct LocalAuthGateView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 36)
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .preferredColorScheme(.dark)
         .onAppear {

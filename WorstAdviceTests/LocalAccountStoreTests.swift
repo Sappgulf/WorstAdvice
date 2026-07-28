@@ -2,6 +2,28 @@ import XCTest
 @testable import Badvice
 
 final class LocalAccountStoreTests: XCTestCase {
+    func testPersistentStoreDirectoryPreparerCreatesNestedDirectoryIdempotently() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("BadviceStorePreparationTests", isDirectory: true)
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let nestedDirectory = root
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Application Support", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        try PersistentStoreDirectoryPreparer.prepareDirectory(at: nestedDirectory)
+        try PersistentStoreDirectoryPreparer.prepareDirectory(at: nestedDirectory)
+
+        var isDirectory: ObjCBool = false
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath: nestedDirectory.path,
+                isDirectory: &isDirectory
+            )
+        )
+        XCTAssertTrue(isDirectory.boolValue)
+    }
+
     func testSignUpRestoreAndSignInRoundTrip() throws {
         let (store, _) = makeLocalAccountStore(suiteName: "LocalAccountStoreTests.RoundTrip")
 

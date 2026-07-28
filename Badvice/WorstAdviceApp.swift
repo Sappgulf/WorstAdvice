@@ -4,6 +4,32 @@ import SwiftUI
 import UserNotifications
 import AppIntents
 
+enum PersistentStoreDirectoryPreparer {
+    @discardableResult
+    static func prepareApplicationSupportDirectory(
+        fileManager: FileManager = .default
+    ) throws -> URL {
+        guard let directory = fileManager.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        try prepareDirectory(at: directory, fileManager: fileManager)
+        return directory
+    }
+
+    static func prepareDirectory(
+        at directory: URL,
+        fileManager: FileManager = .default
+    ) throws {
+        try fileManager.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+    }
+}
+
 @main
 struct WorstAdviceApp: App {
     private static let logger = Logger(subsystem: "com.worstadvice.app", category: "bootstrap")
@@ -93,6 +119,14 @@ struct WorstAdviceApp: App {
             AchievementProgressRecord.self,
             AppSettingsEntity.self,
         ])
+
+        do {
+            try PersistentStoreDirectoryPreparer.prepareApplicationSupportDirectory()
+        } catch {
+            Self.logger.warning(
+                "Could not prepare Application Support before opening SwiftData: \(error.localizedDescription, privacy: .public)"
+            )
+        }
 
         if Self.isRunningOnSimulator {
             let simulatorConfiguration = ModelConfiguration(
