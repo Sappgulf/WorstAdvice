@@ -19,6 +19,7 @@ struct AdviceCardView: View {
     var sourceBadgeText: String? = nil
 
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var shimmerOffset: CGFloat = -1.0
     @State private var lastRecordID: UUID = UUID()
@@ -163,6 +164,7 @@ struct AdviceCardView: View {
                 .rotationEffect(.degrees(sealRotation))
                 .accessibilityHidden(true)
             }
+            .dynamicTypeSize(...DynamicTypeSize.large)
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(record.category.title), \(record.tone.title)")
 
@@ -184,13 +186,16 @@ struct AdviceCardView: View {
                     .foregroundStyle(accent.opacity(0.75))
                     .accessibilityLabel("Wrongness intensity \(intensityScore) percent")
             }
+            .dynamicTypeSize(...DynamicTypeSize.large)
             .padding(.top, 14)
 
-            Text("\u{201C}")
-                .font(.system(size: quoteFontSize, weight: .heavy, design: .serif))
-                .foregroundStyle(accent.opacity(0.22))
-                .frame(height: 24)
-                .offset(y: 4)
+            if !dynamicTypeSize.isAccessibilitySize {
+                Text("\u{201C}")
+                    .font(.system(size: quoteFontSize, weight: .heavy, design: .serif))
+                    .foregroundStyle(accent.opacity(0.22))
+                    .frame(height: 24)
+                    .offset(y: 4)
+            }
 
             Text(displayAdviceLine)
                 .font(takeFont)
@@ -636,6 +641,7 @@ private struct BadviceScoreView: View {
             "Badvice Score. Wrongness \(score.wrongness) percent. Confidence \(score.confidence) percent. HR Risk \(score.hrRisk) percent. Usefulness \(score.usefulness) percent."
         )
         .accessibilityIdentifier("advice.card.badviceScore")
+        .dynamicTypeSize(...DynamicTypeSize.large)
     }
 
     private func scorePill(title: String, value: Int) -> some View {

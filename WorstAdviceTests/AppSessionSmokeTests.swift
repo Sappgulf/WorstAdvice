@@ -64,6 +64,35 @@ final class AppSessionSmokeTests: XCTestCase {
         XCTAssertFalse(generated.adviceLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
+    func testBureauGenerationIsFastGroundedAndDoesNotPrepareAModel() async throws {
+        let container = try makeInMemoryContainer()
+        let session = AppSessionViewModel(context: ModelContext(container))
+        session.settings.preferredGenerationProvider = .classic
+        session.generate.selectedCategory = .career
+        session.generate.selectedTone = .corporateConsultant
+        session.generate.scenarioText =
+            "My manager asked for a status update and I have nothing finished."
+        let selectedModelBeforeGeneration = session.settings.selectedAppleLocalModelID
+
+        let clock = ContinuousClock()
+        let start = clock.now
+        await session.generate.generate(seed: 42)
+        let elapsed = start.duration(to: clock.now)
+
+        let generated = try XCTUnwrap(session.generate.current)
+        XCTAssertLessThan(elapsed, .seconds(5))
+        XCTAssertTrue(
+            generated.adviceLine.normalizedForFiltering.contains("status update"),
+            "The default Bureau path should stay grounded without semantic-model ranking."
+        )
+        XCTAssertEqual(
+            session.settings.selectedAppleLocalModelID,
+            selectedModelBeforeGeneration
+        )
+        XCTAssertFalse(session.settings.isPreparingAppleOnDeviceModel)
+        XCTAssertNil(session.generate.generationSourceBadgeText)
+    }
+
     func testRandomToneRespectsSelectedCategoryCompatibility() async throws {
         let container = try makeInMemoryContainer()
         let session = AppSessionViewModel(context: ModelContext(container))

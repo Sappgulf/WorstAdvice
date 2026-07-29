@@ -454,7 +454,7 @@ final class QuotesViewModel {
         let provider = repository.ensureSettings().preferredGenerationProvider
         let overlayKey = modelQuoteOverlayKey(provider: provider)
 
-        if provider == .classic {
+        if provider != .appleOnDevice {
             modelQuoteTask?.cancel()
             lastModelQuoteOverlayKey = overlayKey
             if !cachedModelGeneratedQuotes.isEmpty {

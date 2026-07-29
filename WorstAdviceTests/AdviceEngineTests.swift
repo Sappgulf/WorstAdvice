@@ -41,6 +41,274 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertNotEqual(first.adviceLine, second.adviceLine)
     }
 
+    func testBureauEngineIsDeterministicContextualAndBounded() {
+        let engine = BureauAdviceEngine()
+        let situation = "My manager asked for a status update and I have nothing finished."
+        let date = Date(timeIntervalSince1970: 1_000)
+
+        let first = engine.generate(
+            category: .career,
+            tone: .corporateConsultant,
+            includeRationale: true,
+            situation: situation,
+            seed: 42,
+            now: date
+        )
+        let second = engine.generate(
+            category: .career,
+            tone: .corporateConsultant,
+            includeRationale: true,
+            situation: situation,
+            seed: 42,
+            now: date
+        )
+
+        XCTAssertEqual(first.adviceLine, second.adviceLine)
+        XCTAssertEqual(first.rationaleLine, second.rationaleLine)
+        XCTAssertLessThanOrEqual(first.adviceLine.count, AdviceEngineConstants.adviceOutputMaxLength)
+        XCTAssertTrue(
+            first.adviceLine.normalizedForFiltering.contains("manager")
+                || first.adviceLine.normalizedForFiltering.contains("status update"),
+            """
+            The local composer should anchor the output to a safe phrase from the situation.
+            Generated: \(first.adviceLine)
+            """
+        )
+        XCTAssertFalse(first.adviceLine.normalizedForFiltering.contains("manager status"))
+        XCTAssertTrue(first.rationaleLine?.contains("with the rule") == true)
+        XCTAssertFalse(first.adviceLine.localizedCaseInsensitiveContains("every hours"))
+    }
+
+    func testBureauEnginePreservesOriginalWordAdjacencyAcrossSeeds() {
+        let engine = BureauAdviceEngine()
+        let situation = "My manager asked for a status update and I have nothing finished."
+
+        let outputs = (0..<32).map { seed in
+            engine.generate(
+                category: .career,
+                tone: .corporateConsultant,
+                includeRationale: true,
+                situation: situation,
+                seed: seed
+            )
+        }
+
+        XCTAssertTrue(
+            outputs.allSatisfy {
+                $0.adviceLine.normalizedForFiltering.contains("status update")
+            }
+        )
+        XCTAssertTrue(
+            outputs.allSatisfy {
+                !$0.adviceLine.normalizedForFiltering.contains("manager status")
+            }
+        )
+        XCTAssertTrue(
+            outputs.allSatisfy {
+                !($0.rationaleLine ?? "").normalizedForFiltering.contains(" for if ")
+            }
+        )
+    }
+
+    func testBureauEnginePrefersCompleteNounPhraseOverDanglingAdjective() {
+        let engine = BureauAdviceEngine()
+        let situation = "My manager scheduled a surprise all-hands."
+
+        let outputs = (0..<32).map { seed in
+            engine.generate(
+                category: .career,
+                tone: .corporateConsultant,
+                includeRationale: true,
+                situation: situation,
+                seed: seed
+            )
+        }
+
+        XCTAssertTrue(
+            outputs.allSatisfy {
+                let normalized = $0.adviceLine.normalizedForFiltering
+                return normalized.contains("surprise all-hands")
+                    || normalized.contains("surprise all hands")
+            },
+            "Expected a complete noun phrase. Generated: \(outputs.map(\.adviceLine))"
+        )
+        XCTAssertTrue(
+            outputs.allSatisfy {
+                !$0.adviceLine.normalizedForFiltering.contains("manager scheduled")
+            },
+            "Dangling adjective reached a recipe. Generated: \(outputs.map(\.adviceLine))"
+        )
+    }
+
+    func testBureauEngineCandidatePoolIsUniqueSafeAndModelFree() {
+        let engine = BureauAdviceEngine()
+        let moderation = ContentModeration()
+        let candidates = engine.generateCandidates(
+            category: .dating,
+            tone: .toxicBestFriend,
+            includeRationale: true,
+            situation: "They take hours to reply after our first date.",
+            seed: 9_001,
+            count: 6
+        )
+
+        XCTAssertEqual(candidates.count, 6)
+        XCTAssertEqual(
+            Set(candidates.map { $0.adviceLine.normalizedForFiltering }).count,
+            candidates.count
+        )
+        XCTAssertTrue(candidates.allSatisfy { moderation.isSafe(text: $0.adviceLine) })
+        XCTAssertTrue(candidates.allSatisfy { $0.category == .dating })
+        XCTAssertTrue(candidates.allSatisfy { $0.tone == .toxicBestFriend })
+    }
+
+    func testBureauQualityLabCoversEveryLaneAndRewriteContract() {
+        let engine = BureauAdviceEngine()
+        let moderation = ContentModeration()
+        let contexts: [AdviceCategory: String] = [
+            .dating: "awkward first date follow-up",
+            .fitness: "first week training routine",
+            .career: "manager status update",
+            .money: "surprise apartment expense",
+            .parenting: "bedtime routine negotiation",
+            .tech: "production deploy warning",
+            .social: "group chat apology",
+            .cooking: "dinner temperature problem",
+            .travel: "tight airport connection",
+            .productivity: "overdue planning backlog",
+            .pets: "puppy walking schedule",
+            .relationships: "small disagreement repair",
+            .spirituality: "important life decision",
+            .financeCrypto: "volatile savings gamble",
+            .gaming: "ranked match frustration",
+            .weddings: "guest list budget",
+        ]
+        var fingerprints = Set<String>()
+        var total = 0
+
+        for category in AdviceCategory.concrete {
+            let situation = contexts[category] ?? "\(category.title) decision"
+            let contextTokens = Set(
+                situation.normalizedForFiltering
+                    .split(separator: " ")
+                    .filter { $0.count >= 4 }
+                    .map(String.init)
+            )
+
+            for revision in AdviceRevisionStyle.allCases {
+                for seedOffset in 0..<2 {
+                    let output = engine.generate(
+                        category: category,
+                        tone: ToneMode.concrete[
+                            (category.rawValue.count + seedOffset) % ToneMode.concrete.count
+                        ],
+                        includeRationale: true,
+                        situation: situation,
+                        intensity: .bold,
+                        revision: revision,
+                        seed: 20_000 + (total * 97) + seedOffset
+                    )
+                    let normalized = output.adviceLine.normalizedForFiltering
+
+                    XCTAssertLessThanOrEqual(
+                        output.adviceLine.count,
+                        AdviceEngineConstants.adviceOutputMaxLength,
+                        "\(category.title) / \(revision.title)"
+                    )
+                    XCTAssertLessThanOrEqual(
+                        output.rationaleLine?.count ?? 0,
+                        AdviceEngineConstants.rationaleOutputMaxLength,
+                        "\(category.title) / \(revision.title)"
+                    )
+                    XCTAssertTrue(moderation.isSafe(text: output.adviceLine))
+                    XCTAssertFalse(output.adviceLine.contains("%@"))
+                    XCTAssertFalse(normalized.contains(" for for "))
+                    XCTAssertFalse(normalized.contains(" your your "))
+                    XCTAssertTrue(
+                        contextTokens.contains(where: normalized.contains),
+                        "Missing context grounding for \(category.title): \(output.adviceLine)"
+                    )
+
+                    fingerprints.insert(normalized)
+                    total += 1
+                }
+            }
+        }
+
+        XCTAssertEqual(total, AdviceCategory.concrete.count * AdviceRevisionStyle.allCases.count * 2)
+        XCTAssertGreaterThan(
+            Double(fingerprints.count) / Double(total),
+            0.82,
+            "The permanent quality corpus should retain broad output variety."
+        )
+    }
+
+    func testBureauIntensityAndRevisionStylesProduceDistinctLocalOutput() {
+        let engine = BureauAdviceEngine()
+        let intensityOutputs = BadviceIntensity.allCases.map { intensity in
+            engine.generate(
+                category: .career,
+                tone: .corporateConsultant,
+                includeRationale: false,
+                situation: "manager status update",
+                intensity: intensity,
+                seed: 314
+            ).adviceLine
+        }
+
+        XCTAssertEqual(Set(intensityOutputs).count, BadviceIntensity.allCases.count)
+
+        let colder = engine.generate(
+            category: .career,
+            tone: .corporateConsultant,
+            includeRationale: false,
+            situation: "manager status update",
+            revision: .colder,
+            seed: 315
+        )
+        let oneSentence = engine.generate(
+            category: .career,
+            tone: .corporateConsultant,
+            includeRationale: false,
+            situation: "manager status update",
+            revision: .oneSentence,
+            seed: 316
+        )
+        let unhinged = engine.generate(
+            category: .career,
+            tone: .corporateConsultant,
+            includeRationale: false,
+            situation: "manager status update",
+            revision: .completelyUnhinged,
+            seed: 317
+        )
+
+        XCTAssertTrue(colder.adviceLine.contains("No follow-up questions"))
+        XCTAssertEqual(oneSentence.adviceLine.filter { ".!?".contains($0) }.count, 1)
+        XCTAssertTrue(
+            unhinged.adviceLine.localizedCaseInsensitiveContains("countdown")
+                || unhinged.adviceLine.localizedCaseInsensitiveContains("witnesses")
+        )
+    }
+
+    func testBureauRealityCheckIsContextualSafeAndBounded() {
+        let engine = BureauAdviceEngine()
+        let moderation = ContentModeration()
+        let text = engine.realityCheck(
+            category: .money,
+            situation: "surprise apartment expense",
+            seed: 88
+        )
+
+        XCTAssertTrue(text.hasPrefix("Reality check:"))
+        XCTAssertTrue(
+            text.normalizedForFiltering.contains("apartment")
+                || text.normalizedForFiltering.contains("expense")
+        )
+        XCTAssertTrue(moderation.isSafe(text: text))
+        XCTAssertLessThanOrEqual(text.count, AdviceEngineConstants.adviceOutputMaxLength)
+    }
+
     func testSeededAdviceQualityBenchmarkMaintainsVarietyAndSafety() async {
         let engine = AdviceEngine()
         let categories: [AdviceCategory] = [.career, .dating, .money, .social, .tech]

@@ -182,7 +182,10 @@ struct ContentView: View {
                     get: { !hasSeenOnboarding },
                     set: { if !$0 { hasSeenOnboarding = true } }
                 ),
-                onStarterSelected: { category, tone in
+                onStarterSelected: { category, tone, situation, intensity in
+                    session.generate.scenarioText =
+                        situation.trimmingCharacters(in: .whitespacesAndNewlines)
+                    session.generate.selectedIntensity = intensity
                     session.generate.updateSelections(
                         category: category,
                         tone: tone,
@@ -513,7 +516,7 @@ struct ContentView: View {
     ) -> some View {
         if auth.isAuthenticated {
             NavigationStack {
-                SettingsTabView(
+                BureauSettingsTabView(
                     viewModel: session.settings,
                     generateViewModel: session.generate,
                     quotesViewModel: session.quotes,
@@ -975,8 +978,8 @@ struct ContentView: View {
                 }
             )
         case .chaosHub:
-            ChaosHubTabView(
-                generateViewModel: session.generate,
+            DaresTabView(
+                generate: session.generate,
                 settings: session.settings,
                 social: session.social,
                 onOpenTab: { tab in
@@ -987,11 +990,18 @@ struct ContentView: View {
                 }
             )
         case .quotes:
-            QuotesTabView(
-                viewModel: session.quotes,
+            DispatchesTabView(
+                quotes: session.quotes,
                 settings: session.settings,
                 social: session.social,
-                onJumpToGenerate: {
+                initialDesk: .daily,
+                onUseStarter: { category, tone, prompt in
+                    session.generate.updateSelections(
+                        category: category,
+                        tone: tone,
+                        autoGenerate: false
+                    )
+                    session.generate.scenarioText = prompt
                     setSelectedTab(.generate, session: session)
                 },
                 onOpenTab: { tab in
@@ -999,23 +1009,33 @@ struct ContentView: View {
                 }
             )
         case .favorites:
-            FavoritesTabView(
-                viewModel: session.favorites,
+            CasebookTabView(
+                favorites: session.favorites,
+                history: session.history,
                 settings: session.settings,
+                initialShelf: .saved,
+                onUseRecord: { record in
+                    session.generate.current = record
+                    setSelectedTab(.generate, session: session)
+                },
+                onDataChanged: {
+                    session.refreshLists()
+                },
                 onJumpToGenerate: {
                     setSelectedTab(.generate, session: session)
                 }
             )
         case .history:
-            HistoryTabView(
-                viewModel: session.history,
+            CasebookTabView(
+                favorites: session.favorites,
+                history: session.history,
                 settings: session.settings,
-                generateViewModel: session.generate,
-                onUseRecord: { (record: AdviceRecord) in
+                initialShelf: .recent,
+                onUseRecord: { record in
                     session.generate.current = record
                     setSelectedTab(.generate, session: session)
                 },
-                onDataChanged: { () -> Void in
+                onDataChanged: {
                     session.refreshLists()
                 },
                 onJumpToGenerate: {
@@ -1031,16 +1051,22 @@ struct ContentView: View {
                 }
             }
         case .explore:
-            ExploreTabView(
-                social: session.social,
+            DispatchesTabView(
+                quotes: session.quotes,
                 settings: session.settings,
-                onJumpToGenerate: { category, tone in
+                social: session.social,
+                initialDesk: .ideas,
+                onUseStarter: { category, tone, prompt in
                     session.generate.updateSelections(
                         category: category,
                         tone: tone,
-                        autoGenerate: true
+                        autoGenerate: false
                     )
+                    session.generate.scenarioText = prompt
                     setSelectedTab(.generate, session: session)
+                },
+                onOpenTab: { tab in
+                    openShellMenuTab(tab, session: session)
                 }
             )
         case .groupChallenges:

@@ -151,6 +151,173 @@ enum ToneMode: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 }
 
+/// A small, deterministic personality descriptor for each advice voice.
+///
+/// The generator stays fully local: `ToneMode` still controls the actual
+/// engine rules, while this value type gives the UI a memorable, human-sized
+/// way to explain what each model sounds like.
+struct AdviceVoice: Identifiable, Hashable, Sendable {
+    let tone: ToneMode
+    let name: String
+    let descriptor: String
+    let systemImage: String
+    let intensity: Int
+
+    var id: String { tone.rawValue }
+
+    static func profile(for tone: ToneMode) -> AdviceVoice {
+        switch tone {
+        case .corporateConsultant:
+            return AdviceVoice(tone: tone, name: "The Operator", descriptor: "Turns every feeling into a quarterly initiative.", systemImage: "briefcase.fill", intensity: 3)
+        case .alphaPodcast:
+            return AdviceVoice(tone: tone, name: "The Alpha", descriptor: "Confuses volume with evidence and calls it leadership.", systemImage: "mic.fill", intensity: 5)
+        case .wizard:
+            return AdviceVoice(tone: tone, name: "The Wizard", descriptor: "Solves ordinary problems with unnecessary ceremony.", systemImage: "wand.and.stars", intensity: 4)
+        case .influencer:
+            return AdviceVoice(tone: tone, name: "The Main Character", descriptor: "Optimizes the story before checking what happened.", systemImage: "camera.fill", intensity: 4)
+        case .toxicBestFriend:
+            return AdviceVoice(tone: tone, name: "The Menace", descriptor: "Would absolutely make this worse for your growth.", systemImage: "flame.fill", intensity: 5)
+        case .boomer:
+            return AdviceVoice(tone: tone, name: "The Dad", descriptor: "Has one story, three rules, and no follow-up questions.", systemImage: "radio.fill", intensity: 2)
+        case .cryptoBro:
+            return AdviceVoice(tone: tone, name: "The Moon Boy", descriptor: "Treats every decision like a once-in-a-lifetime pump.", systemImage: "chart.line.uptrend.xyaxis", intensity: 5)
+        case .minimalistMonk:
+            return AdviceVoice(tone: tone, name: "The Monk", descriptor: "Removes the problem, the context, and most of the furniture.", systemImage: "circle.dotted", intensity: 1)
+        case .friendRoast:
+            return AdviceVoice(tone: tone, name: "The Bestie", descriptor: "Says the quiet part out loud, then adds a little seasoning.", systemImage: "person.2.fill", intensity: 4)
+        case .lifeCoach:
+            return AdviceVoice(tone: tone, name: "The Optimist", descriptor: "Believes a fresh mindset can solve an old spreadsheet.", systemImage: "sun.max.fill", intensity: 3)
+        case .conspiracyTheorist:
+            return AdviceVoice(tone: tone, name: "The Pattern", descriptor: "Connects unrelated dots with alarming confidence.", systemImage: "eye.fill", intensity: 5)
+        case .genZ:
+            return AdviceVoice(tone: tone, name: "The Timeline", descriptor: "Chronically online, emotionally precise, spiritually buffering.", systemImage: "bolt.horizontal.fill", intensity: 4)
+        case .redditCommenter:
+            return AdviceVoice(tone: tone, name: "The Commenter", descriptor: "Has read half the thread and formed a legal opinion.", systemImage: "bubble.left.and.bubble.right.fill", intensity: 3)
+        case .linkedInInfluencer:
+            return AdviceVoice(tone: tone, name: "The Thought Leader", descriptor: "Starts with a hook and ends with a humblebrag.", systemImage: "person.crop.circle.badge.checkmark", intensity: 4)
+        case .astrologyGirlie:
+            return AdviceVoice(tone: tone, name: "The Star Chart", descriptor: "Blames the moon, then makes a very specific plan.", systemImage: "moon.stars.fill", intensity: 3)
+        case .oldMoney:
+            return AdviceVoice(tone: tone, name: "The Heir", descriptor: "Would never rush a decision, especially in public.", systemImage: "seal.fill", intensity: 2)
+        case .random:
+            return AdviceVoice(tone: tone, name: "The Blender", descriptor: "A rotating panel of confident specialists with no oversight.", systemImage: "shuffle", intensity: 4)
+        }
+    }
+}
+
+extension ToneMode {
+    var voice: AdviceVoice { AdviceVoice.profile(for: self) }
+}
+
+/// A persisted, model-free severity preference for the Bureau engine.
+///
+/// Raw integer values intentionally match the five slider stops in the Desk UI,
+/// which keeps App Intents, settings persistence, and accessibility adjustments
+/// speaking the same language.
+enum BadviceIntensity: Int, CaseIterable, Codable, Identifiable, Sendable {
+    case questionable = 1
+    case plausible = 2
+    case bold = 3
+    case careerLimiting = 4
+    case legendaryMistake = 5
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .questionable: return "Questionable"
+        case .plausible: return "Plausible"
+        case .bold: return "Bold"
+        case .careerLimiting: return "Career Limiting"
+        case .legendaryMistake: return "Legendary Mistake"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .questionable: return "Mild"
+        case .plausible: return "Plausible"
+        case .bold: return "Bold"
+        case .careerLimiting: return "Risky"
+        case .legendaryMistake: return "Legendary"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .questionable:
+            return "A small lapse in judgment."
+        case .plausible:
+            return "Wrong enough to sting, believable enough to try."
+        case .bold:
+            return "Confident, visible, and difficult to walk back."
+        case .careerLimiting:
+            return "The kind of take that earns a calendar invite."
+        case .legendaryMistake:
+            return "Maximum theatrical damage, still safely satirical."
+        }
+    }
+}
+
+/// A one-shot local rewrite direction. These never change the saved intensity
+/// preference and never require Apple Intelligence.
+enum AdviceRevisionStyle: String, CaseIterable, Codable, Identifiable, Sendable {
+    case moreChaotic
+    case moreBelievable
+    case colder
+    case officeSafe
+    case oneSentence
+    case completelyUnhinged
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .moreChaotic: return "More chaotic"
+        case .moreBelievable: return "More believable"
+        case .colder: return "Colder"
+        case .officeSafe: return "Office-safe"
+        case .oneSentence: return "One sentence"
+        case .completelyUnhinged: return "Completely unhinged"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .moreChaotic: return "tornado"
+        case .moreBelievable: return "checkmark.seal"
+        case .colder: return "snowflake"
+        case .officeSafe: return "building.2"
+        case .oneSentence: return "text.line.first.and.arrowtriangle.forward"
+        case .completelyUnhinged: return "sparkles.rectangle.stack"
+        }
+    }
+}
+
+enum CaseRarity: Int, CaseIterable, Codable, Identifiable, Sendable {
+    case routine = 1
+    case notable = 2
+    case legendary = 3
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .routine: return "Routine"
+        case .notable: return "Notable"
+        case .legendary: return "Legendary"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .routine: return "doc.text"
+        case .notable: return "seal"
+        case .legendary: return "crown.fill"
+        }
+    }
+}
+
 enum ThemeMode: String, CaseIterable, Codable, Identifiable, Sendable {
     case badvice
     case minimal
@@ -192,6 +359,7 @@ enum ShareCardTemplate: String, CaseIterable, Codable, Identifiable, Sendable {
     case certified
     case cinematic
     case redFlag
+    case caseFile
 
     var id: String { rawValue }
 
@@ -203,6 +371,7 @@ enum ShareCardTemplate: String, CaseIterable, Codable, Identifiable, Sendable {
         case .certified: return "Badvice Certified"
         case .cinematic: return "Cinematic"
         case .redFlag: return "Red Flag"
+        case .caseFile: return "Case File"
         }
     }
 
@@ -211,7 +380,7 @@ enum ShareCardTemplate: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .minimal: return .deadpan
         case .bold: return .chaotic
-        case .gradient, .certified: return .fauxExpert
+        case .gradient, .certified, .caseFile: return .fauxExpert
         case .cinematic: return .deadpan
         case .redFlag: return .chaotic
         }
@@ -328,11 +497,26 @@ enum AdviceGenerationProvider: String, CaseIterable, Codable, Identifiable, Send
 
     var title: String {
         switch self {
-        case .auto: return "Auto"
-        case .classic: return "Classic"
-        case .appleOnDevice: return "Apple On-Device"
+        case .auto: return "Local First"
+        case .classic: return "Bureau Engine"
+        case .appleOnDevice: return "Apple Intelligence"
         }
     }
+
+    var detail: String {
+        switch self {
+        case .auto:
+            return "Legacy local-first setting. Uses the Bureau Engine."
+        case .classic:
+            return "Instant, private, deterministic, and fully offline."
+        case .appleOnDevice:
+            return "Optional model-assisted rewrites on supported devices."
+        }
+    }
+
+    /// `auto` remains decodable for existing installs but is intentionally absent from
+    /// new settings UI. Model-backed generation always requires an explicit selection.
+    static let userSelectable: [AdviceGenerationProvider] = [.classic, .appleOnDevice]
 }
 
 enum AdviceVoteState: Int, CaseIterable, Codable, Identifiable, Sendable {
@@ -547,39 +731,39 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .generate: return "Advice"
-        case .chaosHub: return "Missions"
-        case .explore: return "Explore"
-        case .groupChallenges: return "Challenges"
-        case .quotes: return "Library"
-        case .favorites: return "Favorites"
-        case .history: return "History"
+        case .generate: return "Desk"
+        case .chaosHub: return "Dares"
+        case .explore: return "Starters"
+        case .groupChallenges: return "Groups"
+        case .quotes: return "Dispatches"
+        case .favorites: return "Casebook"
+        case .history: return "Recent"
         case .settings: return "Settings"
         }
     }
 
     var compactTitle: String {
         switch self {
-        case .generate: return "Advice"
-        case .chaosHub: return "Missions"
-        case .explore: return "Explore"
-        case .groupChallenges: return "Challenges"
-        case .quotes: return "Library"
-        case .favorites: return "Saved"
-        case .history: return "History"
+        case .generate: return "Desk"
+        case .chaosHub: return "Dares"
+        case .explore: return "Ideas"
+        case .groupChallenges: return "Groups"
+        case .quotes: return "Dispatch"
+        case .favorites: return "Files"
+        case .history: return "Recent"
         case .settings: return "Settings"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .generate: return "sparkles"
-        case .chaosHub: return "flame.fill"
-        case .explore: return "magnifyingglass"
+        case .generate: return "deskclock.fill"
+        case .chaosHub: return "flag.checkered.2.crossed"
+        case .explore: return "lightbulb.max.fill"
         case .groupChallenges: return "person.3.fill"
-        case .quotes: return "quote.bubble"
-        case .favorites: return "bookmark.fill"
-        case .history: return "clock"
+        case .quotes: return "envelope.open.fill"
+        case .favorites: return "books.vertical.fill"
+        case .history: return "clock.arrow.trianglehead.counterclockwise.rotate.90"
         case .settings: return "gearshape"
         }
     }
@@ -609,13 +793,13 @@ extension AppTab: AppEnum {
     static let typeDisplayName = LocalizedStringResource("Badvice tab")
 
     static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
-        .generate: "Advice",
-        .chaosHub: "Missions",
-        .explore: "Explore",
-        .groupChallenges: "Challenges",
-        .quotes: "Library",
-        .favorites: "Favorites",
-        .history: "History",
+        .generate: "Desk",
+        .chaosHub: "Dares",
+        .explore: "Starters",
+        .groupChallenges: "Groups",
+        .quotes: "Dispatches",
+        .favorites: "Casebook",
+        .history: "Recent",
         .settings: "Settings",
     ]
 }
@@ -669,6 +853,20 @@ extension ToneMode: AppEnum {
         .astrologyGirlie: "Astrology Girlie",
         .oldMoney: "Old Money",
         .random: "Random Mix",
+    ]
+}
+
+@available(iOS 16.0, *)
+extension BadviceIntensity: AppEnum {
+    static let typeDisplayRepresentation = TypeDisplayRepresentation("Badvice intensity")
+    static let typeDisplayName = LocalizedStringResource("Badvice intensity")
+
+    static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
+        .questionable: "Questionable",
+        .plausible: "Plausible",
+        .bold: "Bold",
+        .careerLimiting: "Career Limiting",
+        .legendaryMistake: "Legendary Mistake",
     ]
 }
 
@@ -929,6 +1127,59 @@ extension StartDailyMissionIntent {
     static var openAppWhenRun: Bool { true }
 }
 
+/// Completes entirely in Shortcuts/Siri using the deterministic Bureau engine.
+/// This is deliberately separate from `GenerateBadviceAdviceIntent`, which opens
+/// the full Desk workflow and can use the optional Apple Intelligence provider.
+@available(iOS 16.0, *)
+struct GetQuickBadviceIntent: AppIntent {
+    static let title: LocalizedStringResource = "Get quick Badvice"
+    static let description = IntentDescription(
+        "Return private, local bad advice without opening the app or using an AI model."
+    )
+    @available(iOS 26.0, *)
+    static var supportedModes: IntentModes { .background }
+
+    @Parameter(title: "Category", default: .career)
+    var category: AdviceCategory
+
+    @Parameter(title: "Tone", default: .corporateConsultant)
+    var tone: ToneMode
+
+    @Parameter(title: "Intensity", default: .bold)
+    var intensity: BadviceIntensity
+
+    @Parameter(title: "Situation")
+    var situation: String?
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Get \(\.$intensity) bad advice for \(\.$category)")
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
+        let safeSituation = situation?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .prefix(280)
+        let output = BureauAdviceEngine().generate(
+            category: category,
+            tone: tone,
+            includeRationale: false,
+            situation: safeSituation.map(String.init),
+            intensity: intensity,
+            seed: Int(Date().timeIntervalSinceReferenceDate * 1_000)
+        )
+        return .result(
+            value: output.adviceLine,
+            dialog: IntentDialog("\(output.adviceLine)")
+        )
+    }
+}
+
+@available(iOS 16.0, *)
+@available(*, deprecated, message: "Use supportedModes instead")
+extension GetQuickBadviceIntent {
+    static var openAppWhenRun: Bool { false }
+}
+
 @available(iOS 16.0, *)
 enum BadviceDailyQuoteIntentFormatter {
     static func shortcutText(for quote: SharedDailyQuote) -> String {
@@ -970,6 +1221,16 @@ extension GetDailyQuoteIntent {
 @available(iOS 16.0, *)
 struct BadviceShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
+        AppShortcut(
+            intent: GetQuickBadviceIntent(),
+            phrases: [
+                "Give me quick Badvice in ${applicationName}",
+                "Get local bad advice from ${applicationName}",
+                "Tell me a terrible idea with ${applicationName}"
+            ],
+            shortTitle: "Quick Badvice",
+            systemImageName: "bolt.shield.fill"
+        )
         AppShortcut(
             intent: GetDailyQuoteIntent(),
             phrases: [
@@ -1137,6 +1398,27 @@ struct ShareCardContent: Sendable {
     let includeDisclaimer: Bool
     let template: ShareCardTemplate
     let aspectRatio: ShareAspectRatio
+    let caseNumber: String?
+
+    init(
+        category: AdviceCategory,
+        tone: ToneMode,
+        adviceLine: String,
+        rationaleLine: String?,
+        includeDisclaimer: Bool,
+        template: ShareCardTemplate,
+        aspectRatio: ShareAspectRatio,
+        caseNumber: String? = nil
+    ) {
+        self.category = category
+        self.tone = tone
+        self.adviceLine = adviceLine
+        self.rationaleLine = rationaleLine
+        self.includeDisclaimer = includeDisclaimer
+        self.template = template
+        self.aspectRatio = aspectRatio
+        self.caseNumber = caseNumber
+    }
 }
 
 struct BadQuote: Identifiable, Hashable, Sendable {

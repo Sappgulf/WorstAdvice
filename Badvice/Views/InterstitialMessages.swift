@@ -1159,7 +1159,7 @@ struct SettingsTabView: View {
                 ),
                 pickerAccessibilityIdentifier: "settings.generationEngine.provider"
             ) {
-                ForEach(AdviceGenerationProvider.allCases) { provider in
+                ForEach(AdviceGenerationProvider.userSelectable) { provider in
                     Text(provider.title).tag(provider)
                 }
             }

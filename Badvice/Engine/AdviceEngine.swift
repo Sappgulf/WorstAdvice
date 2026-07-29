@@ -795,6 +795,510 @@ struct AdviceEngine {
     
 }
 
+/// The local-first generation path for Badvice.
+///
+/// `AdviceEngine` remains the broad legacy corpus and recovery engine. This composer
+/// deliberately uses a much smaller recipe surface: it extracts a stable topic from
+/// the user's situation, applies a category playbook, then delivers the result through
+/// the selected voice. The smaller surface makes grammar, length, and determinism much
+/// easier to reason about than one giant bank of interpolated sentence shapes.
+struct BureauAdviceEngine: Sendable {
+    private let store: AdviceStore
+    private let moderation: ContentModeration
+
+    init(
+        store: AdviceStore = AdviceStore(),
+        moderation: ContentModeration = ContentModeration()
+    ) {
+        self.store = store
+        self.moderation = moderation
+    }
+
+    func generate(
+        category: AdviceCategory,
+        tone: ToneMode,
+        includeRationale: Bool,
+        contentPack: ContentPack = .classic,
+        situation: String? = nil,
+        intensity: BadviceIntensity = .bold,
+        revision: AdviceRevisionStyle? = nil,
+        seed: Int,
+        now: Date = Date()
+    ) -> GeneratedAdvice {
+        let resolvedCategory = category.resolved(seed: seed)
+        let resolvedTone = tone.resolved(seed: seed &+ 31)
+        let rules = store.rules(for: resolvedCategory, contentPack: contentPack)
+        let voice = store.profile(for: resolvedTone)
+        let playbook = Self.playbook(for: resolvedCategory)
+        var rng = BureauSeededGenerator(seed: seed)
+
+        let safeSituation = sanitizedSituation(situation)
+        let fallbackKeyword = pick(rules.keywords, using: &rng, fallback: resolvedCategory.title.lowercased())
+        let focus = framedFocus(
+            extractedFocus(from: safeSituation, seed: seed) ?? fallbackKeyword
+        )
+        let baseMove = pick(playbook.moves, using: &rng, fallback: "announce a bold first draft before checking the details")
+        let coverStory = pick(playbook.coverStories, using: &rng, fallback: "call the confusion strategic range")
+        let guardrail = pick(playbook.guardrails, using: &rng, fallback: "checking the facts")
+        let principle = pick(rules.badPrinciples, using: &rng, fallback: "confidence without evidence")
+        let principleRule = sentenceCase(cleanedLead(principle))
+        let opener = cleanedLead(pick(voice.opener, using: &rng, fallback: "Here is the play"))
+        let confidence = cleanedSentence(pick(voice.confidenceTag, using: &rng, fallback: "The confidence is the evidence."))
+        let ending = cleanedSentence(pick(voice.ending, using: &rng, fallback: "Commit before nuance arrives."))
+
+        let move = styledMove(baseMove, intensity: intensity, revision: revision)
+        let recipes: [(String, String, String, String, String) -> String] = [
+            { opener, focus, move, _, confidence in
+                "\(opener): for \(focus), \(move). \(confidence)"
+            },
+            { opener, focus, move, coverStory, _ in
+                "\(opener). With \(focus), \(move), then \(coverStory)."
+            },
+            { opener, focus, move, coverStory, confidence in
+                "\(opener): make \(focus) look intentional—\(move), then \(coverStory). \(confidence)"
+            },
+            { opener, focus, move, _, _ in
+                "\(opener). Skip the quiet option on \(focus); \(move). \(ending)"
+            },
+            { opener, focus, move, coverStory, _ in
+                "\(opener): treat \(focus) as a confidence test. \(sentenceCase(move)), then \(coverStory)."
+            },
+            { opener, focus, move, coverStory, confidence in
+                "\(opener). The move on \(focus): \(move). If anyone asks, \(coverStory). \(confidence)"
+            },
+        ]
+
+        let rawAdvice: String
+        switch revision {
+        case .moreBelievable:
+            rawAdvice = "\(opener): with \(focus), \(move), then \(coverStory)."
+        case .colder:
+            rawAdvice = "\(opener). For \(focus), \(move). No follow-up questions."
+        case .officeSafe:
+            rawAdvice = "Official guidance for \(focus): \(move). \(sentenceCase(coverStory))."
+        case .oneSentence:
+            rawAdvice = "\(opener): for \(focus), \(move); \(coverStory)."
+        case .moreChaotic, .completelyUnhinged, .none:
+            let recipe = recipes[rng.index(upperBound: recipes.count)]
+            rawAdvice = recipe(opener, focus, move, coverStory, confidence)
+        }
+        let advice = bounded(cleanedSentence(rawAdvice), maximum: AdviceEngineConstants.adviceOutputMaxLength)
+        let rationale: String? = includeRationale
+            ? bounded(
+                "Why it fails: it replaces \(guardrail) with the rule “\(principleRule).”",
+                maximum: AdviceEngineConstants.rationaleOutputMaxLength
+            )
+            : nil
+        let moderated = moderation.apply(to: advice, rationale: rationale)
+
+        return GeneratedAdvice(
+            category: resolvedCategory,
+            tone: resolvedTone,
+            adviceLine: moderated.advice,
+            rationaleLine: moderated.rationale,
+            createdAt: now
+        )
+    }
+
+    func generateCandidates(
+        category: AdviceCategory,
+        tone: ToneMode,
+        includeRationale: Bool,
+        contentPack: ContentPack = .classic,
+        situation: String? = nil,
+        intensity: BadviceIntensity = .bold,
+        revision: AdviceRevisionStyle? = nil,
+        seed: Int,
+        count: Int,
+        now: Date = Date()
+    ) -> [GeneratedAdvice] {
+        guard count > 0 else { return [] }
+
+        var seen = Set<String>()
+        var results: [GeneratedAdvice] = []
+        let attemptLimit = max(count * 5, count + 4)
+
+        for attempt in 0..<attemptLimit where results.count < count {
+            let candidateSeed = seed &+ (attempt * 7_919)
+            let candidate = generate(
+                category: category,
+                tone: tone,
+                includeRationale: includeRationale,
+                contentPack: contentPack,
+                situation: situation,
+                intensity: intensity,
+                revision: revision,
+                seed: candidateSeed,
+                now: now
+            )
+            let fingerprint = candidate.adviceLine.normalizedForFiltering
+            if seen.insert(fingerprint).inserted {
+                results.append(candidate)
+            }
+        }
+
+        return results
+    }
+
+    /// Provides a constructive counterpoint without invoking a model. The language
+    /// stays intentionally conservative because this surface is useful guidance,
+    /// not part of the satire.
+    func realityCheck(
+        category: AdviceCategory,
+        situation: String? = nil,
+        seed: Int = 0
+    ) -> String {
+        let resolvedCategory = category.resolved(seed: seed)
+        let playbook = Self.playbook(for: resolvedCategory)
+        let guardrail = playbook.guardrails[seed.positiveModulo(playbook.guardrails.count)]
+        let safeSituation = sanitizedSituation(situation)
+
+        if let focus = extractedFocus(from: safeSituation, seed: seed) {
+            return bounded(
+                "Reality check: for \(framedFocus(focus)), start by \(guardrail). Keep the next step small, honest, and reversible.",
+                maximum: AdviceEngineConstants.adviceOutputMaxLength
+            )
+        }
+
+        return bounded(
+            "Reality check: start by \(guardrail). Keep the next step small, honest, and reversible.",
+            maximum: AdviceEngineConstants.adviceOutputMaxLength
+        )
+    }
+
+    private func sanitizedSituation(_ situation: String?) -> String? {
+        guard let situation else { return nil }
+        let trimmed = situation.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, moderation.isSafe(text: trimmed) else { return nil }
+        let collapsed = trimmed.replacingOccurrences(
+            of: "\\s+",
+            with: " ",
+            options: .regularExpression
+        )
+        return String(collapsed.prefix(AdviceEngineConstants.situationMaxLength))
+    }
+
+    private func extractedFocus(from situation: String?, seed: Int) -> String? {
+        guard let situation, !situation.isEmpty else { return nil }
+
+        let tagger = NLTagger(tagSchemes: [.lexicalClass])
+        tagger.string = situation
+        let options: NLTagger.Options = [.omitWhitespace, .omitPunctuation, .joinNames]
+        var tokens: [(text: String, tag: NLTag?, range: Range<String.Index>)] = []
+
+        tagger.enumerateTags(
+            in: situation.startIndex..<situation.endIndex,
+            unit: .word,
+            scheme: .lexicalClass,
+            options: options
+        ) { tag, range in
+            let text = String(situation[range])
+            let normalized = text.normalizedForFiltering
+            guard normalized.count >= 3, !Self.focusStopwords.contains(normalized) else {
+                return true
+            }
+            tokens.append((text, tag, range))
+            return true
+        }
+
+        var phraseCandidates: [(text: String, specificity: Int)] = []
+        for startIndex in tokens.indices {
+            let startToken = tokens[startIndex]
+            guard startToken.tag == .noun || startToken.tag == .adjective else { continue }
+
+            var previousToken = startToken
+            let endIndex = min(startIndex + 2, tokens.index(before: tokens.endIndex))
+            for index in startIndex...endIndex {
+                let token = tokens[index]
+                guard token.tag == .noun || token.tag == .adjective else { break }
+
+                if index > startIndex {
+                    let gap = situation[previousToken.range.upperBound..<token.range.lowerBound]
+                    let keepsPhraseTogether = gap.allSatisfy {
+                        $0.isWhitespace || "-–—/'’".contains($0)
+                    }
+                    guard keepsPhraseTogether else { break }
+                }
+
+                // A phrase ending in an adjective often produces broken recipe grammar,
+                // such as "make your manager scheduled look intentional." Waiting for a
+                // noun also lets a full phrase like "surprise all-hands" win.
+                if token.tag == .noun {
+                    let phrase = String(
+                        situation[startToken.range.lowerBound..<token.range.upperBound]
+                    )
+                    phraseCandidates.append(
+                        (text: phrase, specificity: index - startIndex + 1)
+                    )
+                }
+                previousToken = token
+            }
+        }
+
+        if !phraseCandidates.isEmpty {
+            var seen = Set<String>()
+            let uniqueCandidates = phraseCandidates.filter {
+                seen.insert($0.text.normalizedForFiltering).inserted
+            }
+            let highestSpecificity = uniqueCandidates.map(\.specificity).max() ?? 1
+            let mostSpecific = uniqueCandidates.filter {
+                $0.specificity == highestSpecificity
+            }
+            let selected = mostSpecific[seed.positiveModulo(mostSpecific.count)].text
+            return String(selected.prefix(48))
+        }
+
+        var fallbackCandidates: [(text: String, specificity: Int)] = []
+        for startIndex in tokens.indices {
+            let startToken = tokens[startIndex]
+            var previousToken = startToken
+            let endIndex = min(startIndex + 2, tokens.index(before: tokens.endIndex))
+
+            for index in startIndex...endIndex {
+                let token = tokens[index]
+                if index > startIndex {
+                    let gap = situation[previousToken.range.upperBound..<token.range.lowerBound]
+                    let keepsPhraseTogether = gap.allSatisfy {
+                        $0.isWhitespace || "-–—/'’".contains($0)
+                    }
+                    guard keepsPhraseTogether else { break }
+                }
+
+                let normalized = token.text.normalizedForFiltering
+                let endsInDanglingModifier =
+                    normalized.count > 4
+                    && (normalized.hasSuffix("ed") || normalized.hasSuffix("ing"))
+                if !endsInDanglingModifier {
+                    let phrase = String(
+                        situation[startToken.range.lowerBound..<token.range.upperBound]
+                    )
+                    fallbackCandidates.append(
+                        (text: phrase, specificity: index - startIndex + 1)
+                    )
+                }
+                previousToken = token
+            }
+        }
+
+        guard !fallbackCandidates.isEmpty else { return nil }
+        var seenFallbacks = Set<String>()
+        let uniqueFallbacks = fallbackCandidates.filter {
+            seenFallbacks.insert($0.text.normalizedForFiltering).inserted
+        }
+        let highestSpecificity = uniqueFallbacks.map(\.specificity).max() ?? 1
+        let mostSpecificPhrases = uniqueFallbacks.filter {
+            $0.specificity == highestSpecificity
+        }
+        let selected = mostSpecificPhrases[
+            seed.positiveModulo(mostSpecificPhrases.count)
+        ].text
+        return String(selected.prefix(48))
+    }
+
+    private func framedFocus(_ raw: String) -> String {
+        let cleaned = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        guard !cleaned.isEmpty else { return "the situation" }
+
+        let normalized = cleaned.normalizedForFiltering
+        let alreadyFramed = Self.focusDeterminers.contains { normalized.hasPrefix("\($0) ") }
+        return alreadyFramed ? cleaned : "your \(cleaned.lowercased())"
+    }
+
+    private func styledMove(
+        _ move: String,
+        intensity: BadviceIntensity,
+        revision: AdviceRevisionStyle?
+    ) -> String {
+        switch revision {
+        case .moreChaotic:
+            return "\(move), invite witnesses, and call the escalation momentum"
+        case .moreBelievable:
+            return "\(move) and present it as the sensible middle ground"
+        case .colder:
+            return "\(move), offer no explanation, and mute the follow-up"
+        case .officeSafe:
+            return "\(move), then document the decision in a perfectly polite recap"
+        case .oneSentence:
+            return move
+        case .completelyUnhinged:
+            return "\(move), announce a countdown, invite witnesses, and commission a commemorative slide deck"
+        case .none:
+            break
+        }
+
+        switch intensity {
+        case .questionable:
+            return "\(move), but keep it subtle enough to deny later"
+        case .plausible:
+            return "\(move) and describe it as the practical option"
+        case .bold:
+            return "\(move), then defend it before anyone objects"
+        case .careerLimiting:
+            return "\(move), copy the widest possible audience, and call the visibility alignment"
+        case .legendaryMistake:
+            return "\(move), invite witnesses, set a deadline, and turn the fallout into a keynote"
+        }
+    }
+
+    private func cleanedLead(_ raw: String) -> String {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ":,.;")))
+    }
+
+    private func cleanedSentence(_ raw: String) -> String {
+        let collapsed = raw
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "..", with: ".")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let last = collapsed.last, !".!?".contains(last) else { return collapsed }
+        return "\(collapsed)."
+    }
+
+    private func sentenceCase(_ raw: String) -> String {
+        guard let first = raw.first else { return raw }
+        return first.uppercased() + raw.dropFirst()
+    }
+
+    private func bounded(_ raw: String, maximum: Int) -> String {
+        guard raw.count > maximum else { return raw }
+        let end = raw.index(raw.startIndex, offsetBy: maximum)
+        let prefix = raw[..<end]
+        let boundary = prefix.lastIndex(where: { $0 == " " }) ?? prefix.endIndex
+        return "\(prefix[..<boundary].trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)))…"
+    }
+
+    private func pick(
+        _ values: [String],
+        using rng: inout BureauSeededGenerator,
+        fallback: String
+    ) -> String {
+        guard !values.isEmpty else { return fallback }
+        return values[rng.index(upperBound: values.count)]
+    }
+
+    private static let focusDeterminers = [
+        "a", "an", "the", "my", "our", "your", "this", "that", "these", "those",
+    ]
+
+    private static let focusStopwords: Set<String> = [
+        "about", "after", "and", "asked", "because", "before", "could", "for", "have",
+        "into", "just", "like", "need", "nothing", "really", "should", "some", "that",
+        "them", "they", "thing", "this", "want", "with", "would",
+    ]
+
+    private static func playbook(for category: AdviceCategory) -> BureauCategoryPlaybook {
+        playbooks[category] ?? playbooks[.productivity]!
+    }
+
+    private static let playbooks: [AdviceCategory: BureauCategoryPlaybook] = [
+        .dating: .init(
+            moves: ["schedule the emotional debrief before the second date", "treat reply time as a competitive leaderboard", "soft-launch the relationship before defining it"],
+            coverStories: ["call the mixed signals romantic tension", "describe the overthinking as standards", "label the confusion mysterious chemistry"],
+            guardrails: ["asking a direct question", "respecting the other person's pace", "watching consistent behavior"]
+        ),
+        .fitness: .init(
+            moves: ["buy the recovery gear before starting the routine", "rename one dramatic workout a training era", "track the outfit more closely than the habit"],
+            coverStories: ["call the inconsistency muscle confusion", "describe the soreness as momentum", "label the shopping phase foundational work"],
+            guardrails: ["building a gradual routine", "resting when your body asks", "choosing sustainable progress"]
+        ),
+        .career: .init(
+            moves: ["send the victory recap before finishing the work", "volunteer for the visible committee with no deliverables", "rename the delay stakeholder alignment"],
+            coverStories: ["call the confusion executive presence", "describe the detour as cross-functional leadership", "label the missing details strategic altitude"],
+            guardrails: ["finishing the actual work", "sharing an honest status", "asking for clear priorities"]
+        ),
+        .money: .init(
+            moves: ["build the reward budget before the real budget", "treat one coupon as a complete financial strategy", "make the spreadsheet prettier than the numbers"],
+            coverStories: ["call the overspend a liquidity event", "describe the impulse as portfolio diversity", "label the missing math abundance"],
+            guardrails: ["checking what you can afford", "planning for boring expenses", "waiting before a large purchase"]
+        ),
+        .parenting: .init(
+            moves: ["turn bedtime into a quarterly negotiation", "announce a reward system with twelve tiers", "optimize the family photo before the family plan"],
+            coverStories: ["call the chaos enrichment", "describe the negotiation as leadership training", "label the extra rules consistency"],
+            guardrails: ["keeping the boundary simple", "listening before reacting", "choosing an age-appropriate routine"]
+        ),
+        .tech: .init(
+            moves: ["ship the announcement while the warning light is still on", "add a dashboard instead of fixing the workflow", "rename the workaround version two"],
+            coverStories: ["call the bug emergent behavior", "describe the outage as live discovery", "label the missing documentation intuitive design"],
+            guardrails: ["testing the risky path", "reading the warning", "fixing the root cause"]
+        ),
+        .social: .init(
+            moves: ["send the group-chat poll before asking anyone privately", "turn the apology into a launch announcement", "document the hangout like a brand partnership"],
+            coverStories: ["call the awkwardness community building", "describe the overshare as authenticity", "label the silence audience anticipation"],
+            guardrails: ["reading the room", "apologizing without a campaign", "giving people space"]
+        ),
+        .cooking: .init(
+            moves: ["plate the garnish before checking whether dinner is cooked", "triple the recipe on the first attempt", "choose the dramatic pan over the useful one"],
+            coverStories: ["call the smoke rustic character", "describe the delay as a tasting menu", "label the missing ingredient improvisation"],
+            guardrails: ["reading the recipe once", "checking the temperature", "keeping the meal simple"]
+        ),
+        .travel: .init(
+            moves: ["book the sunrise activity after the midnight arrival", "turn every free hour into a reservation", "choose the connection with the best story potential"],
+            coverStories: ["call the exhaustion immersion", "describe the sprinting as spontaneity", "label the missed train local flavor"],
+            guardrails: ["leaving margin in the itinerary", "checking the connection time", "resting before adding plans"]
+        ),
+        .productivity: .init(
+            moves: ["rebuild the system before doing the first task", "schedule a planning meeting with yourself about planning", "color-code the backlog until it looks complete"],
+            coverStories: ["call the delay workflow design", "describe the tabs as active research", "label the reorganization deep work"],
+            guardrails: ["doing the next small task", "limiting work in progress", "using the simple tool you already have"]
+        ),
+        .pets: .init(
+            moves: ["build the pet's content calendar before the walking schedule", "interpret one dramatic stare as a formal complaint", "buy the themed accessory before the practical supply"],
+            coverStories: ["call the chaos enrichment", "describe the demands as personal branding", "label the ruined cushion interior feedback"],
+            guardrails: ["following a steady care routine", "checking with a qualified professional", "rewarding calm behavior"]
+        ),
+        .relationships: .init(
+            moves: ["turn the small disagreement into a season finale", "send a summary memo before having the conversation", "score the compromise like a negotiation win"],
+            coverStories: ["call the scorekeeping accountability", "describe the cold shoulder as processing", "label the escalation radical honesty"],
+            guardrails: ["speaking directly and kindly", "listening without keeping score", "choosing repair over winning"]
+        ),
+        .spirituality: .init(
+            moves: ["ask the universe for a sign and ignore the obvious one", "turn one coincidence into a five-year operating plan", "schedule enlightenment between two errands"],
+            coverStories: ["call the uncertainty divine timing", "describe the avoidance as surrender", "label the impulse alignment"],
+            guardrails: ["staying grounded in reality", "making a considered choice", "using reflection without outsourcing judgment"]
+        ),
+        .financeCrypto: .init(
+            moves: ["design the victory post before checking the chart", "treat one green candle as a retirement plan", "refresh the thesis every time the price moves"],
+            coverStories: ["call the volatility conviction training", "describe the loss as cheaper education", "label the panic community research"],
+            guardrails: ["understanding the risk", "protecting essential savings", "avoiding decisions driven by hype"]
+        ),
+        .gaming: .init(
+            moves: ["rebuild the loadout after every single loss", "turn the warm-up match into a legacy-defining event", "optimize the victory clip before learning the map"],
+            coverStories: ["call the tilt competitive fire", "describe the grind as strategic patience", "label the missed objective creative routing"],
+            guardrails: ["taking a break when frustrated", "learning one mechanic at a time", "playing the objective"]
+        ),
+        .weddings: .init(
+            moves: ["choose the photo moment before solving the guest flow", "turn one opinion into a three-vendor review process", "add a reveal to the part that was already decided"],
+            coverStories: ["call the scope growth once-in-a-lifetime detail", "describe the tension as meaningful investment", "label the delay intentional anticipation"],
+            guardrails: ["protecting the couple's priorities", "setting a clear budget", "making the day easier for the people involved"]
+        ),
+    ]
+}
+
+private struct BureauCategoryPlaybook: Sendable {
+    let moves: [String]
+    let coverStories: [String]
+    let guardrails: [String]
+}
+
+private struct BureauSeededGenerator {
+    private var state: UInt64
+
+    init(seed: Int) {
+        state = UInt64(bitPattern: Int64(seed)) ^ 0xA0761D6478BD642F
+    }
+
+    mutating func index(upperBound: Int) -> Int {
+        guard upperBound > 0 else { return 0 }
+        state &+= 0x9E3779B97F4A7C15
+        var value = state
+        value = (value ^ (value >> 30)) &* 0xBF58476D1CE4E5B9
+        value = (value ^ (value >> 27)) &* 0x94D049BB133111EB
+        value ^= value >> 31
+        return Int(value % UInt64(upperBound))
+    }
+}
+
 struct ContentModeration {
     private let hateTerms = [
         "racial slur", "nazi", "hate group", "ethnic cleansing", "supremacist"

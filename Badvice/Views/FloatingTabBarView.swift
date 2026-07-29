@@ -94,6 +94,7 @@ struct FloatingTabBarView: View {
                 )
             }
         }
+        .dynamicTypeSize(...DynamicTypeSize.large)
         .ignoresSafeArea(.container, edges: .bottom)
         .ignoresSafeArea(.keyboard)
     }

@@ -2,17 +2,21 @@ import SwiftUI
 
 struct OnboardingFlow: View {
     @Binding var isPresented: Bool
-    let onStarterSelected: (AdviceCategory, ToneMode) -> Void
+    let onStarterSelected: (AdviceCategory, ToneMode, String, BadviceIntensity) -> Void
 
     @State private var currentPage = 0
     @State private var selectedCategory: AdviceCategory = .career
     @State private var selectedTone: ToneMode = .corporateConsultant
+    @State private var starterSituation = ""
+    @State private var selectedIntensity: BadviceIntensity = .bold
     @State private var cinematicPulse = false
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
 
     init(
         isPresented: Binding<Bool>,
-        onStarterSelected: @escaping (AdviceCategory, ToneMode) -> Void = { _, _ in }
+        onStarterSelected: @escaping (AdviceCategory, ToneMode, String, BadviceIntensity) -> Void = {
+            _, _, _, _ in
+        }
     ) {
         self._isPresented = isPresented
         self.onStarterSelected = onStarterSelected
@@ -262,6 +266,50 @@ struct OnboardingFlow: View {
                     }
                 }
             )
+
+            TextField("What is happening? (optional)", text: $starterSituation, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(.subheadline)
+                .foregroundStyle(.white)
+                .lineLimit(1...2)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.black.opacity(0.2))
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(pages[currentPage].accent.opacity(0.22), lineWidth: 1)
+                }
+                .accessibilityIdentifier("onboarding.situation")
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text("Badvice Dial")
+                    Spacer()
+                    Text(selectedIntensity.title)
+                        .fontWeight(.bold)
+                }
+                .font(.caption2)
+                .foregroundStyle(pages[currentPage].accent.opacity(0.84))
+
+                Slider(
+                    value: Binding(
+                        get: { Double(selectedIntensity.rawValue) },
+                        set: {
+                            selectedIntensity =
+                                BadviceIntensity(rawValue: Int($0.rounded())) ?? .bold
+                        }
+                    ),
+                    in: 1...5,
+                    step: 1
+                )
+                .tint(pages[currentPage].accent)
+                .accessibilityLabel("Starter Badvice intensity")
+                .accessibilityValue(selectedIntensity.title)
+                .accessibilityIdentifier("onboarding.intensity")
+            }
         }
         .padding(12)
         .background(
@@ -353,7 +401,12 @@ struct OnboardingFlow: View {
         }
 
         HapticsManager.playSuccess(isEnabled: true)
-        onStarterSelected(selectedCategory, selectedTone)
+        onStarterSelected(
+            selectedCategory,
+            selectedTone,
+            String(starterSituation.prefix(280)),
+            selectedIntensity
+        )
         Task {
             try? await Task.sleep(for: .milliseconds(isMotionReduced ? 100 : 700))
             dismissOnboarding(playSelectionHaptic: false)

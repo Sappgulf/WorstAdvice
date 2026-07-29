@@ -37,6 +37,7 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertFalse(session.settings.performanceMode)
         XCTAssertTrue(session.settings.dailyNotificationsEnabled)
         XCTAssertTrue(session.settings.streakNotificationsEnabled)
+        XCTAssertEqual(session.settings.preferredIntensity, .bold)
     }
     
     func testSettingsThemeChange() async throws {
@@ -107,7 +108,7 @@ final class SettingsViewModelTests: XCTestCase {
         let session = AppSessionViewModel(context: ModelContext(container))
         
         XCTAssertTrue(session.settings.includeDisclaimerOnShare)
-        XCTAssertEqual(session.settings.preferredTemplate, .minimal)
+        XCTAssertEqual(session.settings.preferredTemplate, .caseFile)
         XCTAssertEqual(session.settings.preferredAspect, .square)
         
         session.settings.includeDisclaimerOnShare = false
@@ -118,6 +119,18 @@ final class SettingsViewModelTests: XCTestCase {
         
         session.settings.preferredAspect = .story
         XCTAssertEqual(session.settings.preferredAspect, .story)
+    }
+
+    func testSettingsPersistsBadviceDialSelection() async throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let repository = AdviceRepository(context: context)
+        let settings = SettingsViewModel(repository: repository)
+
+        settings.preferredIntensity = .legendaryMistake
+
+        XCTAssertEqual(settings.preferredIntensity, .legendaryMistake)
+        XCTAssertEqual(repository.ensureSettings().preferredIntensityRaw, 5)
     }
     
     func testSettingsContentPack() async throws {
@@ -137,10 +150,24 @@ final class SettingsViewModelTests: XCTestCase {
         let container = try makeInMemoryContainer()
         let session = AppSessionViewModel(context: ModelContext(container))
         
-        XCTAssertEqual(session.settings.preferredGenerationProvider, .auto)
+        XCTAssertEqual(session.settings.preferredGenerationProvider, .classic)
         
         session.settings.preferredGenerationProvider = .classic
         XCTAssertEqual(session.settings.preferredGenerationProvider, .classic)
+    }
+
+    func testLegacyAutoProviderMigratesToLocalBureauEngine() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let legacySettings = AppSettingsEntity(preferredGenerationProvider: .auto)
+        context.insert(legacySettings)
+        try context.save()
+
+        let repository = AdviceRepository(context: context)
+        let settings = SettingsViewModel(repository: repository)
+
+        XCTAssertEqual(settings.preferredGenerationProvider, .classic)
+        XCTAssertEqual(repository.ensureSettings().preferredGenerationProvider, .classic)
     }
 
     func testLaunchLocalModelPreparationSkipsClassicProvider() async throws {
@@ -203,6 +230,7 @@ final class SettingsViewModelTests: XCTestCase {
         )
         let settings = SettingsViewModel(repository: repository, localModelStore: localModelStore)
 
+        settings.preferredGenerationProvider = .appleOnDevice
         await settings.prepareAppleLocalModelForLaunchIfNeeded(
             systemMaxPollCount: 0,
             systemPollDelay: .milliseconds(1)

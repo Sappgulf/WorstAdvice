@@ -119,7 +119,7 @@ private struct WorstAdviceQuoteWidgetEntryView: View {
                             .foregroundStyle(WidgetBrand.espressoDeep)
                     }
 
-                    Text(family == .systemSmall ? "Bad Quote" : "Bad Quote of the Day")
+                    Text(family == .systemSmall ? "Dispatch" : "Daily Badvice Dispatch")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(WidgetBrand.parchment.opacity(0.9))
                         .lineLimit(1)
@@ -168,8 +168,8 @@ struct WorstAdviceQuoteWidget: Widget {
         StaticConfiguration(kind: kind, provider: DailyQuoteProvider()) { entry in
             WorstAdviceQuoteWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("Daily Bad Quote")
-        .description("A fresh, confidently terrible quote every day — stamped.")
+        .configurationDisplayName("Daily Dispatch")
+        .description("A fresh, confidently terrible Bureau dispatch every day—stamped.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

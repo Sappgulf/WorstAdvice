@@ -1070,7 +1070,8 @@ private struct FavoriteDetailView: View {
                                 rationaleLine: record.rationaleLine,
                                 includeDisclaimer: settings.includeDisclaimerOnShare,
                                 template: settings.preferredTemplate,
-                                aspectRatio: settings.preferredAspect
+                                aspectRatio: settings.preferredAspect,
+                                caseNumber: record.caseNumber
                             )
                             Task {
                                 let image = await ShareCardRenderer.renderAsync(content: content)

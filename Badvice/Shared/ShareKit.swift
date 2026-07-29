@@ -6,7 +6,14 @@ struct ShareCardRenderer {
         let size =
             content.aspectRatio == .story
             ? CGSize(width: 1080, height: 1920) : CGSize(width: 1080, height: 1080)
-        let renderer = UIGraphicsImageRenderer(size: size)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+
+        if content.template == .caseFile {
+            return renderCaseFile(content: content, size: size, renderer: renderer)
+        }
 
         return renderer.image { context in
             let cg = context.cgContext
@@ -231,6 +238,251 @@ struct ShareCardRenderer {
         }
     }
 
+    private static func renderCaseFile(
+        content: ShareCardContent,
+        size: CGSize,
+        renderer: UIGraphicsImageRenderer
+    ) -> UIImage {
+        renderer.image { context in
+            let cg = context.cgContext
+            let rect = CGRect(origin: .zero, size: size)
+            let storyMode = content.aspectRatio == .story
+
+            let outerColors = [
+                UIColor(red: 0.19, green: 0.10, blue: 0.08, alpha: 1).cgColor,
+                UIColor(red: 0.08, green: 0.04, blue: 0.04, alpha: 1).cgColor,
+            ]
+            if let gradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: outerColors as CFArray,
+                locations: [0, 1]
+            ) {
+                cg.drawLinearGradient(
+                    gradient,
+                    start: .zero,
+                    end: CGPoint(x: rect.maxX, y: rect.maxY),
+                    options: []
+                )
+            }
+
+            let inset: CGFloat = storyMode ? 70 : 62
+            let cardRect = rect.insetBy(dx: inset, dy: inset)
+            let cardPath = UIBezierPath(
+                roundedRect: cardRect,
+                cornerRadius: storyMode ? 42 : 38
+            )
+
+            cg.saveGState()
+            cg.setShadow(
+                offset: CGSize(width: 0, height: 26),
+                blur: 48,
+                color: UIColor.black.withAlphaComponent(0.48).cgColor
+            )
+            UIColor(red: 0.91, green: 0.83, blue: 0.67, alpha: 1).setFill()
+            cardPath.fill()
+            cg.restoreGState()
+
+            cg.saveGState()
+            cardPath.addClip()
+            if let paper = UIImage(named: "BureauCaseFilePaper") {
+                paper.draw(in: cardRect)
+            } else {
+                UIColor(red: 0.91, green: 0.83, blue: 0.67, alpha: 1).setFill()
+                cg.fill(cardRect)
+            }
+            cg.restoreGState()
+
+            UIColor(red: 0.43, green: 0.21, blue: 0.10, alpha: 0.82).setStroke()
+            cardPath.lineWidth = 2
+            cardPath.stroke()
+
+            let sideInset: CGFloat = storyMode ? 72 : 66
+            let contentRect = cardRect.insetBy(dx: sideInset, dy: sideInset)
+            let ink = UIColor(red: 0.16, green: 0.08, blue: 0.06, alpha: 1)
+            let mutedInk = UIColor(red: 0.34, green: 0.19, blue: 0.14, alpha: 0.82)
+            let oxblood = UIColor(red: 0.38, green: 0.07, blue: 0.06, alpha: 1)
+            let copper = UIColor(red: 0.56, green: 0.29, blue: 0.13, alpha: 1)
+
+            NSString(string: "THE BADVICE BUREAU").draw(
+                in: CGRect(
+                    x: contentRect.minX,
+                    y: contentRect.minY,
+                    width: contentRect.width * 0.68,
+                    height: 42
+                ),
+                withAttributes: [
+                    .font: UIFont.monospacedSystemFont(
+                        ofSize: storyMode ? 28 : 25,
+                        weight: .black
+                    ),
+                    .foregroundColor: oxblood,
+                    .kern: 1.8,
+                ]
+            )
+
+            let caseNumber = content.caseNumber ?? generatedCaseNumber(for: content.adviceLine)
+            NSString(string: "CASE \(caseNumber)").draw(
+                in: CGRect(
+                    x: contentRect.minX,
+                    y: contentRect.minY + 50,
+                    width: contentRect.width,
+                    height: 34
+                ),
+                withAttributes: [
+                    .font: UIFont.monospacedSystemFont(
+                        ofSize: storyMode ? 22 : 20,
+                        weight: .bold
+                    ),
+                    .foregroundColor: mutedInk,
+                ]
+            )
+
+            let stampDiameter: CGFloat = storyMode ? 128 : 112
+            let stampRect = CGRect(
+                x: contentRect.maxX - stampDiameter,
+                y: contentRect.minY - 4,
+                width: stampDiameter,
+                height: stampDiameter
+            )
+            let stampPath = UIBezierPath(ovalIn: stampRect)
+            oxblood.withAlphaComponent(0.72).setStroke()
+            stampPath.lineWidth = 5
+            stampPath.stroke()
+            NSString(string: "FILED").draw(
+                in: CGRect(
+                    x: stampRect.minX,
+                    y: stampRect.midY - 16,
+                    width: stampRect.width,
+                    height: 34
+                ),
+                withAttributes: [
+                    .font: UIFont.monospacedSystemFont(
+                        ofSize: storyMode ? 24 : 21,
+                        weight: .black
+                    ),
+                    .foregroundColor: oxblood.withAlphaComponent(0.76),
+                    .paragraphStyle: centeredParagraph(),
+                ]
+            )
+
+            copper.withAlphaComponent(0.58).setFill()
+            cg.fill(
+                CGRect(
+                    x: contentRect.minX,
+                    y: contentRect.minY + (storyMode ? 148 : 132),
+                    width: contentRect.width,
+                    height: 3
+                )
+            )
+
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .left
+            paragraph.lineBreakMode = .byWordWrapping
+            paragraph.lineSpacing = storyMode ? 12 : 9
+            let adviceTop = contentRect.minY + (storyMode ? 205 : 176)
+            let rationaleHeight: CGFloat = content.rationaleLine == nil ? 0 : (storyMode ? 280 : 180)
+            let adviceHeight = max(
+                storyMode ? 690 : 430,
+                contentRect.height - (adviceTop - contentRect.minY) - rationaleHeight - 190
+            )
+            drawWordWrappedText(
+                content.adviceLine,
+                in: cg,
+                in: CGRect(
+                    x: contentRect.minX,
+                    y: adviceTop,
+                    width: contentRect.width,
+                    height: adviceHeight
+                ),
+                baseFontSize: storyMode ? 58 : 48,
+                minFontSize: 25,
+                fontWeight: .bold,
+                paragraph: paragraph,
+                color: ink,
+                design: .serif
+            )
+
+            if let rationale = content.rationaleLine, !rationale.isEmpty {
+                let rationaleY = cardRect.maxY - (storyMode ? 430 : 310)
+                cg.fill(
+                    CGRect(
+                        x: contentRect.minX,
+                        y: rationaleY - 26,
+                        width: contentRect.width * 0.22,
+                        height: 4
+                    )
+                )
+                drawWordWrappedText(
+                    rationale,
+                    in: cg,
+                    in: CGRect(
+                        x: contentRect.minX,
+                        y: rationaleY,
+                        width: contentRect.width,
+                        height: storyMode ? 250 : 160
+                    ),
+                    baseFontSize: storyMode ? 29 : 25,
+                    minFontSize: 18,
+                    fontWeight: .medium,
+                    paragraph: paragraph,
+                    color: mutedInk,
+                    design: .serif
+                )
+            }
+
+            NSString(
+                string: "\(content.category.title.uppercased())  ·  \(content.tone.voice.name.uppercased())"
+            ).draw(
+                in: CGRect(
+                    x: contentRect.minX,
+                    y: cardRect.maxY - 122,
+                    width: contentRect.width,
+                    height: 32
+                ),
+                withAttributes: [
+                    .font: UIFont.monospacedSystemFont(
+                        ofSize: storyMode ? 22 : 19,
+                        weight: .bold
+                    ),
+                    .foregroundColor: oxblood,
+                ]
+            )
+
+            let footer = content.includeDisclaimer
+                ? "FOR ENTERTAINMENT ONLY  ·  BADVICE"
+                : "BADVICE"
+            NSString(string: footer).draw(
+                in: CGRect(
+                    x: contentRect.minX,
+                    y: cardRect.maxY - 78,
+                    width: contentRect.width,
+                    height: 28
+                ),
+                withAttributes: [
+                    .font: UIFont.monospacedSystemFont(
+                        ofSize: storyMode ? 18 : 16,
+                        weight: .heavy
+                    ),
+                    .foregroundColor: mutedInk,
+                    .kern: 1.1,
+                ]
+            )
+        }
+    }
+
+    private static func centeredParagraph() -> NSParagraphStyle {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        return paragraph
+    }
+
+    private static func generatedCaseNumber(for text: String) -> String {
+        let value = text.unicodeScalars.reduce(into: 17) { partial, scalar in
+            partial = (partial &* 31 &+ Int(scalar.value)) & 0x00FF_FFFF
+        }
+        return String(format: "BDB-%06X", value)
+    }
+
     private static func drawGradient(in cg: CGContext, rect: CGRect, template: ShareCardTemplate) {
         let colors: [CGColor]
         switch template {
@@ -272,6 +524,12 @@ struct ShareCardRenderer {
                 UIColor(red: 0.32, green: 0.02, blue: 0.02, alpha: 1).cgColor,
                 UIColor(red: 0.17, green: 0.0, blue: 0.0, alpha: 1).cgColor,
                 UIColor(red: 0.12, green: 0.0, blue: 0.0, alpha: 1).cgColor,
+            ]
+        case .caseFile:
+            colors = [
+                UIColor(red: 0.19, green: 0.10, blue: 0.08, alpha: 1).cgColor,
+                UIColor(red: 0.08, green: 0.04, blue: 0.04, alpha: 1).cgColor,
+                UIColor(red: 0.04, green: 0.02, blue: 0.02, alpha: 1).cgColor,
             ]
         }
 

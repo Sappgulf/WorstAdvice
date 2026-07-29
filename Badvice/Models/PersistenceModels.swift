@@ -82,6 +82,32 @@ final class AdviceRecord {
         get { AdviceVoteState(rawValue: voteRaw ?? 0) ?? .none }
         set { voteRaw = newValue.rawValue }
     }
+
+    /// Stable, display-only filing number. It is derived from the record UUID so
+    /// existing stores gain case numbers without a persistence migration.
+    var caseNumber: String {
+        let compact = id.uuidString.replacingOccurrences(of: "-", with: "")
+        return "\(categoryRaw.prefix(3).uppercased())-\(compact.prefix(6))"
+    }
+
+    /// Collectible classification driven by observable engagement plus a small,
+    /// deterministic discovery chance. No hidden random state is persisted.
+    var caseRarity: CaseRarity {
+        let engagement = shareCountValue + copyCountValue + (vote == .like ? 2 : 0)
+        if engagement >= 4 || stableRarityBucket.isMultiple(of: 17) {
+            return .legendary
+        }
+        if engagement >= 2 || stableRarityBucket.isMultiple(of: 5) {
+            return .notable
+        }
+        return .routine
+    }
+
+    private var stableRarityBucket: Int {
+        id.uuidString.unicodeScalars.reduce(into: 0) { partial, scalar in
+            partial = (partial &* 31 &+ Int(scalar.value)) & 0x7FFF_FFFF
+        }
+    }
 }
 
 @Model
@@ -343,6 +369,7 @@ final class AppSettingsEntity {
     var preferredSharePresetRaw: String?
     var preferredContentPackRaw: String?
     var preferredGenerationProviderRaw: String?
+    var preferredIntensityRaw: Int?
     var strictNoRepeatsRaw: Bool?
     var communityOnlyModeRaw: Bool?
     var performanceModeRaw: Bool?
@@ -362,11 +389,12 @@ final class AppSettingsEntity {
         hapticsEnabled: Bool = true,
         soundEffectsEnabled: Bool = true,
         includeRationale: Bool = true,
-        preferredTemplate: ShareCardTemplate = .minimal,
+        preferredTemplate: ShareCardTemplate = .caseFile,
         preferredAspect: ShareAspectRatio = .square,
         preferredSharePreset: ShareCaptionPreset = .deadpan,
         preferredContentPack: ContentPack = .classic,
-        preferredGenerationProvider: AdviceGenerationProvider = .auto,
+        preferredGenerationProvider: AdviceGenerationProvider = .classic,
+        preferredIntensity: BadviceIntensity = .bold,
         strictNoRepeats: Bool = true,
         communityOnlyMode: Bool = false,
         performanceMode: Bool = false,
@@ -385,6 +413,7 @@ final class AppSettingsEntity {
         self.preferredSharePresetRaw = preferredSharePreset.rawValue
         self.preferredContentPackRaw = preferredContentPack.rawValue
         self.preferredGenerationProviderRaw = preferredGenerationProvider.rawValue
+        self.preferredIntensityRaw = preferredIntensity.rawValue
         self.strictNoRepeatsRaw = strictNoRepeats
         self.communityOnlyModeRaw = communityOnlyMode
         self.performanceModeRaw = performanceMode
@@ -425,8 +454,13 @@ final class AppSettingsEntity {
     }
 
     var preferredGenerationProvider: AdviceGenerationProvider {
-        get { AdviceGenerationProvider(rawValue: preferredGenerationProviderRaw ?? "") ?? .auto }
+        get { AdviceGenerationProvider(rawValue: preferredGenerationProviderRaw ?? "") ?? .classic }
         set { preferredGenerationProviderRaw = newValue.rawValue }
+    }
+
+    var preferredIntensity: BadviceIntensity {
+        get { BadviceIntensity(rawValue: preferredIntensityRaw ?? 3) ?? .bold }
+        set { preferredIntensityRaw = newValue.rawValue }
     }
 
     var strictNoRepeats: Bool {

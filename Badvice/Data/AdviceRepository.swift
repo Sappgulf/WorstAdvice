@@ -192,6 +192,11 @@ final class AdviceRepository {
     func setFavorite(_ record: AdviceRecord, isFavorite: Bool) {
         record.isFavorite = isFavorite
         save()
+        if isFavorite {
+            SpotlightManager.index(record)
+        } else {
+            SpotlightManager.remove(id: record.id)
+        }
     }
 
     func setVote(_ record: AdviceRecord, vote: AdviceVoteState) {

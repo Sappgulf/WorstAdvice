@@ -169,13 +169,13 @@ enum NotificationManager {
         let body: String
 
         static let defaultDaily = NotificationCopy(
-            title: "Today's Badvice is ready.",
-            body: "Open the app for a new laugh and today's questionable guidance."
+            title: "Your daily dispatch is ready.",
+            body: "The Bureau filed a fresh piece of questionable guidance."
         )
     }
 
     private static let bodies: [NotificationCopy] = [
-        .init(title: "Today's Badvice is ready.", body: "Your daily dose of spectacularly wrong guidance awaits."),
+        .init(title: "Your daily dispatch is ready.", body: "The Bureau filed a fresh piece of spectacularly wrong guidance."),
         .init(title: "Fresh terrible advice.", body: "New day. New bad takes. Tap for a laugh and today's questionable guidance."),
         .init(title: "Your Badvice is served.", body: "Professionally wrong since whenever you installed this."),
         .init(title: "Bad news: more advice.", body: "Someone's gotta say it. Might as well be confidently wrong."),

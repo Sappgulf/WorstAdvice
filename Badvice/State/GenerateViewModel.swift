@@ -13,6 +13,26 @@ private enum AppleOnDeviceGenerationError: Error, Equatable {
 @MainActor
 @Observable
 final class GenerateViewModel {
+    struct LocalTasteSummary: Sendable {
+        let signalCount: Int
+        let favoriteCategory: AdviceCategory?
+        let favoriteTone: ToneMode?
+
+        var title: String {
+            guard signalCount >= 5 else { return "Taste profile warming up" }
+            return "Your bureau is learning"
+        }
+
+        var detail: String {
+            guard signalCount >= 5 else {
+                return "Saves, votes, shares, skips, and rerolls tune local ranking on this device."
+            }
+            let category = favoriteCategory?.title ?? "mixed lanes"
+            let tone = favoriteTone?.voice.name ?? "mixed voices"
+            return "Currently leaning toward \(category) with \(tone). \(signalCount) private signals, zero account upload."
+        }
+    }
+
     struct TopicLeaderboardItem: Identifiable {
         let id: String
         let category: AdviceCategory
@@ -89,6 +109,7 @@ final class GenerateViewModel {
     private let settingsViewModel: SettingsViewModel
     private let store: AdviceStore
     private let engine: AdviceEngine
+    private let bureauEngine: BureauAdviceEngine
     private let appleOnDeviceBridge: AppleOnDeviceAdviceBridge
     private let badQuoteService: BadQuoteService
     private let moderation: ContentModeration
@@ -111,6 +132,11 @@ final class GenerateViewModel {
     var isGenerating: Bool = false
     var debugPolishFixturesStatus: String = "idle"
 
+    var selectedIntensity: BadviceIntensity {
+        get { settingsViewModel.preferredIntensity }
+        set { settingsViewModel.preferredIntensity = newValue }
+    }
+
     private var recentAdviceFingerprints: [String] = []
     private var recentAdviceFingerprintsByPool: [String: [String]] = [:]
     private var suggestionsVersion: Int = 0
@@ -120,6 +146,7 @@ final class GenerateViewModel {
     @ObservationIgnored private var hasBootstrappedAdviceExperience = false
     @ObservationIgnored private var adviceBootstrapTask: Task<Void, Never>?
     @ObservationIgnored private var autoGenerateSelectionTask: Task<Void, Never>?
+    @ObservationIgnored private var cachedLocalTasteSummary: LocalTasteSummary?
     private static let chaosMissionCompletionStorageKey = "chaosHubMissionCompletionKey"
     private static let activeChaosContractStorageKey = "activeChaosContractID"
     private static let chaosContractPeriod = "contract"
@@ -163,6 +190,7 @@ final class GenerateViewModel {
         self.moderation = moderation
         self.appleOnDeviceBridge = AppleOnDeviceAdviceBridge(moderation: moderation)
         self.engine = AdviceEngine(store: store, moderation: moderation)
+        self.bureauEngine = BureauAdviceEngine(store: store, moderation: moderation)
         self.analyticsTracker = analyticsTracker
         self.achievementsManager = achievementsManager
         self.liveActivityManager = liveActivityManager ?? LiveActivityManager()
@@ -209,11 +237,11 @@ final class GenerateViewModel {
             }
 
             let modelWarmupTask: Task<Void, Never>? =
-                preferredGenerationProvider == .classic
-                ? nil
-                : Task(priority: .utility) { [weak self] in
+                preferredGenerationProvider == .appleOnDevice
+                ? Task(priority: .utility) { [weak self] in
                     await self?.prepareLocalModelForBootstrap()
                 }
+                : nil
 
             if Task.isCancelled {
                 self.clearBootstrapGenerationState()
@@ -303,7 +331,12 @@ final class GenerateViewModel {
         await generate(seed: seed, isBootstrap: true)
     }
 
-    func generate(seed: Int? = nil, isBootstrap: Bool = false) async {
+    func generate(
+        seed: Int? = nil,
+        isBootstrap: Bool = false,
+        revision: AdviceRevisionStyle? = nil,
+        forceBureau: Bool = false
+    ) async {
         let generationPerfToken = AppPerformanceInstrumentation.beginAdviceGenerationInterval()
         defer { AppPerformanceInstrumentation.endAdviceGenerationInterval(generationPerfToken) }
         isGenerating = true
@@ -327,13 +360,14 @@ final class GenerateViewModel {
             return
         }
         let shouldEnforceGlobalUniqueness = settingsViewModel.strictNoRepeats
-        let communityOnlyMode = settingsViewModel.communityOnlyMode
+        let communityOnlyMode = forceBureau ? false : settingsViewModel.communityOnlyMode
         let selectedPack = settingsViewModel.preferredContentPack
         let requestedGenerationProvider = settingsViewModel.preferredGenerationProvider
-        let generationProvider =
-            isBootstrap && requestedGenerationProvider == .auto
-            ? .classic
-            : requestedGenerationProvider
+        // `.auto` is retained for persisted backwards compatibility, but now resolves to
+        // the deterministic local engine. A language model is used only after the person
+        // explicitly selects Apple Intelligence in Settings.
+        let generationProvider: AdviceGenerationProvider =
+            !forceBureau && requestedGenerationProvider == .appleOnDevice ? .appleOnDevice : .classic
         if generationProvider != .classic {
             let availability = AppleOnDeviceAdviceBridge.currentAvailability()
             analyticsTracker.track(
@@ -355,8 +389,6 @@ final class GenerateViewModel {
             context: learningContext,
             category: resolvedCategory
         )
-        let templateBias = templateBias(
-            for: resolvedCategory, tone: resolvedTone, context: learningContext)
         logger.debug(
             "Generate started: category=\(self.selectedCategory.rawValue) resolved=\(resolvedCategory.rawValue) tone=\(self.selectedTone.rawValue) resolvedTone=\(resolvedTone.rawValue) seed=\(baseSeed)"
         )
@@ -376,19 +408,20 @@ final class GenerateViewModel {
         }
 
         if !communityOnlyMode, isBootstrap, generationProvider != .appleOnDevice {
-            let output = await engine.generate(
+            let output = bureauEngine.generate(
                 category: resolvedCategory,
                 tone: resolvedTone,
                 includeRationale: settingsViewModel.includeRationale,
                 contentPack: selectedPack,
                 situation: situation,
+                intensity: selectedIntensity,
+                revision: revision,
                 seed: baseSeed,
-                templateBias: templateBias,
-                skipQualityScoring: true
+                now: Date()
             )
             rememberFingerprint(for: output)
             rememberPoolFingerprint(for: output)
-            generationSourceBadgeText = generationSourceBadgeLabel(for: "engine")
+            generationSourceBadgeText = generationSourceBadgeLabel(for: "bureau")
             lastWhyTerrible =
                 "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
             current = repository.insert(output)
@@ -399,6 +432,7 @@ final class GenerateViewModel {
                 scopeKey: adviceScopeKey(category: output.category, tone: output.tone),
                 type: .shown
             )
+            cachedLocalTasteSummary = nil
             leaderboardVersion += 1
             return
         }
@@ -409,7 +443,7 @@ final class GenerateViewModel {
 
         let semanticScorer = SemanticTextScorer.shared
         let preparedQuery =
-            hasSituationContext
+            hasSituationContext && generationProvider == .appleOnDevice
             ? await semanticScorer.preparedQuery(from: normalizedSituationForRanking ?? "")
             : nil
 
@@ -445,45 +479,20 @@ final class GenerateViewModel {
             let shouldUseClassicEngines =
                 generationProvider != .appleOnDevice || appleCandidates.isEmpty
             if shouldUseClassicEngines {
-                let engineCandidates: [GeneratedAdvice]
-                if isBootstrap {
-                    let singleAdvice = await engine.generate(
-                        category: resolvedCategory,
-                        tone: resolvedTone,
-                        includeRationale: settingsViewModel.includeRationale,
-                        contentPack: selectedPack,
-                        situation: situation,
-                        seed: baseSeed,
-                        templateBias: templateBias,
-                        skipQualityScoring: false
-                    )
-                    engineCandidates = [singleAdvice]
-                } else {
-                    engineCandidates = await engine.generateCandidates(
-                        category: resolvedCategory,
-                        tone: resolvedTone,
-                        includeRationale: settingsViewModel.includeRationale,
-                        contentPack: selectedPack,
-                        situation: situation,
-                        seed: baseSeed,
-                        templateBias: templateBias,
-                        count: shouldEnforceGlobalUniqueness
-                            ? (hasSituationContext ? 9 : 6)
-                            : (hasSituationContext ? 6 : 4)
-                    )
-                }
-                candidatePool.append(contentsOf: engineCandidates.map { ($0, "engine") })
-
-                // ML Remix Lab for advice: inject synthesized variants derived from liked history
-                let remixCandidates = await synthesizedAdviceCandidates(
+                let bureauCandidates = bureauEngine.generateCandidates(
                     category: resolvedCategory,
                     tone: resolvedTone,
-                    seed: baseSeed,
                     includeRationale: settingsViewModel.includeRationale,
                     contentPack: selectedPack,
-                    limit: selectedPack == .classic ? 1 : (hasSituationContext ? 3 : 2)
+                    situation: situation,
+                    intensity: selectedIntensity,
+                    revision: revision,
+                    seed: baseSeed,
+                    count: shouldEnforceGlobalUniqueness
+                        ? (hasSituationContext ? 9 : 7)
+                        : (hasSituationContext ? 7 : 5)
                 )
-                candidatePool.append(contentsOf: remixCandidates.map { ($0, "ml_remix") })
+                candidatePool.append(contentsOf: bureauCandidates.map { ($0, "bureau") })
             }
         }
 
@@ -645,6 +654,7 @@ final class GenerateViewModel {
             scopeKey: adviceScopeKey(category: output.category, tone: output.tone),
             type: .shown
         )
+        cachedLocalTasteSummary = nil
         leaderboardVersion += 1
 
         if !isBootstrap {
@@ -665,6 +675,8 @@ final class GenerateViewModel {
                     "content_pack": selectedPack.rawValue,
                     "generation_provider": generationProvider.rawValue,
                     "source": source,
+                    "intensity": "\(selectedIntensity.rawValue)",
+                    "revision": revision?.rawValue ?? "original",
                     "has_situation": situation == nil ? "false" : "true",
                     "strict_no_repeats": shouldEnforceGlobalUniqueness ? "true" : "false",
                     "community_only": communityOnlyMode ? "true" : "false",
@@ -813,7 +825,7 @@ final class GenerateViewModel {
         switch source {
         case "apple_on_device":
             return "On-Device"
-        case "engine":
+        case "bureau", "engine":
             return nil
         case "ml_remix":
             return "Remix"
@@ -830,6 +842,8 @@ final class GenerateViewModel {
         requestedProvider: AdviceGenerationProvider
     ) -> Double {
         switch source {
+        case "bureau":
+            return contentPack == .classic ? 0.16 : 0.12
         case "engine":
             return contentPack == .classic ? 0.08 : 0.04
         case "ml_remix":
@@ -871,6 +885,28 @@ final class GenerateViewModel {
         Task {
             await generate(
                 seed: Int(Date().timeIntervalSince1970 * 1_000) &+ Int.random(in: 1...9999))
+        }
+    }
+
+    /// Applies a single local rewrite direction while preserving the current lane,
+    /// voice, context, and persisted intensity. This intentionally bypasses the
+    /// optional model provider so the control is instant and available offline.
+    func reviseCurrentAdvice(_ revision: AdviceRevisionStyle) {
+        guard current != nil, !isGenerating else { return }
+        analyticsTracker.track(
+            "revise_advice",
+            properties: [
+                "revision": revision.rawValue,
+                "category": selectedCategory.rawValue,
+                "tone": selectedTone.rawValue,
+                "intensity": "\(selectedIntensity.rawValue)",
+            ])
+        Task {
+            await generate(
+                seed: Int(Date().timeIntervalSince1970 * 1_000) &+ stableSeed(for: revision.rawValue),
+                revision: revision,
+                forceBureau: true
+            )
         }
     }
 
@@ -999,6 +1035,7 @@ final class GenerateViewModel {
                 type: .favorite
             )
         }
+        cachedLocalTasteSummary = nil
         analyticsTracker.track(
             "toggle_favorite",
             properties: [
@@ -1025,6 +1062,7 @@ final class GenerateViewModel {
         case .none:
             break
         }
+        cachedLocalTasteSummary = nil
         leaderboardVersion += 1
         analyticsTracker.track(
             "advice_vote",
@@ -1097,6 +1135,7 @@ final class GenerateViewModel {
             scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
             type: .favorite
         )
+        cachedLocalTasteSummary = nil
         analyticsTracker.track("save_from_generate", properties: [:])
         playHaptic(style: .light)
     }
@@ -1107,6 +1146,37 @@ final class GenerateViewModel {
 
     var currentVote: AdviceVoteState {
         current?.vote ?? .none
+    }
+
+    var currentRealityCheck: String? {
+        guard let current else { return nil }
+        return bureauEngine.realityCheck(
+            category: current.category,
+            situation: preparedSituationText(),
+            seed: stableSeed(for: current.id.uuidString)
+        )
+    }
+
+    var localTasteSummary: LocalTasteSummary {
+        if let cachedLocalTasteSummary {
+            return cachedLocalTasteSummary
+        }
+
+        let context = adviceLearningContext()
+        let signalCount = repository.totalLearningSignalCount()
+        let category = context.byCategory.max {
+            preferenceWeight(for: $0.value) < preferenceWeight(for: $1.value)
+        }?.key
+        let tone = context.byTone.max {
+            preferenceWeight(for: $0.value) < preferenceWeight(for: $1.value)
+        }?.key
+        let summary = LocalTasteSummary(
+            signalCount: signalCount,
+            favoriteCategory: category,
+            favoriteTone: tone
+        )
+        cachedLocalTasteSummary = summary
+        return summary
     }
 
     private var cachedRecentSuggestions: [UserAdviceSuggestion] = []
@@ -1197,7 +1267,8 @@ final class GenerateViewModel {
             rationaleLine: current.rationaleLine,
             includeDisclaimer: settingsViewModel.includeDisclaimerOnShare,
             template: settingsViewModel.preferredTemplate,
-            aspectRatio: settingsViewModel.preferredAspect
+            aspectRatio: settingsViewModel.preferredAspect,
+            caseNumber: current.caseNumber
         )
     }
 

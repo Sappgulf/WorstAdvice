@@ -11,7 +11,6 @@ struct GenerateBrandMenuView: View {
     @Bindable var social: SocialViewModel
     @Bindable var settings: SettingsViewModel
     let quickAccessTabs: [AppTab]
-    var primaryTabCount = AppTab.primaryNavigationTabs.count
     @Binding var isPresented: Bool
     @Binding var activeToast: ToastMessage?
     var onSelectQuickAccessTab: ((AppTab) -> Void)? = nil
@@ -24,11 +23,10 @@ struct GenerateBrandMenuView: View {
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var accent: Color { Theme.accent(for: settings.theme) }
-    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
     private var socialStatusText: String {
-        social.availability.isAvailable
-            ? "Saved work, history, discovery, challenges, and settings stay one tap away."
-            : social.availability.message
+        social.socialFeaturesEnabled
+            ? "Recent files, starter briefs, group dares, and preferences."
+            : "Recent files, starter briefs, solo tools, and preferences."
     }
     private var utilityTabs: [AppTab] {
         quickAccessTabs.filter { $0 != .settings }
@@ -43,7 +41,6 @@ struct GenerateBrandMenuView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.sectionSpacing) {
                         heroCard
-                        recommendedFlowCard
                         quickAccessCard
                         if onResetAllLocalAccounts != nil {
                             accountCard
@@ -80,61 +77,42 @@ struct GenerateBrandMenuView: View {
     }
 
     private var heroCard: some View {
-        SectionShell(accent: accent, cardColor: cardColor) {
-            HStack(alignment: .top, spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: Theme.shellBannerCornerRadius, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [accent.opacity(0.95), accent.opacity(0.6), cardColor.opacity(0.92)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(buttonText)
-                }
-                .frame(width: 54, height: 54)
+        ZStack(alignment: .bottomLeading) {
+            Image("BureauDeskHero")
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: 150)
+                .clipped()
+                .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Badvice Menu")
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(primaryText)
-                    Text(socialStatusText)
-                        .font(.footnote)
-                        .foregroundStyle(secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        } content: {
-            HStack(spacing: 8) {
-                menuMetric(title: "Destinations", value: "\(utilityTabs.count + (onSelectQuickAccessTab != nil ? 1 : 0))")
-                menuMetric(title: "Primary", value: "\(primaryTabCount)")
-                menuMetric(title: "Mode", value: "Slim")
-            }
-        }
-    }
+            LinearGradient(
+                colors: [.clear, Theme.espressoInk.opacity(0.88)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
-    private var recommendedFlowCard: some View {
-        SectionShell(accent: accent, cardColor: cardColor) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Recommended Flow")
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(primaryText)
-                Text("Start with Advice, keep the useful lines, then use Missions when it adds momentum.")
+            VStack(alignment: .leading, spacing: 5) {
+                Text("BUREAU INDEX")
+                    .font(.caption2.weight(.black))
+                    .tracking(1.5)
+                    .foregroundStyle(Theme.copperFoilLight)
+                Text("Everything else, filed neatly.")
+                    .font(.system(.title2, design: .serif, weight: .bold))
+                    .foregroundStyle(Theme.parchmentWarm)
+                Text(socialStatusText)
                     .font(.caption)
-                    .foregroundStyle(secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(Theme.parchmentWarm.opacity(0.76))
             }
-        } content: {
-            HStack(spacing: 8) {
-                flowStep("1", "Advice", tab: .generate)
-                flowStep("2", "Saved", tab: .favorites)
-                flowStep("3", "Missions", tab: .chaosHub)
-            }
+            .padding(16)
         }
-        .accessibilityIdentifier("brandMenu.recommendedFlow")
+        .frame(height: 150)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(accent.opacity(0.22), lineWidth: 1)
+        }
+        .shadow(color: Theme.espressoInk.opacity(0.2), radius: 14, y: 7)
     }
 
     private var quickAccessCard: some View {
@@ -143,7 +121,7 @@ struct GenerateBrandMenuView: View {
                 Text("Quick Access")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
-                Text("Open saved work, history, discovery, challenges, or settings without crowding the primary tabs.")
+                Text("Open a secondary desk without crowding the four primary tabs.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
             }
@@ -199,48 +177,6 @@ struct GenerateBrandMenuView: View {
         }
     }
 
-    private func menuMetric(title: String, value: String) -> some View {
-        TabCommandMetric(
-            title: title,
-            value: value,
-            accent: accent,
-            primaryText: primaryText,
-            secondaryText: secondaryText
-        )
-    }
-
-    private func flowStep(_ number: String, _ title: String, tab: AppTab) -> some View {
-        Button {
-            openQuickAccessTab(tab)
-        } label: {
-            VStack(spacing: 5) {
-                Text(number)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(buttonText)
-                    .frame(width: 24, height: 24)
-                    .background(Circle().fill(accent))
-                Text(title)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
-                    .fill(accent.opacity(0.07))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.compactCornerRadius, style: .continuous)
-                            .stroke(accent.opacity(0.12), lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("brandMenu.flow.\(tab.rawValue)")
-        .accessibilityLabel("Open \(title)")
-    }
-
     private func quickAccessButton(
         title: String,
         systemImage: String,
@@ -294,14 +230,12 @@ struct GenerateBrandMenuView: View {
         switch title {
         case "Settings":
             return "Preferences"
-        case "Favorites":
-            return "Saved"
-        case "History":
-            return "Timeline"
-        case "Explore":
-            return "Ideas"
-        case "Challenges":
-            return "Missions"
+        case "Recent":
+            return "Casebook timeline"
+        case "Starters":
+            return "Ready-made briefs"
+        case "Groups":
+            return "Shared dares"
         default:
             return "Open"
         }

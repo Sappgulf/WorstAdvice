@@ -26,6 +26,10 @@ final class SettingsViewModel {
                 }
             }
         }
+        if settings.preferredGenerationProvider == .auto {
+            settings.preferredGenerationProvider = .classic
+            repository.save()
+        }
         normalizeStreakFreezeState(for: Date())
         NotificationManager.updateStreakFreezeAvailability(
             hasAvailable: streakFreezeAvailableThisWeek)
@@ -180,6 +184,15 @@ final class SettingsViewModel {
         }
     }
 
+    var preferredIntensity: BadviceIntensity {
+        get { settings.preferredIntensity }
+        set {
+            guard settings.preferredIntensity != newValue else { return }
+            settings.preferredIntensity = newValue
+            repository.save()
+        }
+    }
+
     var appleOnDeviceModelStatusText: String {
         appleOnDeviceModelStatusSummary.message
     }
@@ -245,7 +258,7 @@ final class SettingsViewModel {
         systemMaxPollCount: Int = 2,
         systemPollDelay: Duration = .milliseconds(250)
     ) async {
-        guard preferredGenerationProvider != .classic else { return }
+        guard preferredGenerationProvider == .appleOnDevice else { return }
         guard !isPreparingAppleOnDeviceModel else { return }
         isPreparingAppleOnDeviceModel = true
         defer {

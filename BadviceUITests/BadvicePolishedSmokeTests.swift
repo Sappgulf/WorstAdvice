@@ -15,6 +15,287 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testBureauShellGeneratesLocallyAndFilesAResult() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
+
+        XCTAssertTrue(app.staticTexts["THE BADVICE BUREAU"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["tab.generate"].exists)
+        XCTAssertTrue(app.buttons["tab.favorites"].exists)
+        XCTAssertTrue(app.buttons["tab.chaosHub"].exists)
+        XCTAssertTrue(app.buttons["tab.quotes"].exists)
+        XCTAssertTrue(app.buttons["tab.more"].exists)
+
+        app.buttons["tab.favorites"].tap()
+        XCTAssertTrue(app.staticTexts["Casebook"].waitForExistence(timeout: 6))
+
+        app.buttons["tab.chaosHub"].tap()
+        XCTAssertTrue(app.staticTexts["Dares"].waitForExistence(timeout: 6))
+
+        app.buttons["tab.quotes"].tap()
+        XCTAssertTrue(app.staticTexts["Dispatches"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["TODAY'S DISPATCH"].waitForExistence(timeout: 6))
+
+        XCTAssertTrue(
+            openQuickAccessFromBrandMenu(
+                app: app,
+                quickAccessID: "settings",
+                quickAccessLabel: "Settings"
+            )
+        )
+        XCTAssertTrue(app.staticTexts["ADVICE ENGINE"].waitForExistence(timeout: 6))
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.buttons["Bureau Engine"],
+                    app.staticTexts["Bureau Engine"],
+                ],
+                timeout: 3,
+                requireHittable: false
+            )
+        )
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.buttons["Apple Intelligence"],
+                    app.staticTexts["Apple Intelligence"],
+                ],
+                timeout: 3,
+                requireHittable: false
+            )
+        )
+
+        let deskTab = app.buttons["tab.generate"]
+        XCTAssertTrue(deskTab.waitForExistence(timeout: 4))
+        deskTab.tap()
+
+        let contextField = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.textFields["generate.situation"],
+                app.textViews["generate.situation"],
+                app.textFields.matching(
+                    NSPredicate(format: "placeholderValue CONTAINS[c] %@", "awkward first date")
+                ).firstMatch,
+            ],
+            timeout: 6,
+            maxSwipes: 8,
+            requireHittable: true
+        )
+        XCTAssertNotNil(contextField)
+        app.swipeUp()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+
+        let writableContextField = app.textFields["generate.situation"]
+        XCTAssertTrue(writableContextField.waitForExistence(timeout: 3))
+        writableContextField.tap()
+        writableContextField.typeText(
+            "My manager asked for a status update and I have nothing finished."
+        )
+        app.swipeUp()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.35))
+
+        let generateButton = waitForActionLikeElement(
+            app: app,
+            identifier: "generate.primary",
+            labelHints: ["Advise", "take"],
+            timeout: 6,
+            maxSwipes: 5,
+            requireHittable: true
+        )
+        XCTAssertNotNil(generateButton)
+        generateButton?.tap()
+        XCTAssertTrue(waitForGenerateAdviceToSettle(app: app, timeout: 18))
+
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.otherElements["advice.card"],
+                    app.staticTexts["THE RESULT"],
+                ],
+                timeout: 8,
+                maxSwipes: 4,
+                requireHittable: false
+            )
+        )
+
+        let saveButton = waitForActionLikeElement(
+            app: app,
+            identifier: "generate.save",
+            labelHints: ["Save"],
+            timeout: 8,
+            maxSwipes: 8,
+            requireHittable: true
+        )
+        XCTAssertNotNil(saveButton)
+        saveButton?.tap()
+
+        let casebookTab = app.buttons["tab.favorites"]
+        XCTAssertTrue(casebookTab.waitForExistence(timeout: 4))
+        casebookTab.tap()
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.buttons.matching(
+                        NSPredicate(format: "label CONTAINS[c] %@", "Remove")
+                    ).firstMatch,
+                    app.staticTexts.matching(
+                        NSPredicate(format: "label CONTAINS[c] %@", "status update")
+                    ).firstMatch,
+                ],
+                timeout: 8,
+                maxSwipes: 4,
+                requireHittable: false
+            ),
+            "A saved local result should be filed in Casebook."
+        )
+    }
+
+    func testBadviceDialRewriteRealityCheckAndCasebookOrganization() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
+
+        let slider = waitForAnyElement(
+            app: app,
+            candidates: [app.sliders["generate.intensity"]],
+            timeout: 6,
+            maxSwipes: 6,
+            requireHittable: true
+        )
+        XCTAssertNotNil(slider)
+        guard let slider else { return }
+
+        for _ in 0..<4
+        where slider.frame.maxY > app.frame.maxY - 120 {
+            app.swipeUp()
+        }
+        XCTAssertLessThan(
+            slider.frame.maxY,
+            app.frame.maxY - 120,
+            "The dial must be fully above the floating tab bar before dragging."
+        )
+        slider.adjust(toNormalizedSliderPosition: 1)
+        let adjustedSlider = app.sliders["generate.intensity"]
+        XCTAssertTrue(adjustedSlider.waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            (adjustedSlider.value as? String)?
+                .localizedCaseInsensitiveContains("Legendary") == true,
+            "The dial should expose its selected intensity through accessibility."
+        )
+
+        let generateButton = waitForActionLikeElement(
+            app: app,
+            identifier: "generate.primary",
+            labelHints: ["Advise", "take"],
+            timeout: 6,
+            maxSwipes: 5,
+            requireHittable: true
+        )
+        XCTAssertNotNil(generateButton)
+        generateButton?.tap()
+        XCTAssertTrue(waitForGenerateAdviceToSettle(app: app, timeout: 18))
+
+        let rewrite = waitForActionLikeElement(
+            app: app,
+            identifier: "generate.revision.moreBelievable",
+            labelHints: ["More believable"],
+            timeout: 6,
+            maxSwipes: 8,
+            requireHittable: true
+        )
+        XCTAssertNotNil(rewrite)
+        rewrite?.tap()
+        XCTAssertTrue(waitForGenerateAdviceToSettle(app: app, timeout: 18))
+
+        let realityCheck = waitForActionLikeElement(
+            app: app,
+            identifier: "generate.realityCheck",
+            labelHints: ["Reality check"],
+            timeout: 6,
+            maxSwipes: 8,
+            requireHittable: true
+        )
+        XCTAssertNotNil(realityCheck)
+        realityCheck?.tap()
+        XCTAssertTrue(
+            app.staticTexts["generate.realityCheck.text"].waitForExistence(timeout: 5)
+                || app.staticTexts.matching(
+                    NSPredicate(format: "label BEGINSWITH[c] %@", "Reality check:")
+                ).firstMatch.waitForExistence(timeout: 5)
+        )
+
+        let save = waitForActionLikeElement(
+            app: app,
+            identifier: "generate.save",
+            labelHints: ["Save"],
+            timeout: 6,
+            maxSwipes: 8,
+            requireHittable: true
+        )
+        XCTAssertNotNil(save)
+        guard let save else { return }
+        for _ in 0..<4
+        where save.frame.minY < 90 {
+            app.swipeDown()
+        }
+        XCTAssertGreaterThan(
+            save.frame.minY,
+            90,
+            "Save must be below the status-bar region before tapping."
+        )
+        XCTAssertLessThan(
+            save.frame.maxY,
+            app.frame.maxY - 100,
+            "Save must be above the floating tab bar before tapping."
+        )
+        save.tap()
+        let savedState = app.buttons["generate.save"]
+        let savedExpectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label CONTAINS[c] %@", "Saved"),
+            object: savedState
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [savedExpectation], timeout: 3),
+            .completed,
+            "The Desk should confirm the result was filed before navigating away."
+        )
+
+        let casebookTab = app.buttons["tab.favorites"]
+        XCTAssertTrue(casebookTab.waitForExistence(timeout: 4))
+        casebookTab.tap()
+        XCTAssertTrue(app.otherElements["casebook.monthlyDossier"].waitForExistence(timeout: 8))
+
+        let organize = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.buttons["Organize"],
+                app.buttons.matching(
+                    NSPredicate(format: "label CONTAINS[c] %@", "Organize")
+                ).firstMatch,
+            ],
+            timeout: 6,
+            maxSwipes: 6,
+            requireHittable: true
+        )
+        XCTAssertNotNil(organize)
+        organize?.tap()
+
+        let folderField = app.textFields["casebook.organize.folder"]
+        XCTAssertTrue(folderField.waitForExistence(timeout: 5))
+        folderField.tap()
+        folderField.typeText("Best Of")
+
+        let saveOrganization = app.buttons["casebook.organize.save"]
+        XCTAssertTrue(saveOrganization.waitForExistence(timeout: 4))
+        saveOrganization.tap()
+        XCTAssertTrue(
+            app.staticTexts["Best Of"].waitForExistence(timeout: 6)
+                || app.buttons["Best Of"].waitForExistence(timeout: 6)
+        )
+    }
+
     func testGenerateFlowIsStableAndReachesShare() throws {
         let app = launchTestApp()
 
@@ -166,8 +447,25 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             resetOnboarding: true
         )
 
-        if app.buttons["onboarding.next"].waitForExistence(timeout: 5) {
-            app.buttons["onboarding.skip"].tap()
+        let onboardingNext = app.buttons["onboarding.next"]
+        if onboardingNext.waitForExistence(timeout: 5) {
+            onboardingNext.tap()
+
+            let starterSituation = app.textFields["onboarding.situation"]
+            let starterIntensity = app.sliders["onboarding.intensity"]
+            XCTAssertTrue(starterSituation.waitForExistence(timeout: 5))
+            XCTAssertTrue(starterIntensity.waitForExistence(timeout: 5))
+            starterIntensity.adjust(toNormalizedSliderPosition: 0.75)
+
+            let getStarted = app.buttons["onboarding.next"]
+            XCTAssertTrue(getStarted.waitForExistence(timeout: 3))
+            XCTAssertTrue(getStarted.label.localizedCaseInsensitiveContains("Get Started"))
+            getStarted.tap()
+
+            XCTAssertTrue(
+                waitForGenerateAdviceToSettle(app: app, timeout: 20),
+                "Completing onboarding should commission the first local take."
+            )
         }
 
         XCTAssertTrue(waitForAnyElement(app: app, candidates: [app.buttons["generate.primary"]], timeout: 8) != nil)
@@ -1083,11 +1381,10 @@ final class BadvicePolishedSmokeTests: XCTestCase {
 
     private func waitForGenerateLoadingElement(app: XCUIApplication, timeout: TimeInterval) -> XCUIElement? {
         let loading = app.otherElements["generate.loading"]
-        let fallbackText = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Generating advice")).firstMatch
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            if loading.exists || fallbackText.exists {
-                return loading.exists ? loading : fallbackText
+            if loading.exists {
+                return loading
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
@@ -1095,6 +1392,13 @@ final class BadvicePolishedSmokeTests: XCTestCase {
     }
 
     private func loadingCopy(from loading: XCUIElement) -> String {
+        let label = loading.label
+        if label.localizedCaseInsensitiveContains("generating advice") {
+            return label.localizedCaseInsensitiveContains(" — ")
+                ? label
+                : "Generating advice"
+        }
+
         if let value = loading.value as? String, !value.isEmpty {
             return value
         }
