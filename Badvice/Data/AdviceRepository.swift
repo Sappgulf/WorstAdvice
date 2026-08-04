@@ -107,6 +107,26 @@ final class AdviceRepository {
         fetchAllHistory().count
     }
 
+    /// Counts matching case files using the repository's account-scoped cache.
+    /// Optional bounds make this useful for both all-time collections and
+    /// calendar-bound contracts without adding more SwiftData predicates.
+    func historyCount(
+        category: AdviceCategory,
+        tone: ToneMode? = nil,
+        from startDate: Date? = nil,
+        to endDate: Date? = nil
+    ) -> Int {
+        let categoryRaw = category.rawValue
+        let toneRaw = tone?.rawValue
+        return fetchAllHistory().reduce(into: 0) { count, record in
+            guard record.categoryRaw == categoryRaw else { return }
+            if let toneRaw, record.toneRaw != toneRaw { return }
+            if let startDate, record.createdAt < startDate { return }
+            if let endDate, record.createdAt >= endDate { return }
+            count += 1
+        }
+    }
+
     // MARK: - Leaderboard helpers
 
     func incrementShareCount(for id: UUID) {

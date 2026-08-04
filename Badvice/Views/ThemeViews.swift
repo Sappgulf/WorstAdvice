@@ -163,6 +163,7 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 1)
         }
+        .accessibilityElement(children: .contain)
     }
 }
 

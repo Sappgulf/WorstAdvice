@@ -2,13 +2,16 @@ import SwiftUI
 
 struct ExploreTabView: View {
     let social: SocialViewModel
+    let generate: GenerateViewModel
     let settings: SettingsViewModel
     let onJumpToGenerate: (AdviceCategory, ToneMode) -> Void
 
     @State private var trendingAdvice: [TrendingAdvice] = Self.demoTrendingAdvice
+    @State private var visibleTrending: [TrendingAdvice] = Self.demoTrendingAdvice
     @State private var searchText = ""
     @State private var selectedCategory: AdviceCategory?
     @State private var selectedTone: ToneMode?
+    @AppStorage("badvice.lastExploreStarterID") private var lastExploreStarterID = ""
     private let isFocusMode = false
     @Environment(\.tabBarVisible) private var tabBarVisible
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -30,7 +33,24 @@ struct ExploreTabView: View {
         settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion
     }
 
-    var filteredTrending: [TrendingAdvice] {
+    private var boardEyebrow: String {
+        generate.totalGeneratedCount > 0 ? "YOUR + STARTER BOARD" : "STARTER BOARD"
+    }
+
+    private var filteredTrending: [TrendingAdvice] {
+        visibleTrending
+    }
+
+    private var filterSignature: String {
+        "\(normalizedSearchText)|\(selectedCategory?.rawValue ?? "all")|\(selectedTone?.rawValue ?? "all")|\(trendingAdvice.count)"
+    }
+
+    private var recentStarter: TrendingAdvice? {
+        guard let id = UUID(uuidString: lastExploreStarterID) else { return nil }
+        return trendingAdvice.first(where: { $0.id == id })
+    }
+
+    private func recomputeVisibleTrending() {
         var result = trendingAdvice
         if let category = selectedCategory {
             result = result.filter { $0.category == category }
@@ -41,7 +61,7 @@ struct ExploreTabView: View {
         if !normalizedSearchText.isEmpty {
             result = result.filter { $0.adviceLine.localizedCaseInsensitiveContains(normalizedSearchText) }
         }
-        return result
+        visibleTrending = result
     }
 
     var body: some View {
@@ -54,11 +74,13 @@ struct ExploreTabView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         heroSection
 
-                        exploreCommandCard
-
                         if !isFocusMode {
                             filterSection
                         }
+
+                        recentStarterSection
+
+                        exploreCommandCard
 
                         if filteredTrending.isEmpty {
                             emptyStateView
@@ -80,6 +102,9 @@ struct ExploreTabView: View {
                 tabBarVisible.wrappedValue = true
             }
             .task { await loadTrending() }
+            .task(id: filterSignature) {
+                recomputeVisibleTrending()
+            }
         }
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
     }
@@ -102,7 +127,7 @@ struct ExploreTabView: View {
                 )
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("IDEA BOARD")
+                    Text(boardEyebrow)
                         .font(.caption2.weight(.heavy))
                         .tracking(1.2)
                         .foregroundStyle(accent)
@@ -246,6 +271,20 @@ struct ExploreTabView: View {
                     }
                 }
             }
+
+            if isFilterActive {
+                TabCommandActionButton(
+                    title: "Clear filters",
+                    systemImage: "xmark.circle.fill",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    accessibilityIdentifier: "explore.clearFilters",
+                    minHeight: 42
+                ) {
+                    clearFilters()
+                }
+            }
         }
     }
 
@@ -286,6 +325,54 @@ struct ExploreTabView: View {
             }
         }
         .accessibilityIdentifier("explore.emptyState")
+    }
+
+    @ViewBuilder
+    private var recentStarterSection: some View {
+        if let recentStarter {
+            SectionShell(accent: accent, cardColor: cardFill) {
+                HStack(spacing: 8) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .foregroundStyle(accent)
+                    Text("RECENTLY USED")
+                        .font(.caption2.weight(.black))
+                        .tracking(1.1)
+                        .foregroundStyle(accent)
+                    Spacer()
+                    Text("One-tap return")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(secondaryText)
+                }
+            } content: {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(recentStarter.adviceLine)
+                        .font(.system(.subheadline, design: .serif, weight: .semibold))
+                        .foregroundStyle(primaryText)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 10) {
+                        Label(recentStarter.category.title, systemImage: recentStarter.category.icon)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(secondaryText)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        TabCommandActionButton(
+                            title: "Use again",
+                            systemImage: "arrow.up.right",
+                            accent: accent,
+                            buttonText: buttonText,
+                            accessibilityIdentifier: "explore.recentStarter.use",
+                            minHeight: 38
+                        ) {
+                            openTrendingAdvice(recentStarter)
+                        }
+                        .frame(width: 122)
+                    }
+                }
+            }
+            .accessibilityIdentifier("explore.recentStarter")
+        }
     }
 
     private var starterIdeasSection: some View {
@@ -362,7 +449,7 @@ struct ExploreTabView: View {
 
     private var exploreCommandDetail: String {
         if filteredTrending.isEmpty {
-            return "No seeded ideas match the current search and filters. Reset the board or loosen one lane."
+            return "No starter ideas match the current search and filters. Reset the board or loosen one lane."
         }
         if isFilterActive {
             return "Board narrowed to \(filteredTrending.count) idea\(filteredTrending.count == 1 ? "" : "s"). Open one to carry lane and voice into Advice."
@@ -378,10 +465,13 @@ struct ExploreTabView: View {
     }
 
     private func loadTrending() async {
-        // Always seed the expanded demo board; filters operate on the full catalog.
-        if trendingAdvice.count < Self.demoTrendingAdvice.count {
-            trendingAdvice = Self.demoTrendingAdvice
-        }
+        // Returning users see their own casebook first; the curated catalog is
+        // explicitly starter content rather than being presented as live global
+        // trends when no social feed is available.
+        let localIdeas = generate.exploreStarterIdeas
+        let localIDs = Set(localIdeas.map(\.id))
+        trendingAdvice = localIdeas + Self.demoTrendingAdvice.filter { !localIDs.contains($0.id) }
+        recomputeVisibleTrending()
     }
 
     private func resetCategoryFilter() {
@@ -421,6 +511,7 @@ struct ExploreTabView: View {
 
     private func openTrendingAdvice(_ advice: TrendingAdvice) {
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        lastExploreStarterID = advice.id.uuidString
         onJumpToGenerate(advice.category, advice.tone)
     }
 
@@ -540,10 +631,16 @@ struct ExploreTabView: View {
         }
     }
 
+    private static func stableDemoID(_ index: Int) -> UUID {
+        let value = String(index)
+        let suffix = String(repeating: "0", count: max(0, 12 - value.count)) + value
+        return UUID(uuidString: "00000000-0000-0000-0000-\(suffix)")!
+    }
+
     private static var demoTrendingAdvice: [TrendingAdvice] {
         [
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(1),
                 adviceLine: "Just skip the meeting and call it executive delegation.",
                 category: .career,
                 tone: .corporateConsultant,
@@ -552,7 +649,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(2),
                 adviceLine: "If they haven't texted back in three hours, they've already found someone else.",
                 category: .dating,
                 tone: .toxicBestFriend,
@@ -561,7 +658,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(3),
                 adviceLine: "The universe will provide if you visualize hard enough and mute feedback.",
                 category: .spirituality,
                 tone: .wizard,
@@ -570,7 +667,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(4),
                 adviceLine: "Skip the deload and treat soreness as free market research.",
                 category: .fitness,
                 tone: .alphaPodcast,
@@ -579,7 +676,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(5),
                 adviceLine: "Buy the dip of every vibe and call the receipt a long-term thesis.",
                 category: .money,
                 tone: .cryptoBro,
@@ -588,7 +685,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(6),
                 adviceLine: "Ship the happy path Friday and let Monday invent the rollback plan.",
                 category: .tech,
                 tone: .redditCommenter,
@@ -597,7 +694,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(7),
                 adviceLine: "If the group chat goes quiet, restart it with an unsolicited hot take.",
                 category: .social,
                 tone: .influencer,
@@ -606,7 +703,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(8),
                 adviceLine: "Open six productivity apps and treat the switching cost as focus training.",
                 category: .productivity,
                 tone: .lifeCoach,
@@ -615,7 +712,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(9),
                 adviceLine: "Book the tightest layover so the trip feels like character development.",
                 category: .travel,
                 tone: .boomer,
@@ -624,7 +721,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(10),
                 adviceLine: "If the sauce breaks, plate with confidence and invent a regional origin story.",
                 category: .cooking,
                 tone: .friendRoast,
@@ -633,7 +730,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(11),
                 adviceLine: "Treat every soft launch like a performance review of the whole friend group.",
                 category: .relationships,
                 tone: .linkedInInfluencer,
@@ -642,7 +739,7 @@ struct ExploreTabView: View {
                 generatedAt: Date()
             ),
             TrendingAdvice(
-                id: UUID(),
+                id: stableDemoID(12),
                 adviceLine: "If the lobby is toxic, blame matchmaking and queue again immediately.",
                 category: .gaming,
                 tone: .genZ,

@@ -16,14 +16,21 @@ final class BadvicePolishedSmokeTests: XCTestCase {
     }
 
     func testBureauShellGeneratesLocallyAndFilesAResult() throws {
-        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
+        let app = launchTestApp(
+            extraLaunchArguments: ["-ui-testing-reset-data"],
+            startOnDesk: false
+        )
 
-        XCTAssertTrue(app.staticTexts["THE BADVICE BUREAU"].waitForExistence(timeout: 8))
+        // The Wire is the launch tab; the Desk masthead lives one tab over.
+        XCTAssertTrue(app.buttons["wire.aim"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["tab.wire"].exists)
         XCTAssertTrue(app.buttons["tab.generate"].exists)
         XCTAssertTrue(app.buttons["tab.favorites"].exists)
         XCTAssertTrue(app.buttons["tab.chaosHub"].exists)
-        XCTAssertTrue(app.buttons["tab.quotes"].exists)
         XCTAssertTrue(app.buttons["tab.more"].exists)
+
+        app.buttons["tab.generate"].tap()
+        XCTAssertTrue(app.staticTexts["THE BADVICE BUREAU"].waitForExistence(timeout: 8))
 
         app.buttons["tab.favorites"].tap()
         XCTAssertTrue(app.staticTexts["Casebook"].waitForExistence(timeout: 6))
@@ -31,7 +38,14 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         app.buttons["tab.chaosHub"].tap()
         XCTAssertTrue(app.staticTexts["Dares"].waitForExistence(timeout: 6))
 
-        app.buttons["tab.quotes"].tap()
+        // Dispatches moved out of the tab bar into More when The Wire took a slot.
+        XCTAssertTrue(
+            openQuickAccessFromBrandMenu(
+                app: app,
+                quickAccessID: "quotes",
+                quickAccessLabel: "Dispatches"
+            )
+        )
         XCTAssertTrue(app.staticTexts["Dispatches"].waitForExistence(timeout: 6))
         XCTAssertTrue(app.staticTexts["TODAY'S DISPATCH"].waitForExistence(timeout: 6))
 
@@ -152,6 +166,27 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             ),
             "A saved local result should be filed in Casebook."
         )
+    }
+
+    func testBureauProgressionAndEvidenceFilesAreVisible() throws {
+        let app = launchTestApp(extraLaunchArguments: ["-ui-testing-reset-data"])
+
+        let daresTab = app.buttons["tab.chaosHub"]
+        XCTAssertTrue(daresTab.waitForExistence(timeout: 8))
+        daresTab.tap()
+
+        XCTAssertTrue(app.staticTexts["BUREAU RANK"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.buttons["chaos.bureau.contract"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.buttons["chaos.bureau.boss"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["COSMETIC LOCKER"].waitForExistence(timeout: 6))
+
+        let casebookTab = app.buttons["tab.favorites"]
+        XCTAssertTrue(casebookTab.waitForExistence(timeout: 4))
+        casebookTab.tap()
+
+        XCTAssertTrue(app.staticTexts["EVIDENCE COLLECTIONS"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Career File"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.staticTexts["Crypto Ledger"].waitForExistence(timeout: 6))
     }
 
     func testBadviceDialRewriteRealityCheckAndCasebookOrganization() throws {
@@ -582,8 +617,8 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             print("Brand menu not discoverable from current UI state; continuing with tab-cycle fallback.")
         }
 
-        let tabOrder = ["tab.generate", "tab.favorites", "tab.chaosHub", "tab.quotes", "tab.more"]
-        for tabID in tabOrder where tabID != "tab.generate" {
+        let tabOrder = ["tab.wire", "tab.generate", "tab.favorites", "tab.chaosHub", "tab.more"]
+        for tabID in tabOrder where tabID != "tab.wire" {
             let tab = app.buttons.matching(identifier: tabID).firstMatch
             if !tab.waitForExistence(timeout: 2) { continue }
             tab.tap()
@@ -684,7 +719,6 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         let primaryTabs = [
             "tab.favorites",
             "tab.chaosHub",
-            "tab.quotes",
         ]
         for tabID in primaryTabs {
             let tabButton = app.buttons.matching(identifier: tabID).firstMatch
@@ -717,18 +751,6 @@ final class BadvicePolishedSmokeTests: XCTestCase {
                     commandActionIDs: [
                         "chaos.command.primary",
                         "chaos.command.generate",
-                    ],
-                    expectFocusToggle: true
-                )
-            case "tab.quotes":
-                assertTabSurface(
-                    app: app,
-                    tabMarkerCandidates: [
-                        app.otherElements["quotes.dailyHero"],
-                        app.staticTexts["Quotes"],
-                    ],
-                    commandActionIDs: [
-                        "quotes.spotlight.toggle",
                     ],
                     expectFocusToggle: true
                 )
@@ -805,12 +827,14 @@ final class BadvicePolishedSmokeTests: XCTestCase {
                 app.otherElements["groupChallenges.command.card"],
                 app.buttons["groupChallenges.empty.create"],
                 app.buttons["groupChallenges.empty.join"],
+                app.otherElements["groupChallenges.social.trustCard"],
             ],
             commandActionIDs: [
                 "groupChallenges.command.primary",
                 "groupChallenges.command.join",
                 "groupChallenges.empty.create",
                 "groupChallenges.empty.join",
+                "groupChallenges.social.trust",
             ],
             expectFocusToggle: true
         )
@@ -842,10 +866,10 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         ]
 
         let tabTargets: [(String, [String])] = [
+            ("tab.wire", ["wire.aim", "wire.card"]),
             ("tab.generate", ["generate.primary", "generate.commandCard"]),
             ("tab.favorites", ["favorites.command.primary", "favorites.generate"]),
             ("tab.chaosHub", ["chaos.command.primary", "chaos.social.submitScore"]),
-            ("tab.quotes", ["quotes.dailyHero", "quotes.spotlight.toggle"]),
         ]
 
         for (tabIdentifier, markerIdentifiers) in tabTargets {
@@ -863,10 +887,10 @@ final class BadvicePolishedSmokeTests: XCTestCase {
                     app.staticTexts["Missions"],
                     app.staticTexts["Progression Path"],
                 ]
-            } else if tabIdentifier == "tab.quotes" {
+            } else if tabIdentifier == "tab.wire" {
                 markerMatches += [
-                    app.otherElements["quotes.dailyHero"],
-                    app.staticTexts["Quotes"],
+                    app.otherElements["wire.card"],
+                    app.buttons["wire.aim"],
                 ]
             }
 
@@ -964,6 +988,7 @@ final class BadvicePolishedSmokeTests: XCTestCase {
                     app.otherElements["chaos.progressionPath"],
                     app.buttons["chaos.command.card"],
                     app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "Progression Path")).firstMatch,
+                    app.otherElements["chaos.seasonStatus"],
                     app.staticTexts["Daily Mission"],
                 ],
                 timeout: 7,
@@ -984,6 +1009,19 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         XCTAssertNotNil(
             quickAction,
             "Expected at least one Missions quick action affordance to be discoverable."
+        )
+        XCTAssertNotNil(
+            waitForAnyElement(
+                app: app,
+                candidates: [
+                    app.otherElements["chaos.seasonStatus"],
+                    app.staticTexts["SEASON STATUS"],
+                ],
+                timeout: 5,
+                maxSwipes: 6,
+                requireHittable: false
+            ),
+            "Expected season and reward status to be visible on Missions."
         )
     }
 
@@ -1012,6 +1050,7 @@ final class BadvicePolishedSmokeTests: XCTestCase {
                 app: app,
                 candidates: [
                     app.buttons["settings.upgradeStore"],
+                    app.buttons["settings.offlinePacks"],
                     app.otherElements["settings.upgradeStore"],
                     app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Upgrade")) .firstMatch,
                     app.staticTexts["Upgrade & Store"],
@@ -1025,10 +1064,15 @@ final class BadvicePolishedSmokeTests: XCTestCase {
 
     }
 
+    /// - Parameter startOnDesk: The Wire is the app's launch tab, but most tests in
+    ///   this bundle exercise the Desk and were written when the Desk was first on
+    ///   screen. Defaulting to a Desk hop keeps those tests testing what they mean
+    ///   to; tests about the shell itself pass `false` to see the real launch state.
     private func launchTestApp(
         extraLaunchArguments: [String] = [],
         skipIntro: Bool = true,
-        resetOnboarding: Bool = false
+        resetOnboarding: Bool = false,
+        startOnDesk: Bool = true
     ) -> XCUIApplication {
         let app = XCUIApplication()
         var launchArguments = defaultLaunchArguments
@@ -1044,6 +1088,13 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         }
         app.launch()
         XCTAssertTrue(waitForAppToBecomeReady(app: app, timeout: 15))
+        if startOnDesk {
+            let deskTab = app.buttons["tab.generate"]
+            if deskTab.waitForExistence(timeout: 6) {
+                deskTab.tap()
+                _ = app.buttons["generate.primary"].waitForExistence(timeout: 8)
+            }
+        }
         return app
     }
 
@@ -1269,6 +1320,9 @@ final class BadvicePolishedSmokeTests: XCTestCase {
 
     private func waitForAppToBecomeReady(app: XCUIApplication, timeout: TimeInterval) -> Bool {
         let readinessChecks: [() -> Bool] = [
+            // The Wire is the launch surface; the Desk's CTA is no longer the
+            // first thing to appear, so readiness must accept either.
+            { app.buttons["wire.aim"].exists },
             { app.buttons["generate.primary"].exists },
             { app.buttons["auth.mode.signUp"].exists },
             { app.buttons["auth.mode.signIn"].exists },

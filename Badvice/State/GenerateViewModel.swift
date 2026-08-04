@@ -131,6 +131,10 @@ final class GenerateViewModel {
     var hapticWeight: Double = 0.5  // 0.0 to 1.0 mapping to intensity
     var isGenerating: Bool = false
     var debugPolishFixturesStatus: String = "idle"
+    /// Most recent take produced by a look-ahead `generate(isPrefetch: true)` call.
+    /// The Wire reads this to append to its buffer; it is deliberately separate
+    /// from `current`, which always tracks what a person is actually looking at.
+    private(set) var lastPrefetchedRecord: AdviceRecord?
 
     var selectedIntensity: BadviceIntensity {
         get { settingsViewModel.preferredIntensity }
@@ -144,9 +148,11 @@ final class GenerateViewModel {
     private var successfulGenerationCount: Int = 0
     @ObservationIgnored private var hasLoadedRecentSuggestions = false
     @ObservationIgnored private var hasBootstrappedAdviceExperience = false
+    @ObservationIgnored private var automaticBootstrapSuppressedForStarter = false
     @ObservationIgnored private var adviceBootstrapTask: Task<Void, Never>?
     @ObservationIgnored private var autoGenerateSelectionTask: Task<Void, Never>?
     @ObservationIgnored private var cachedLocalTasteSummary: LocalTasteSummary?
+    @ObservationIgnored private var lastCommittedImpressionID: UUID?
     private static let chaosMissionCompletionStorageKey = "chaosHubMissionCompletionKey"
     private static let activeChaosContractStorageKey = "activeChaosContractID"
     private static let chaosContractPeriod = "contract"
@@ -200,13 +206,17 @@ final class GenerateViewModel {
         syncLiveActivityState()
     }
 
-    func bootstrapAdviceExperienceIfNeeded(autoGenerateInitialAdvice: Bool) {
-        guard !hasBootstrappedAdviceExperience || current == nil else { return }
+    @discardableResult
+    func bootstrapAdviceExperienceIfNeeded(autoGenerateInitialAdvice: Bool) -> Bool {
+        guard !hasBootstrappedAdviceExperience || current == nil else { return false }
         hasBootstrappedAdviceExperience = true
 
         let currentCategory = selectedCategory
         let currentTone = selectedTone
-        let shouldAutoGenerate = autoGenerateInitialAdvice && current == nil && !isGenerating
+        let shouldAutoGenerate = autoGenerateInitialAdvice
+            && current == nil
+            && !isGenerating
+            && !automaticBootstrapSuppressedForStarter
         let bootSeed = Int(Date().timeIntervalSince1970 * 1_000)
         let preferredContentPack = settingsViewModel.preferredContentPack
         let preferredGenerationProvider = settingsViewModel.preferredGenerationProvider
@@ -263,6 +273,7 @@ final class GenerateViewModel {
                 await modelWarmupTask.value
             }
         }
+        return shouldAutoGenerate
     }
 
     func updateCategory(_ category: AdviceCategory, autoGenerate: Bool = true) {
@@ -281,6 +292,38 @@ final class GenerateViewModel {
         selectedTone = tone
         guard autoGenerate else { return }
         requestAutoGenerateAfterSelectionChange()
+    }
+
+    /// Starts a new, visible brief from another part of the app.
+    ///
+    /// The previous result remains persisted in history/favorites, but it is
+    /// removed from the active workspace so the destination cannot look like
+    /// the handoff failed. The user lands on the selected lane, voice, and
+    /// context with an explicit next step instead of a stale result card.
+    func prepareStarter(
+        category: AdviceCategory,
+        tone: ToneMode,
+        prompt: String = "",
+        source: String = "Starter"
+    ) {
+        adviceBootstrapTask?.cancel()
+        autoGenerateSelectionTask?.cancel()
+        automaticBootstrapSuppressedForStarter = true
+        selectedCategory = category
+        selectedTone = tone
+        scenarioText = prompt
+        current = nil
+        generationSourceBadgeText = nil
+        generationNotice = "\(source) loaded. Generate when ready."
+        generationNoticeStyle = .success
+        analyticsTracker.track(
+            "prepare_starter",
+            properties: [
+                "source": source,
+                "category": category.rawValue,
+                "tone": tone.rawValue,
+                "has_prompt": prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "false" : "true",
+            ])
     }
 
     func requestAutoGenerateAfterSelectionChange(delayMilliseconds: UInt64 = 220) {
@@ -331,11 +374,21 @@ final class GenerateViewModel {
         await generate(seed: seed, isBootstrap: true)
     }
 
+    /// Generates a take.
+    ///
+    /// - Parameter isPrefetch: Set when the result is being produced ahead of
+    ///   time for The Wire's look-ahead buffer. Prefetched takes are persisted
+    ///   like any other, but every side effect that means "a person saw this"
+    ///   — learning signals, achievements, missions, haptics, analytics — is
+    ///   deferred until ``commitImpression(for:)`` fires as the card scrolls
+    ///   into view. Without this split, a two-ahead buffer would award progress
+    ///   for advice nobody ever read.
     func generate(
         seed: Int? = nil,
         isBootstrap: Bool = false,
         revision: AdviceRevisionStyle? = nil,
-        forceBureau: Bool = false
+        forceBureau: Bool = false,
+        isPrefetch: Bool = false
     ) async {
         let generationPerfToken = AppPerformanceInstrumentation.beginAdviceGenerationInterval()
         defer { AppPerformanceInstrumentation.endAdviceGenerationInterval(generationPerfToken) }
@@ -345,7 +398,7 @@ final class GenerateViewModel {
         generationNoticeStyle = .info
         generationSourceBadgeText = nil
         let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
-        if let current {
+        if let current, !isPrefetch {
             repository.recordLearningSignal(
                 scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
                 type: .regen
@@ -422,8 +475,7 @@ final class GenerateViewModel {
             rememberFingerprint(for: output)
             rememberPoolFingerprint(for: output)
             generationSourceBadgeText = generationSourceBadgeLabel(for: "bureau")
-            lastWhyTerrible =
-                "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
+            lastWhyTerrible = whyTerribleLine(for: output.category, contentPack: selectedPack)
             current = repository.insert(output)
             invalidateRetentionSnapshot()
             NotificationManager.updateGenerationActivity(date: output.createdAt)
@@ -644,20 +696,24 @@ final class GenerateViewModel {
 
         rememberFingerprint(for: output)
         rememberPoolFingerprint(for: output)
-        lastWhyTerrible =
-            "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
-        current = repository.insert(output)
+        let inserted = repository.insert(output)
         invalidateRetentionSnapshot()
-        NotificationManager.updateGenerationActivity(date: output.createdAt)
-        NotificationManager.scheduleDaily()
-        repository.recordLearningSignal(
-            scopeKey: adviceScopeKey(category: output.category, tone: output.tone),
-            type: .shown
-        )
+        if isPrefetch {
+            lastPrefetchedRecord = inserted
+        } else {
+            lastWhyTerrible = whyTerribleLine(for: output.category, contentPack: selectedPack)
+            current = inserted
+            NotificationManager.updateGenerationActivity(date: output.createdAt)
+            NotificationManager.scheduleDaily()
+            repository.recordLearningSignal(
+                scopeKey: adviceScopeKey(category: output.category, tone: output.tone),
+                type: .shown
+            )
+        }
         cachedLocalTasteSummary = nil
         leaderboardVersion += 1
 
-        if !isBootstrap {
+        if !isBootstrap, !isPrefetch {
             // Achievement Tracking
             let total = repository.historyCount()
             achievementsManager.trackAdviceGenerated(
@@ -689,8 +745,8 @@ final class GenerateViewModel {
             }
             hapticTrigger += 1
             trackMissionCompletionIfNeeded()
-            trackWeeklyMissionProgressIfNeeded(with: output)
-            trackActiveChaosContractProgressIfNeeded(with: output)
+            trackWeeklyMissionProgressIfNeeded(category: output.category, tone: output.tone)
+            trackActiveChaosContractProgressIfNeeded(category: output.category, tone: output.tone)
             rotatePrimaryActionTitleIfNeeded()
         }
         if let generationProviderNotice {
@@ -1025,6 +1081,62 @@ final class GenerateViewModel {
         scenarioText = suggestion
     }
 
+    private func whyTerribleLine(for category: AdviceCategory, contentPack: ContentPack) -> String {
+        let principle = store.rules(for: category, contentPack: contentPack)
+            .badPrinciples.randomElement() ?? "certainty without evidence"
+        return "Why this is awful: \(principle)."
+    }
+
+    /// Records that a person actually laid eyes on `record`.
+    ///
+    /// The Wire generates ahead of the scroll position, so the side effects that
+    /// represent an impression are split out of `generate` and fired here as each
+    /// card lands. Calling this twice for the same record is a no-op, which keeps
+    /// scroll-position jitter from double-counting progress.
+    func commitImpression(for record: AdviceRecord) {
+        guard lastCommittedImpressionID != record.id else { return }
+        lastCommittedImpressionID = record.id
+
+        current = record
+        lastWhyTerrible = whyTerribleLine(
+            for: record.category,
+            contentPack: settingsViewModel.preferredContentPack
+        )
+        NotificationManager.updateGenerationActivity(date: record.createdAt)
+        NotificationManager.scheduleDaily()
+        repository.recordLearningSignal(
+            scopeKey: adviceScopeKey(category: record.category, tone: record.tone),
+            type: .shown
+        )
+        cachedLocalTasteSummary = nil
+
+        achievementsManager.trackAdviceGenerated(
+            tone: record.tone,
+            category: record.category,
+            totalCount: repository.historyCount()
+        )
+        achievementsManager.trackStreak(days: challengeStreakDays)
+
+        analyticsTracker.track(
+            "generate",
+            properties: [
+                "category": record.category.rawValue,
+                "tone": record.tone.rawValue,
+                "surface": "wire",
+                "intensity": "\(selectedIntensity.rawValue)",
+            ])
+
+        if let profile = store.toneProfiles[record.tone] {
+            hapticWeight = Double(min(max(profile.rhetoricalTick.count, 1), 6)) / 6.0
+        }
+        hapticTrigger += 1
+        trackMissionCompletionIfNeeded()
+        trackWeeklyMissionProgressIfNeeded(category: record.category, tone: record.tone)
+        trackActiveChaosContractProgressIfNeeded(category: record.category, tone: record.tone)
+        rotatePrimaryActionTitleIfNeeded()
+        syncLiveActivityState()
+    }
+
     func toggleFavorite() {
         guard let current else { return }
         let newValue = !current.isFavorite
@@ -1034,6 +1146,7 @@ final class GenerateViewModel {
                 scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
                 type: .favorite
             )
+            achievementsManager.trackAdviceSaved(totalSaved: repository.favoriteCount())
         }
         cachedLocalTasteSummary = nil
         analyticsTracker.track(
@@ -1130,11 +1243,15 @@ final class GenerateViewModel {
 
     func markFavorite() {
         guard let current else { return }
+        let wasFavorite = current.isFavorite
         repository.setFavorite(current, isFavorite: true)
-        repository.recordLearningSignal(
-            scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
-            type: .favorite
-        )
+        if !wasFavorite {
+            repository.recordLearningSignal(
+                scopeKey: adviceScopeKey(category: current.category, tone: current.tone),
+                type: .favorite
+            )
+            achievementsManager.trackAdviceSaved(totalSaved: repository.favoriteCount())
+        }
         cachedLocalTasteSummary = nil
         analyticsTracker.track("save_from_generate", properties: [:])
         playHaptic(style: .light)
@@ -1414,9 +1531,84 @@ final class GenerateViewModel {
         repository.favoriteCount()
     }
 
+    /// A compact identity snapshot for the profile/recap surfaces. It is
+    /// derived from the same local history that powers adaptive ranking, so it
+    /// never invents a separate progression source or uploads private taste.
+    var bureauIdentitySnapshot: BureauIdentitySnapshot {
+        let history = repository.fetchAllHistory()
+        let favoriteCategory = mostFrequentCategory(in: history)
+        let favoriteTone = mostFrequentTone(in: history)
+        return BureauIdentitySnapshot(
+            archetype: BureauArchetype.resolve(category: favoriteCategory, tone: favoriteTone),
+            favoriteCategory: favoriteCategory,
+            favoriteTone: favoriteTone,
+            currentRank: achievementsManager.bureauRank,
+            bureauXP: achievementsManager.bureauXP,
+            streakDays: challengeStreakDays,
+            generatedCount: history.count,
+            equippedCosmetic: achievementsManager.equippedBureauCosmetic
+        )
+    }
+
+    var weeklyRecapSnapshot: WeeklyRecapSnapshot {
+        let calendar = Calendar.current
+        let interval = calendar.dateInterval(of: .weekOfYear, for: Date())
+            ?? DateInterval(start: calendar.startOfDay(for: Date()), duration: 7 * 86_400)
+        let history = repository.fetchAllHistory().filter {
+            $0.createdAt >= interval.start && $0.createdAt < interval.end
+        }
+        let sharedCount = history.reduce(into: 0) { result, record in
+            result += record.shareCountValue
+        }
+        let highlight = history.max { lhs, rhs in
+            if lhs.shareCountValue != rhs.shareCountValue {
+                return lhs.shareCountValue < rhs.shareCountValue
+            }
+            return lhs.createdAt < rhs.createdAt
+        }
+        return WeeklyRecapSnapshot(
+            weekStart: interval.start,
+            generatedCount: history.count,
+            savedCount: history.filter(\.isFavorite).count,
+            sharedCount: sharedCount,
+            streakDays: challengeStreakDays,
+            topCategory: mostFrequentCategory(in: history),
+            topTone: mostFrequentTone(in: history),
+            highlightLine: highlight?.adviceLine
+        )
+    }
+
+    /// Explore should feel alive for returning users without pretending that
+    /// a local starter catalog is a live global trend feed.
+    var exploreStarterIdeas: [TrendingAdvice] {
+        repository.fetchAllHistory().prefix(20).map { record in
+            TrendingAdvice(
+                id: record.id,
+                adviceLine: record.adviceLine,
+                category: record.category,
+                tone: record.tone,
+                likeCount: record.vote == .like ? 1 : 0,
+                shareCount: record.shareCountValue,
+                generatedAt: record.createdAt
+            )
+        }
+    }
+
     var challengeStreakDays: Int {
         let snapshot = currentRetentionSnapshot()
         return snapshot.streakDays + snapshot.streakFreezeBonus
+    }
+
+    private func mostFrequentCategory(in history: [AdviceRecord]) -> AdviceCategory? {
+        Dictionary(grouping: history, by: \.category)
+            .max { lhs, rhs in lhs.value.count < rhs.value.count }?
+            .key
+    }
+
+    private func mostFrequentTone(in history: [AdviceRecord]) -> ToneMode? {
+        Dictionary(grouping: history, by: \.tone)
+            .max { lhs, rhs in lhs.value.count < rhs.value.count }?
+            .key
     }
 
     var challengeGoalDays: Int {
@@ -1453,6 +1645,10 @@ final class GenerateViewModel {
                 type: .share
             )
             repository.incrementShareCount(for: current.id)
+            let totalShares = repository.fetchAllHistory().reduce(into: 0) { count, record in
+                count += record.shareCountValue
+            }
+            achievementsManager.trackShare(totalShares: totalShares)
         }
         analyticsTracker.track(
             "share_card",
@@ -1550,9 +1746,9 @@ final class GenerateViewModel {
             ])
     }
 
-    private func trackWeeklyMissionProgressIfNeeded(with output: GeneratedAdvice) {
+    private func trackWeeklyMissionProgressIfNeeded(category: AdviceCategory, tone: ToneMode) {
         let mission = weeklyMissionState
-        guard output.category == mission.category, output.tone == mission.tone else { return }
+        guard category == mission.category, tone == mission.tone else { return }
 
         let before = repository.ensureMissionProgress(
             missionKey: mission.key,
@@ -1592,16 +1788,16 @@ final class GenerateViewModel {
             ])
     }
 
-    private func trackActiveChaosContractProgressIfNeeded(with output: GeneratedAdvice) {
+    private func trackActiveChaosContractProgressIfNeeded(category: AdviceCategory, tone: ToneMode) {
         guard let activeID = activeChaosContractID else { return }
         guard let contract = ChaosContract.catalog.first(where: { $0.id == activeID }) else {
             UserDefaults.standard.removeObject(forKey: Self.activeChaosContractStorageKey)
             return
         }
-        if let category = contract.category, output.category != category {
+        if let required = contract.category, category != required {
             return
         }
-        if let tone = contract.tone, output.tone != tone {
+        if let required = contract.tone, tone != required {
             return
         }
 
@@ -1609,8 +1805,8 @@ final class GenerateViewModel {
         let before = repository.ensureMissionProgress(
             missionKey: key,
             periodRaw: Self.chaosContractPeriod,
-            category: contract.category ?? output.category,
-            tone: contract.tone ?? output.tone,
+            category: contract.category ?? category,
+            tone: contract.tone ?? tone,
             targetCount: 1
         )
         guard before.progressCount < before.targetCount else {
@@ -1621,8 +1817,8 @@ final class GenerateViewModel {
         let updated = repository.incrementMissionProgress(
             missionKey: key,
             periodRaw: Self.chaosContractPeriod,
-            category: contract.category ?? output.category,
-            tone: contract.tone ?? output.tone,
+            category: contract.category ?? category,
+            tone: contract.tone ?? tone,
             targetCount: 1
         )
         guard updated.progressCount >= updated.targetCount else { return }
@@ -1634,8 +1830,8 @@ final class GenerateViewModel {
             "chaos_contract_complete",
             properties: [
                 "contract_id": contract.id,
-                "category": output.category.rawValue,
-                "tone": output.tone.rawValue,
+                "category": category.rawValue,
+                "tone": tone.rawValue,
                 "reward": contract.reward,
             ])
     }

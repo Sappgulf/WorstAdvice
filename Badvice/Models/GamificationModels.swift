@@ -304,6 +304,402 @@ enum XPReason: String, Codable, Sendable {
         case .questComplete: return 30
         }
     }
+
+    var displayTitle: String {
+        switch self {
+        case .generateAdvice: return "Advice filed"
+        case .shareAdvice: return "Advice shared"
+        case .favoriteAdvice: return "Keeper saved"
+        case .dailyChallenge: return "Daily contract closed"
+        case .groupChallenge: return "Relay progress"
+        case .battleWin: return "Battle won"
+        case .streakBonus: return "Streak bonus"
+        case .achievementUnlock: return "Achievement unlocked"
+        case .questComplete: return "Case completed"
+        }
+    }
+}
+
+// MARK: - Bureau progression
+
+enum BureauRank: Int, CaseIterable, Codable, Identifiable, Sendable {
+    case intern = 0
+    case clerk = 1
+    case analyst = 2
+    case director = 3
+    case legend = 4
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .intern: return "Rookie Operative"
+        case .clerk: return "Chaos Clerk"
+        case .analyst: return "Badvice Analyst"
+        case .director: return "Dossier Director"
+        case .legend: return "Legendary Liability"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .intern: return "Rookie"
+        case .clerk: return "Clerk"
+        case .analyst: return "Analyst"
+        case .director: return "Director"
+        case .legend: return "Legend"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .intern: return "person.crop.circle"
+        case .clerk: return "doc.badge.gearshape"
+        case .analyst: return "magnifyingglass.circle.fill"
+        case .director: return "person.crop.circle.badge.checkmark"
+        case .legend: return "crown.fill"
+        }
+    }
+
+    var threshold: Int {
+        switch self {
+        case .intern: return 0
+        case .clerk: return 100
+        case .analyst: return 300
+        case .director: return 650
+        case .legend: return 1_100
+        }
+    }
+
+    var nextThreshold: Int? {
+        guard let next = BureauRank(rawValue: rawValue + 1) else { return nil }
+        return next.threshold
+    }
+
+    static func forXP(_ xp: Int) -> BureauRank {
+        allCases.last(where: { xp >= $0.threshold }) ?? .intern
+    }
+
+    func progress(for xp: Int) -> Double {
+        guard let nextThreshold else { return 1 }
+        let span = max(nextThreshold - threshold, 1)
+        return min(max(Double(xp - threshold) / Double(span), 0), 1)
+    }
+}
+
+struct BureauContract: Identifiable, Codable, Sendable {
+    let key: String
+    let category: AdviceCategory
+    let tone: ToneMode
+    let targetCount: Int
+    let title: String
+    let detail: String
+    let rewardXP: Int
+    let cosmetic: BureauCosmetic
+
+    var id: String { key }
+
+    static func current(for date: Date = Date(), calendar: Calendar = .current) -> BureauContract {
+        let mission = DailyMissionSpec.current(for: date, calendar: calendar)
+        return BureauContract(
+            key: "contract-\(mission.key)",
+            category: mission.category,
+            tone: mission.tone,
+            targetCount: mission.targetCount,
+            title: "The Daily Filing",
+            detail: "File \(mission.targetCount) \(mission.tone.title) takes in \(mission.category.title).",
+            rewardXP: 40,
+            cosmetic: .dailySeal
+        )
+    }
+}
+
+struct BureauBossCase: Identifiable, Codable, Sendable {
+    let key: String
+    let category: AdviceCategory
+    let tone: ToneMode
+    let targetCount: Int
+    let title: String
+    let detail: String
+    let rewardXP: Int
+    let cosmetic: BureauCosmetic
+    let periodStart: Date
+    let periodEnd: Date
+
+    var id: String { key }
+
+    static func current(for date: Date = Date(), calendar: Calendar = .current) -> BureauBossCase {
+        let week = calendar.component(.weekOfYear, from: date)
+        let year = calendar.component(.yearForWeekOfYear, from: date)
+        let categories = AdviceCategory.concrete
+        let tones = ToneMode.concrete
+        let category = categories[(week * 3) % categories.count]
+        let tone = tones[(week * 7) % tones.count]
+        let targetCount = 6 + (week % 4)
+        let interval = calendar.dateInterval(of: .weekOfYear, for: date)
+        let periodStart = interval?.start ?? calendar.startOfDay(for: date)
+        let periodEnd = interval?.end ?? (calendar.date(byAdding: .day, value: 7, to: periodStart) ?? date)
+
+        return BureauBossCase(
+            key: "boss-\(year)-\(week)-\(category.rawValue)-\(tone.rawValue)-\(targetCount)",
+            category: category,
+            tone: tone,
+            targetCount: targetCount,
+            title: "The \(category.title) \(tone.title) Dossier",
+            detail: "Build the week's flagship case file with \(targetCount) matching takes.",
+            rewardXP: 150,
+            cosmetic: .cosmicSeal,
+            periodStart: periodStart,
+            periodEnd: periodEnd
+        )
+    }
+}
+
+enum BureauCosmetic: String, CaseIterable, Codable, Identifiable, Sendable {
+    case dailySeal
+    case careerTab
+    case redFlagStamp
+    case neonStamp
+    case circuitBadge
+    case stardustBadge
+    case cosmicSeal
+    case directorBadge
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .dailySeal: return "Daily Seal"
+        case .careerTab: return "Career Tab"
+        case .redFlagStamp: return "Red Flag Stamp"
+        case .neonStamp: return "Neon Stamp"
+        case .circuitBadge: return "Circuit Badge"
+        case .stardustBadge: return "Stardust Badge"
+        case .cosmicSeal: return "Cosmic Seal"
+        case .directorBadge: return "Director Badge"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .dailySeal: return "A fresh seal for completing a daily contract."
+        case .careerTab: return "A brass tab for a fully documented career file."
+        case .redFlagStamp: return "A scarlet stamp for relationship evidence."
+        case .neonStamp: return "A high-voltage stamp for crypto cases."
+        case .circuitBadge: return "A diagnostic badge for technical incidents."
+        case .stardustBadge: return "A suspiciously luminous badge for cosmic evidence."
+        case .cosmicSeal: return "The official seal of a completed boss case."
+        case .directorBadge: return "A director's badge earned through sustained chaos."
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .dailySeal: return "seal.fill"
+        case .careerTab: return "briefcase.fill"
+        case .redFlagStamp: return "flag.fill"
+        case .neonStamp: return "bolt.fill"
+        case .circuitBadge: return "cpu.fill"
+        case .stardustBadge: return "sparkles"
+        case .cosmicSeal: return "globe.americas.fill"
+        case .directorBadge: return "rosette"
+        }
+    }
+
+    var theme: ThemeMode {
+        switch self {
+        case .dailySeal: return .ember
+        case .careerTab: return .sunset
+        case .redFlagStamp: return .retro
+        case .neonStamp: return .neon
+        case .circuitBadge: return .cybernetic
+        case .stardustBadge: return .midnight
+        case .cosmicSeal: return .cosmic
+        case .directorBadge: return .fallout
+        }
+    }
+}
+
+enum BureauArchetype: String, CaseIterable, Codable, Sendable {
+    case spreadsheetGremlin
+    case velvetSaboteur
+    case wellnessWarlock
+    case cryptidStrategist
+    case cosmicIntern
+    case chaosArchivist
+
+    static func resolve(category: AdviceCategory?, tone: ToneMode?) -> BureauArchetype {
+        switch category {
+        case .career, .productivity:
+            return .spreadsheetGremlin
+        case .dating, .relationships, .social, .weddings:
+            return .velvetSaboteur
+        case .fitness, .pets, .parenting:
+            return .wellnessWarlock
+        case .money, .financeCrypto, .tech, .gaming:
+            return .cryptidStrategist
+        case .spirituality, .travel:
+            return .cosmicIntern
+        case .cooking:
+            return .chaosArchivist
+        case .random, nil:
+            switch tone {
+            case .corporateConsultant, .linkedInInfluencer, .minimalistMonk, .oldMoney:
+                return .spreadsheetGremlin
+            case .toxicBestFriend, .friendRoast, .genZ:
+                return .velvetSaboteur
+            case .alphaPodcast, .cryptoBro, .conspiracyTheorist:
+                return .cryptidStrategist
+            case .wizard, .lifeCoach, .redditCommenter, .astrologyGirlie:
+                return .cosmicIntern
+            case .boomer, .influencer, .random, nil:
+                return .chaosArchivist
+            }
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .spreadsheetGremlin: return "Spreadsheet Gremlin"
+        case .velvetSaboteur: return "Velvet Saboteur"
+        case .wellnessWarlock: return "Wellness Warlock"
+        case .cryptidStrategist: return "Cryptid Strategist"
+        case .cosmicIntern: return "Cosmic Intern"
+        case .chaosArchivist: return "Chaos Archivist"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .spreadsheetGremlin:
+            return "You turn every decision into a meeting with a color-coded agenda."
+        case .velvetSaboteur:
+            return "You bring confidence, timing, and just enough emotional damage."
+        case .wellnessWarlock:
+            return "You can make a wellness ritual out of almost any questionable choice."
+        case .cryptidStrategist:
+            return "You see hidden leverage everywhere, especially where none exists."
+        case .cosmicIntern:
+            return "You report directly to the universe and accept no follow-up questions."
+        case .chaosArchivist:
+            return "You collect bad ideas carefully and file them for future generations."
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .spreadsheetGremlin: return "tablecells.fill"
+        case .velvetSaboteur: return "heart.slash.fill"
+        case .wellnessWarlock: return "wand.and.stars"
+        case .cryptidStrategist: return "binoculars.fill"
+        case .cosmicIntern: return "sparkles"
+        case .chaosArchivist: return "archivebox.fill"
+        }
+    }
+}
+
+struct BureauIdentitySnapshot: Sendable {
+    let archetype: BureauArchetype
+    let favoriteCategory: AdviceCategory?
+    let favoriteTone: ToneMode?
+    let currentRank: BureauRank
+    let bureauXP: Int
+    let streakDays: Int
+    let generatedCount: Int
+    let equippedCosmetic: BureauCosmetic?
+}
+
+struct WeeklyRecapSnapshot: Sendable {
+    let weekStart: Date
+    let generatedCount: Int
+    let savedCount: Int
+    let sharedCount: Int
+    let streakDays: Int
+    let topCategory: AdviceCategory?
+    let topTone: ToneMode?
+    let highlightLine: String?
+
+    var isEmpty: Bool {
+        generatedCount == 0 && savedCount == 0 && sharedCount == 0
+    }
+
+    var headline: String {
+        guard generatedCount > 0 else { return "Your first filing is waiting." }
+        if let topCategory {
+            return "You made \(topCategory.title) your main liability."
+        }
+        return "A productive week of bad judgment."
+    }
+}
+
+struct BureauCollection: Identifiable, Codable, Sendable {
+    let id: String
+    let title: String
+    let detail: String
+    let category: AdviceCategory
+    let targetCount: Int
+    let rewardXP: Int
+    let cosmetic: BureauCosmetic
+
+    static let all: [BureauCollection] = [
+        BureauCollection(
+            id: "career-file",
+            title: "Career File",
+            detail: "Document three career catastrophes.",
+            category: .career,
+            targetCount: 3,
+            rewardXP: 35,
+            cosmetic: .careerTab
+        ),
+        BureauCollection(
+            id: "heartbreak-file",
+            title: "Heartbreak File",
+            detail: "Assemble three relationship exhibits.",
+            category: .dating,
+            targetCount: 3,
+            rewardXP: 40,
+            cosmetic: .redFlagStamp
+        ),
+        BureauCollection(
+            id: "crypto-ledger",
+            title: "Crypto Ledger",
+            detail: "Audit three volatile money takes.",
+            category: .financeCrypto,
+            targetCount: 3,
+            rewardXP: 50,
+            cosmetic: .neonStamp
+        ),
+        BureauCollection(
+            id: "incident-log",
+            title: "Incident Log",
+            detail: "Close three technical incidents.",
+            category: .tech,
+            targetCount: 3,
+            rewardXP: 40,
+            cosmetic: .circuitBadge
+        ),
+        BureauCollection(
+            id: "cosmic-evidence",
+            title: "Cosmic Evidence",
+            detail: "File three suspiciously spiritual exhibits.",
+            category: .spirituality,
+            targetCount: 3,
+            rewardXP: 50,
+            cosmetic: .stardustBadge
+        )
+    ]
+}
+
+struct BureauCollectionState: Identifiable, Sendable {
+    let collection: BureauCollection
+    let progress: Int
+    let isUnlocked: Bool
+
+    var id: String { collection.id }
+    var isComplete: Bool { progress >= collection.targetCount }
+    var progressFraction: Double {
+        min(max(Double(progress) / Double(max(collection.targetCount, 1)), 0), 1)
+    }
 }
 
 struct DailyQuest: Identifiable, Codable, Sendable {

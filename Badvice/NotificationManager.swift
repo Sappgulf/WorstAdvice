@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UserNotifications
 
 enum NotificationManager {
@@ -9,6 +10,7 @@ enum NotificationManager {
     private static let defaults = UserDefaults.standard
     private static let lastGenerationDayKey = "com.badvice.last-generation-day"
     private static let streakFreezeAvailableKey = "com.badvice.streak-freeze-available"
+    private static var responseDelegate: NotificationResponseDelegate?
     private static var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
@@ -18,6 +20,14 @@ enum NotificationManager {
         #else
             return false
         #endif
+    }
+
+    static func configureResponseHandling() {
+        guard !isRunningTests else { return }
+        if responseDelegate == nil {
+            responseDelegate = NotificationResponseDelegate()
+        }
+        UNUserNotificationCenter.current().delegate = responseDelegate
     }
 
     static func requestPermissionAndScheduleDaily(hour: Int = 9, streakEnabled: Bool = true) {
@@ -52,10 +62,18 @@ enum NotificationManager {
         center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
 
         let selectedCopy = bodies.randomElement() ?? .defaultDaily
+        let mission = DailyMissionSpec.current()
         let content = UNMutableNotificationContent()
         content.title = selectedCopy.title
-        content.body = selectedCopy.body
+        content.body = "\(selectedCopy.body) Today's brief: \(mission.category.title) × \(mission.tone.title)."
         content.sound = .default
+        content.categoryIdentifier = "DAILY_BRIEF"
+        content.userInfo = [
+            "destination": "badvice://chaoshub",
+            "missionKey": mission.key,
+            "category": mission.category.rawValue,
+            "tone": mission.tone.rawValue,
+        ]
 
         var dateComponents = DateComponents()
         dateComponents.hour = hour
@@ -100,6 +118,8 @@ enum NotificationManager {
             ? "Generate one advice now, or your weekly Streak Freeze may auto-protect today."
             : "Generate one advice before midnight to keep your streak alive."
         content.sound = .default
+        content.categoryIdentifier = "STREAK_RISK"
+        content.userInfo = ["destination": "badvice://chaoshub"]
 
         var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
         components.hour = 20
@@ -134,6 +154,11 @@ enum NotificationManager {
             content.body = "Generate a \(category.title) piece of advice in \(tone.title) tone for bonus chaos points."
             content.sound = .default
             content.categoryIdentifier = "DAILY_CHALLENGE"
+            content.userInfo = [
+                "destination": "badvice://chaoshub",
+                "category": category.rawValue,
+                "tone": tone.rawValue,
+            ]
 
             var components = DateComponents()
             components.hour = deliveryHour
@@ -184,4 +209,30 @@ enum NotificationManager {
         .init(title: "The experts have spoken.", body: "By experts we mean a random algorithm with no credentials."),
         .init(title: "Badvice o\u{2019}clock.", body: "Start the day with maximum confidence and minimum correctness."),
     ]
+}
+
+private final class NotificationResponseDelegate: NSObject, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        defer { completionHandler() }
+
+        guard let destination = response.notification.request.content.userInfo["destination"] as? String,
+              let url = URL(string: destination)
+        else { return }
+
+        DispatchQueue.main.async {
+            UIApplication.shared.open(url, options: [:])
+        }
+    }
 }

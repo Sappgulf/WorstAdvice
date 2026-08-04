@@ -410,8 +410,10 @@ final class SettingsViewModel {
         }
     }
 
+    /// The Wire is the entry point and stays pinned first; everything else in the
+    /// main shell can be reordered, including the Desk.
     var reorderableTabs: [AppTab] {
-        AppTab.primaryNavigationTabs.filter { $0 != .generate }
+        AppTab.primaryNavigationTabs.filter { $0 != .wire }
     }
 
     func moveReorderableTabs(from source: IndexSet, to destination: Int) {
@@ -444,9 +446,9 @@ final class SettingsViewModel {
     }
 
     private func applyPrimaryTabOrder(_ primaryItems: [AppTab]) {
-        let pinnedTabs = Set([AppTab.generate] + primaryItems)
+        let pinnedTabs = Set([AppTab.wire] + primaryItems)
         let overflowItems = AppTab.allCases.filter { !pinnedTabs.contains($0) }
-        tabOrder = [.generate] + primaryItems + overflowItems
+        tabOrder = [.wire] + primaryItems + overflowItems
     }
 
     var streakFreezeAvailableThisWeek: Bool {

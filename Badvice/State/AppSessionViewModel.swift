@@ -32,8 +32,12 @@ final class AppSessionViewModel {
         self.sharedAdviceStore = AdviceStore()
         self.sharedBadQuoteService = BadQuoteService()
         self.sharedContentModeration = ContentModeration()
-        self.settings = SettingsViewModel(repository: repository, localModelStore: localModelStore)
-        self.achievements = AchievementsManager(repository: repository)
+        let settingsViewModel = SettingsViewModel(repository: repository, localModelStore: localModelStore)
+        self.settings = settingsViewModel
+        self.achievements = AchievementsManager(
+            repository: repository,
+            settingsViewModel: settingsViewModel
+        )
         self.generate = GenerateViewModel(
             repository: repository,
             settingsViewModel: settings,

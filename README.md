@@ -6,9 +6,18 @@ A SwiftUI satire app that generates confidently wrong advice that still sounds p
 - `6.4`
 
 ## Features
-- Focused main shell with `Advice`, `Social`, `Missions`, and `Library` in the tab bar
-- `More` quick access keeps Saved, History, Explore, Challenges, Settings, and diagnostics reachable without crowding the primary flow
-- User-customizable main tab order with Advice pinned first
+- Focused main shell with `Wire`, `Desk`, `Casebook`, and `Dares` in the tab bar
+- `The Wire` is the entry point: a swipe-paged, full-bleed advice feed
+  - Generation is a gesture — each swipe advances to the next ruling
+  - A two-ahead look-ahead buffer keeps the engine from stalling mid-scroll
+  - Impressions (streak, learning signals, achievements, missions) are recorded
+    only when a card actually reaches the screen, never when it is merely buffered
+  - Deliberate targeting lives in the `Aim` sheet (category, tone, intensity, situation)
+  - Save / Copy / Share / Like / Dislike sit on a persistent action rail
+- `Desk` keeps the full command card for composing a specific take
+- `More` quick access keeps Dispatches, History, Explore, Challenges, Settings, and
+  diagnostics reachable without crowding the primary flow
+- User-customizable main tab order with Wire pinned first
 - Categories (14 + Random Mix): Dating, Fitness, Career, Money, Parenting, Tech, Social, Cooking, Travel, Productivity, Pets, Relationships, Spirituality, Crypto
 - Tone modes (14 + Random Mix): Corporate Consultant, Alpha Podcast, Wizard, Influencer, Toxic Best Friend, Boomer, Crypto Bro, Minimalist Monk, Friend Roast, Life Coach, Conspiracy Theorist, Gen Z, Reddit Commenter, LinkedIn Influencer
 - Themes (12): Badvice, Minimal, Ember, Slate, Evergreen, Fallout, Neon Nights, Midnight Oil, Golden Hour, Cosmic Chaos, Retro Wave, Cybernetic
@@ -160,6 +169,12 @@ bash scripts/ci_xcodebuild_tests.sh
 ```
 
 ## QA Checklist
+- Wire tab:
+  - Opens on launch and generates a first ruling without any input.
+  - Swiping up advances to a different ruling with no visible loading stall.
+  - Save, Copy, Share, Like, and Dislike all act on the visible card.
+  - `Aim` applies a new category/tone/intensity and refills the feed.
+  - Streak and achievement progress advance once per card seen, not per card buffered.
 - Advice tab:
   - Generate creates instant advice with selected category + tone.
   - Primary action flow is one dominant Advice CTA plus compact secondary icon rail.

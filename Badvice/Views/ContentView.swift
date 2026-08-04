@@ -56,7 +56,7 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
-    @State private var selectedTab: AppTab = .generate
+    @State private var selectedTab: AppTab = .wire
     @State private var auth: AuthViewModel?
     @State private var session: AppSessionViewModel?
     @State private var pendingDeepLinks: [URL] = []
@@ -81,7 +81,7 @@ struct ContentView: View {
     @State private var shouldRestartOnNextActive = false
     @State private var deviceCapability = DeviceCapabilityProfile.current()
     @State private var hasScheduledDebugPolishFixturePreload = false
-    @State private var loadedTabs: Set<AppTab> = [.generate]
+    @State private var loadedTabs: Set<AppTab> = [.wire]
 
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("favoritesCountAtLastReview") private var favoritesCountAtLastReview = 0
@@ -665,7 +665,7 @@ struct ContentView: View {
             switch selectedTab {
             case .generate:
                 baseline = session.generate.isGenerating ? .full : .balanced
-            case .chaosHub, .explore, .groupChallenges:
+            case .wire, .chaosHub, .explore, .groupChallenges:
                 baseline = .balanced
             case .quotes, .favorites, .history, .settings:
                 baseline = .reduced
@@ -757,8 +757,9 @@ struct ContentView: View {
     }
 
     private func applyScreenshotStartTabIfNeeded(session: AppSessionViewModel) {
-        guard isScreenshotMode,
-              let rawTab = stringLaunchArgumentValue(after: "-screenshot-start-tab"),
+        guard isScreenshotMode else { return }
+
+        guard let rawTab = stringLaunchArgumentValue(after: "-screenshot-start-tab"),
               let tab = AppTab(rawValue: rawTab)
         else { return }
 
@@ -961,11 +962,19 @@ struct ContentView: View {
     @ViewBuilder
     private func tabView(for tab: AppTab, session: AppSessionViewModel) -> some View {
         switch tab {
+        case .wire:
+            WireTabView(
+                viewModel: session.generate,
+                settings: session.settings,
+                onDataChanged: { session.refreshLists() },
+                isActive: selectedTab == .wire
+            )
         case .generate:
             GenerateTabView(
                 viewModel: session.generate,
                 settings: session.settings,
                 social: session.social,
+                achievements: session.achievements,
                 onDataChanged: { session.refreshLists() },
                 onOpenTab: { tab in
                     openShellMenuTab(tab, session: session)
@@ -982,6 +991,7 @@ struct ContentView: View {
                 generate: session.generate,
                 settings: session.settings,
                 social: session.social,
+                achievements: session.achievements,
                 onOpenTab: { tab in
                     openShellMenuTab(tab, session: session)
                 },
@@ -996,12 +1006,12 @@ struct ContentView: View {
                 social: session.social,
                 initialDesk: .daily,
                 onUseStarter: { category, tone, prompt in
-                    session.generate.updateSelections(
+                    session.generate.prepareStarter(
                         category: category,
                         tone: tone,
-                        autoGenerate: false
+                        prompt: prompt,
+                        source: "Quote starter"
                     )
-                    session.generate.scenarioText = prompt
                     setSelectedTab(.generate, session: session)
                 },
                 onOpenTab: { tab in
@@ -1013,6 +1023,7 @@ struct ContentView: View {
                 favorites: session.favorites,
                 history: session.history,
                 settings: session.settings,
+                achievements: session.achievements,
                 initialShelf: .saved,
                 onUseRecord: { record in
                     session.generate.current = record
@@ -1030,6 +1041,7 @@ struct ContentView: View {
                 favorites: session.favorites,
                 history: session.history,
                 settings: session.settings,
+                achievements: session.achievements,
                 initialShelf: .recent,
                 onUseRecord: { record in
                     session.generate.current = record
@@ -1051,22 +1063,17 @@ struct ContentView: View {
                 }
             }
         case .explore:
-            DispatchesTabView(
-                quotes: session.quotes,
-                settings: session.settings,
+            ExploreTabView(
                 social: session.social,
-                initialDesk: .ideas,
-                onUseStarter: { category, tone, prompt in
-                    session.generate.updateSelections(
+                generate: session.generate,
+                settings: session.settings,
+                onJumpToGenerate: { category, tone in
+                    session.generate.prepareStarter(
                         category: category,
                         tone: tone,
-                        autoGenerate: false
+                        source: "Explore idea"
                     )
-                    session.generate.scenarioText = prompt
                     setSelectedTab(.generate, session: session)
-                },
-                onOpenTab: { tab in
-                    openShellMenuTab(tab, session: session)
                 }
             )
         case .groupChallenges:

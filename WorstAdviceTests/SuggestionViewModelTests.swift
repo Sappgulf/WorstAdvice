@@ -102,6 +102,111 @@ final class SuggestionViewModelTests: XCTestCase {
         XCTAssertNotEqual(generated.tone, .random)
     }
 
+    func testPrepareStarterReplacesVisibleResultWithoutDeletingHistory() throws {
+        let repository = try makeRepository()
+        let settings = SettingsViewModel(repository: repository)
+        let achievements = AchievementsManager(context: repository.context)
+        let generate = GenerateViewModel(
+            repository: repository,
+            settingsViewModel: settings,
+            achievementsManager: achievements
+        )
+
+        let existing = repository.insert(
+            GeneratedAdvice(
+                category: .career,
+                tone: .corporateConsultant,
+                adviceLine: "Keep the old take filed as evidence.",
+                rationaleLine: nil
+            )
+        )
+        generate.current = existing
+
+        generate.prepareStarter(
+            category: .spirituality,
+            tone: .random,
+            prompt: "I want advice inspired by this quote.",
+            source: "Quote starter"
+        )
+
+        XCTAssertNil(generate.current)
+        XCTAssertEqual(generate.selectedCategory, .spirituality)
+        XCTAssertEqual(generate.selectedTone, .random)
+        XCTAssertEqual(generate.scenarioText, "I want advice inspired by this quote.")
+        XCTAssertEqual(generate.generationNotice, "Quote starter loaded. Generate when ready.")
+        XCTAssertEqual(repository.fetchHistory(limit: 10).count, 1)
+        XCTAssertFalse(
+            generate.bootstrapAdviceExperienceIfNeeded(autoGenerateInitialAdvice: true),
+            "A starter handoff should wait for the user instead of triggering cold-launch generation."
+        )
+    }
+
+    func testBureauXPAndRankPersistAcrossManagerReloads() throws {
+        let repository = try makeRepository()
+        let manager = AchievementsManager(context: repository.context)
+
+        XCTAssertEqual(manager.bureauXP, 0)
+        XCTAssertEqual(manager.bureauRank, .intern)
+
+        manager.awardBureauXP(105, reason: .generateAdvice)
+
+        XCTAssertEqual(manager.bureauXP, 105)
+        XCTAssertEqual(manager.bureauRank, .clerk)
+        XCTAssertEqual(repository.ensureSettings().bureauXP, 105)
+
+        let reloaded = AchievementsManager(context: repository.context)
+        XCTAssertEqual(reloaded.bureauXP, 105)
+        XCTAssertEqual(reloaded.bureauRank, .clerk)
+    }
+
+    func testBureauCollectionClosesFromCasebookHistoryOnce() throws {
+        let repository = try makeRepository()
+        let manager = AchievementsManager(context: repository.context)
+        let referenceDate = Date(timeIntervalSince1970: 1_751_500_000)
+
+        for index in 0..<3 {
+            _ = repository.insert(
+                GeneratedAdvice(
+                    category: .career,
+                    tone: .corporateConsultant,
+                    adviceLine: "Career evidence exhibit \(index)",
+                    rationaleLine: nil,
+                    createdAt: referenceDate.addingTimeInterval(TimeInterval(index))
+                )
+            )
+        }
+
+        manager.refreshBureauProgress(referenceDate: referenceDate)
+
+        let careerFile = try XCTUnwrap(
+            manager.collectionStates.first(where: { $0.collection.id == "career-file" })
+        )
+        XCTAssertTrue(careerFile.isComplete)
+        XCTAssertTrue(careerFile.isUnlocked)
+        XCTAssertTrue(manager.unlockedBureauCosmetics.contains(.careerTab))
+        let xpAfterFirstRefresh = manager.bureauXP
+
+        manager.refreshBureauProgress(referenceDate: referenceDate)
+
+        XCTAssertEqual(manager.bureauXP, xpAfterFirstRefresh)
+    }
+
+    func testBureauSchedulesKeepStableKeysForSameCalendarPeriod() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+        let date = Date(timeIntervalSince1970: 1_751_500_000)
+
+        let firstContract = BureauContract.current(for: date, calendar: calendar)
+        let secondContract = BureauContract.current(for: date, calendar: calendar)
+        let firstBossCase = BureauBossCase.current(for: date, calendar: calendar)
+        let secondBossCase = BureauBossCase.current(for: date, calendar: calendar)
+
+        XCTAssertEqual(firstContract.key, secondContract.key)
+        XCTAssertEqual(firstBossCase.key, secondBossCase.key)
+        XCTAssertFalse(firstBossCase.key.contains("(year)"))
+        XCTAssertGreaterThan(firstBossCase.targetCount, 0)
+    }
+
     func testQuoteSuggestionValidationDelete() throws {
         let repository = try makeRepository()
         let quotes = QuotesViewModel(repository: repository)

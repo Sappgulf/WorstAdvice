@@ -13,8 +13,8 @@ struct GroupChallengesTabView: View {
     let onOpenTab: (AppTab) -> Void
     private let isFocusMode = false
 
-    @State private var activeChallenges: [GroupChallenge] = Self.demoActiveChallenges
-    @State private var completedChallenges: [GroupChallenge] = Self.demoCompletedChallenges
+    @State private var activeChallenges: [GroupChallenge] = []
+    @State private var completedChallenges: [GroupChallenge] = []
     @State private var showCreateSheet = false
     @State private var inviteCodeInput = ""
     @State private var showJoinAlert = false
@@ -44,6 +44,7 @@ struct GroupChallengesTabView: View {
                             headerSection
                         }
                         challengeCommandCard
+                        socialTrustCard
 
                         if !activeChallenges.isEmpty {
                             activeChallengesSection
@@ -69,6 +70,7 @@ struct GroupChallengesTabView: View {
             .sheet(isPresented: $showCreateSheet) {
                 CreateChallengeSheet(onCreate: { challenge in
                     activeChallenges.append(challenge)
+                    persistChallenges()
                     scheduleNotificationForChallenge(challenge)
                 }, hapticsEnabled: settings.hapticsEnabled)
             }
@@ -147,6 +149,9 @@ struct GroupChallengesTabView: View {
             .refreshable { await loadChallenges() }
             .onAppear {
                 tabBarVisible.wrappedValue = true
+            }
+            .onChange(of: generateViewModel.totalGeneratedCount) { _, _ in
+                refreshLocalChallengeScore()
             }
         }
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
@@ -289,6 +294,67 @@ struct GroupChallengesTabView: View {
         .accessibilityIdentifier("groupChallenges.command.card")
     }
 
+    private var socialTrustCard: some View {
+        SectionShell(accent: accent, cardColor: cardColor) {
+            EmptyView()
+        } content: {
+            VStack(alignment: .leading, spacing: 11) {
+                Label("LOCAL-FIRST SOCIAL", systemImage: "lock.shield.fill")
+                    .font(.caption2.weight(.black))
+                    .tracking(1.2)
+                    .foregroundStyle(accent)
+
+                Text(social.socialFeaturesEnabled ? "Your score board is connected." : "Your local relay is ready.")
+                    .font(.system(.title3, design: .serif, weight: .bold))
+                    .foregroundStyle(primaryText)
+
+                Text(
+                    social.socialFeaturesEnabled
+                        ? "CloudKit is available for profiles and shared season scores. Challenge rooms remain local-first, so this screen never pretends a demo room is live."
+                        : "Rooms, history, and challenge progress stay on this device. Connect social services when you want a real shared score board."
+                )
+                .font(.subheadline)
+                .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    trustPill(title: "History", value: "On-device")
+                    trustPill(title: "Sharing", value: "Opt-in")
+                    trustPill(title: "Status", value: social.socialFeaturesEnabled ? "Ready" : "Solo")
+                }
+
+                TabCommandActionButton(
+                    title: social.socialFeaturesEnabled ? "Review social settings" : "See social settings",
+                    systemImage: "gearshape",
+                    accent: accent,
+                    buttonText: buttonText,
+                    prominent: false,
+                    accessibilityIdentifier: "groupChallenges.social.trust"
+                ) {
+                    onOpenTab(.settings)
+                }
+            }
+        }
+        .accessibilityIdentifier("groupChallenges.social.trustCard")
+    }
+
+    private func trustPill(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 8)
+        .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
     private var emptyStateView: some View {
         TabEmptyStatePanel(
             icon: "person.3.fill",
@@ -393,8 +459,18 @@ struct GroupChallengesTabView: View {
     private func loadChallenges() async {
         guard activeChallenges.isEmpty && completedChallenges.isEmpty else { return }
 
-        activeChallenges = Self.demoActiveChallenges
-        completedChallenges = Self.demoCompletedChallenges
+        if let data = UserDefaults.standard.data(forKey: Self.challengeStorageKey),
+           let stored = try? JSONDecoder().decode(StoredChallengeState.self, from: data)
+        {
+            activeChallenges = stored.active.filter(\.isActive)
+            completedChallenges = stored.completed
+        }
+
+        if activeChallenges.isEmpty && completedChallenges.isEmpty {
+            activeChallenges = [Self.starterRelay]
+        }
+
+        refreshLocalChallengeScore()
     }
 
     private var challengeCommandTitle: String {
@@ -441,45 +517,75 @@ struct GroupChallengesTabView: View {
         onOpenTab(.generate)
     }
 
-    private static var demoActiveChallenges: [GroupChallenge] {
-        [
-            GroupChallenge(
-                id: UUID(),
-                name: "Dating Disaster Week",
-                inviteCode: "LOVE12",
-                category: .dating,
-                tone: .toxicBestFriend,
-                creatorID: "user123",
-                participantIDs: ["user1", "user2", "user3"],
-                startedAt: Date().addingTimeInterval(-86400 * 2),
-                endsAt: Date().addingTimeInterval(86400 * 5),
-                leaderboard: [
-                    ChallengeEntry(id: UUID(), userID: "user1", userName: "Alex", adviceCount: 12, totalLikes: 45),
-                    ChallengeEntry(id: UUID(), userID: "user2", userName: "Sam", adviceCount: 8, totalLikes: 32),
-                    ChallengeEntry(id: UUID(), userID: "user3", userName: "Jordan", adviceCount: 5, totalLikes: 18),
-                ]
-            ),
-        ]
+    private static let challengeStorageKey = "badvice.groupChallenges.v1"
+
+    private struct StoredChallengeState: Codable {
+        let active: [GroupChallenge]
+        let completed: [GroupChallenge]
     }
 
-    private static var demoCompletedChallenges: [GroupChallenge] {
-        [
-            GroupChallenge(
-                id: UUID(),
-                name: "Career Chaos Challenge",
-                inviteCode: "BOSS99",
-                category: .career,
-                tone: .corporateConsultant,
-                creatorID: "user123",
-                participantIDs: ["user1", "user2"],
-                startedAt: Date().addingTimeInterval(-86400 * 10),
-                endsAt: Date().addingTimeInterval(-86400),
-                leaderboard: [
-                    ChallengeEntry(id: UUID(), userID: "user1", userName: "Alex", adviceCount: 22, totalLikes: 88),
-                    ChallengeEntry(id: UUID(), userID: "user2", userName: "Sam", adviceCount: 15, totalLikes: 61),
-                ]
-            ),
-        ]
+    private static var starterRelay: GroupChallenge {
+        GroupChallenge(
+            id: UUID(),
+            name: "Starter Relay: Career Catastrophe",
+            inviteCode: "START1",
+            category: .career,
+            tone: .corporateConsultant,
+            creatorID: "local",
+            participantIDs: ["local"],
+            startedAt: Date(),
+            endsAt: Date().addingTimeInterval(86400 * 3),
+            leaderboard: []
+        )
+    }
+
+    private func persistChallenges() {
+        let state = StoredChallengeState(active: activeChallenges, completed: completedChallenges)
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        UserDefaults.standard.set(data, forKey: Self.challengeStorageKey)
+    }
+
+    private func refreshLocalChallengeScore() {
+        guard var challenge = activeChallenges.first else { return }
+
+        let userID = social.currentUser?.id ?? "local"
+        let userName = social.currentUser?.displayName ?? "You"
+        let generated = generateViewModel.totalGeneratedCount
+        let saved = generateViewModel.favoriteCount
+        let score = generated * 10 + saved * 5 + generateViewModel.challengeStreakDays * 2
+        let existingEntry = challenge.leaderboard.first(where: { $0.userID == userID })
+        let entry = ChallengeEntry(
+            id: existingEntry?.id ?? UUID(),
+            userID: userID,
+            userName: userName,
+            adviceCount: generated,
+            totalLikes: saved
+        )
+        var leaderboard = challenge.leaderboard.filter { $0.userID != userID }
+        leaderboard.append(entry)
+        var participantIDs = Set(challenge.participantIDs)
+        participantIDs.insert(userID)
+        challenge = GroupChallenge(
+            id: challenge.id,
+            name: challenge.name,
+            inviteCode: challenge.inviteCode,
+            category: challenge.category,
+            tone: challenge.tone,
+            creatorID: challenge.creatorID,
+            participantIDs: participantIDs.sorted(),
+            startedAt: challenge.startedAt,
+            endsAt: challenge.endsAt,
+            leaderboard: leaderboard
+        )
+        activeChallenges[0] = challenge
+        persistChallenges()
+
+        // CloudKit remains an opt-in score board. The local relay still works
+        // when iCloud is unavailable, while connected users get a real season
+        // score instead of a fake friend leaderboard.
+        if social.socialFeaturesEnabled {
+            Task { await social.submitChaosScore(Int64(score)) }
+        }
     }
 
     private func joinChallenge() {
@@ -492,9 +598,27 @@ struct GroupChallengesTabView: View {
         }
         // Check active challenges first, then show not-found feedback.
         if let match = activeChallenges.first(where: { $0.inviteCode == code }) {
-            selectedChallenge = match
+            var participantIDs = Set(match.participantIDs)
+            participantIDs.insert(social.currentUser?.id ?? "local")
+            let joined = GroupChallenge(
+                id: match.id,
+                name: match.name,
+                inviteCode: match.inviteCode,
+                category: match.category,
+                tone: match.tone,
+                creatorID: match.creatorID,
+                participantIDs: participantIDs.sorted(),
+                startedAt: match.startedAt,
+                endsAt: match.endsAt,
+                leaderboard: match.leaderboard
+            )
+            if let index = activeChallenges.firstIndex(where: { $0.id == joined.id }) {
+                activeChallenges[index] = joined
+            }
+            persistChallenges()
+            selectedChallenge = joined
         } else {
-            showJoinFeedback("No challenge found for code \"\(code)\".")
+            showJoinFeedback("No local relay found for code \"\(code)\". Ask the creator to open this build on the same device or use the CloudKit score board.")
         }
     }
 

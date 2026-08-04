@@ -12,6 +12,7 @@ struct GenerateTabView: View {
     @Bindable var viewModel: GenerateViewModel
     @Bindable var settings: SettingsViewModel
     @Bindable var social: SocialViewModel
+    @Bindable var achievements: AchievementsManager
 
     let onDataChanged: () -> Void
     var onOpenTab: ((AppTab) -> Void)? = nil
@@ -63,6 +64,8 @@ struct GenerateTabView: View {
 
                             header
 
+                            dailyBriefPanel
+
                             if viewModel.current == nil && !viewModel.isGenerating {
                                 workspace
                                 if let notice = viewModel.generationNotice, !notice.isEmpty {
@@ -86,7 +89,7 @@ struct GenerateTabView: View {
                     }
                     .scrollDismissesKeyboard(.interactively)
                     .scrollIndicators(.hidden)
-                    .safeAreaPadding(.bottom, tabBarVisible.wrappedValue ? Theme.tabContentBottomInset : 26)
+                    .safeAreaPadding(.bottom, generateContentBottomInset)
                     .refreshable {
                         await viewModel.generate()
                         onDataChanged()
@@ -112,8 +115,20 @@ struct GenerateTabView: View {
                             }
                         }
                     }
+
                 }
-            }
+
+                    if shouldShowResultDock {
+                        VStack {
+                            Spacer(minLength: 0)
+                            resultActions
+                                .padding(.horizontal, 14)
+                                .padding(.bottom, tabBarVisible.wrappedValue ? 116 : 14)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(reduceMotion ? .identity : .move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
         }
@@ -271,6 +286,96 @@ struct GenerateTabView: View {
         .shadow(color: Theme.cardShadow(for: settings.theme).color.opacity(0.24), radius: 18, y: 9)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("generate.commandCard")
+    }
+
+    private var dailyBriefPanel: some View {
+        let contract = achievements.dailyContract
+        let target = max(contract.targetCount, 1)
+        let progress = min(achievements.dailyContractProgress, target)
+        let isComplete = progress >= target
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: isComplete ? "checkmark.seal.fill" : "sun.max.fill")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(buttonText)
+                    .frame(width: 38, height: 38)
+                    .background(accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("DAILY BRIEF")
+                        .font(.caption2.weight(.black))
+                        .tracking(1.3)
+                        .foregroundStyle(accent)
+                    Text(isComplete ? "Filed for today" : contract.title)
+                        .font(.system(.headline, design: .serif, weight: .bold))
+                        .foregroundStyle(primaryText)
+                    Text(contract.detail)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            ProgressView(value: Double(progress), total: Double(target))
+                .tint(accent)
+                .accessibilityLabel("Daily brief progress")
+                .accessibilityValue("\(progress) of \(target)")
+
+            HStack(spacing: 8) {
+                Label("\(progress)/\(target)", systemImage: "checkmark.circle")
+                Label("+\(contract.rewardXP) XP", systemImage: "seal.fill")
+                Spacer(minLength: 0)
+                if !isComplete {
+                    Button {
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        viewModel.runDailyMissionGeneration()
+                        onDataChanged()
+                    } label: {
+                        Label("Run brief", systemImage: "bolt.fill")
+                            .font(.caption.weight(.bold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(accent)
+                    .foregroundStyle(buttonText)
+                    .accessibilityIdentifier("generate.dailyBrief.run")
+                } else if let onOpenTab {
+                    Button {
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        onOpenTab(.chaosHub)
+                    } label: {
+                        Label("Review", systemImage: "arrow.up.right")
+                            .font(.caption.weight(.bold))
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(accent)
+                    .accessibilityIdentifier("generate.dailyBrief.review")
+                }
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(secondaryText)
+
+            if let notice = achievements.lastBureauNotice, !notice.isEmpty {
+                Label(notice, systemImage: "sparkles")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("generate.dailyBrief.notice")
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(cardColor.opacity(0.9))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(accent.opacity(0.24), lineWidth: 1)
+                }
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("generate.dailyBrief")
     }
 
     private var workspaceHeader: some View {
@@ -588,7 +693,6 @@ struct GenerateTabView: View {
             .animation(reduceMotion ? nil : .easeInOut(duration: Theme.animFast), value: viewModel.isGenerating)
 
             if !viewModel.isGenerating {
-                resultActions
                 revisionControls
                 realityCheck
                 votingRow
@@ -599,7 +703,7 @@ struct GenerateTabView: View {
     private var resultActions: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(viewModel.isCurrentFavorite ? "Keep the keeper" : "What happens next?")
+                Text("Keep or send it")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(primaryText)
                 Spacer(minLength: 0)
@@ -625,12 +729,24 @@ struct GenerateTabView: View {
         .padding(14)
         .background {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(cardColor.opacity(0.72))
+                .fill(canvas)
         }
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(secondaryText.opacity(0.12), lineWidth: 1)
         }
+        .shadow(color: Theme.espressoInk.opacity(0.42), radius: 16, y: 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("generate.stickyActionRail")
+    }
+
+    private var shouldShowResultDock: Bool {
+        isActive && viewModel.current != nil && !viewModel.isGenerating
+    }
+
+    private var generateContentBottomInset: CGFloat {
+        guard tabBarVisible.wrappedValue else { return 26 }
+        return Theme.tabContentBottomInset + (shouldShowResultDock ? 132 : 0)
     }
 
     private var revisionControls: some View {

@@ -380,6 +380,12 @@ final class AppSettingsEntity {
     var dailyNotificationsEnabledRaw: Bool?
     var streakNotificationsEnabledRaw: Bool?
     var dailyNotificationHourRaw: Int?
+    var bureauXPValue: Int?
+    var bureauUnlockedCosmeticsRaw: String?
+    var bureauCompletedCollectionsRaw: String?
+    var bureauLastDailyContractKeyRaw: String?
+    var bureauLastBossCaseKeyRaw: String?
+    var bureauActiveCosmeticRaw: String?
     init(
         id: UUID = UUID(),
         ownerAccountID: String? = nil,
@@ -421,11 +427,50 @@ final class AppSettingsEntity {
         self.streakFreezeUsedRaw = false
         self.streakFreezeProtectedDayRaw = nil
         self.tabOrderRaw = tabOrder.map(\.rawValue).joined(separator: ",")
+        self.bureauXPValue = nil
+        self.bureauUnlockedCosmeticsRaw = nil
+        self.bureauCompletedCollectionsRaw = nil
+        self.bureauLastDailyContractKeyRaw = nil
+        self.bureauLastBossCaseKeyRaw = nil
+        self.bureauActiveCosmeticRaw = nil
     }
 
     var theme: ThemeMode {
         get { ThemeMode(rawValue: themeRaw) ?? .badvice }
         set { themeRaw = newValue.rawValue }
+    }
+
+    var bureauXP: Int {
+        get { bureauXPValue ?? 0 }
+        set { bureauXPValue = max(newValue, 0) }
+    }
+
+    var bureauUnlockedCosmetics: Set<String> {
+        get {
+            guard let bureauUnlockedCosmeticsRaw, !bureauUnlockedCosmeticsRaw.isEmpty else { return [] }
+            return Set(bureauUnlockedCosmeticsRaw.split(separator: "|").map(String.init))
+        }
+        set {
+            bureauUnlockedCosmeticsRaw = newValue.sorted().joined(separator: "|")
+        }
+    }
+
+    var bureauCompletedCollections: Set<String> {
+        get {
+            guard let bureauCompletedCollectionsRaw, !bureauCompletedCollectionsRaw.isEmpty else { return [] }
+            return Set(bureauCompletedCollectionsRaw.split(separator: "|").map(String.init))
+        }
+        set {
+            bureauCompletedCollectionsRaw = newValue.sorted().joined(separator: "|")
+        }
+    }
+
+    var bureauActiveCosmetic: BureauCosmetic? {
+        get {
+            guard let bureauActiveCosmeticRaw else { return nil }
+            return BureauCosmetic(rawValue: bureauActiveCosmeticRaw)
+        }
+        set { bureauActiveCosmeticRaw = newValue?.rawValue }
     }
 
     var soundEffectsEnabled: Bool {
@@ -514,7 +559,9 @@ final class AppSettingsEntity {
         for tab in AppTab.defaultOrder where seen.insert(tab).inserted {
             ordered.append(tab)
         }
-        let middle = ordered.filter { $0 != .generate && $0 != .settings }
-        return [.generate] + middle + [.settings]
+        // The Wire is the entry point and is pinned first; Settings stays last.
+        // Everything between them, including the Desk, is user-orderable.
+        let middle = ordered.filter { $0 != .wire && $0 != .settings }
+        return [.wire] + middle + [.settings]
     }
 }

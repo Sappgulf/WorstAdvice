@@ -64,6 +64,7 @@ struct WorstAdviceApp: App {
         self.container = bootstrapResult.container
         _startupErrorMessage = State(initialValue: bootstrapResult.errorMessage)
         Self.runLegacySettingsCleanupIfNeeded()
+        NotificationManager.configureResponseHandling()
         AppPerformanceInstrumentation.beginColdStartIfNeeded()
         if #available(iOS 16.0, *),
             !isUITesting,

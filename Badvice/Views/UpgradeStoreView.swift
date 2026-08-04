@@ -81,6 +81,41 @@ struct UpgradeStoreView: View {
 
                         benefitMatrixCard
 
+                        NavigationLink {
+                            OfflinePacksView(settings: settings)
+                        } label: {
+                            SectionShell(accent: accent, cardColor: cardColor) {
+                                Text("Offline Vault")
+                                    .font(.caption2.weight(.heavy))
+                                    .tracking(1.1)
+                                    .foregroundStyle(accent)
+                            } content: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "arrow.down.circle.fill")
+                                        .font(.title3.weight(.bold))
+                                        .foregroundStyle(accent)
+                                        .frame(width: 40, height: 40)
+                                        .background(accent.opacity(0.10), in: Circle())
+
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text("Manage Offline Packs")
+                                            .font(.headline)
+                                            .foregroundStyle(primaryText)
+                                        Text("Download or remove phrase banks without changing your plan.")
+                                            .font(.caption)
+                                            .foregroundStyle(secondaryText)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .foregroundStyle(secondaryText)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("upgrade.offlinePacks")
+
                         if !featuredProducts.isEmpty {
                             storeSection(
                                 title: "Featured Seals",

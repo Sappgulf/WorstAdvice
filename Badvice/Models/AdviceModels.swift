@@ -718,6 +718,7 @@ struct LearningWeightProfile: Sendable {
 }
 
 enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
+    case wire
     case generate
     case chaosHub
     case explore
@@ -731,6 +732,7 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var title: String {
         switch self {
+        case .wire: return "Wire"
         case .generate: return "Desk"
         case .chaosHub: return "Dares"
         case .explore: return "Starters"
@@ -744,6 +746,7 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var compactTitle: String {
         switch self {
+        case .wire: return "Wire"
         case .generate: return "Desk"
         case .chaosHub: return "Dares"
         case .explore: return "Ideas"
@@ -757,6 +760,7 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var systemImage: String {
         switch self {
+        case .wire: return "antenna.radiowaves.left.and.right"
         case .generate: return "deskclock.fill"
         case .chaosHub: return "flag.checkered.2.crossed"
         case .explore: return "lightbulb.max.fill"
@@ -769,15 +773,16 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
     }
 
     static let defaultOrder: [AppTab] = [
-        .generate, .favorites, .chaosHub, .quotes, .history, .explore, .groupChallenges, .settings,
+        .wire, .generate, .favorites, .chaosHub, .quotes, .history, .explore, .groupChallenges,
+        .settings,
     ]
 
     static let primaryNavigationTabs: [AppTab] = [
-        .generate, .favorites, .chaosHub, .quotes,
+        .wire, .generate, .favorites, .chaosHub,
     ]
 
     static let brandMenuTabs: [AppTab] = [
-        .history, .explore, .groupChallenges, .settings,
+        .quotes, .history, .explore, .groupChallenges, .settings,
     ]
 }
 
@@ -793,6 +798,7 @@ extension AppTab: AppEnum {
     static let typeDisplayName = LocalizedStringResource("Badvice tab")
 
     static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
+        .wire: "Wire",
         .generate: "Desk",
         .chaosHub: "Dares",
         .explore: "Starters",

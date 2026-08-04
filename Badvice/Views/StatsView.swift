@@ -179,6 +179,7 @@ struct CasebookTabView: View {
     @Bindable var favorites: FavoritesViewModel
     @Bindable var history: HistoryViewModel
     @Bindable var settings: SettingsViewModel
+    @Bindable var achievements: AchievementsManager
 
     let initialShelf: Shelf
     var onUseRecord: (AdviceRecord) -> Void
@@ -196,6 +197,7 @@ struct CasebookTabView: View {
         favorites: FavoritesViewModel,
         history: HistoryViewModel,
         settings: SettingsViewModel,
+        achievements: AchievementsManager,
         initialShelf: Shelf,
         onUseRecord: @escaping (AdviceRecord) -> Void,
         onDataChanged: @escaping () -> Void,
@@ -204,6 +206,7 @@ struct CasebookTabView: View {
         self.favorites = favorites
         self.history = history
         self.settings = settings
+        self.achievements = achievements
         self.initialShelf = initialShelf
         self.onUseRecord = onUseRecord
         self.onDataChanged = onDataChanged
@@ -306,6 +309,10 @@ struct CasebookTabView: View {
                             shelf == .saved ? "favorites.command.card" : "history.command.card"
                         )
 
+                        if shelf == .saved {
+                            evidenceCollectionsPanel
+                        }
+
                         if shelf == .saved, !favorites.favorites.isEmpty {
                             monthlyRecap
                             folderFilters
@@ -327,6 +334,7 @@ struct CasebookTabView: View {
                 .scrollIndicators(.hidden)
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(shelf == .saved ? "Favorites" : "History")
             .toolbarBackground(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
@@ -349,6 +357,80 @@ struct CasebookTabView: View {
                 theme: settings.theme
             )
         }
+    }
+
+    private var evidenceCollectionsPanel: some View {
+        BureauPanel(theme: settings.theme) {
+            VStack(alignment: .leading, spacing: 13) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("EVIDENCE COLLECTIONS")
+                            .font(.caption2.weight(.black))
+                            .tracking(1.3)
+                            .foregroundStyle(accent)
+                        Text("Build the file")
+                            .font(.system(.title3, design: .serif, weight: .bold))
+                            .foregroundStyle(primaryText)
+                    }
+                    Spacer(minLength: 12)
+                    Text("\(achievements.collectionStates.filter(\.isComplete).count)/\(achievements.collectionStates.count) closed")
+                        .font(.caption.weight(.black).monospacedDigit())
+                        .foregroundStyle(secondaryText)
+                }
+
+                Text("Every category leaves evidence. Complete a file to earn XP and a collectible Bureau cosmetic.")
+                    .font(.subheadline)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                LazyVGrid(
+                    columns: [GridItem(.flexible(), spacing: 9), GridItem(.flexible(), spacing: 9)],
+                    spacing: 9
+                ) {
+                    ForEach(achievements.collectionStates) { state in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 7) {
+                                Image(systemName: state.collection.category.icon)
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(state.isComplete ? accent : secondaryText)
+                                Text(state.collection.title)
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(primaryText)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                if state.isUnlocked {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .font(.caption2.weight(.bold))
+                                        .foregroundStyle(.green)
+                                }
+                            }
+
+                            Text(state.collection.detail)
+                                .font(.caption2)
+                                .foregroundStyle(secondaryText)
+                                .lineLimit(2)
+
+                            ProgressView(value: state.progressFraction)
+                                .tint(state.isComplete ? .green : accent)
+
+                            HStack {
+                                Text("\(min(state.progress, state.collection.targetCount))/\(state.collection.targetCount)")
+                                    .font(.caption2.weight(.black).monospacedDigit())
+                                    .foregroundStyle(secondaryText)
+                                Spacer()
+                                Text(state.isComplete ? "FILED" : "+\(state.collection.rewardXP) XP")
+                                    .font(.caption2.weight(.black))
+                                    .foregroundStyle(state.isComplete ? .green : accent)
+                            }
+                        }
+                        .padding(10)
+                        .background(canvas.opacity(0.72), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                        .accessibilityIdentifier("casebook.collection.\(state.collection.id)")
+                    }
+                }
+            }
+        }
+        .accessibilityIdentifier("casebook.collections")
     }
 
     private var monthlyRecap: some View {
@@ -437,7 +519,7 @@ struct CasebookTabView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(accent)
-                .accessibilityIdentifier("favorites.generate")
+                .accessibilityIdentifier(shelf == .saved ? "favorites.generate" : "history.generate")
             }
             .frame(maxWidth: .infinity)
         }
@@ -701,12 +783,196 @@ private struct CasebookOrganizationSheet: View {
     }
 }
 
+private struct BureauProgressionPanel: View {
+    @Bindable var settings: SettingsViewModel
+    @Bindable var achievements: AchievementsManager
+
+    let onOpenContract: (BureauContract) -> Void
+    let onOpenBossCase: (BureauBossCase) -> Void
+
+    private var accent: Color { Theme.accent(for: settings.theme) }
+    private var canvas: Color { Theme.canvasColor(for: settings.theme) }
+    private var primaryText: Color { Theme.primaryText(for: settings.theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+
+    var body: some View {
+        BureauPanel(theme: settings.theme, emphasized: true) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 11) {
+                    Image(systemName: achievements.bureauRank.systemImage)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(accent)
+                        .frame(width: 42, height: 42)
+                        .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("BUREAU RANK")
+                            .font(.caption2.weight(.black))
+                            .tracking(1.3)
+                            .foregroundStyle(accent)
+                        Text(achievements.bureauRank.title)
+                            .font(.system(.title3, design: .serif, weight: .bold))
+                            .foregroundStyle(primaryText)
+                    }
+
+                    Spacer(minLength: 10)
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(achievements.bureauXP) XP")
+                            .font(.headline.weight(.black).monospacedDigit())
+                            .foregroundStyle(primaryText)
+                        Text(achievements.bureauRank.nextThreshold.map { "Next \($0)" } ?? "Max rank")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(secondaryText)
+                    }
+                }
+
+                ProgressView(value: achievements.bureauRank.progress(for: achievements.bureauXP))
+                    .tint(accent)
+                    .accessibilityLabel("Bureau rank progress")
+                    .accessibilityValue("\(achievements.bureauXP) experience points")
+
+                if let notice = achievements.lastBureauNotice {
+                    Label(notice, systemImage: "sparkles")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(accent)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("chaos.bureau.notice")
+                }
+
+                objectiveRow(
+                    eyebrow: "DAILY CONTRACT",
+                    title: achievements.dailyContract.title,
+                    detail: achievements.dailyContract.detail,
+                    progress: achievements.dailyContractProgress,
+                    target: achievements.dailyContract.targetCount,
+                    reward: "+\(achievements.dailyContract.rewardXP) XP",
+                    actionTitle: "Run contract",
+                    actionIdentifier: "chaos.bureau.contract"
+                ) {
+                    onOpenContract(achievements.dailyContract)
+                }
+
+                objectiveRow(
+                    eyebrow: "BOSS CASE",
+                    title: achievements.bossCase.title,
+                    detail: achievements.bossCase.detail,
+                    progress: achievements.bossCaseProgress,
+                    target: achievements.bossCase.targetCount,
+                    reward: "+\(achievements.bossCase.rewardXP) XP",
+                    actionTitle: "Open case",
+                    actionIdentifier: "chaos.bureau.boss"
+                ) {
+                    onOpenBossCase(achievements.bossCase)
+                }
+
+                VStack(alignment: .leading, spacing: 9) {
+                    HStack {
+                        Text("COSMETIC LOCKER")
+                            .font(.caption2.weight(.black))
+                            .tracking(1.3)
+                            .foregroundStyle(accent)
+                        Spacer()
+                        Text("\(achievements.unlockedBureauCosmetics.count) unlocked")
+                            .font(.caption2.weight(.black).monospacedDigit())
+                            .foregroundStyle(secondaryText)
+                    }
+
+                    if achievements.unlockedBureauCosmetics.isEmpty {
+                        Text("Complete a contract to stamp your first Bureau cosmetic.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(achievements.unlockedBureauCosmetics) { cosmetic in
+                                    Button {
+                                        achievements.equipBureauCosmetic(cosmetic)
+                                    } label: {
+                                        Label(cosmetic.title, systemImage: cosmetic.systemImage)
+                                            .font(.caption.weight(.bold))
+                                            .foregroundStyle(
+                                                achievements.equippedBureauCosmetic == cosmetic ? accent : primaryText
+                                            )
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 8)
+                                            .background(
+                                                (achievements.equippedBureauCosmetic == cosmetic ? accent : canvas)
+                                                    .opacity(achievements.equippedBureauCosmetic == cosmetic ? 0.14 : 0.72),
+                                                in: Capsule()
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityIdentifier("chaos.bureau.cosmetic.\(cosmetic.id)")
+                                }
+                            }
+                        }
+                    }
+                }
+                .accessibilityIdentifier("chaos.bureau.cosmetics")
+            }
+        }
+        .accessibilityIdentifier("chaos.bureau.progression")
+    }
+
+    private func objectiveRow(
+        eyebrow: String,
+        title: String,
+        detail: String,
+        progress: Int,
+        target: Int,
+        reward: String,
+        actionTitle: String,
+        actionIdentifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                Text(eyebrow)
+                    .font(.caption2.weight(.black))
+                    .tracking(1.2)
+                    .foregroundStyle(accent)
+                Spacer()
+                Text("\(min(progress, target))/\(target)")
+                    .font(.caption.weight(.black).monospacedDigit())
+                    .foregroundStyle(secondaryText)
+            }
+
+            Text(title)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(primaryText)
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ProgressView(value: min(max(Double(progress) / Double(max(target, 1)), 0), 1))
+                .tint(accent)
+
+            HStack {
+                Text(reward)
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(accent)
+                Spacer()
+                Button(actionTitle, action: action)
+                    .font(.caption.weight(.bold))
+                    .buttonStyle(.bordered)
+                    .tint(accent)
+                    .accessibilityIdentifier(actionIdentifier)
+            }
+        }
+        .padding(11)
+        .background(canvas.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
 // MARK: - Dares
 
 struct DaresTabView: View {
     @Bindable var generate: GenerateViewModel
     @Bindable var settings: SettingsViewModel
     @Bindable var social: SocialViewModel
+    @Bindable var achievements: AchievementsManager
     var onOpenTab: (AppTab) -> Void
     var onDataChanged: () -> Void
 
@@ -736,6 +1002,38 @@ struct DaresTabView: View {
                         )
                         .accessibilityIdentifier("chaos.command.card")
 
+                        BureauProgressionPanel(
+                            settings: settings,
+                            achievements: achievements,
+                            onOpenContract: { contract in
+                                generate.prepareStarter(
+                                    category: contract.category,
+                                    tone: contract.tone,
+                                    source: "Daily contract"
+                                )
+                                onOpenTab(.generate)
+                            },
+                            onOpenBossCase: { bossCase in
+                                generate.prepareStarter(
+                                    category: bossCase.category,
+                                    tone: bossCase.tone,
+                                    source: "Boss case"
+                                )
+                                onOpenTab(.generate)
+                            }
+                        )
+
+                        Button {
+                            onOpenTab(.generate)
+                        } label: {
+                            Label("Open Advice", systemImage: "sparkles")
+                                .font(.subheadline.weight(.bold))
+                                .frame(maxWidth: .infinity, minHeight: 42)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(accent)
+                        .accessibilityIdentifier("chaos.command.primary")
+
                         BureauPanel(theme: settings.theme, emphasized: true) {
                             missionCard(
                                 eyebrow: "TODAY",
@@ -743,7 +1041,11 @@ struct DaresTabView: View {
                                 detail: daily.subtitle,
                                 progress: daily.progressFraction,
                                 count: "\(daily.currentCount)/\(daily.targetCount)",
-                                completed: daily.isComplete
+                                completed: daily.isComplete,
+                                rewardDetail: daily.isComplete
+                                    ? "Daily signal banked"
+                                    : "Finish the run to bank today's signal",
+                                actionIdentifier: "chaos.openAdvice"
                             ) {
                                 generate.runDailyMissionGeneration()
                                 onDataChanged()
@@ -752,23 +1054,40 @@ struct DaresTabView: View {
                         }
 
                         BureauPanel(theme: settings.theme) {
-                            missionCard(
-                                eyebrow: "THIS WEEK",
-                                title: weekly.title.replacingOccurrences(of: "Weekly Mission: ", with: ""),
-                                detail: weekly.subtitle,
-                                progress: weekly.progressFraction,
-                                count: "\(weekly.currentCount)/\(weekly.targetCount)",
-                                completed: weekly.isComplete
-                            ) {
-                                generate.updateSelections(
-                                    category: weekly.category,
-                                    tone: weekly.tone,
-                                    autoGenerate: false
-                                )
-                                onOpenTab(.generate)
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("PROGRESSION PATH")
+                                    .font(.caption2.weight(.black))
+                                    .tracking(1.3)
+                                    .foregroundStyle(accent)
+                                    .accessibilityIdentifier("chaos.progressionPath.title")
+
+                                missionCard(
+                                    eyebrow: "THIS WEEK",
+                                    title: weekly.title.replacingOccurrences(of: "Weekly Mission: ", with: ""),
+                                    detail: weekly.subtitle,
+                                    progress: weekly.progressFraction,
+                                    count: "\(weekly.currentCount)/\(weekly.targetCount)",
+                                    completed: weekly.isComplete,
+                                    rewardDetail: weekly.rewardClaimed
+                                        ? "Cosmic theme unlocked"
+                                        : "Reward: Cosmic theme at week completion"
+                                ) {
+                                    generate.prepareStarter(
+                                        category: weekly.category,
+                                        tone: weekly.tone,
+                                        source: "Weekly mission"
+                                    )
+                                    onOpenTab(.generate)
+                                }
                             }
                         }
                         .accessibilityIdentifier("chaos.progressionPath")
+
+                        seasonStatusPanel
+
+                        identityPanel
+
+                        weeklyRecapPanel
 
                         BureauPanel(theme: settings.theme) {
                             VStack(alignment: .leading, spacing: 14) {
@@ -837,6 +1156,7 @@ struct DaresTabView: View {
                 .scrollIndicators(.hidden)
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Missions")
             .toolbarBackground(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
@@ -850,6 +1170,188 @@ struct DaresTabView: View {
         }
     }
 
+    private var seasonStatusPanel: some View {
+        BureauPanel(theme: settings.theme) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("SEASON STATUS")
+                    .font(.caption2.weight(.black))
+                    .tracking(1.3)
+                    .foregroundStyle(accent)
+
+                Text(weekly.rewardClaimed ? "This week's unlock is yours." : "Keep the loop moving.")
+                    .font(.system(.title3, design: .serif, weight: .bold))
+                    .foregroundStyle(primaryText)
+
+                Text(
+                    weekly.rewardClaimed
+                        ? "Cosmic theme is unlocked. The next useful move is building a streak and sharing one take."
+                        : "Daily runs, saved keepers, and a protected streak all feed the same progression path."
+                )
+                .font(.subheadline)
+                .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    progressionMetric(
+                        title: "Next unlock",
+                        value: weekly.rewardClaimed
+                            ? "Active"
+                            : "\(max(weekly.targetCount - weekly.currentCount, 0)) left"
+                    )
+                    progressionMetric(
+                        title: "Streak",
+                        value: "\(generate.challengeStreakDays)d"
+                    )
+                    progressionMetric(
+                        title: "Freeze",
+                        value: settings.streakFreezeAvailableThisWeek ? "Ready" : "Used"
+                    )
+                }
+            }
+        }
+        .accessibilityIdentifier("chaos.seasonStatus")
+    }
+
+    private var identityPanel: some View {
+        let identity = generate.bureauIdentitySnapshot
+
+        return BureauPanel(theme: settings.theme, emphasized: true) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("YOUR BUREAU IDENTITY")
+                    .font(.caption2.weight(.black))
+                    .tracking(1.3)
+                    .foregroundStyle(accent)
+
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: identity.archetype.systemImage)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(Theme.buttonText(for: settings.theme))
+                        .frame(width: 48, height: 48)
+                        .background(accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(identity.archetype.title)
+                            .font(.system(.title3, design: .serif, weight: .bold))
+                            .foregroundStyle(primaryText)
+                        Text(identity.archetype.detail)
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    identityMetric("Rank", identity.currentRank.shortTitle)
+                    identityMetric("XP", "\(identity.bureauXP)")
+                    identityMetric("Streak", "\(identity.streakDays)d")
+                    identityMetric("Filed", "\(identity.generatedCount)")
+                }
+
+                HStack(spacing: 8) {
+                    Label(identity.favoriteCategory?.title ?? "No lane yet", systemImage: identity.favoriteCategory?.icon ?? "square.dashed")
+                    Label(identity.favoriteTone?.voice.name ?? "No voice yet", systemImage: identity.favoriteTone?.voice.systemImage ?? "waveform")
+                    if let equippedCosmetic = identity.equippedCosmetic {
+                        Label(equippedCosmetic.title, systemImage: equippedCosmetic.systemImage)
+                    }
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+            }
+        }
+        .accessibilityIdentifier("chaos.identity")
+    }
+
+    private var weeklyRecapPanel: some View {
+        let recap = generate.weeklyRecapSnapshot
+
+        return BureauPanel(theme: settings.theme) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("WEEKLY RECAP")
+                        .font(.caption2.weight(.black))
+                        .tracking(1.3)
+                        .foregroundStyle(accent)
+                    Spacer()
+                    Text(recap.weekStart, format: .dateTime.month(.abbreviated).day())
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(secondaryText)
+                }
+
+                Text(recap.headline)
+                    .font(.system(.title3, design: .serif, weight: .bold))
+                    .foregroundStyle(primaryText)
+
+                Text(
+                    recap.isEmpty
+                        ? "Your first filing will turn this into a report worth reading."
+                        : "The Bureau keeps this recap on-device. It resets with the week and never needs a live feed."
+                )
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    identityMetric("Generated", "\(recap.generatedCount)")
+                    identityMetric("Saved", "\(recap.savedCount)")
+                    identityMetric("Shared", "\(recap.sharedCount)")
+                    identityMetric("Streak", "\(recap.streakDays)d")
+                }
+
+                if let highlightLine = recap.highlightLine, !highlightLine.isEmpty {
+                    Label(highlightLine, systemImage: "quote.opening")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(accent)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack(spacing: 8) {
+                    Label(recap.topCategory?.title ?? "Mixed lanes", systemImage: recap.topCategory?.icon ?? "square.grid.2x2")
+                    Label(recap.topTone?.voice.name ?? "Mixed voices", systemImage: recap.topTone?.voice.systemImage ?? "waveform")
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(secondaryText)
+            }
+        }
+        .accessibilityIdentifier("chaos.weeklyRecap")
+    }
+
+    private func identityMetric(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.caption.weight(.black).monospacedDigit())
+                .foregroundStyle(primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+    }
+
+    private func progressionMetric(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.caption.weight(.black).monospacedDigit())
+                .foregroundStyle(primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 8)
+        .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
     private func missionCard(
         eyebrow: String,
         title: String,
@@ -857,6 +1359,8 @@ struct DaresTabView: View {
         progress: Double,
         count: String,
         completed: Bool,
+        rewardDetail: String? = nil,
+        actionIdentifier: String = "chaos.mission.action",
         action: @escaping () -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: 13) {
@@ -882,6 +1386,16 @@ struct DaresTabView: View {
             ProgressView(value: progress)
                 .tint(accent)
 
+            if let rewardDetail {
+                Label(
+                    rewardDetail,
+                    systemImage: completed ? "checkmark.seal.fill" : "lock.open"
+                )
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(completed ? .green : secondaryText)
+                .accessibilityIdentifier("chaos.mission.reward")
+            }
+
             Button(action: action) {
                 Label(
                     completed ? "Commission another" : "Accept the dare",
@@ -892,6 +1406,7 @@ struct DaresTabView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(accent)
+            .accessibilityIdentifier(actionIdentifier)
         }
     }
 
@@ -945,6 +1460,7 @@ struct DispatchesTabView: View {
     @State private var desk: Desk
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
+    @State private var showingSpotlight = false
     @State private var activeToast: ToastMessage?
 
     init(
@@ -1019,6 +1535,7 @@ struct DispatchesTabView: View {
                 .scrollIndicators(.hidden)
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Quotes")
             .toolbarBackground(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
@@ -1062,6 +1579,23 @@ struct DispatchesTabView: View {
                     ) {
                         quotes.toggleVote(.like, for: quote)
                     }
+
+                    Button {
+                        showingSpotlight.toggle()
+                        HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    } label: {
+                        Label(
+                            showingSpotlight ? "Hide Spotlight" : "Spotlight",
+                            systemImage: showingSpotlight ? "chevron.up" : "sparkle.magnifyingglass"
+                        )
+                            .font(.caption.weight(.bold))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .background(accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 13))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(accent)
+                    .accessibilityIdentifier("quotes.spotlight.toggle")
+
                     quoteAction("Copy", systemImage: "doc.on.doc") {
                         UIPasteboard.general.string = quote.text
                         quotes.trackCopy(quote, isDaily: true)
@@ -1073,8 +1607,42 @@ struct DispatchesTabView: View {
                         showingShareSheet = true
                     }
                 }
+
+                Button {
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                    onUseStarter(
+                        quote.category,
+                        .random,
+                        "I want advice inspired by this quote: \(quote.text)"
+                    )
+                } label: {
+                    Label("Use this quote as a starter", systemImage: "arrow.up.right.square")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .accessibilityIdentifier("quotes.useAsStarter")
+
+                if showingSpotlight {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("QUOTE SPOTLIGHT", systemImage: "sparkle.magnifyingglass")
+                            .font(.caption2.weight(.black))
+                            .tracking(1.2)
+                            .foregroundStyle(accent)
+                        Text(quotes.quoteSpotlightInsight(for: quote))
+                            .font(.footnote)
+                            .foregroundStyle(primaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+                    .accessibilityIdentifier("quotes.spotlight.card")
+                }
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("quotes.dailyHero")
     }
 
@@ -1249,6 +1817,64 @@ struct BureauSettingsTabView: View {
                     systemImage: "slider.horizontal.3",
                     theme: viewModel.theme
                 )
+
+                NavigationLink {
+                    UpgradeStoreView(settings: viewModel)
+                } label: {
+                    BureauPanel(theme: viewModel.theme, emphasized: true) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "star.circle.fill")
+                                .font(.title2.weight(.bold))
+                                .foregroundStyle(accent)
+                                .frame(width: 42, height: 42)
+                                .background(accent.opacity(0.12), in: Circle())
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Upgrade & Store")
+                                    .font(.headline)
+                                    .foregroundStyle(primaryText)
+                                Text("Unlock themed packs and premium bureau extras.")
+                                    .font(.caption)
+                                    .foregroundStyle(secondaryText)
+                            }
+
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(secondaryText)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.upgradeStore")
+
+                NavigationLink {
+                    OfflinePacksView(settings: viewModel)
+                } label: {
+                    BureauPanel(theme: viewModel.theme) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "arrow.down.circle.fill")
+                                .font(.title3.weight(.bold))
+                                .foregroundStyle(accent)
+                                .frame(width: 42, height: 42)
+                                .background(accent.opacity(0.10), in: Circle())
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Offline Packs")
+                                    .font(.headline)
+                                    .foregroundStyle(primaryText)
+                                Text("Keep the local engine ready for flights and dead zones.")
+                                    .font(.caption)
+                                    .foregroundStyle(secondaryText)
+                            }
+
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(secondaryText)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.offlinePacks")
 
                 BureauPanel(theme: viewModel.theme, emphasized: true) {
                     VStack(alignment: .leading, spacing: 14) {

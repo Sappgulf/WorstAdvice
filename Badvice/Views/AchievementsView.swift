@@ -8,10 +8,24 @@ import CoreMotion
 @Observable
 final class AchievementsManager {
     private let repository: AdviceRepository
+    private let settingsViewModel: SettingsViewModel?
 
     var achievements: [Achievement] = []
     var newlyUnlocked: [Achievement] = []
     var showUnlockCelebration = false
+
+    // Bureau progression is intentionally kept beside the existing achievement
+    // manager so every meaningful action has one source of truth.
+    var bureauXP = 0
+    var bureauRank: BureauRank = .intern
+    var dailyContract = BureauContract.current()
+    var dailyContractProgress = 0
+    var bossCase = BureauBossCase.current()
+    var bossCaseProgress = 0
+    var collectionStates: [BureauCollectionState] = []
+    var unlockedBureauCosmetics: [BureauCosmetic] = []
+    var equippedBureauCosmetic: BureauCosmetic?
+    var lastBureauNotice: String?
 
     // Tracking for achievements
     private var usedTones: Set<ToneMode> = []
@@ -19,14 +33,18 @@ final class AchievementsManager {
     private var hasUsedShake = false
     private var hasSubmittedSuggestion = false
 
-    init(repository: AdviceRepository) {
+    init(repository: AdviceRepository, settingsViewModel: SettingsViewModel? = nil) {
         self.repository = repository
+        self.settingsViewModel = settingsViewModel
         loadAchievements()
+        loadBureauProgress()
     }
 
     init(context: ModelContext) {
         self.repository = AdviceRepository(context: context)
+        self.settingsViewModel = nil
         loadAchievements()
+        loadBureauProgress()
     }
 
     private func loadAchievements() {
@@ -48,6 +66,180 @@ final class AchievementsManager {
                 target: record.target
             )
         }
+    }
+
+    private func loadBureauProgress() {
+        let settings = repository.ensureSettings()
+        bureauXP = settings.bureauXP
+        bureauRank = BureauRank.forXP(bureauXP)
+        dailyContract = BureauContract.current()
+        bossCase = BureauBossCase.current()
+        syncBureauCosmeticState()
+        refreshBureauCollectionStates()
+        refreshBureauProgress()
+    }
+
+    private func syncBureauCosmeticState() {
+        let settings = repository.ensureSettings()
+        unlockedBureauCosmetics = BureauCosmetic.allCases.filter {
+            settings.bureauUnlockedCosmetics.contains($0.rawValue)
+        }
+        equippedBureauCosmetic = settings.bureauActiveCosmetic
+    }
+
+    private func refreshBureauCollectionStates() {
+        let settings = repository.ensureSettings()
+        let completed = settings.bureauCompletedCollections
+        collectionStates = BureauCollection.all.map { collection in
+            BureauCollectionState(
+                collection: collection,
+                progress: repository.historyCount(category: collection.category),
+                isUnlocked: completed.contains(collection.id)
+            )
+        }
+    }
+
+    /// Recomputes all time-boxed progression from account-scoped history. The
+    /// reward keys in AppSettingsEntity make each contract collectible once,
+    /// even when this method is called on every generation and relaunch.
+    func refreshBureauProgress(referenceDate: Date = Date()) {
+        let calendar = Calendar.current
+        let settings = repository.ensureSettings()
+        let rankBeforeRewards = bureauRank
+        var notices: [String] = []
+
+        let contract = BureauContract.current(for: referenceDate, calendar: calendar)
+        dailyContract = contract
+        let dayInterval = calendar.dateInterval(of: .day, for: referenceDate)
+        let dailyProgress = repository.historyCount(
+            category: contract.category,
+            tone: contract.tone,
+            from: dayInterval?.start,
+            to: dayInterval?.end
+        )
+        dailyContractProgress = min(dailyProgress, contract.targetCount)
+        if dailyProgress >= contract.targetCount,
+           settings.bureauLastDailyContractKeyRaw != contract.key
+        {
+            settings.bureauLastDailyContractKeyRaw = contract.key
+            repository.save()
+            awardBureauXP(contract.rewardXP, reason: .dailyChallenge)
+            unlockBureauCosmetic(contract.cosmetic, announce: false)
+            notices.append("Daily contract filed • +\(contract.rewardXP) XP")
+        }
+
+        let boss = BureauBossCase.current(for: referenceDate, calendar: calendar)
+        bossCase = boss
+        let bossProgress = repository.historyCount(
+            category: boss.category,
+            tone: boss.tone,
+            from: boss.periodStart,
+            to: boss.periodEnd
+        )
+        bossCaseProgress = min(bossProgress, boss.targetCount)
+        if bossProgress >= boss.targetCount,
+           settings.bureauLastBossCaseKeyRaw != boss.key
+        {
+            settings.bureauLastBossCaseKeyRaw = boss.key
+            repository.save()
+            awardBureauXP(boss.rewardXP, reason: .questComplete)
+            unlockBureauCosmetic(boss.cosmetic, announce: false)
+            notices.append("Boss case closed • +\(boss.rewardXP) XP")
+        }
+
+        var completedCollections = settings.bureauCompletedCollections
+        for collection in BureauCollection.all {
+            let progress = repository.historyCount(category: collection.category)
+            guard progress >= collection.targetCount,
+                  !completedCollections.contains(collection.id)
+            else { continue }
+
+            completedCollections.insert(collection.id)
+            settings.bureauCompletedCollections = completedCollections
+            repository.save()
+            awardBureauXP(collection.rewardXP, reason: .questComplete)
+            unlockBureauCosmetic(collection.cosmetic, announce: false)
+            notices.append("\(collection.title) completed • +\(collection.rewardXP) XP")
+        }
+
+        refreshBureauCollectionStates()
+        syncBureauCosmeticState()
+
+        if bureauRank != rankBeforeRewards {
+            notices.append("Rank up: \(bureauRank.title)")
+        }
+        if !notices.isEmpty {
+            lastBureauNotice = notices.joined(separator: "  ")
+        }
+    }
+
+    @discardableResult
+    func awardBureauXP(_ amount: Int, reason: XPReason) -> BureauRank {
+        guard amount > 0 else { return bureauRank }
+        let previousRank = bureauRank
+        bureauXP += amount
+        bureauRank = BureauRank.forXP(bureauXP)
+
+        let settings = repository.ensureSettings()
+        settings.bureauXP = bureauXP
+        repository.save()
+
+        if bureauRank.rawValue >= BureauRank.director.rawValue {
+            unlockBureauCosmetic(.directorBadge, announce: false)
+        }
+        if bureauRank != previousRank {
+            lastBureauNotice = "Rank up: \(bureauRank.title) • \(bureauXP) XP"
+        } else {
+            lastBureauNotice = "+\(amount) XP • \(reason.displayTitle)"
+        }
+        return bureauRank
+    }
+
+    func unlockBureauCosmetic(_ cosmetic: BureauCosmetic, announce: Bool = true) {
+        let settings = repository.ensureSettings()
+        var unlocked = settings.bureauUnlockedCosmetics
+        guard unlocked.insert(cosmetic.rawValue).inserted else {
+            syncBureauCosmeticState()
+            return
+        }
+
+        settings.bureauUnlockedCosmetics = unlocked
+        if settings.bureauActiveCosmetic == nil {
+            settings.bureauActiveCosmetic = cosmetic
+        }
+        repository.save()
+        syncBureauCosmeticState()
+
+        if announce {
+            lastBureauNotice = "Cosmetic unlocked: \(cosmetic.title)"
+        }
+    }
+
+    func equipBureauCosmetic(_ cosmetic: BureauCosmetic) {
+        let settings = repository.ensureSettings()
+        guard settings.bureauUnlockedCosmetics.contains(cosmetic.rawValue) else { return }
+        settings.bureauActiveCosmetic = cosmetic
+        repository.save()
+        equippedBureauCosmetic = cosmetic
+        settingsViewModel?.theme = cosmetic.theme
+        lastBureauNotice = "Equipped \(cosmetic.title)"
+    }
+
+    func resetBureauProgress() {
+        let settings = repository.ensureSettings()
+        settings.bureauXP = 0
+        settings.bureauUnlockedCosmetics = []
+        settings.bureauCompletedCollections = []
+        settings.bureauLastDailyContractKeyRaw = nil
+        settings.bureauLastBossCaseKeyRaw = nil
+        settings.bureauActiveCosmetic = nil
+        repository.save()
+        bureauXP = 0
+        bureauRank = .intern
+        unlockedBureauCosmetics = []
+        equippedBureauCosmetic = nil
+        refreshBureauCollectionStates()
+        lastBureauNotice = nil
     }
 
     private func targetFor(_ type: AchievementType) -> Int {
@@ -113,17 +305,22 @@ final class AchievementsManager {
 
         // Check time-based achievements
         checkTimeBasedAchievements()
+
+        awardBureauXP(XPReason.generateAdvice.xpAmount, reason: .generateAdvice)
+        refreshBureauProgress()
     }
 
     func trackAdviceSaved(totalSaved: Int) {
         updateProgress(.firstSave, to: min(totalSaved, 1))
         updateProgress(.collector, to: min(totalSaved, 10))
         updateProgress(.hoarder, to: min(totalSaved, 50))
+        awardBureauXP(XPReason.favoriteAdvice.xpAmount, reason: .favoriteAdvice)
     }
 
     func trackShare(totalShares: Int) {
         updateProgress(.sharer, to: min(totalShares, 5))
         updateProgress(.viral, to: min(totalShares, 25))
+        awardBureauXP(XPReason.shareAdvice.xpAmount, reason: .shareAdvice)
     }
 
     func trackStreak(days: Int) {
@@ -205,11 +402,15 @@ final class AchievementsManager {
             }
         }
 
+        for cosmetic in unlockedBureauCosmetics where !themes.contains(cosmetic.theme) {
+            themes.append(cosmetic.theme)
+        }
+
         return themes
     }
 
     var unlockedThemeCount: Int {
-        achievements.filter { $0.isUnlocked && $0.type.unlocksTheme != nil }.count
+        Set(unlockedThemes).subtracting([.badvice, .minimal, .ember, .slate, .evergreen, .fallout]).count
     }
 
     var totalAchievementCount: Int {
@@ -505,6 +706,9 @@ struct AchievementsView: View {
                 // Progress header
                 progressHeader
 
+                // Bureau progression and cosmetic locker
+                bureauProgressHeader
+
                 // Filter picker
                 Picker("Filter", selection: $selectedFilter) {
                     ForEach(AchievementFilter.allCases, id: \.self) { filter in
@@ -533,6 +737,76 @@ struct AchievementsView: View {
                 }
             }
         }
+    }
+
+    private var bureauProgressHeader: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: manager.bureauRank.systemImage)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 36, height: 36)
+                    .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("BUREAU RANK")
+                        .font(.caption2.weight(.black))
+                        .tracking(1.2)
+                        .foregroundStyle(accent)
+                    Text(manager.bureauRank.title)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(primaryText)
+                }
+
+                Spacer()
+
+                Text("\(manager.bureauXP) XP")
+                    .font(.subheadline.weight(.black).monospacedDigit())
+                    .foregroundStyle(primaryText)
+            }
+
+            ProgressView(value: manager.bureauRank.progress(for: manager.bureauXP))
+                .tint(accent)
+
+            Text("Contracts, evidence files, saves, and shares all advance the same Bureau rank.")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !manager.unlockedBureauCosmetics.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(manager.unlockedBureauCosmetics) { cosmetic in
+                            Button {
+                                manager.equipBureauCosmetic(cosmetic)
+                            } label: {
+                                Label(cosmetic.title, systemImage: cosmetic.systemImage)
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(
+                                        manager.equippedBureauCosmetic == cosmetic ? accent : primaryText
+                                    )
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        (manager.equippedBureauCosmetic == cosmetic ? accent : secondaryText)
+                                            .opacity(manager.equippedBureauCosmetic == cosmetic ? 0.14 : 0.08),
+                                        in: Capsule()
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("achievements.cosmetic.\(cosmetic.id)")
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(cardColor)
+        )
+        .padding(.horizontal)
+        .accessibilityIdentifier("achievements.bureauProgression")
     }
 
     private var progressHeader: some View {
