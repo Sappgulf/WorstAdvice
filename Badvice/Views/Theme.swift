@@ -6,27 +6,6 @@ enum RenderBudget {
     case reduced
 }
 
-struct LazyView<Content: View>: View {
-    let build: () -> Content
-    @State private var loaded = false
-    
-    init(_ build: @autoclosure @escaping () -> Content) {
-        self.build = build
-    }
-    
-    var body: some View {
-        if loaded {
-            build()
-        } else {
-            Color.clear
-                .onAppear {
-                    loaded = true
-                }
-        }
-    }
-}
-
-
 enum Theme {
     static let cardCornerRadius: CGFloat = 24
     static let cardPadding: CGFloat = 20

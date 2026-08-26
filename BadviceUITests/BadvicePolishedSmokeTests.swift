@@ -1007,6 +1007,11 @@ final class BadvicePolishedSmokeTests: XCTestCase {
         )
         XCTAssertNotNil(settingsSurface, "Expected settings surface to render with auth, social, or theme controls.")
 
+        XCTAssertTrue(
+            openAdvancedSettings(app: app),
+            "Expected the All settings & diagnostics entry to be reachable from the settings shell."
+        )
+
         XCTAssertNotNil(
             waitForAnyElement(
                 app: app,
@@ -1170,6 +1175,27 @@ final class BadvicePolishedSmokeTests: XCTestCase {
             app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Cancel")).firstMatch,
             app.navigationBars.buttons.firstMatch,
         ]
+    }
+
+    /// The Bureau settings shell keeps labs, model setup, sharing and the store
+    /// behind a second-level "All settings & diagnostics" screen, so deep rows
+    /// are only reachable after this push.
+    @discardableResult
+    private func openAdvancedSettings(app: XCUIApplication) -> Bool {
+        guard let entry = waitForAnyElement(
+            app: app,
+            candidates: [
+                app.buttons["settings.advanced"],
+                app.buttons.matching(
+                    NSPredicate(format: "label CONTAINS[c] %@", "All settings")
+                ).firstMatch,
+            ],
+            timeout: 6,
+            maxSwipes: 8,
+            requireHittable: true
+        ) else { return false }
+        entry.tap()
+        return true
     }
 
     @discardableResult

@@ -42,9 +42,9 @@ final class BadviceShippingReadinessTests: XCTestCase {
 
         let tabFlow = [
             (id: "tab.generate", marker: [app.buttons["generate.primary"], app.otherElements["generate.resultNextStep"], app.navigationBars["Generate"], app.staticTexts["Generate"]]),
-            (id: "tab.favorites", marker: [app.buttons["favorites.generate"], app.staticTexts["Favorites"], app.staticTexts["Nothing saved yet."]]),
-            (id: "tab.chaosHub", marker: [app.buttons["chaos.command.primary"], app.staticTexts["Missions"], app.staticTexts["Daily Mission"]]),
-            (id: "tab.quotes", marker: [app.otherElements["quotes.dailyHero"], app.otherElements["quotes.tomorrowCue"], app.staticTexts["Quotes"], app.buttons["quotes.spotlight.toggle"]]),
+            (id: "tab.favorites", marker: [app.buttons["favorites.generate"], app.staticTexts["Casebook"], app.staticTexts["Saved"], app.staticTexts["Favorites"], app.staticTexts["No filed takes yet"]]),
+            (id: "tab.chaosHub", marker: [app.descendants(matching: .any)["chaos.command.card"], app.descendants(matching: .any)["chaos.progressionPath"], app.staticTexts["Dares"], app.staticTexts["Missions"]]),
+            (id: "tab.quotes", marker: [app.descendants(matching: .any)["quotes.dailyHero"], app.staticTexts["Dispatches"], app.staticTexts["TODAY'S DISPATCH"], app.staticTexts["Quotes"]]),
             (id: "tab.more", marker: [app.otherElements["brandMenu.recommendedFlow"], app.buttons["brandMenu.flow.generate"], app.buttons["brandMenu.flow.favorites"], app.buttons["brandMenu.quickAccess.favorites"], app.buttons["brandMenu.quickAccess.settings"], app.staticTexts["Quick Access"], app.navigationBars["Badvice"]]),
         ]
 

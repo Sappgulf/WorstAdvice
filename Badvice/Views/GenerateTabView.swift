@@ -607,6 +607,8 @@ struct GenerateTabView: View {
                     .font(.caption2.weight(.bold).monospacedDigit())
                     .foregroundStyle(secondaryText)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("generate.actionRailHeader")
 
             HStack(spacing: 8) {
                 resultActionButton(

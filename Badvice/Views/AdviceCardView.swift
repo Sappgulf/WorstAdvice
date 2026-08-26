@@ -626,9 +626,9 @@ private struct BadviceScoreView: View {
             // Single compact row — less vertical chrome under the take
             HStack(spacing: 6) {
                 scorePill(title: "Wrong", value: score.wrongness)
-                scorePill(title: "Conf", value: score.confidence)
-                scorePill(title: "HR", value: score.hrRisk)
-                scorePill(title: "Use", value: score.usefulness)
+                scorePill(title: "Confident", value: score.confidence)
+                scorePill(title: "HR Risk", value: score.hrRisk)
+                scorePill(title: "Useful", value: score.usefulness)
             }
         }
         .padding(10)

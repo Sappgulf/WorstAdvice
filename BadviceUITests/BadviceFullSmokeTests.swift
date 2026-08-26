@@ -117,10 +117,13 @@ final class BadviceFullSmokeTests: XCTestCase {
 
             if let historyTarget {
                 historyTarget.tap()
+                // The history desk now lives as the "Recent" shelf inside Casebook.
                 XCTAssertTrue(
-                    app.navigationBars["History"].waitForExistence(timeout: 5)
-                        || app.staticTexts["History"].waitForExistence(timeout: 5),
-                    "History tab should open from the brand menu"
+                    app.navigationBars["Casebook"].waitForExistence(timeout: 5)
+                        || app.staticTexts["Casebook"].waitForExistence(timeout: 5)
+                        || app.staticTexts["Recent"].waitForExistence(timeout: 5)
+                        || app.buttons["Recent"].waitForExistence(timeout: 5),
+                    "History tab should open the Casebook recent shelf from the brand menu"
                 )
             } else {
                 print("Skipping history quick access because no history entry is visible in this menu style.")
@@ -147,10 +150,13 @@ final class BadviceFullSmokeTests: XCTestCase {
         let favoritesTab = app.buttons.matching(identifier: "tab.favorites").firstMatch
         if favoritesTab.waitForExistence(timeout: 5) {
             favoritesTab.tap()
+            // Favorites is now the "Saved" shelf of the Casebook desk.
             XCTAssertTrue(
-                app.navigationBars["Favorites"].waitForExistence(timeout: 5)
-                    || app.staticTexts["Favorites"].waitForExistence(timeout: 5),
-                "Favorites tab should open from the primary tab bar"
+                app.navigationBars["Casebook"].waitForExistence(timeout: 5)
+                    || app.staticTexts["Casebook"].waitForExistence(timeout: 5)
+                    || app.staticTexts["Saved"].waitForExistence(timeout: 5)
+                    || app.buttons["Saved"].waitForExistence(timeout: 5),
+                "Favorites tab should open the Casebook saved shelf from the primary tab bar"
             )
 
             let generateTabAfterFavorites = app.buttons.matching(identifier: "tab.generate").firstMatch
@@ -163,10 +169,13 @@ final class BadviceFullSmokeTests: XCTestCase {
         if openMoreQuickAccess(app: app, id: "chaosHub", label: "Missions") {
             // Verify core Missions elements
             let leaderboardCard = app.descendants(matching: .any)["chaos.social.leaderboardCard"]
-            let chaosTitle = app.staticTexts["Missions"]
+            // The missions desk is titled "Dares" in the Bureau shell.
+            let chaosTitle = app.staticTexts["Dares"]
             XCTAssertTrue(
                 leaderboardCard.waitForExistence(timeout: 5)
-                    || chaosTitle.waitForExistence(timeout: 5),
+                    || chaosTitle.waitForExistence(timeout: 5)
+                    || app.staticTexts["Missions"].waitForExistence(timeout: 5)
+                    || app.descendants(matching: .any)["chaos.command.card"].waitForExistence(timeout: 5),
                 "Missions content should load"
             )
 
@@ -186,10 +195,12 @@ final class BadviceFullSmokeTests: XCTestCase {
             quotesTab.tap()
 
             let dailyHero = app.otherElements["quotes.dailyHero"]
-            let quotesTitle = app.staticTexts["Quotes"]
+            // The quotes desk is titled "Dispatches" in the Bureau shell.
+            let quotesTitle = app.staticTexts["Dispatches"]
             XCTAssertTrue(
                 dailyHero.waitForExistence(timeout: 5)
-                    || quotesTitle.waitForExistence(timeout: 5),
+                    || quotesTitle.waitForExistence(timeout: 5)
+                    || app.staticTexts["Quotes"].waitForExistence(timeout: 5),
                 "Quotes tab should load"
             )
 
@@ -306,9 +317,16 @@ final class BadviceFullSmokeTests: XCTestCase {
         )
 
         // Verify action buttons all exist
+        // The header is a combined accessibility element, so its element type is
+        // not guaranteed — match on identifier across any type.
         XCTAssertTrue(
-            scrollToFind(app: app, element: app.staticTexts["Keep or send it"], maxSwipes: 12)
-                || scrollToFind(app: app, element: app.otherElements["generate.actionRailHeader"], maxSwipes: 12),
+            scrollToFind(
+                app: app,
+                element: app.descendants(matching: .any)["generate.actionRailHeader"],
+                maxSwipes: 12
+            )
+                || scrollToFind(app: app, element: app.staticTexts["What happens next?"], maxSwipes: 12)
+                || scrollToFind(app: app, element: app.staticTexts["Keep the keeper"], maxSwipes: 12),
             "Generate action rail header should explain save/copy/share/remix actions"
         )
         let actionButtons = ["generate.save", "generate.copy", "generate.share", "generate.remix"]

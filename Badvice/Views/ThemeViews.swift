@@ -1210,3 +1210,122 @@ private struct GlitchView: View {
         .allowsHitTesting(false)
     }
 }
+
+// MARK: - Inline Search Field
+
+struct InlineSearchField: View {
+    @Binding var text: String
+    let prompt: String
+    let accent: Color
+    let secondaryText: Color
+    var surfaceColor: Color? = nil
+
+    @FocusState private var isFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+
+    var body: some View {
+        HStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.shellMetricCornerRadius, style: .continuous)
+                    .fill(isFocused ? accent.opacity(0.18) : secondaryText.opacity(0.08))
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(isFocused ? accent : secondaryText.opacity(0.7))
+            }
+            .frame(width: 30, height: 30)
+
+            TextField(prompt, text: $text)
+                .font(.system(.subheadline, design: .default))
+                .foregroundStyle(.primary)
+                .focused($isFocused)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(secondaryText.opacity(0.65))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+                .accessibilityHint("Clears the search field")
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .frame(minHeight: Theme.minimumTapTarget)
+        .background {
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .fill(surfaceColor ?? Color.white.opacity(0.05))
+                .overlay {
+                    if surfaceColor != nil {
+                        RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        .white.opacity(0.1),
+                                        .clear,
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .blendMode(.screen)
+                    } else {
+                        RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    }
+                }
+                .shadow(
+                    color: .black.opacity(surfaceColor == nil ? 0.08 : 0.14),
+                    radius: 10,
+                    x: 0,
+                    y: 4
+                )
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .stroke(isFocused ? accent.opacity(0.4) : .white.opacity(0.08), lineWidth: 1)
+        )
+        .animation(
+            accessibilityReduceMotion ? nil : .easeInOut(duration: Theme.animFast), value: isFocused
+        )
+        .animation(
+            accessibilityReduceMotion ? nil : .easeInOut(duration: Theme.animFast),
+            value: text.isEmpty
+        )
+    }
+}
+
+// MARK: - Filter Chip (shared by community + dispatch filters)
+
+struct FilterChip: View {
+    let title: String
+    var icon: String? = nil
+    let isSelected: Bool
+    var accent: Color = .accentColor
+    var primaryText: Color = .primary
+    var secondaryText: Color = .secondary
+    let accessibilityIdentifier: String
+    let buttonText: Color
+    let action: () -> Void
+
+    var body: some View {
+        TabCommandActionButton(
+            title: title,
+            systemImage: icon,
+            accent: accent,
+            buttonText: buttonText,
+            prominent: isSelected,
+            minHeight: 34
+        ) {
+            action()
+        }
+        .accessibilityIdentifier(accessibilityIdentifier)
+    }
+}

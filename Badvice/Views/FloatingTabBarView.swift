@@ -100,7 +100,10 @@ struct FloatingTabBarView: View {
     }
 
     private func tabButton(_ tab: AppTab) -> some View {
-        let isSelected = selectedTab == tab || (tab == .settings && showingSettingsRoot)
+        // While the settings root is showing it owns the selected state (via the
+        // More button), so the underlying tab must not stay lit as well.
+        let isSelected = (selectedTab == tab && !showingSettingsRoot)
+            || (tab == .settings && showingSettingsRoot)
         let isHighlighted = tabDragHighlight == tab
         let titleText = isSelected ? tab.title : tab.compactTitle
 

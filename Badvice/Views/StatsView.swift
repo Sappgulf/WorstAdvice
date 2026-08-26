@@ -758,7 +758,8 @@ struct DaresTabView: View {
                                 detail: weekly.subtitle,
                                 progress: weekly.progressFraction,
                                 count: "\(weekly.currentCount)/\(weekly.targetCount)",
-                                completed: weekly.isComplete
+                                completed: weekly.isComplete,
+                                prominent: false
                             ) {
                                 generate.updateSelections(
                                     category: weekly.category,
@@ -857,6 +858,7 @@ struct DaresTabView: View {
         progress: Double,
         count: String,
         completed: Bool,
+        prominent: Bool = true,
         action: @escaping () -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: 13) {
@@ -882,16 +884,24 @@ struct DaresTabView: View {
             ProgressView(value: progress)
                 .tint(accent)
 
-            Button(action: action) {
-                Label(
-                    completed ? "Commission another" : "Accept the dare",
-                    systemImage: completed ? "arrow.clockwise" : "arrow.up.right"
-                )
-                .font(.subheadline.weight(.bold))
-                .frame(maxWidth: .infinity, minHeight: 46)
+            // Only the daily dare carries the filled CTA; the weekly card steps
+            // down to bordered so the two cards do not compete for the tap.
+            let label = Label(
+                completed ? "Commission another" : "Accept the dare",
+                systemImage: completed ? "arrow.clockwise" : "arrow.up.right"
+            )
+            .font(.subheadline.weight(.bold))
+            .frame(maxWidth: .infinity, minHeight: 46)
+
+            if prominent {
+                Button(action: action) { label }
+                    .buttonStyle(.borderedProminent)
+                    .tint(accent)
+            } else {
+                Button(action: action) { label }
+                    .buttonStyle(.bordered)
+                    .tint(accent)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(accent)
         }
     }
 
@@ -1441,6 +1451,7 @@ struct BureauSettingsTabView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.advanced")
             }
             .padding(.horizontal, 18)
             .padding(.top, 12)

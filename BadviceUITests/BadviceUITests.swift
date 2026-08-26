@@ -148,7 +148,7 @@ final class BadviceUITests: XCTestCase {
             "-debug-polish-seed", "424242",
         ])
 
-        XCTAssertTrue(openSettings(app: app))
+        XCTAssertTrue(openAdvancedSettings(app: app))
 
         let suggestionPipeline = waitForAnyElement(
             app: app,
@@ -198,7 +198,7 @@ final class BadviceUITests: XCTestCase {
     func testSettingsAppleLocalModelShowsListOrExplicitEmptyState() throws {
         let app = launchTestApp()
 
-        XCTAssertTrue(openSettings(app: app))
+        XCTAssertTrue(openAdvancedSettings(app: app))
 
         let appleModelStatus = app.staticTexts["settings.appleModel.status"]
         let appleModelEmpty = app.staticTexts["settings.appleModel.empty"]
@@ -239,7 +239,7 @@ final class BadviceUITests: XCTestCase {
     func testSettingsThemeMetadataAndDiagnosticsCopyReport() throws {
         let app = launchTestApp()
 
-        XCTAssertTrue(openSettings(app: app))
+        XCTAssertTrue(openAdvancedSettings(app: app))
 
         let badviceTheme = app.buttons["settings.theme.badvice"]
         if !badviceTheme.exists {
@@ -924,6 +924,37 @@ final class BadviceUITests: XCTestCase {
             || settingsChangePassword.exists
             || (authSuccessStatus.exists && isAuthSuccessStatusVisible())
             || tabMarkers.contains(where: \.exists)
+    }
+
+    /// The Bureau settings shell keeps labs, model setup, sharing and the store
+    /// behind a second-level "All settings & diagnostics" screen, so deep rows
+    /// are only reachable after this push.
+    @discardableResult
+    private func openAdvancedSettings(app: XCUIApplication, timeout: TimeInterval = 15) -> Bool {
+        guard openSettings(app: app, timeout: timeout) else { return false }
+        // The entry is a NavigationLink wrapped in a styled panel, so its element
+        // type is not guaranteed to be a button.
+        let candidates = [
+            app.descendants(matching: .any)["settings.advanced"].firstMatch,
+            app.buttons.matching(
+                NSPredicate(format: "label CONTAINS[c] %@", "All settings")
+            ).firstMatch,
+            app.staticTexts["All settings & diagnostics"].firstMatch,
+        ]
+        for candidate in candidates {
+            guard scrollToFind(app: app, element: candidate, maxSwipes: 10) else { continue }
+            if candidate.isHittable {
+                candidate.tap()
+            } else {
+                candidate.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            }
+            // Let the navigation push settle before callers start scrolling for
+            // rows on the pushed screen.
+            RunLoop.current.run(until: Date().addingTimeInterval(0.8))
+            _ = app.staticTexts["Personalize Badvice"].waitForExistence(timeout: 4)
+            return true
+        }
+        return false
     }
 
     @discardableResult
@@ -1688,30 +1719,38 @@ final class BadviceReadinessHardeningUITests: XCTestCase {
         switch tabID {
         case "tab.generate":
             return [app.buttons["generate.primary"], app.staticTexts["Generate"], app.navigationBars["Generate"].firstMatch]
+        // Bureau shell titles: Dares (missions), Casebook (favorites/history),
+        // Dispatches (quotes + starters).
         case "tab.chaosHub":
             return [
+                app.descendants(matching: .any)["chaos.command.card"],
+                app.descendants(matching: .any)["chaos.progressionPath"],
                 app.descendants(matching: .any)["chaos.social.leaderboardCard"],
+                app.staticTexts["Dares"],
                 app.staticTexts["Missions"],
-                app.buttons["chaos.social.submitScore"],
             ]
         case "tab.favorites":
             return [
                 app.buttons["favorites.generate"],
+                app.staticTexts["Casebook"],
+                app.staticTexts["Saved"],
+                app.staticTexts["No filed takes yet"],
                 app.staticTexts["Favorites"],
-                app.staticTexts["Nothing saved yet."],
             ]
         case "tab.quotes":
             return [
-                app.otherElements["quotes.dailyHero"],
+                app.descendants(matching: .any)["quotes.dailyHero"],
+                app.staticTexts["Dispatches"],
+                app.staticTexts["TODAY'S DISPATCH"],
                 app.staticTexts["Quotes"],
-                app.buttons["quotes.spotlight.toggle"],
             ]
         case "tab.explore":
+            // Explore is now the "Starters" desk inside Dispatches.
             return [
-                app.searchFields["explore.search"],
+                app.staticTexts["Dispatches"],
+                app.staticTexts["Starters"],
+                app.buttons["Starters"],
                 app.staticTexts["Explore"],
-                app.otherElements["explore.scrollArea"],
-                app.navigationBars["Explore"].firstMatch,
             ]
         default:
             return [app.navigationBars.firstMatch]

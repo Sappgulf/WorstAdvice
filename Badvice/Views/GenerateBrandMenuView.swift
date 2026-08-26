@@ -205,6 +205,9 @@ struct GenerateBrandMenuView: View {
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(secondaryText.opacity(0.75))
                         .lineLimit(1)
+                        // Two-up cards are narrow; scale rather than clip the
+                        // subtitle mid-word.
+                        .minimumScaleFactor(0.8)
                 }
 
                 Spacer(minLength: 0)
@@ -233,7 +236,7 @@ struct GenerateBrandMenuView: View {
         case "Recent":
             return "Casebook timeline"
         case "Starters":
-            return "Ready-made briefs"
+            return "Starter briefs"
         case "Groups":
             return "Shared dares"
         default:
