@@ -17,6 +17,17 @@ import OSLog
         @Guide(description: "A short explanation and sensible alternative, at most 140 characters.")
         var notes: String
     }
+
+    @available(iOS 26.0, *)
+    @Generable
+    private struct ModelQuoteResponse {
+        @Guide(description: "One short, fictional, punchy quote between 8 and 160 characters.")
+        var quote: String
+        @Guide(description: "A brief invented source label, never a real person or organization.")
+        var source: String
+        @Guide(description: "A very short description of the quote's comic voice.")
+        var style: String
+    }
 #endif
 
 enum AppleOnDeviceModelAvailability: Equatable, Sendable {
@@ -185,17 +196,22 @@ final class AppleOnDeviceAdviceBridge: AppleAdviceGenerating {
 
         #if canImport(FoundationModels)
             if #available(iOS 26.0, *) {
-                let session = LanguageModelSession(
-                    instructions: Self.quoteInstructions(category: category, tone: tone))
+                let request = Self.quoteRequest(category: category, tone: tone, seed: seed)
+                let session = LanguageModelSession(instructions: request.instructions)
+                try Task.checkCancellation()
                 let response = try await session.respond(
-                    to: Self.quotePrompt(category: category, tone: tone, seed: seed)
+                    to: request.prompt,
+                    generating: ModelQuoteResponse.self
                 )
-                let parsed = Self.parseModelQuoteResponse(response.content)
-                let quoteText = Self.trimmedOutput(parsed.quote, limit: 160)
+                try Task.checkCancellation()
+                let quoteText = Self.trimmedOutput(response.content.quote, limit: 160)
                 guard !quoteText.isEmpty else {
                     throw AppleOnDeviceAdviceError.invalidResponse
                 }
-                let source = Self.compactQuoteSource(label: parsed.source, style: parsed.style)
+                let source = Self.compactQuoteSource(
+                    label: response.content.source,
+                    style: response.content.style
+                )
                 let moderated = moderation.apply(to: quoteText, rationale: nil)
                 return BadQuote(
                     id: "apple-quote-\(category.rawValue)-\(seed)",
@@ -263,14 +279,21 @@ final class AppleOnDeviceAdviceBridge: AppleAdviceGenerating {
     }
 
     private static func quoteInstructions(category: AdviceCategory, tone: ToneMode) -> String {
-        instructions(category: category, tone: tone) + """
-
-        Write one short fictional quote, 8–160 characters, with a memorable magazine rhythm.
-        Attribute it to an imaginary office, memo, oracle or club.
+        """
+        You write fictional pull quotes for a playful advice magazine.
+        Create one concise, memorable, clearly satirical quote about an everyday topic.
+        Keep it harmless and obviously fictional. Never give professional or dangerous guidance.
+        Never attribute it to a real person or organization.
+        Category: \(category.title)
+        Category setting: \(categoryGenerationTemplate(category))
+        Voice: \(tone.title)
+        Voice style: \(toneQuoteGenerationTemplate(tone))
+        The source should be an invented office, memo, club, oracle, or similarly fictional source.
+        Do not include advice notes or practical recommendations; return only the requested quote fields.
         """
     }
 
-    private static func categoryGenerationTemplate(_ category: AdviceCategory) -> String {
+    static func categoryGenerationTemplate(_ category: AdviceCategory) -> String {
         switch category {
         case .dating: return "An imaginary committee organizing a first date with too much paperwork."
         case .fitness: return "A gym visitor inventing ceremonial titles for workout equipment."
@@ -290,10 +313,6 @@ final class AppleOnDeviceAdviceBridge: AppleAdviceGenerating {
         case .weddings: return "A seating chart treated like an overly elaborate royal event."
         case .random: return "An ordinary small decision transformed into imaginary bureaucracy."
         }
-    }
-
-    private static func categoryQuoteGenerationTemplate(_ category: AdviceCategory) -> String {
-        categoryGenerationTemplate(category)
     }
 
     private static func toneGenerationTemplate(_ tone: ToneMode) -> String {
@@ -338,7 +357,7 @@ final class AppleOnDeviceAdviceBridge: AppleAdviceGenerating {
         }
     }
 
-    private static func toneQuoteGenerationTemplate(_ tone: ToneMode) -> String {
+    static func toneQuoteGenerationTemplate(_ tone: ToneMode) -> String {
         switch tone {
         case .corporateConsultant:
             return "Quote sounds like a boardroom principle or strategy memo line."
@@ -377,61 +396,45 @@ final class AppleOnDeviceAdviceBridge: AppleAdviceGenerating {
         }
     }
 
+    static func quoteRequest(
+        category: AdviceCategory,
+        tone: ToneMode,
+        seed: Int
+    ) -> (instructions: String, prompt: String) {
+        (
+            quoteInstructions(category: category, tone: tone),
+            quotePrompt(category: category, tone: tone, seed: seed)
+        )
+    }
+
     private static func quotePrompt(category: AdviceCategory, tone: ToneMode, seed: Int) -> String {
         """
-        Generate one fake quote for category \(category.title) in tone \(tone.title).
+        Generate one fictional pull quote about \(category.title) in the \(tone.title) voice.
         Variation seed: \(seed)
-        Category quote template: \(categoryQuoteGenerationTemplate(category))
-        Tone quote template: \(toneQuoteGenerationTemplate(tone))
-        Return exactly two lines:
-        QUOTE: <short quote text>
-        SOURCE: <fake source name>
-        STYLE: <short style tag>
+        Make the wording distinct from a generic motivational slogan and keep it clearly satirical.
+        The response schema has separate quote, fictional source, and style fields;
+        do not put field labels in the quote.
         """
     }
 
-    private static func parseModelQuoteResponse(_ text: String) -> (
-        quote: String, source: String?, style: String?
-    )
-    {
-        let lines =
-            text
-            .split(whereSeparator: \.isNewline)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
-        let quoteLine =
-            lines.first(where: { $0.uppercased().hasPrefix("QUOTE:") })
-            ?? lines.first
-            ?? ""
-        let sourceLine = lines.first(where: { $0.uppercased().hasPrefix("SOURCE:") })
-        let styleLine = lines.first(where: { $0.uppercased().hasPrefix("STYLE:") })
-
-        let quote = quoteLine.replacingOccurrences(
-            of: "QUOTE:", with: "", options: [.caseInsensitive]
-        )
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-        let source = sourceLine?
-            .replacingOccurrences(of: "SOURCE:", with: "", options: [.caseInsensitive])
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let style = styleLine?
-            .replacingOccurrences(of: "STYLE:", with: "", options: [.caseInsensitive])
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        return (quote, source, style)
-    }
-
-    private static func compactQuoteSource(label: String?, style: String?) -> String {
+    static func compactQuoteSource(label: String?, style: String?) -> String {
         let fallback = "Apple On-Device Quote Lab"
-        let trimmedLabel = label?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedStyle = style?.trimmingCharacters(in: .whitespacesAndNewlines)
+        func normalized(_ value: String?) -> String? {
+            guard let value else { return nil }
+            let compact = value
+                .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return compact.isEmpty ? nil : compact
+        }
 
-        let base = (trimmedLabel?.isEmpty == false ? trimmedLabel : fallback) ?? fallback
-        let merged =
-            trimmedStyle?.isEmpty == false
-            ? "\(base) • \(trimmedStyle!)"
-            : base
-        return String(merged.prefix(44))
+        let base = normalized(label) ?? fallback
+        let merged: String
+        if let normalizedStyle = normalized(style) {
+            merged = "\(base) • \(normalizedStyle)"
+        } else {
+            merged = base
+        }
+        return String(merged.prefix(44)).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func tonePersona(_ tone: ToneMode) -> String {
