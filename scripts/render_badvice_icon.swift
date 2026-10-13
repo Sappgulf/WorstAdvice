@@ -45,57 +45,67 @@ private func makeContext(width: Int, height: Int) -> CGContext {
 
 private func drawHorn(in context: CGContext) {
     let horn = CGMutablePath()
-    horn.move(to: CGPoint(x: 354, y: 716))
+    horn.move(to: CGPoint(x: 397, y: 684))
     horn.addCurve(
-        to: CGPoint(x: 326, y: 760),
-        control1: CGPoint(x: 340, y: 735),
-        control2: CGPoint(x: 316, y: 744)
+        to: CGPoint(x: 351, y: 800),
+        control1: CGPoint(x: 372, y: 704),
+        control2: CGPoint(x: 342, y: 766)
     )
     horn.addCurve(
-        to: CGPoint(x: 354, y: 748),
-        control1: CGPoint(x: 332, y: 777),
-        control2: CGPoint(x: 350, y: 769)
+        to: CGPoint(x: 449, y: 699),
+        control1: CGPoint(x: 369, y: 783),
+        control2: CGPoint(x: 420, y: 752)
     )
-    context.setLineWidth(16)
-    context.setLineCap(.round)
-    context.setLineJoin(.round)
+    horn.addCurve(
+        to: CGPoint(x: 397, y: 684),
+        control1: CGPoint(x: 437, y: 690),
+        control2: CGPoint(x: 410, y: 684)
+    )
+    horn.closeSubpath()
     context.addPath(horn)
-    context.strokePath()
+    context.fillPath()
 }
 
 private func drawTail(in context: CGContext) {
     let tail = CGMutablePath()
-    tail.move(to: CGPoint(x: 700, y: 235))
+    tail.move(to: CGPoint(x: 700, y: 430))
     tail.addCurve(
-        to: CGPoint(x: 850, y: 198),
-        control1: CGPoint(x: 756, y: 194),
-        control2: CGPoint(x: 838, y: 167)
+        to: CGPoint(x: 780, y: 375),
+        control1: CGPoint(x: 750, y: 420),
+        control2: CGPoint(x: 790, y: 402)
     )
     tail.addCurve(
-        to: CGPoint(x: 862, y: 264),
-        control1: CGPoint(x: 873, y: 226),
-        control2: CGPoint(x: 842, y: 244)
+        to: CGPoint(x: 740, y: 290),
+        control1: CGPoint(x: 780, y: 342),
+        control2: CGPoint(x: 755, y: 303)
     )
-    context.setLineWidth(15)
+    tail.addCurve(
+        to: CGPoint(x: 495, y: 177),
+        control1: CGPoint(x: 690, y: 260),
+        control2: CGPoint(x: 550, y: 230)
+    )
+    context.setLineWidth(18)
     context.setLineCap(.round)
     context.setLineJoin(.round)
     context.addPath(tail)
     context.strokePath()
 
     let arrowhead = CGMutablePath()
-    arrowhead.move(to: CGPoint(x: 909, y: 310))
-    arrowhead.addLine(to: CGPoint(x: 856, y: 276))
-    arrowhead.addLine(to: CGPoint(x: 887, y: 250))
+    arrowhead.move(to: CGPoint(x: 430, y: 110))
+    arrowhead.addLine(to: CGPoint(x: 509, y: 163))
+    arrowhead.addLine(to: CGPoint(x: 481, y: 191))
     arrowhead.closeSubpath()
     context.addPath(arrowhead)
     context.fillPath()
 }
 
 private func drawArtwork(in context: CGContext) {
-    let systemFont = NSFont.systemFont(ofSize: 800, weight: .black)
+    let fontSize: CGFloat = 680
+    let baseline: CGFloat = 220
+    let systemFont = NSFont.systemFont(ofSize: fontSize, weight: .black)
     guard
         let serifDescriptor = systemFont.fontDescriptor.withDesign(.serif),
-        let serifFont = NSFont(descriptor: serifDescriptor, size: 800)
+        let serifFont = NSFont(descriptor: serifDescriptor, size: fontSize)
     else {
         fatalError("Could not load the system serif black font.")
     }
@@ -114,7 +124,7 @@ private func drawArtwork(in context: CGContext) {
     let glyphBounds = glyphPath.boundingBox
     var glyphTransform = CGAffineTransform(
         translationX: (1024 - glyphAdvance) / 2 - glyphBounds.minX,
-        y: 160 - glyphBounds.minY
+        y: baseline - glyphBounds.minY
     )
     guard let positionedGlyph = glyphPath.copy(using: &glyphTransform) else {
         fatalError("Could not position the system serif capital B.")
@@ -122,6 +132,7 @@ private func drawArtwork(in context: CGContext) {
 
     // Draw the horns first so the letter cleanly covers their bases.
     context.setStrokeColor(red)
+    context.setFillColor(red)
     drawHorn(in: context)
     context.saveGState()
     context.translateBy(x: 1024, y: 0)
