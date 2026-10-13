@@ -45,29 +45,49 @@ private func makeContext(width: Int, height: Int) -> CGContext {
 
 private func drawHorn(in context: CGContext) {
     let horn = CGMutablePath()
-    horn.move(to: CGPoint(x: 392, y: 712))
+    horn.move(to: CGPoint(x: 354, y: 716))
     horn.addCurve(
-        to: CGPoint(x: 352, y: 900),
-        control1: CGPoint(x: 362, y: 753),
-        control2: CGPoint(x: 326, y: 839)
+        to: CGPoint(x: 326, y: 760),
+        control1: CGPoint(x: 340, y: 735),
+        control2: CGPoint(x: 316, y: 744)
     )
     horn.addCurve(
-        to: CGPoint(x: 437, y: 790),
-        control1: CGPoint(x: 366, y: 884),
-        control2: CGPoint(x: 405, y: 831)
+        to: CGPoint(x: 354, y: 748),
+        control1: CGPoint(x: 332, y: 777),
+        control2: CGPoint(x: 350, y: 769)
     )
-    horn.addCurve(
-        to: CGPoint(x: 432, y: 724),
-        control1: CGPoint(x: 457, y: 757),
-        control2: CGPoint(x: 449, y: 730)
-    )
-    horn.addCurve(
-        to: CGPoint(x: 392, y: 712),
-        control1: CGPoint(x: 417, y: 716),
-        control2: CGPoint(x: 405, y: 710)
-    )
-    horn.closeSubpath()
+    context.setLineWidth(16)
+    context.setLineCap(.round)
+    context.setLineJoin(.round)
     context.addPath(horn)
+    context.strokePath()
+}
+
+private func drawTail(in context: CGContext) {
+    let tail = CGMutablePath()
+    tail.move(to: CGPoint(x: 700, y: 235))
+    tail.addCurve(
+        to: CGPoint(x: 850, y: 198),
+        control1: CGPoint(x: 756, y: 194),
+        control2: CGPoint(x: 838, y: 167)
+    )
+    tail.addCurve(
+        to: CGPoint(x: 862, y: 264),
+        control1: CGPoint(x: 873, y: 226),
+        control2: CGPoint(x: 842, y: 244)
+    )
+    context.setLineWidth(15)
+    context.setLineCap(.round)
+    context.setLineJoin(.round)
+    context.addPath(tail)
+    context.strokePath()
+
+    let arrowhead = CGMutablePath()
+    arrowhead.move(to: CGPoint(x: 909, y: 310))
+    arrowhead.addLine(to: CGPoint(x: 856, y: 276))
+    arrowhead.addLine(to: CGPoint(x: 887, y: 250))
+    arrowhead.closeSubpath()
+    context.addPath(arrowhead)
     context.fillPath()
 }
 
@@ -101,13 +121,16 @@ private func drawArtwork(in context: CGContext) {
     }
 
     // Draw the horns first so the letter cleanly covers their bases.
-    context.setFillColor(red)
+    context.setStrokeColor(red)
     drawHorn(in: context)
     context.saveGState()
     context.translateBy(x: 1024, y: 0)
     context.scaleBy(x: -1, y: 1)
     drawHorn(in: context)
     context.restoreGState()
+    context.setStrokeColor(red)
+    context.setFillColor(red)
+    drawTail(in: context)
 
     context.setFillColor(ink)
     context.addPath(positionedGlyph)
