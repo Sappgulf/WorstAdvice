@@ -46,6 +46,34 @@ final class AppSessionSmokeTests: XCTestCase {
         )
     }
 
+    func testGeneratorRestoresControlsFromMostRecentAdvice() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let older = AdviceRecord(
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+            category: .career,
+            tone: .corporateConsultant,
+            adviceLine: "Older advice",
+            rationaleLine: nil
+        )
+        let latest = AdviceRecord(
+            createdAt: Date(timeIntervalSince1970: 1_700_000_100),
+            category: .dating,
+            tone: .wizard,
+            adviceLine: "The newest terrible idea",
+            rationaleLine: nil
+        )
+        context.insert(older)
+        context.insert(latest)
+        try context.save()
+
+        let session = AppSessionViewModel(context: context)
+
+        XCTAssertEqual(session.generate.current?.id, latest.id)
+        XCTAssertEqual(session.generate.selectedCategory, .dating)
+        XCTAssertEqual(session.generate.selectedTone, .wizard)
+    }
+
     func testBootstrapAdviceExperienceShowsLoadingAndAutoGeneratesInitialAdvice() async throws {
         let container = try makeInMemoryContainer()
         let session = AppSessionViewModel(context: ModelContext(container))

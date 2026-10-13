@@ -199,7 +199,10 @@ final class GenerateViewModel {
         self.achievementsManager = achievementsManager
         self.liveActivityManager = liveActivityManager ?? LiveActivityManager()
         repository.seedAdviceMemoryFromHistoryIfNeeded()
-        self.current = repository.fetchHistory(limit: 1).first
+        let latestAdvice = repository.fetchHistory(limit: 1).first
+        self.selectedCategory = latestAdvice?.category ?? .career
+        self.selectedTone = latestAdvice?.tone ?? .corporateConsultant
+        self.current = latestAdvice
         self.primaryActionTitle = Self.primaryActionTitles.first ?? "Advise Me"
         syncLiveActivityState()
     }
