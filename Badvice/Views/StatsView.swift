@@ -987,6 +987,31 @@ struct DispatchesTabView: View {
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var deskHeader: (eyebrow: String, title: String, detail: String, systemImage: String) {
+        switch desk {
+        case .daily:
+            (
+                "Quotes & prompts",
+                "The daily bad idea",
+                "A fresh quote every day. A little inspiration for your next mistake.",
+                "envelope.open.fill"
+            )
+        case .ideas:
+            (
+                "Scenario starters",
+                "Start with a situation",
+                "Pick a prompt to carry its topic and voice into your next bad idea.",
+                "lightbulb.max.fill"
+            )
+        case .archive:
+            (
+                "Dispatch archive",
+                "The quote file",
+                "Search, sort, and revisit every dispatch in the collection.",
+                "books.vertical.fill"
+            )
+        }
+    }
     private var starters: [Starter] {
         [
             .init(id: "meeting", title: "The status meeting", prompt: "I need to explain a project delay without sounding worried.", category: .career, tone: .corporateConsultant),
@@ -1006,12 +1031,14 @@ struct DispatchesTabView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 14) {
                         BureauTabHeader(
-                            eyebrow: "Quotes & prompts",
-                            title: "The daily bad idea",
-                            detail: "A fresh quote every day. A little inspiration for your next mistake.",
-                            systemImage: "envelope.open.fill",
+                            eyebrow: deskHeader.eyebrow,
+                            title: deskHeader.title,
+                            detail: deskHeader.detail,
+                            systemImage: deskHeader.systemImage,
                             theme: settings.theme
                         )
+                        .accessibilityElement(children: .contain)
+                        .accessibilityIdentifier("quotes.header")
 
                         Picker("Dispatch desk", selection: $desk) {
                             ForEach(Desk.allCases) { item in
@@ -1019,6 +1046,7 @@ struct DispatchesTabView: View {
                             }
                         }
                         .pickerStyle(.segmented)
+                        .accessibilityIdentifier("quotes.deskPicker")
 
                         switch desk {
                         case .daily:
@@ -1076,23 +1104,37 @@ struct DispatchesTabView: View {
                 HStack(spacing: 8) {
                     quoteAction(
                         "Like",
-                        systemImage: quotes.vote(for: quote) == .like ? "hand.thumbsup.fill" : "hand.thumbsup"
+                        systemImage: quotes.vote(for: quote) == .like ? "hand.thumbsup.fill" : "hand.thumbsup",
+                        identifier: "quotes.daily.like"
                     ) {
                         quotes.toggleVote(.like, for: quote)
                     }
-                    quoteAction("Copy", systemImage: "doc.on.doc") {
+                    quoteAction("Copy", systemImage: "doc.on.doc", identifier: "quotes.daily.copy") {
                         UIPasteboard.general.string = quote.text
                         quotes.trackCopy(quote, isDaily: true)
                         activeToast = ToastMessage(message: "Dispatch copied", style: .success)
                     }
-                    quoteAction("Share", systemImage: "square.and.arrow.up") {
+                    quoteAction("Share", systemImage: "square.and.arrow.up", identifier: "quotes.daily.share") {
                         shareItems = ["“\(quote.text)” — \(quote.source)\n\nBadvice"]
                         quotes.trackShare(quote, isDaily: true)
                         showingShareSheet = true
                     }
                 }
+
+                Button {
+                    onUseStarter(quote.category, .random, quote.text)
+                } label: {
+                    Label("Use as prompt", systemImage: "sparkles")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(accent)
+                .accessibilityIdentifier("quotes.daily.remix")
+                .accessibilityHint("Opens Advice with this quote in the situation field.")
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("quotes.dailyHero")
     }
 
@@ -1211,10 +1253,24 @@ struct DispatchesTabView: View {
                                     .foregroundStyle(secondaryText)
                                     .lineLimit(1)
                                 Spacer()
-                                quoteAction("Copy", systemImage: "doc.on.doc") {
+                            }
+                            HStack(spacing: 8) {
+                                quoteAction(
+                                    "Copy",
+                                    systemImage: "doc.on.doc",
+                                    identifier: "quotes.archive.copy.\(quote.id)"
+                                ) {
                                     UIPasteboard.general.string = quote.text
                                     quotes.trackCopy(quote, isDaily: false)
                                     activeToast = ToastMessage(message: "Dispatch copied", style: .success)
+                                }
+                                quoteAction(
+                                    "Remix",
+                                    systemImage: "sparkles",
+                                    identifier: "quotes.archive.remix.\(quote.id)",
+                                    hint: "Opens Advice with this quote in the situation field."
+                                ) {
+                                    onUseStarter(quote.category, .random, quote.text)
                                 }
                             }
                         }
@@ -1224,7 +1280,13 @@ struct DispatchesTabView: View {
         }
     }
 
-    private func quoteAction(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+    private func quoteAction(
+        _ title: String,
+        systemImage: String,
+        identifier: String,
+        hint: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
                 .font(.caption.weight(.bold))
@@ -1234,6 +1296,8 @@ struct DispatchesTabView: View {
         .buttonStyle(.plain)
         .foregroundStyle(accent)
         .accessibilityLabel(title)
+        .accessibilityIdentifier(identifier)
+        .accessibilityHint(hint ?? "Double-tap to \(title.lowercased()) this quote.")
     }
 }
 

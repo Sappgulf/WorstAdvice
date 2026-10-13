@@ -186,8 +186,13 @@ struct FloatingTabBarView: View {
     }
 
     private var moreButton: some View {
-        let selectedTabIsOverflow = overflowTabs.contains(selectedTab) && !tabs.contains(selectedTab)
-        let isSelected = showingShellMenu || showingSettingsRoot || selectedTabIsOverflow
+        let activeOverflowTab: AppTab? = {
+            guard !showingShellMenu else { return nil }
+            if showingSettingsRoot { return .settings }
+            guard overflowTabs.contains(selectedTab), !tabs.contains(selectedTab) else { return nil }
+            return selectedTab
+        }()
+        let isSelected = showingShellMenu || activeOverflowTab != nil
 
         return Button {
             HapticsManager.playSelection(isEnabled: hapticsEnabled)
@@ -196,16 +201,17 @@ struct FloatingTabBarView: View {
             VStack(spacing: 2) {
                 Group {
                     if reduceMotion {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: activeOverflowTab?.systemImage ?? "ellipsis.circle")
                     } else {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: activeOverflowTab?.systemImage ?? "ellipsis.circle")
                             .symbolEffect(.bounce.up.byLayer, value: isSelected)
                     }
                 }
                 .font(.system(size: 18, weight: isSelected ? .semibold : .medium))
+                .symbolVariant(isSelected ? .fill : .none)
                 .foregroundStyle(isSelected ? accent : secondaryText.opacity(0.74))
 
-                Text(selectedTabIsOverflow ? selectedTab.compactTitle : "More")
+                Text(activeOverflowTab?.compactTitle ?? "More")
                     .font(.system(size: 11, weight: isSelected ? .semibold : .regular, design: .rounded))
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
@@ -235,8 +241,12 @@ struct FloatingTabBarView: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("More")
-        .accessibilityHint("Opens saved work, history, discovery, challenges, settings, and other quick access destinations")
+        .accessibilityLabel(activeOverflowTab?.title ?? "More")
+        .accessibilityHint(
+            activeOverflowTab == nil
+                ? "Opens saved work, history, discovery, challenges, settings, and other quick access destinations"
+                : "Opens the quick access menu"
+        )
         .accessibilityIdentifier("tab.more")
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }

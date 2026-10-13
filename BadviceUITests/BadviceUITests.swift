@@ -212,7 +212,7 @@ final class BadviceUITests: BadviceUITestCase {
         capture("CloudKit unavailable diagnosis", app: app)
     }
 
-    func testSignedDeviceDevelopmentCloudKitProbe() {
+    func testSignedDeviceDevelopmentCloudKitProbe() throws {
 #if targetEnvironment(simulator)
         throw XCTSkip("The CloudKit probe intentionally runs only on a signed physical device.")
 #else

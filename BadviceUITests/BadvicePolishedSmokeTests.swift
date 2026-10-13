@@ -1,6 +1,41 @@
 import XCTest
 
 final class BadvicePolishedSmokeTests: BadviceUITestCase {
+    func testDispatchDeskHeadersAndQuoteRemixFlow() {
+        let app = launch()
+        tap("tab.quotes", in: app)
+        XCTAssertTrue(app.staticTexts["The daily bad idea"].waitForExistence(timeout: 8))
+
+        tap("quotes.daily.remix", in: app)
+        let situation = control("generate.situation", in: app)
+        XCTAssertTrue(situation.waitForExistence(timeout: 8))
+        XCTAssertFalse((situation.value as? String ?? "").isEmpty)
+
+        tap("tab.quotes", in: app)
+        let starters = app.buttons["Starters"].firstMatch
+        reveal(starters, in: app)
+        starters.tap()
+        XCTAssertTrue(app.staticTexts["Start with a situation"].waitForExistence(timeout: 8))
+
+        let archive = app.buttons["Archive"].firstMatch
+        reveal(archive, in: app)
+        archive.tap()
+        XCTAssertTrue(app.staticTexts["The quote file"].waitForExistence(timeout: 8))
+    }
+
+    func testOverflowNavigationMatchesTheSelectedRoute() {
+        let app = launch()
+        openParty(app)
+        let partyDestination = control("tab.more", in: app)
+        XCTAssertEqual(partyDestination.label, "Party")
+        XCTAssertEqual(partyDestination.value as? String, "Selected")
+
+        openSettings(app)
+        let settingsDestination = control("tab.more", in: app)
+        XCTAssertEqual(settingsDestination.label, "Settings")
+        XCTAssertEqual(settingsDestination.value as? String, "Selected")
+    }
+
     func testGenerateCustomizationAndRealityCheck() {
         let app = launch()
         tap("generate.category.menu", in: app)

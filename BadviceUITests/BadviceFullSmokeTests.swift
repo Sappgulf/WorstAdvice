@@ -23,6 +23,8 @@ final class BadviceFullSmokeTests: BadviceUITestCase {
         generate(app)
         tap("generate.save", in: app)
         tap("tab.favorites", in: app)
+        XCTAssertTrue(app.buttons["tab.favorites"].isSelected, app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Saved & recent"].waitForExistence(timeout: 8), app.debugDescription)
         reveal(app.buttons["Organize"].firstMatch, in: app)
         capture("Saved before background", app: app)
         XCUIDevice.shared.press(.home)
@@ -37,7 +39,7 @@ final class BadviceFullSmokeTests: BadviceUITestCase {
         openSettings(app, advanced: true)
         tap("settings.row.quote.suggestion.lab", in: app)
         let submit = app.buttons["quoteSuggestionLab.submit"]
-        XCTAssertTrue(submit.waitForExistence(timeout: 8))
+        XCTAssertTrue(submit.waitForExistence(timeout: 8), app.debugDescription)
         XCTAssertFalse(submit.isEnabled)
         type("Department of Overthinking", field: "Source (optional)", in: app)
         type("If the deadline moves, you were early all along.", field: "Quote text", in: app)
