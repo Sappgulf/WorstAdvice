@@ -31,6 +31,7 @@ BADVICE_LIVE_MODEL_MATRIX=1 xcodebuild test \
   -derivedDataPath "$DERIVED_DATA_PATH" \
   -resultBundlePath "$RESULT_BUNDLE_PATH" \
   -only-testing:BadviceTests/AppSessionSmokeTests/testLiveAppleFoundationModelCategoryToneMatrixWhenEnabled \
+  -only-testing:BadviceTests/AppSessionSmokeTests/testLiveAppleFoundationQuoteSmokeWhenAvailable \
   -parallel-testing-enabled NO \
   ONLY_ACTIVE_ARCH=YES \
   COMPILER_INDEX_STORE_ENABLE=NO \

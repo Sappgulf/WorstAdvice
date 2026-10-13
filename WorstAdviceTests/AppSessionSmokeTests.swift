@@ -641,6 +641,27 @@ extension AppSessionSmokeTests {
         print("LIVE APP GENERATOR TOTAL: Apple=\(appleCount), explained fallback=\(fallbackCount)")
     }
 
+    func testLiveAppleFoundationQuoteSmokeWhenAvailable() async throws {
+        let availability = AppleOnDeviceAdviceBridge.currentAvailability()
+        guard availability.isReady else {
+            throw XCTSkip("Live Apple quote model: \(availability.statusText)")
+        }
+
+        let bridge = AppleOnDeviceAdviceBridge(moderation: ContentModeration())
+        let quote = try await bridge.generateQuoteCandidate(
+            category: .career,
+            tone: .wizard,
+            seed: 270_013
+        )
+
+        XCTAssertEqual(quote.category, .career)
+        XCTAssertFalse(quote.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        XCTAssertLessThanOrEqual(quote.text.count, 160)
+        XCTAssertFalse(quote.source.isEmpty)
+        XCTAssertLessThanOrEqual(quote.source.count, 44)
+        print("LIVE APP QUOTE: career/wizard — \(quote.source) — \(quote.text)")
+    }
+
     func testLiveAppleFoundationModelCategoryToneMatrixWhenEnabled() async throws {
         guard ProcessInfo.processInfo.environment["BADVICE_LIVE_MODEL_MATRIX"] == "1" else {
             throw XCTSkip("Set BADVICE_LIVE_MODEL_MATRIX=1 to run the opt-in live category/voice sweep.")
