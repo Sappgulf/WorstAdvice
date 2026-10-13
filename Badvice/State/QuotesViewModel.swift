@@ -231,12 +231,12 @@ final class QuotesViewModel {
         let keyword = rules.keywords[keywordSeed.positiveModulo(rules.keywords.count)]
         let sourceTone = quote.source.normalizedForFiltering
         if sourceTone.contains("memo") || sourceTone.contains("brief") {
-            return "It reads like a memo that mistook \(keyword) for the responsible conclusion."
+            return "The bad premise is “\(principle)”; the memo turns “\(keyword)” into official policy."
         }
         if sourceTone.contains("oracle") || sourceTone.contains("wisdom") {
-            return "It gives \(principle.lowercased()) the confidence of a rule and lets \(keyword) sound inevitable."
+            return "The bad premise is “\(principle)”; “\(keyword)” gets the confidence of a prophecy."
         }
-        return "It frames \(principle.lowercased()) as good judgment and makes \(keyword) feel like the polished answer."
+        return "The bad premise is “\(principle)”; “\(keyword)” dresses it up as good judgment."
     }
 
     func loadIfNeeded() {

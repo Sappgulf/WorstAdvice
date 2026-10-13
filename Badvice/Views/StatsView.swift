@@ -1180,13 +1180,43 @@ struct DispatchesTabView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(secondaryText)
 
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "text.magnifyingglass")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(accent)
+                        .frame(width: 30, height: 30)
+                        .background(accent.opacity(0.1), in: Circle())
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("WHY IT'S BADVICE")
+                            .font(.caption2.weight(.black))
+                            .tracking(1)
+                            .foregroundStyle(accent)
+                        Text(quotes.quoteSpotlightInsight(for: quote))
+                            .font(.footnote)
+                            .foregroundStyle(secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("quotes.daily.insight")
+                    }
+                }
+                .padding(11)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(accent.opacity(0.055), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
                 HStack(spacing: 8) {
+                    let isLiked = quotes.vote(for: quote) == .like
                     quoteAction(
-                        "Like",
-                        systemImage: quotes.vote(for: quote) == .like ? "hand.thumbsup.fill" : "hand.thumbsup",
-                        identifier: "quotes.daily.like"
+                        isLiked ? "Liked" : "Like",
+                        systemImage: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup",
+                        identifier: "quotes.daily.like",
+                        selected: isLiked
                     ) {
                         quotes.toggleVote(.like, for: quote)
+                        activeToast = ToastMessage(
+                            message: isLiked ? "Removed from liked dispatches" : "Added to liked dispatches",
+                            style: isLiked ? .deleted : .success
+                        )
                     }
                     quoteAction("Copy", systemImage: "doc.on.doc", identifier: "quotes.daily.copy") {
                         UIPasteboard.general.string = quote.text
@@ -1401,24 +1431,34 @@ struct DispatchesTabView: View {
         }
     }
 
+    @ViewBuilder
     private func quoteAction(
         _ title: String,
         systemImage: String,
         identifier: String,
         hint: String? = nil,
+        selected: Bool? = nil,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        let button = Button(action: action) {
             Label(title, systemImage: systemImage)
                 .font(.caption.weight(.bold))
                 .frame(maxWidth: .infinity, minHeight: 44)
-                .background(accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 13))
+                .background(accent.opacity(selected == true ? 0.2 : 0.1), in: RoundedRectangle(cornerRadius: 13))
         }
         .buttonStyle(.plain)
         .foregroundStyle(accent)
         .accessibilityLabel(title)
         .accessibilityIdentifier(identifier)
         .accessibilityHint(hint ?? "Double-tap to \(title.lowercased()) this quote.")
+
+        if let selected {
+            button
+                .accessibilityValue(selected ? "Liked" : "Not liked")
+                .accessibilityAddTraits(selected ? .isSelected : [])
+        } else {
+            button
+        }
     }
 }
 

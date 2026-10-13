@@ -5,6 +5,20 @@ final class BadvicePolishedSmokeTests: BadviceUITestCase {
         let app = launch()
         tap("tab.quotes", in: app)
         XCTAssertTrue(app.staticTexts["The daily bad idea"].waitForExistence(timeout: 8))
+        let insight = control("quotes.daily.insight", in: app)
+        XCTAssertTrue(insight.waitForExistence(timeout: 8))
+        XCTAssertFalse(insight.label.isEmpty)
+        XCTAssertTrue(insight.label.hasPrefix("The bad premise is"))
+
+        let like = control("quotes.daily.like", in: app)
+        let originalLikeState = like.value as? String
+        XCTAssertTrue(["Liked", "Not liked"].contains(originalLikeState ?? ""))
+        like.tap()
+        let toggledLikeState = originalLikeState == "Liked" ? "Not liked" : "Liked"
+        XCTAssertEqual(like.value as? String, toggledLikeState)
+        XCTAssertEqual(like.label, toggledLikeState == "Liked" ? "Liked" : "Like")
+        like.tap()
+        XCTAssertEqual(like.value as? String, originalLikeState)
 
         tap("quotes.daily.remix", in: app)
         let situation = control("generate.situation", in: app)
