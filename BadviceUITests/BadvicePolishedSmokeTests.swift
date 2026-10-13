@@ -51,6 +51,33 @@ final class BadvicePolishedSmokeTests: BadviceUITestCase {
         XCTAssertTrue(app.staticTexts["The quote file"].waitForExistence(timeout: 8))
     }
 
+    func testMissionActionsAreClearAndProgressIsAnnounced() {
+        let app = launch()
+        tap("tab.chaosHub", in: app)
+
+        let dailyAction = control("chaos.mission.daily.action", in: app)
+        XCTAssertTrue(dailyAction.waitForExistence(timeout: 8))
+        XCTAssertTrue(["Generate today's dare", "Generate another"].contains(dailyAction.label))
+
+        let dailyProgress = control("chaos.mission.daily.progress", in: app)
+        XCTAssertEqual(dailyProgress.label, "Today's mission progress")
+        let dailyValue = dailyProgress.value as? String ?? ""
+        XCTAssertTrue(dailyValue == "Complete" || dailyValue.contains(" of "))
+
+        let weeklyAction = control("chaos.mission.weekly.action", in: app)
+        XCTAssertEqual(weeklyAction.label, "Set weekly focus")
+
+        let weeklyProgress = control("chaos.mission.weekly.progress", in: app)
+        XCTAssertEqual(weeklyProgress.label, "Weekly mission progress")
+        let weeklyValue = weeklyProgress.value as? String ?? ""
+        XCTAssertTrue(weeklyValue == "Complete" || weeklyValue.contains(" of "))
+
+        weeklyAction.tap()
+        XCTAssertTrue(control("generate.category.menu", in: app).waitForExistence(timeout: 8))
+        XCTAssertTrue(control("generate.tone.menu", in: app).exists)
+        XCTAssertTrue(app.buttons["generate.primary"].exists)
+    }
+
     func testOverflowNavigationMatchesTheSelectedRoute() {
         let app = launch()
         openParty(app)

@@ -821,12 +821,20 @@ struct DaresTabView: View {
 
                         BureauPanel(theme: settings.theme, emphasized: true) {
                             missionCard(
+                                missionIdentifier: "daily",
+                                progressLabel: "Today's mission progress",
+                                progressValue: daily.isComplete
+                                    ? "Complete"
+                                    : "\(daily.currentCount) of \(daily.targetCount)",
                                 eyebrow: "TODAY",
                                 title: daily.title.replacingOccurrences(of: "Daily Mission: ", with: ""),
                                 detail: daily.subtitle,
                                 progress: daily.progressFraction,
                                 count: "\(daily.currentCount)/\(daily.targetCount)",
-                                completed: daily.isComplete
+                                completed: daily.isComplete,
+                                actionTitle: daily.isComplete ? "Generate another" : "Generate today's dare",
+                                actionSystemImage: daily.isComplete ? "arrow.clockwise" : "arrow.up.right",
+                                actionHint: "Starts a new \(daily.category.title) take in the \(daily.tone.voice.name) voice."
                             ) {
                                 generate.runDailyMissionGeneration()
                                 onDataChanged()
@@ -836,13 +844,21 @@ struct DaresTabView: View {
 
                         BureauPanel(theme: settings.theme) {
                             missionCard(
+                                missionIdentifier: "weekly",
+                                progressLabel: "Weekly mission progress",
+                                progressValue: weekly.isComplete
+                                    ? "Complete"
+                                    : "\(weekly.currentCount) of \(weekly.targetCount)",
                                 eyebrow: "THIS WEEK",
                                 title: weekly.title.replacingOccurrences(of: "Weekly Mission: ", with: ""),
                                 detail: weekly.subtitle,
                                 progress: weekly.progressFraction,
                                 count: "\(weekly.currentCount)/\(weekly.targetCount)",
                                 completed: weekly.isComplete,
-                                prominent: false
+                                prominent: false,
+                                actionTitle: "Set weekly focus",
+                                actionSystemImage: "arrow.up.right",
+                                actionHint: "Loads \(weekly.category.title) and \(weekly.tone.voice.name) into Advice so you can choose when to generate."
                             ) {
                                 generate.updateSelections(
                                     category: weekly.category,
@@ -852,8 +868,6 @@ struct DaresTabView: View {
                                 onOpenTab(.generate)
                             }
                         }
-                        .accessibilityIdentifier("chaos.progressionPath")
-
                         BureauPanel(theme: settings.theme) {
                             VStack(alignment: .leading, spacing: 14) {
                                 Text("YOUR MISCHIEF")
@@ -935,6 +949,9 @@ struct DaresTabView: View {
     }
 
     private func missionCard(
+        missionIdentifier: String,
+        progressLabel: String,
+        progressValue: String,
         eyebrow: String,
         title: String,
         detail: String,
@@ -942,6 +959,9 @@ struct DaresTabView: View {
         count: String,
         completed: Bool,
         prominent: Bool = true,
+        actionTitle: String,
+        actionSystemImage: String,
+        actionHint: String,
         action: @escaping () -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: 13) {
@@ -959,29 +979,34 @@ struct DaresTabView: View {
             Text(title)
                 .font(.system(.title2, design: .serif, weight: .bold))
                 .foregroundStyle(primaryText)
+                .accessibilityIdentifier("chaos.mission.\(missionIdentifier).title")
 
             Text(detail)
                 .font(.subheadline)
                 .foregroundStyle(secondaryText)
+                .accessibilityIdentifier("chaos.mission.\(missionIdentifier).detail")
 
             ProgressView(value: progress)
                 .tint(accent)
+                .accessibilityLabel(progressLabel)
+                .accessibilityValue(progressValue)
+                .accessibilityIdentifier("chaos.mission.\(missionIdentifier).progress")
 
             // Only the daily dare carries the filled CTA; the weekly card steps
             // down to bordered so the two cards do not compete for the tap.
-            let label = Label(
-                completed ? "Commission another" : "Accept the dare",
-                systemImage: completed ? "arrow.clockwise" : "arrow.up.right"
-            )
-            .font(.subheadline.weight(.bold))
-            .frame(maxWidth: .infinity, minHeight: 46)
+            let label = Label(actionTitle, systemImage: actionSystemImage)
+                .font(.subheadline.weight(.bold))
+                .frame(maxWidth: .infinity, minHeight: 46)
+            let actionButton = Button(action: action) { label }
+                .accessibilityHint(actionHint)
+                .accessibilityIdentifier("chaos.mission.\(missionIdentifier).action")
 
             if prominent {
-                Button(action: action) { label }
+                actionButton
                     .buttonStyle(.borderedProminent)
                     .tint(accent)
             } else {
-                Button(action: action) { label }
+                actionButton
                     .buttonStyle(.bordered)
                     .tint(accent)
             }
