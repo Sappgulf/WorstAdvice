@@ -2,6 +2,16 @@ import Foundation
 import OSLog
 import SwiftData
 
+enum AppLaunchEnvironment {
+    static var isHostedUnitTesting: Bool {
+        let process = ProcessInfo.processInfo
+        guard !process.arguments.contains("-ui-testing") else { return false }
+        return ["XCTestConfigurationFilePath", "XCTestBundlePath", "XCTestSessionIdentifier"]
+            .contains { process.environment[$0] != nil }
+            || NSClassFromString("XCTestCase") != nil
+    }
+}
+
 @MainActor
 final class AppSessionViewModel {
     private static let logger = Logger(subsystem: "com.worstadvice.app", category: "ui-tests")
@@ -59,7 +69,9 @@ final class AppSessionViewModel {
             localModelStore: localModelStore,
             analyticsTracker: analyticsTracker
         )
-        self.social = SocialViewModel()
+        self.social = SocialViewModel(
+            actionQueue: SocialActionQueueStore(storageKey: "social.queue.v2.\(accountID?.uuidString ?? "__default__")")
+        )
     }
 
     func refreshLists() {

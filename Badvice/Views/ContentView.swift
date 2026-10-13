@@ -1,3 +1,4 @@
+import CloudKit
 import CoreMotion
 import StoreKit
 import OSLog
@@ -78,7 +79,6 @@ struct ContentView: View {
     @State private var lastShakeHandledAt: Date = .distantPast
     @State private var lowPowerModeEnabled = ProcessInfo.processInfo.isLowPowerModeEnabled
     @StateObject private var shakeDetector = ShakeDetector()
-    @State private var shouldRestartOnNextActive = false
     @State private var deviceCapability = DeviceCapabilityProfile.current()
     @State private var hasScheduledDebugPolishFixturePreload = false
     @State private var loadedTabs: Set<AppTab> = [.generate]
@@ -94,7 +94,7 @@ struct ContentView: View {
         isUITesting && (isScreenshotMode || launchArguments.contains("-debug-preload-polish-fixtures"))
     }
     private var isHostedUnitTesting: Bool {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        AppLaunchEnvironment.isHostedUnitTesting
     }
     private var settingsTabAvailable: Bool { auth?.isAuthenticated == true && session != nil }
     private var shouldAutoGenerateAdviceOnOpen: Bool {
@@ -232,11 +232,6 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                if shouldRestartOnNextActive {
-                    shouldRestartOnNextActive = false
-                    restartAppSession()
-                    return
-                }
                 if shakeToGenerateEnabled {
                     shakeDetector.startMonitoring()
                 }
@@ -249,9 +244,6 @@ struct ContentView: View {
                     break
                 }
             } else {
-                if phase == .background {
-                    shouldRestartOnNextActive = true
-                }
                 shakeDetector.stopMonitoring()
             }
         }
@@ -264,6 +256,17 @@ struct ContentView: View {
                 shakeDetector.startMonitoring()
             }
             session.generate.refreshRetentionStateOnAppear()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .CKAccountChanged)) { _ in
+            auth.setLinkedSocialProfileRecordName(nil)
+            Task { await session.social.handleICloudAccountChange() }
+        }
+        .onChange(of: NetworkMonitor.shared.isOnline) { wasOnline, isOnline in
+            guard !wasOnline, isOnline else { return }
+            Task {
+                await session.social.retryFriendsLoad()
+                await session.social.retryQueuedActions()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) {
             _ in
@@ -285,7 +288,9 @@ struct ContentView: View {
             }
         }
         .onChange(of: session.social.currentUser?.recordID.recordName) { _, newRecordName in
-            auth.setLinkedSocialProfileRecordName(newRecordName)
+            // Temporary refresh/error states clear the displayed user, not the saved link.
+            // Actual iCloud account changes explicitly unlink in the account-change handler.
+            if let newRecordName { auth.setLinkedSocialProfileRecordName(newRecordName) }
         }
         .onReceive(
             NotificationCenter.default.publisher(
@@ -504,7 +509,7 @@ struct ContentView: View {
 
     private func syncAuthContext(auth: AuthViewModel, social: SocialViewModel?) async {
         await social?.applyAuthContext(
-            email: auth.signedInEmail,
+            email: auth.currentSession.map { $0.isGuest ? "local:\($0.accountID.uuidString)" : $0.email },
             linkedSocialRecordName: auth.linkedSocialProfileRecordName
         )
     }
@@ -523,6 +528,7 @@ struct ContentView: View {
                     social: session.social,
                     auth: auth,
                     achievementsManager: session.achievements,
+                    onOpenTab: { tab in selectedTab = tab; showingSettingsRoot = false },
                     onSignOut: { signOutCurrentAccount(auth) },
                     onDeleteAccount: { password in
                         await deleteCurrentAccount(auth, password: password)
@@ -735,7 +741,7 @@ struct ContentView: View {
             showSplash = false
         }
         if isUITesting {
-            activeSession?.settings.preferredGenerationProvider = .classic
+            activeSession?.settings.preferredGenerationProvider = launchArguments.contains("-ui-testing-apple-model") ? .appleOnDevice : .classic
             activeSession?.settings.performanceMode = true
             activeSession?.settings.reduceMotion = true
             activeSession?.settings.hapticsEnabled = false
@@ -1071,6 +1077,7 @@ struct ContentView: View {
             )
         case .groupChallenges:
             GroupChallengesTabView(
+                accountKey: session.accountID?.uuidString ?? "__default__",
                 social: session.social,
                 generateViewModel: session.generate,
                 settings: session.settings,

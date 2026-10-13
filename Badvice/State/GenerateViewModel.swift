@@ -110,7 +110,8 @@ final class GenerateViewModel {
     private let store: AdviceStore
     private let engine: AdviceEngine
     private let bureauEngine: BureauAdviceEngine
-    private let appleOnDeviceBridge: AppleOnDeviceAdviceBridge
+    private let appleOnDeviceBridge: any AppleAdviceGenerating
+    private let appleAvailability: () -> AppleOnDeviceModelAvailability
     private let badQuoteService: BadQuoteService
     private let moderation: ContentModeration
     private let analyticsTracker: AnalyticsTracking
@@ -181,14 +182,17 @@ final class GenerateViewModel {
         moderation: ContentModeration = ContentModeration(),
         analyticsTracker: AnalyticsTracking = AppAnalyticsTracker(),
         achievementsManager: AchievementsManager,
-        liveActivityManager: LiveActivityManager? = nil
+        liveActivityManager: LiveActivityManager? = nil,
+        appleOnDeviceBridge: (any AppleAdviceGenerating)? = nil,
+        appleAvailability: @escaping () -> AppleOnDeviceModelAvailability = { AppleOnDeviceAdviceBridge.currentAvailability() }
     ) {
         self.repository = repository
         self.settingsViewModel = settingsViewModel
         self.store = store
         self.badQuoteService = badQuoteService
         self.moderation = moderation
-        self.appleOnDeviceBridge = AppleOnDeviceAdviceBridge(moderation: moderation)
+        self.appleOnDeviceBridge = appleOnDeviceBridge ?? AppleOnDeviceAdviceBridge(moderation: moderation)
+        self.appleAvailability = appleAvailability
         self.engine = AdviceEngine(store: store, moderation: moderation)
         self.bureauEngine = BureauAdviceEngine(store: store, moderation: moderation)
         self.analyticsTracker = analyticsTracker
@@ -337,6 +341,7 @@ final class GenerateViewModel {
         revision: AdviceRevisionStyle? = nil,
         forceBureau: Bool = false
     ) async {
+        guard !isGenerating || isBootstrap else { return }
         let generationPerfToken = AppPerformanceInstrumentation.beginAdviceGenerationInterval()
         defer { AppPerformanceInstrumentation.endAdviceGenerationInterval(generationPerfToken) }
         isGenerating = true
@@ -363,13 +368,10 @@ final class GenerateViewModel {
         let communityOnlyMode = forceBureau ? false : settingsViewModel.communityOnlyMode
         let selectedPack = settingsViewModel.preferredContentPack
         let requestedGenerationProvider = settingsViewModel.preferredGenerationProvider
-        // `.auto` is retained for persisted backwards compatibility, but now resolves to
-        // the deterministic local engine. A language model is used only after the person
-        // explicitly selects Apple Intelligence in Settings.
         let generationProvider: AdviceGenerationProvider =
-            !forceBureau && requestedGenerationProvider == .appleOnDevice ? .appleOnDevice : .classic
+            !forceBureau && requestedGenerationProvider != .classic ? .appleOnDevice : .classic
         if generationProvider != .classic {
-            let availability = AppleOnDeviceAdviceBridge.currentAvailability()
+            let availability = appleAvailability()
             analyticsTracker.track(
                 "apple_model_availability",
                 properties: [
@@ -427,7 +429,7 @@ final class GenerateViewModel {
             current = repository.insert(output)
             invalidateRetentionSnapshot()
             NotificationManager.updateGenerationActivity(date: output.createdAt)
-            NotificationManager.scheduleDaily()
+            refreshNotificationSchedule()
             repository.recordLearningSignal(
                 scopeKey: adviceScopeKey(category: output.category, tone: output.tone),
                 type: .shown
@@ -458,7 +460,9 @@ final class GenerateViewModel {
                     situation: situation,
                     includeRationale: settingsViewModel.includeRationale,
                     baseSeed: baseSeed,
-                    maxCount: generationProvider == .appleOnDevice ? 2 : 1,
+                    maxCount: 1,
+                    intensity: selectedIntensity,
+                    revision: revision,
                     requestedProvider: generationProvider
                 )
                 appleCandidates = appleBatch.candidates
@@ -504,7 +508,10 @@ final class GenerateViewModel {
                 ? (hasSituationContext ? 8 : 6)
                 : (hasSituationContext ? 5 : 4)
         )
-        candidatePool.append(contentsOf: communityCandidates.map { ($0, "community") })
+        // An explicit Apple request cannot silently select a community candidate instead.
+        if communityOnlyMode || !candidatePool.contains(where: { $0.source == "apple_on_device" }) {
+            candidatePool.append(contentsOf: communityCandidates.map { ($0, "community") })
+        }
 
         guard !candidatePool.isEmpty else {
             generationNotice = "Community suggestions were filtered by safety checks."
@@ -649,7 +656,7 @@ final class GenerateViewModel {
         current = repository.insert(output)
         invalidateRetentionSnapshot()
         NotificationManager.updateGenerationActivity(date: output.createdAt)
-        NotificationManager.scheduleDaily()
+        refreshNotificationSchedule()
         repository.recordLearningSignal(
             scopeKey: adviceScopeKey(category: output.category, tone: output.tone),
             type: .shown
@@ -706,27 +713,12 @@ final class GenerateViewModel {
         includeRationale: Bool,
         baseSeed: Int,
         maxCount: Int,
+        intensity: BadviceIntensity,
+        revision: AdviceRevisionStyle?,
         requestedProvider: AdviceGenerationProvider
     ) async -> (candidates: [GeneratedAdvice], notice: String?, fallbackReason: String?) {
-        let availability = AppleOnDeviceAdviceBridge.currentAvailability()
+        let availability = appleAvailability()
         let requestedExplicitly = requestedProvider == .appleOnDevice
-        switch settingsViewModel.appleLocalGenerationGate {
-        case .ready(let modelID):
-            if requestedProvider != .classic {
-                analyticsTracker.track(
-                    "apple_local_model_selected",
-                    properties: [
-                        "requested_provider": requestedProvider.rawValue,
-                        "selected_model_id": modelID,
-                    ])
-            }
-        case .unavailable(let reasonKey, let message, _, _):
-            return (
-                [],
-                requestedExplicitly ? "\(message) Using classic generator." : nil,
-                "selection_\(reasonKey)"
-            )
-        }
         guard availability.isReady else {
             return (
                 [], requestedExplicitly ? availability.statusText : nil,
@@ -747,7 +739,9 @@ final class GenerateViewModel {
                     includeRationale: includeRationale,
                     seed: baseSeed + (index * 4_099),
                     now: Date(),
-                    timeout: requestedExplicitly ? .seconds(8) : .seconds(4)
+                    intensity: intensity,
+                    revision: revision,
+                    timeout: .seconds(25)
                 )
                 guard engine.validateOutput(candidate, for: category) else { continue }
                 let fingerprint = candidate.adviceLine.normalizedForFiltering
@@ -759,6 +753,9 @@ final class GenerateViewModel {
                     "Apple on-device generation failed: \(String(describing: error), privacy: .public)"
                 )
                 if requestedExplicitly, candidates.isEmpty {
+                    if AppleOnDeviceAdviceBridge.isGuardrailRefusal(error) {
+                        return ([], "Apple Intelligence declined this request. Using the local Bureau Engine.", "guardrail_refusal")
+                    }
                     let didTimeOut = (error as? AppleOnDeviceGenerationError) == .timedOut
                     return (
                         [],
@@ -794,6 +791,8 @@ final class GenerateViewModel {
         includeRationale: Bool,
         seed: Int,
         now: Date,
+        intensity: BadviceIntensity,
+        revision: AdviceRevisionStyle?,
         timeout: Duration
     ) async throws -> GeneratedAdvice {
         try await withThrowingTaskGroup(of: GeneratedAdvice.self) { group in
@@ -804,7 +803,9 @@ final class GenerateViewModel {
                     situation: situation,
                     includeRationale: includeRationale,
                     seed: seed,
-                    now: now
+                    now: now,
+                    intensity: intensity,
+                    revision: revision
                 )
             }
             group.addTask {
@@ -821,12 +822,11 @@ final class GenerateViewModel {
     }
 
     private func generationSourceBadgeLabel(for source: String) -> String? {
-        // Default engine path is silent chrome — only non-default sources earn a badge.
         switch source {
         case "apple_on_device":
-            return "On-Device"
+            return "Apple Intelligence • on device"
         case "bureau", "engine":
-            return nil
+            return "Bureau Engine • local"
         case "ml_remix":
             return "Remix"
         case "community":
@@ -858,6 +858,7 @@ final class GenerateViewModel {
     }
 
     func surpriseMeAndGenerate() {
+        guard !isGenerating else { return }
         selectedCategory = AdviceCategory.allCases.randomElement() ?? .dating
         selectedTone = ToneMode.allCases.randomElement() ?? .corporateConsultant
         analyticsTracker.track(
@@ -888,9 +889,7 @@ final class GenerateViewModel {
         }
     }
 
-    /// Applies a single local rewrite direction while preserving the current lane,
-    /// voice, context, and persisted intensity. This intentionally bypasses the
-    /// optional model provider so the control is instant and available offline.
+    /// Rewrites through the selected provider, preserving topic, voice and context.
     func reviseCurrentAdvice(_ revision: AdviceRevisionStyle) {
         guard current != nil, !isGenerating else { return }
         analyticsTracker.track(
@@ -904,8 +903,7 @@ final class GenerateViewModel {
         Task {
             await generate(
                 seed: Int(Date().timeIntervalSince1970 * 1_000) &+ stableSeed(for: revision.rawValue),
-                revision: revision,
-                forceBureau: true
+                revision: revision
             )
         }
     }
@@ -1150,6 +1148,9 @@ final class GenerateViewModel {
 
     var currentRealityCheck: String? {
         guard let current else { return nil }
+        if let rationale = current.rationaleLine, !rationale.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return rationale
+        }
         return bureauEngine.realityCheck(
             category: current.category,
             situation: preparedSituationText(),
@@ -1361,13 +1362,24 @@ final class GenerateViewModel {
         weeklyMissionState.isComplete
     }
 
+    private func refreshNotificationSchedule() {
+        if settingsViewModel.dailyNotificationsEnabled {
+            NotificationManager.scheduleDaily(
+                hour: settingsViewModel.dailyNotificationHour,
+                streakEnabled: settingsViewModel.streakNotificationsEnabled
+            )
+        } else {
+            NotificationManager.cancelDailyNotification()
+        }
+    }
+
     func refreshRetentionStateOnAppear(referenceDate: Date = Date()) {
         invalidateRetentionSnapshot()
         applyStreakFreezeIfNeeded(referenceDate: referenceDate)
         invalidateRetentionSnapshot()
         NotificationManager.updateStreakFreezeAvailability(
             hasAvailable: settingsViewModel.streakFreezeAvailableThisWeek)
-        NotificationManager.scheduleDaily()
+        refreshNotificationSchedule()
         syncLiveActivityState()
     }
 
@@ -1509,13 +1521,6 @@ final class GenerateViewModel {
     }
 
     private func generationBlockingNotice(for normalizedSituation: String?) -> String? {
-        if selectedTone == .friendRoast {
-            let trimmedFriend = friendName.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmedFriend.isEmpty {
-                return "Friend roast needs a friend name to generate."
-            }
-        }
-
         let hasSituation = (normalizedSituation?.isEmpty == false)
         if hasSituation, let situation = normalizedSituation, situation.count > 1_200 {
             return "Please shorten the situation before generating."

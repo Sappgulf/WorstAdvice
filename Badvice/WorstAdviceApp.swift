@@ -53,7 +53,7 @@ struct WorstAdviceApp: App {
     }
 
     private var isRunningTests: Bool {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        AppLaunchEnvironment.isHostedUnitTesting
     }
 
     @State private var startupErrorMessage: String?
@@ -89,14 +89,6 @@ struct WorstAdviceApp: App {
                                 await CloudKitDebugSanityChecker.runFriendsReachabilityCheck()
                             }
                         #endif
-                    }
-                    .onAppear {
-                        guard !isUITesting,
-                            !isDebugPolishFixtureLaunch,
-                            !isRunningTests,
-                            !Self.isRunningOnSimulator
-                        else { return }
-                        NotificationManager.requestPermissionAndScheduleDaily()
                     }
                     .modelContainer(container)
             } else {

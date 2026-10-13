@@ -158,7 +158,7 @@ enum Theme {
         case .minimal, .slate, .evergreen:
             return .system(.body, design: .rounded, weight: .regular)
         case .badvice:
-            return .system(.body, design: .rounded, weight: .regular)
+            return .system(.body, design: .default, weight: .regular)
         default:
             return .system(.body, design: .default, weight: .regular)
         }
@@ -197,7 +197,7 @@ enum Theme {
     static func cardShadow(for theme: ThemeMode) -> (color: Color, radius: CGFloat, y: CGFloat) {
         switch theme {
         case .badvice:
-            return (Color.black.opacity(0.52), 22, 10)
+            return (Color(hex: "3B2920").opacity(0.10), 12, 5)
         case .minimal:
             return (Color.black.opacity(0.06), 8, 3)
         case .ember:
@@ -228,7 +228,7 @@ enum Theme {
         switch theme {
         case .badvice:
             // Copper foil bloom under the poster card
-            return (Color(hex: "E88D72").opacity(0.18), 14, 4)
+            return nil
         case .neon:
             return (Color(hex: "00FFFF").opacity(0.2), 12, 5)
         case .cosmic:
@@ -253,16 +253,10 @@ enum Theme {
             let gradient: LinearGradient
             switch mode {
             case .badvice:
-                // Deeper vignette espresso with warm copper lift at the top
                 gradient = LinearGradient(
-                    colors: [
-                        Color(hex: "2A1816"),
-                        Color(hex: "1A1218"),
-                        Color(hex: "120E12"),
-                        Color(hex: "0A080B"),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                    colors: [Color(hex: "F6F0E6"), Color(hex: "F6F0E6")],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
             case .minimal:
                 gradient = LinearGradient(
@@ -339,7 +333,7 @@ enum Theme {
 
     static func canvasColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "0C0A0E")
+        case .badvice: return Color(hex: "F6F0E6")
         case .minimal: return Color(hex: "F4F4F6")
         case .ember: return Color(hex: "1B100F")
         case .slate: return Color(hex: "1A2430")
@@ -359,7 +353,7 @@ enum Theme {
             return custom
         }
         switch mode {
-        case .badvice: return copperFoilMid // Brand copper
+        case .badvice: return Color(hex: "B52C2C") // Magazine red ink
         case .minimal: return Color(hex: "1C1C1E") // Black
         case .ember: return Color(hex: "FF6B47") // Vibrant Ember Orange
         case .slate: return Color(hex: "8EC5FC") // Cool Blue accent for better contrast
@@ -378,7 +372,7 @@ enum Theme {
     static func secondaryAccent(for mode: ThemeMode) -> Color? {
         switch mode {
         case .badvice:
-            return copperFoilLight // Foil highlight
+            return Color(hex: "C76942")
         case .sunset:
             return Color(hex: "FF6B35") // Coral complement to gold
         case .cosmic:
@@ -402,7 +396,7 @@ enum Theme {
 
     static func cardColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "2C1C28").opacity(0.92)
+        case .badvice: return Color(hex: "FFFCF6")
         case .minimal: return Color.white
         case .ember: return Color(hex: "4F2728").opacity(0.84)
         case .slate: return Color(hex: "314355").opacity(0.84)
@@ -420,8 +414,8 @@ enum Theme {
     /// Returns the glassmorphism intensity for themes that support it
     static func glassMorphismOpacity(for mode: ThemeMode) -> Double {
         switch mode {
-        case .minimal:
-            return 0.0 // No glass effect for minimal
+        case .badvice, .minimal:
+            return 0.0 // Paper surfaces stay opaque
         case .neon, .cosmic, .midnight:
             return 0.6 // Strong glass effect for vibrant themes
         case .sunset, .retro:
@@ -437,7 +431,7 @@ enum Theme {
 
     static func primaryText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "FFFCF7") // Warm bright white
+        case .badvice: return Color(hex: "241E1C")
         case .minimal: return Color(hex: "1C1C1E")
         case .ember: return Color(hex: "FFFAF0") // Warm white with better contrast
         case .slate: return Color(hex: "F0F4F8") // Cooler white
@@ -454,7 +448,7 @@ enum Theme {
 
     static func secondaryText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "D0C0D0") // Lighter, better contrast
+        case .badvice: return Color(hex: "6B6058")
         case .minimal: return Color(hex: "636366")
         case .ember: return Color(hex: "FFCAB0") // Warmer, more visible
         case .slate: return Color(hex: "CBD5E1") // Cooler, higher contrast
@@ -471,7 +465,7 @@ enum Theme {
 
     static func buttonText(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "2D1B2E")
+        case .badvice: return .white
         case .minimal: return .white
         case .ember: return Color(hex: "24110E")
         case .slate: return Color(hex: "2C3E50")
@@ -490,14 +484,14 @@ enum Theme {
     /// (nav title, search bar, etc.) use the correct foreground color.
     static func colorScheme(for mode: ThemeMode) -> ColorScheme {
         switch mode {
-        case .minimal: return .light
+        case .badvice, .minimal: return .light
         default:       return .dark
         }
     }
 
     static func tabBarBackground(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "1A181C")
+        case .badvice: return Color(hex: "FFFCF6")
         case .minimal: return Color(hex: "EEEEF0")
         case .ember: return Color(hex: "261212")
         case .slate: return Color(hex: "233140")
@@ -629,10 +623,10 @@ enum Theme {
         switch mode {
         case .badvice:
             return ThemePersonality(
-                descriptor: "Infernal editorial — copper foil on espresso paper",
-                surfaceMood: "Velvet Parchment",
+                descriptor: "Mischief magazine — warm paper and red ink",
+                surfaceMood: "Sunday mischief",
                 bestFor: "Best for the core Badvice vibe",
-                effectIntensity: 0.68,
+                effectIntensity: 0.22,
                 indicatorInset: 2
             )
         case .minimal:
@@ -688,7 +682,7 @@ enum Theme {
                 descriptor: "Deep-focus dark with cool bloom",
                 surfaceMood: "Nocturne Film",
                 bestFor: "Best for late-night sessions",
-                effectIntensity: 0.68,
+                effectIntensity: 0.22,
                 indicatorInset: 2
             )
         case .sunset:
@@ -736,7 +730,7 @@ enum Theme {
         let glassStrength = glassMorphismOpacity(for: mode)
         let glow: Color? = {
             switch mode {
-            case .badvice: return copperFoilMid.opacity(0.35)
+            case .badvice: return nil
             case .neon, .cosmic, .cybernetic, .fallout: return accent(for: mode).opacity(0.28)
             default: return nil
             }

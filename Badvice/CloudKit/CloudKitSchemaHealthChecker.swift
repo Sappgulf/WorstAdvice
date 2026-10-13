@@ -6,7 +6,7 @@ struct CloudKitSchemaHealthReport: Sendable {
     let message: String
     let containerIdentifier: String
     let environmentName: String
-    let signedIntoICloud: Bool
+    let signedIntoICloud: Bool?
 }
 
 struct CloudKitSchemaHealthCheckFailed: LocalizedError {
@@ -25,6 +25,24 @@ struct CloudKitSchemaHealthChecker {
     let environmentName: String
 
     func validateFriendsSchema() async throws -> CloudKitSchemaHealthReport {
+        let accountStatus: CKAccountStatus
+        do {
+            accountStatus = try await container.accountStatus()
+        } catch {
+            throw failure(
+                signedIntoICloud: nil,
+                reason: "Could not determine iCloud account status.",
+                underlyingError: error
+            )
+        }
+        guard accountStatus == .available else {
+            throw failure(
+                signedIntoICloud: false,
+                reason: "The iCloud account is not available (status: \(accountStatus.rawValue)).",
+                underlyingError: nil
+            )
+        }
+
         let ownerUserRecordName: String
         do {
             ownerUserRecordName = try await fetchCurrentUserRecordName()
@@ -39,9 +57,16 @@ struct CloudKitSchemaHealthChecker {
 
         let probeRecord = makeProbeUserProfile(ownerUserRecordName: ownerUserRecordName)
         do {
-            _ = try await save(record: probeRecord)
+            let savedRecord = try await save(record: probeRecord)
+            guard savedRecord.recordID == probeRecord.recordID,
+                savedRecord[CloudKitSocialSchema.Field.handle] as? String
+                    == probeRecord[CloudKitSocialSchema.Field.handle] as? String
+            else {
+                throw CKError(.serverRecordChanged)
+            }
         } catch {
-            throw failure(
+            throw await failureAfterCleaningProbe(
+                probeRecord,
                 signedIntoICloud: true,
                 reason:
                     "Could not write a `UserProfile` record to the Public database. This usually means the type, fields, or public permissions are missing.",
@@ -50,10 +75,16 @@ struct CloudKitSchemaHealthChecker {
         }
 
         do {
-            _ = try await fetchRecord(recordID: probeRecord.recordID)
+            let fetchedRecord = try await fetchRecord(recordID: probeRecord.recordID)
+            guard fetchedRecord.recordID == probeRecord.recordID,
+                fetchedRecord[CloudKitSocialSchema.Field.handle] as? String
+                    == probeRecord[CloudKitSocialSchema.Field.handle] as? String
+            else {
+                throw CKError(.unknownItem)
+            }
         } catch {
-            try? await delete(recordID: probeRecord.recordID)
-            throw failure(
+            throw await failureAfterCleaningProbe(
+                probeRecord,
                 signedIntoICloud: true,
                 reason: "Wrote a `UserProfile` record but could not read it back from the Public database.",
                 underlyingError: error
@@ -61,20 +92,35 @@ struct CloudKitSchemaHealthChecker {
         }
 
         do {
-            _ = try await queryProbeRecord(
+            let queryMatches = try await queryProbeRecord(
                 handle: (probeRecord[CloudKitSocialSchema.Field.handle] as? String) ?? ""
             )
+            guard queryMatches.contains(where: { record in
+                record.recordID == probeRecord.recordID
+                    && (record[CloudKitSocialSchema.Field.handle] as? String)
+                        == (probeRecord[CloudKitSocialSchema.Field.handle] as? String)
+            }) else {
+                throw CKError(.unknownItem)
+            }
         } catch {
-            try? await delete(recordID: probeRecord.recordID)
-            throw failure(
+            throw await failureAfterCleaningProbe(
+                probeRecord,
                 signedIntoICloud: true,
                 reason:
-                    "A safe `UserProfile` query failed. This usually means the `handle` field is not marked Queryable in CloudKit Dashboard.",
+                    "A safe `UserProfile` query could not find the temporary profile. Check that `handle` is Queryable in CloudKit Dashboard.",
                 underlyingError: error
             )
         }
 
-        try? await delete(recordID: probeRecord.recordID)
+        do {
+            try await delete(recordID: probeRecord.recordID)
+        } catch {
+            throw failure(
+                signedIntoICloud: true,
+                reason: "CloudKit checks passed, but the temporary schema probe could not be deleted.",
+                underlyingError: error
+            )
+        }
 
         return CloudKitSchemaHealthReport(
             isHealthy: true,
@@ -86,24 +132,12 @@ struct CloudKitSchemaHealthChecker {
     }
 
     private func fetchCurrentUserRecordName() async throws -> String {
-        try await withCheckedThrowingContinuation { continuation in
-            container.fetchUserRecordID { recordID, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                guard let recordID else {
-                    continuation.resume(throwing: CKError(.notAuthenticated))
-                    return
-                }
-                continuation.resume(returning: recordID.recordName)
-            }
-        }
+        try await container.userRecordID().recordName
     }
 
     private func makeProbeUserProfile(ownerUserRecordName: String) -> CKRecord {
         let uniqueSuffix = UUID().uuidString.lowercased().replacingOccurrences(of: "-", with: "")
-        let handle = String("schemaprobe\(uniqueSuffix)".prefix(16))
+        let handle = "sp\(uniqueSuffix.prefix(14))"
         let recordID = CKRecord.ID(recordName: "UserProfile_schema_probe_\(uniqueSuffix)")
         let record = CKRecord(
             recordType: CloudKitSocialSchema.RecordType.userProfile,
@@ -125,89 +159,77 @@ struct CloudKitSchemaHealthChecker {
                 handle
             )
         )
-        let operation = CKQueryOperation(query: query)
-        operation.desiredKeys = [CloudKitSocialSchema.Field.handle]
-        operation.resultsLimit = 1
+        let retryDelays: [Duration] = [.milliseconds(400), .milliseconds(800), .seconds(1), .seconds(2), .seconds(3), .seconds(3)]
 
-        return try await withCheckedThrowingContinuation { continuation in
+        for (attempt, retryDelay) in retryDelays.enumerated() {
+            let (matches, _) = try await publicDatabase.records(
+                matching: query,
+                inZoneWith: nil,
+                desiredKeys: [CloudKitSocialSchema.Field.handle],
+                resultsLimit: 1
+            )
             var records: [CKRecord] = []
-            var firstError: Error?
-            operation.recordMatchedBlock = { _, result in
+            records.reserveCapacity(matches.count)
+            for (_, result) in matches {
                 switch result {
                 case .success(let record):
                     records.append(record)
                 case .failure(let error):
-                    if firstError == nil {
-                        firstError = error
-                    }
+                    throw error
                 }
             }
-            operation.queryResultBlock = { result in
-                switch result {
-                case .success:
-                    if let firstError {
-                        continuation.resume(throwing: firstError)
-                        return
-                    }
-                    continuation.resume(returning: records)
-                case .failure(let error):
-                    continuation.resume(throwing: error)
-                }
+
+            if !records.isEmpty || attempt == retryDelays.count - 1 {
+                return records
             }
-            publicDatabase.add(operation)
+            try await Task.sleep(for: retryDelay)
         }
+
+        return []
     }
 
     private func fetchRecord(recordID: CKRecord.ID) async throws -> CKRecord {
-        try await withCheckedThrowingContinuation { continuation in
-            publicDatabase.fetch(withRecordID: recordID) { record, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                guard let record else {
-                    continuation.resume(throwing: CKError(.unknownItem))
-                    return
-                }
-                continuation.resume(returning: record)
-            }
-        }
+        try await publicDatabase.record(for: recordID)
     }
 
     private func save(record: CKRecord) async throws -> CKRecord {
-        try await withCheckedThrowingContinuation { continuation in
-            publicDatabase.save(record) { savedRecord, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                guard let savedRecord else {
-                    continuation.resume(throwing: CKError(.serverRecordChanged))
-                    return
-                }
-                continuation.resume(returning: savedRecord)
-            }
-        }
+        try await publicDatabase.save(record)
     }
 
     private func delete(recordID: CKRecord.ID) async throws {
-        let _: CKRecord.ID = try await withCheckedThrowingContinuation { continuation in
-            publicDatabase.delete(withRecordID: recordID) { deletedRecordID, error in
-                if let ckError = error as? CKError, ckError.code == .unknownItem {
-                    continuation.resume(returning: deletedRecordID ?? recordID)
-                    return
-                }
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                continuation.resume(returning: deletedRecordID ?? recordID)
-            }
+        do {
+            try await publicDatabase.deleteRecord(withID: recordID)
+        } catch let error as CKError where error.code == .unknownItem {
+            // A concurrent cleanup can remove the uniquely named probe first.
+        }
+    }
+
+    private func failureAfterCleaningProbe(
+        _ probeRecord: CKRecord,
+        signedIntoICloud: Bool?,
+        reason: String,
+        underlyingError: Error
+    ) async -> CloudKitSchemaHealthCheckFailed {
+        do {
+            // A save can reach CloudKit even when its response is lost. The unique ID
+            // lets cleanup safely attempt deletion after every save attempt.
+            try await delete(recordID: probeRecord.recordID)
+            return failure(
+                signedIntoICloud: signedIntoICloud,
+                reason: reason,
+                underlyingError: underlyingError
+            )
+        } catch {
+            return failure(
+                signedIntoICloud: signedIntoICloud,
+                reason: "\(reason) Cleanup of the temporary probe also failed: \(error.localizedDescription)",
+                underlyingError: underlyingError
+            )
         }
     }
 
     private func failure(
-        signedIntoICloud: Bool,
+        signedIntoICloud: Bool?,
         reason: String,
         underlyingError: Error?
     ) -> CloudKitSchemaHealthCheckFailed {
@@ -228,11 +250,17 @@ struct CloudKitSchemaHealthChecker {
     }
 
     private func makeFailureMessage(
-        signedIntoICloud: Bool,
+        signedIntoICloud: Bool?,
         reason: String,
         underlyingError: Error?
     ) -> String {
         #if DEBUG
+            let accountStatus: String
+            if let signedIntoICloud {
+                accountStatus = signedIntoICloud ? "Available" : "Not available"
+            } else {
+                accountStatus = "Unknown"
+            }
             let expectedRecordTypes = CloudKitSocialSchema.coreFriendsRecordTypes
                 .map { "- \($0)" }
                 .joined(separator: "\n")
@@ -248,7 +276,7 @@ struct CloudKitSchemaHealthChecker {
             Container: \(containerIdentifier)
             Environment: \(environmentName)
             Database: Public
-            Signed into iCloud: \(signedIntoICloud ? "Yes" : "No")
+            iCloud account status: \(accountStatus)
 
             Missing or mismatched record types expected:
             \(expectedRecordTypes)

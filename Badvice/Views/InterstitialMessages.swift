@@ -24,8 +24,6 @@ struct SettingsTabView: View {
     var achievementsManager: AchievementsManager
     var onSignOut: () -> Void
     var onDeleteAccount: (_ password: String) async -> Void
-    private let isFocusMode = false
-
     @State private var sectionsAppeared = false
     @State private var gearWobble = false
     @State private var gearSpinDegrees: Double = 0
@@ -89,143 +87,56 @@ struct SettingsTabView: View {
     private var cardColor: Color { Theme.cardColor(for: viewModel.theme) }
     private var buttonText: Color { Theme.buttonText(for: viewModel.theme) }
 
+    private var animatedSettingsHero: AnyView {
+        AnyView(
+            settingsHeroCard
+                .opacity(sectionsAppeared ? 1 : 0)
+                .offset(y: sectionsAppeared ? 0 : 18)
+                .animation(
+                    isMotionReduced
+                        ? nil
+                        : .spring(response: 0.5, dampingFraction: 0.78),
+                    value: sectionsAppeared
+                )
+        )
+    }
+
+    private var animatedSettingsSections: [AnyView] {
+        [
+            animatedSection(accountSection, delay: 0.05),
+            animatedSection(communityLabsSection, delay: 0.10),
+            animatedSection(themeSection, delay: 0.15),
+            animatedSection(experienceSection, delay: 0.20),
+            animatedSection(notificationSection, delay: 0.225),
+            animatedSection(sharingSection, delay: 0.25),
+            animatedSection(discoverSection, delay: 0.30),
+            animatedSection(dataSection, delay: 0.35),
+            animatedSection(aboutSection, delay: 0.40),
+        ]
+    }
+
+    private func animatedSection<Content: View>(_ content: Content, delay: Double) -> AnyView {
+        AnyView(
+            content
+                .opacity(sectionsAppeared ? 1 : 0)
+                .offset(y: sectionsAppeared ? 0 : 24)
+                .scaleEffect(sectionsAppeared ? 1 : 0.96)
+                .animation(
+                    isMotionReduced
+                        ? nil
+                        : .spring(response: 0.5, dampingFraction: 0.75).delay(delay),
+                    value: sectionsAppeared
+                )
+        )
+    }
+
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                settingsHeroCard
-                    .opacity(sectionsAppeared ? 1 : 0)
-                    .offset(y: sectionsAppeared ? 0 : 18)
-                    .animation(
-                        isMotionReduced
-                            ? nil
-                            : .spring(response: 0.5, dampingFraction: 0.78),
-                        value: sectionsAppeared
-                    )
+            LazyVStack(spacing: 20) {
+                animatedSettingsHero
 
-                Group {
-                    if isFocusMode {
-                        accountSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75),
-                                value: sectionsAppeared
-                            )
-                        themeSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05),
-                                value: sectionsAppeared
-                            )
-                        experienceSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10),
-                                value: sectionsAppeared
-                            )
-                    } else {
-                        accountSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.05),
-                                value: sectionsAppeared
-                            )
-                        communityLabsSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.10),
-                                value: sectionsAppeared
-                            )
-                        themeSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.15),
-                                value: sectionsAppeared
-                            )
-                        experienceSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.20),
-                                value: sectionsAppeared
-                            )
-                        notificationSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.225),
-                                value: sectionsAppeared
-                            )
-                        sharingSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.25),
-                                value: sectionsAppeared
-                            )
-                        discoverSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.30),
-                                value: sectionsAppeared
-                            )
-                        dataSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.35),
-                                value: sectionsAppeared
-                            )
-                        aboutSection
-                            .opacity(sectionsAppeared ? 1 : 0)
-                            .offset(y: sectionsAppeared ? 0 : 24)
-                            .scaleEffect(sectionsAppeared ? 1 : 0.96)
-                            .animation(
-                                isMotionReduced
-                                    ? nil
-                                    : .spring(response: 0.5, dampingFraction: 0.75).delay(0.40),
-                                value: sectionsAppeared
-                            )
-                    }
+                ForEach(Array(animatedSettingsSections.enumerated()), id: \.offset) { section in
+                    section.element
                 }
                 .padding(.horizontal, 16)
             }
@@ -245,18 +156,18 @@ struct SettingsTabView: View {
             if !didLoadInitialDiagnostics {
                 didLoadInitialDiagnostics = true
                 dataLoadTask?.cancel()
-                dataLoadTask = Task(priority: .utility) {
+                dataLoadTask = Task(priority: .utility) { @MainActor in
                     viewModel.refreshAppleOnDeviceModelAvailability()
                 }
                 socialLoadTask?.cancel()
-                socialLoadTask = Task(priority: .background) {
+                socialLoadTask = Task(priority: .background) { @MainActor in
                     quotesViewModel.loadIfNeeded()
                     await social.loadBackendDisplayNameIfNeeded()
                     guard !Task.isCancelled else { return }
                     await social.refreshAvailability()
                 }
                 notificationsTask?.cancel()
-                notificationsTask = Task(priority: .background) {
+                notificationsTask = Task(priority: .background) { @MainActor in
                     guard !Task.isCancelled else { return }
                     await loadNotificationPermissionStatus()
                 }
@@ -536,7 +447,7 @@ struct SettingsTabView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(primaryText)
                             .accessibilityIdentifier("settings.auth.displayName")
-                        Text(auth.signedInEmail ?? "Signed in")
+                        Text(auth.signedInEmail ?? "Guest • this device only")
                             .font(.caption)
                             .foregroundStyle(secondaryText)
                             .accessibilityIdentifier("settings.auth.email")
@@ -547,6 +458,7 @@ struct SettingsTabView: View {
 
                 settingsDivider
 
+                if !auth.isGuest {
                 TabCommandActionButton(
                     title: "Change Password",
                     systemImage: "key.fill",
@@ -581,6 +493,7 @@ struct SettingsTabView: View {
                     accessibilityIdentifier: "settings.auth.signOut"
                 ) {
                     onSignOut()
+                }
                 }
             }
         }
@@ -1967,6 +1880,9 @@ struct SocialDiagnosticsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 statusCard
+#if DEBUG
+                schemaCheckCard
+#endif
                 reportCard
                 actionCard
             }
@@ -1980,6 +1896,53 @@ struct SocialDiagnosticsView: View {
             await social.refreshAvailability()
         }
     }
+
+#if DEBUG
+    private var schemaCheckCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Development CloudKit Probe")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(primaryText)
+
+            Text("Creates a uniquely named temporary profile, verifies write/read/query access, then deletes it. Development builds only.")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let message = social.cloudKitSchemaCheckMessage {
+                Text(message)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(secondaryText)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("settings.socialHealth.schemaCheck.result")
+            }
+
+            TabCommandActionButton(
+                title: social.isRunningCloudKitSchemaCheck ? "Checking CloudKit..." : "Test Development CloudKit",
+                systemImage: social.isRunningCloudKitSchemaCheck ? "hourglass" : "checkmark.icloud",
+                accent: accent,
+                buttonText: Theme.buttonText(for: settings.theme),
+                isDisabled: social.isRunningCloudKitSchemaCheck,
+                accessibilityIdentifier: "settings.socialHealth.schemaCheck"
+            ) {
+                Task {
+                    await social.runDevelopmentCloudKitSchemaCheck()
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .fill(Theme.cardColor(for: settings.theme))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.largeCornerRadius, style: .continuous)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
+        )
+    }
+#endif
 
     private var statusCard: some View {
         VStack(alignment: .leading, spacing: 10) {

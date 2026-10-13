@@ -19,6 +19,11 @@ struct AdviceBracketView: View {
 
     // MARK: State
 
+    @State private var isResolvingVote = false
+    @State private var voteTask: Task<Void, Never>?
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     @State private var contestants: [Contestant] = []
     @State private var nextRoundContestants: [Contestant] = []
     @State private var round: Int = 0
@@ -34,6 +39,7 @@ struct AdviceBracketView: View {
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var bg: LinearGradient { Theme.backgroundGradient(for: settings.theme) }
+    private var reduceMotion: Bool { settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion }
 
     // MARK: Computed
 
@@ -71,52 +77,49 @@ struct AdviceBracketView: View {
                         .foregroundStyle(accent)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Text(champion == nil ? "Round \(round + 1)" : "Champion 🏆")
+                    Text(champion == nil ? "Round \(round + 1)" : "Champion")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(secondaryText)
                 }
             }
         }
         .onAppear { loadContestants() }
+        .onDisappear { voteTask?.cancel() }
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
     }
 
     // MARK: Bracket View
 
     private var bracketView: some View {
-        VStack(spacing: 24) {
-            Text("Tap the WORSE advice")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(secondaryText)
+        ScrollView {
+            VStack(spacing: 24) {
+                Text("Tap the WORSE advice")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(secondaryText)
+                HStack(spacing: 4) {
+                    ForEach(0..<totalPairs, id: \.self) { index in
+                        Capsule().fill(index < currentPairIndex ? accent : accent.opacity(0.2)).frame(height: 4)
+                    }
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Round \(round + 1), match \(currentPairIndex + 1) of \(totalPairs)")
 
-            // Progress
-            HStack(spacing: 4) {
-                ForEach(0..<totalPairs, id: \.self) { idx in
-                    Capsule()
-                        .fill(idx < currentPairIndex ? accent : accent.opacity(0.2))
-                        .frame(height: 4)
+                if let left, let right {
+                    if dynamicTypeSize.isAccessibilitySize {
+                        VStack(spacing: 16) {
+                            contestantCard(left, side: .left)
+                            contestantCard(right, side: .right)
+                        }
+                    } else {
+                        HStack(alignment: .top, spacing: 12) {
+                            contestantCard(left, side: .left)
+                            contestantCard(right, side: .right)
+                        }
+                    }
                 }
             }
-            .padding(.horizontal)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Round \(round + 1), match \(currentPairIndex + 1) of \(totalPairs)")
-
-            if let left, let right {
-                HStack(spacing: 12) {
-                    contestantCard(left, side: .left)
-                    Text("VS")
-                        .font(.title3.weight(.black))
-                        .foregroundStyle(accent)
-                        .frame(width: 32)
-                        .accessibilityHidden(true)
-                    contestantCard(right, side: .right)
-                }
-                .padding(.horizontal)
-            }
-
-            Spacer()
+            .padding(20)
         }
-        .padding(.top, 12)
     }
 
     private enum Side { case left, right }
@@ -129,9 +132,8 @@ struct AdviceBracketView: View {
                 Text(contestant.adviceLine)
                     .font(.body.weight(.medium))
                     .foregroundStyle(primaryText)
-                    .lineLimit(6)
-                    .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
 
                 Spacer(minLength: 0)
 
@@ -140,7 +142,7 @@ struct AdviceBracketView: View {
                     .foregroundStyle(accent)
             }
             .padding(14)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: 180, alignment: .topLeading)
             .background(
                 RoundedRectangle(cornerRadius: Theme.tileCornerRadius, style: .continuous)
                     .fill(cardColor)
@@ -148,6 +150,8 @@ struct AdviceBracketView: View {
             )
         }
         .buttonStyle(.plain)
+        .disabled(isResolvingVote)
+        .accessibilityIdentifier(side == .left ? "bracket.left" : "bracket.right")
         .scaleEffect(side == .left ? leftScale : rightScale)
         .opacity(side == .left ? leftOpacity : rightOpacity)
         .accessibilityLabel(contestant.adviceLine)
@@ -241,10 +245,12 @@ struct AdviceBracketView: View {
     }
 
     private func vote(winner: Contestant) {
+        guard !isResolvingVote else { return }
+        isResolvingVote = true
         HapticsManager.play(style: .medium, isEnabled: settings.hapticsEnabled)
 
         let isLeft = winner.id == left?.id
-        withAnimation(Theme.springBouncy) {
+        withAnimation(reduceMotion ? nil : Theme.springBouncy) {
             if isLeft {
                 leftScale = 1.08
                 rightOpacity = 0
@@ -254,10 +260,16 @@ struct AdviceBracketView: View {
             }
         }
 
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(400))
+        voteTask?.cancel()
+        voteTask = Task { @MainActor in
+            if !reduceMotion {
+                do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+            }
+            guard !Task.isCancelled else { return }
             leftScale = 1; rightScale = 1; leftOpacity = 1; rightOpacity = 1
             advanceWith(winner: winner)
+            isResolvingVote = false
+            voteTask = nil
         }
     }
 
@@ -282,13 +294,8 @@ struct AdviceBracketView: View {
     }
 
     private func restart() {
-        withAnimation(Theme.springSmooth) {
-            contestants = []
-            champion = nil
-        }
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(300))
-            loadContestants()
-        }
+        voteTask?.cancel()
+        isResolvingVote = false
+        loadContestants()
     }
 }

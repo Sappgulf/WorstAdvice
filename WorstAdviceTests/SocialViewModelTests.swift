@@ -104,6 +104,8 @@ actor InspectableSocialBackend: SocialBackend {
     private let availabilityValue: SocialAvailabilityState
     private let incomingError: Error?
     private let optionalFetchError: Error?
+    private let friendsValue: [SocialUser]
+    private let friendsDelay: Duration?
     private var storedUser: SocialUser?
     private var incomingCalls = 0
     private var outgoingCalls = 0
@@ -114,12 +116,16 @@ actor InspectableSocialBackend: SocialBackend {
         storedUser: SocialUser?,
         availabilityValue: SocialAvailabilityState = .available,
         incomingError: Error? = nil,
-        optionalFetchError: Error? = nil
+        optionalFetchError: Error? = nil,
+        friendsValue: [SocialUser] = [],
+        friendsDelay: Duration? = nil
     ) {
         self.storedUser = storedUser
         self.availabilityValue = availabilityValue
         self.incomingError = incomingError
         self.optionalFetchError = optionalFetchError
+        self.friendsValue = friendsValue
+        self.friendsDelay = friendsDelay
     }
 
     func backendDisplayName() async -> String { "Inspectable Backend" }
@@ -204,7 +210,8 @@ actor InspectableSocialBackend: SocialBackend {
 
     func fetchFriends() async throws -> [SocialUser] {
         friendsCalls += 1
-        return []
+        if let friendsDelay { try await Task.sleep(for: friendsDelay) }
+        return friendsValue
     }
 
     func createPost(type: SocialPostType, text: String) async throws -> SocialPost {
@@ -253,6 +260,8 @@ actor InspectableSocialBackend: SocialBackend {
     func submitModerationReport(_ report: SocialModerationReport) async throws {
         throw SocialError.invalidRecord
     }
+
+    func friendsCallCount() -> Int { friendsCalls }
 
     func mandatoryFetchInvocationCount() async -> Int {
         incomingCalls + outgoingCalls + friendsCalls + blockedCalls

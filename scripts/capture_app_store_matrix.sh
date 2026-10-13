@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Capture App Store–oriented screenshot matrix for Infernal Editorial surfaces.
+# Capture App Store–oriented screenshot matrix for Mischief magazine surfaces.
 # Resolves screenshot simulators, then runs capture_screenshot_mode on primary tabs.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-export DEVELOPER_DIR="${DEVELOPER_DIR:-/Users/austinbeatty/Downloads/Xcode-beta.app/Contents/Developer}"
 export OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/.build/screenshots/app-store-matrix}"
 export BUILD="${BUILD:-1}"
 export SEED="${SEED:-424242}"
@@ -36,7 +35,7 @@ fi
 
 export SIMULATOR_IDS
 
-# Primary App Store surfaces (Infernal Editorial hero frames)
+# Primary App Store surfaces (Mischief magazine hero frames)
 TABS=(
   generate
   chaosHub
@@ -64,7 +63,7 @@ MANIFEST="$OUTPUT_DIR/MANIFEST.md"
   echo
   echo "## Editorial notes"
   echo
-  echo "- Default theme should read as Infernal Editorial (espresso + copper)."
+  echo "- Default theme should read as Mischief magazine (espresso + copper)."
   echo "- Generate: copper CTA, stamped advice card, intensity rail."
   echo "- Missions: chaos meter thermometer."
   echo "- Quotes: daily ritual card."

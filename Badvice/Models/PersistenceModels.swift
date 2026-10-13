@@ -369,6 +369,7 @@ final class AppSettingsEntity {
     var preferredSharePresetRaw: String?
     var preferredContentPackRaw: String?
     var preferredGenerationProviderRaw: String?
+    var foundationRoutingVersion: Int?
     var preferredIntensityRaw: Int?
     var strictNoRepeatsRaw: Bool?
     var communityOnlyModeRaw: Bool?
@@ -393,7 +394,7 @@ final class AppSettingsEntity {
         preferredAspect: ShareAspectRatio = .square,
         preferredSharePreset: ShareCaptionPreset = .deadpan,
         preferredContentPack: ContentPack = .classic,
-        preferredGenerationProvider: AdviceGenerationProvider = .classic,
+        preferredGenerationProvider: AdviceGenerationProvider = .appleOnDevice,
         preferredIntensity: BadviceIntensity = .bold,
         strictNoRepeats: Bool = true,
         communityOnlyMode: Bool = false,
@@ -413,6 +414,7 @@ final class AppSettingsEntity {
         self.preferredSharePresetRaw = preferredSharePreset.rawValue
         self.preferredContentPackRaw = preferredContentPack.rawValue
         self.preferredGenerationProviderRaw = preferredGenerationProvider.rawValue
+        self.foundationRoutingVersion = 1
         self.preferredIntensityRaw = preferredIntensity.rawValue
         self.strictNoRepeatsRaw = strictNoRepeats
         self.communityOnlyModeRaw = communityOnlyMode
@@ -454,7 +456,7 @@ final class AppSettingsEntity {
     }
 
     var preferredGenerationProvider: AdviceGenerationProvider {
-        get { AdviceGenerationProvider(rawValue: preferredGenerationProviderRaw ?? "") ?? .classic }
+        get { AdviceGenerationProvider(rawValue: preferredGenerationProviderRaw ?? "") ?? .appleOnDevice }
         set { preferredGenerationProviderRaw = newValue.rawValue }
     }
 

@@ -4,10 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-SIMULATOR_ID="${SIMULATOR_ID:-47F86C58-BDC0-472D-9A4F-3AC719B015FB}"
+SIMULATOR_ID="${SIMULATOR_ID:-}"
 SIMULATOR_IDS="${SIMULATOR_IDS:-$SIMULATOR_ID}"
-DEVELOPER_DIR="${DEVELOPER_DIR:-/Users/austinbeatty/Downloads/Xcode-beta.app/Contents/Developer}"
-DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/.build/ScreenshotModeCaptureDerivedData}"
+if [[ -z "$SIMULATOR_IDS" ]]; then
+  echo "Set SIMULATOR_ID or SIMULATOR_IDS to available UDIDs from xcrun simctl list devices available." >&2
+  exit 1
+fi
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/.build/DerivedData}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/.build/screenshots/screenshot-mode}"
 SEED="${SEED:-424242}"
 BUILD="${BUILD:-1}"
@@ -20,12 +23,11 @@ APP_BUNDLE_ID="${APP_BUNDLE_ID:-com.worstadvice.app}"
 if [[ "$#" -gt 0 ]]; then
   TABS=("$@")
 else
-  # Primary Infernal Editorial surfaces (App Store + QA default set)
+  # Current magazine surfaces (App Store + QA default set)
   TABS=(generate chaosHub quotes favorites history settings explore groupChallenges)
 fi
 
 APP_PATH="$DERIVED_DATA_PATH/Build/Products/Debug-iphonesimulator/Badvice.app"
-export DEVELOPER_DIR
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -57,6 +59,8 @@ if [[ "$BUILD" == "1" ]]; then
     -scheme "$SCHEME" \
     -destination "platform=iOS Simulator,id=$PRIMARY_SIMULATOR_ID" \
     -derivedDataPath "$DERIVED_DATA_PATH" \
+    ONLY_ACTIVE_ARCH=YES \
+    COMPILER_INDEX_STORE_ENABLE=NO \
     CODE_SIGNING_ALLOWED=NO
 fi
 
@@ -75,7 +79,7 @@ for simulator_id in "${CAPTURE_SIMULATORS[@]}"; do
   fi
 
   xcrun simctl boot "$simulator_id" >/dev/null 2>&1 || true
-  xcrun simctl bootstatus "$simulator_id" -b
+  xcrun simctl bootstatus "$simulator_id"
   xcrun simctl install "$simulator_id" "$APP_PATH"
 
   tab_index=0

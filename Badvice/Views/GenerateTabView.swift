@@ -28,12 +28,16 @@ struct GenerateTabView: View {
     @State private var showingBrandMenu = false
     @State private var showingBracket = false
     @State private var showingDetails = false
+    @State private var showingCustomization = false
+    @State private var showingPlayTools = false
+    @ScaledMetric(relativeTo: .largeTitle) private var mastheadSize: CGFloat = 54
     @State private var activeToast: ToastMessage?
     @State private var pendingBrandMenuTab: AppTab?
     @State private var lastGeneratedAdviceID: UUID?
     @State private var loadingHapticArmed = false
     @State private var revealsRealityCheck = false
-    @FocusState private var isComposerFocused: Bool
+    private enum ComposerField: Hashable { case situation, friendName }
+    @FocusState private var composerField: ComposerField?
 
     private var reduceMotion: Bool {
         settings.reduceMotion || settings.performanceMode || accessibilityReduceMotion
@@ -63,19 +67,15 @@ struct GenerateTabView: View {
 
                             header
 
+                            workspace
+                            if let notice = viewModel.generationNotice, !notice.isEmpty {
+                                statusBanner(notice)
+                            }
                             if viewModel.current == nil && !viewModel.isGenerating {
-                                workspace
-                                if let notice = viewModel.generationNotice, !notice.isEmpty {
-                                    statusBanner(notice)
-                                }
                                 emptyState
                             } else {
                                 resultSection
                                     .id("generate.result")
-                                if let notice = viewModel.generationNotice, !notice.isEmpty {
-                                    statusBanner(notice)
-                                }
-                                workspace
                             }
 
                             footerTools
@@ -115,7 +115,7 @@ struct GenerateTabView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar(.hidden, for: .navigationBar)
         }
         .toast(item: $activeToast, accentColor: accent)
         .sheet(isPresented: $showingShareSheet) {
@@ -132,183 +132,192 @@ struct GenerateTabView: View {
                 onResetAllLocalAccounts: onResetAllLocalAccounts
             )
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { composerField = nil }.accessibilityIdentifier("keyboard.done")
+            }
+        }
         .sheet(isPresented: $showingBracket) {
             AdviceBracketView(settings: settings, generateViewModel: viewModel)
         }
         .onAppear(perform: prepareScreen)
+        .onChange(of: viewModel.selectedTone) { _, tone in
+            if tone == .friendRoast { showingCustomization = true }
+        }
         .onChange(of: viewModel.isGenerating) { _, generating in
             handleGeneratingStateChange(generating)
         }
     }
 
     private var header: some View {
-        ZStack(alignment: .bottomLeading) {
-            Image("BureauDeskHero")
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity)
-                .frame(height: 168)
-                .clipped()
-                .accessibilityHidden(true)
-
-            LinearGradient(
-                colors: [.clear, Theme.espressoInk.opacity(0.38), Theme.espressoInk.opacity(0.94)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            HStack(alignment: .bottom, spacing: 12) {
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack(spacing: 7) {
-                        Image("BadviceMark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 22, height: 22)
-
-                        Text("THE BADVICE BUREAU")
-                            .font(.caption2.weight(.black))
-                            .tracking(1.7)
-                            .foregroundStyle(Theme.copperFoilLight)
-                    }
-
-                    Text("Make one confident mistake.")
-                        .font(.system(size: 25, weight: .bold, design: .serif))
-                        .foregroundStyle(Theme.parchmentWarm)
-                        .lineLimit(2)
-
-                    Text("Private, instant, and drafted on this device.")
-                        .font(.caption)
-                        .foregroundStyle(Theme.parchmentWarm.opacity(0.76))
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center) {
+                Text("BAD IDEAS. GREAT DELIVERY.")
+                    .font(.caption2.weight(.black))
+                    .tracking(1.8)
+                    .foregroundStyle(accent)
+                Spacer(minLength: 8)
+                Button(action: openBrandMenu) {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(primaryText)
+                        .frame(width: 44, height: 44)
+                        .background(cardColor, in: Circle())
+                        .overlay { Circle().stroke(secondaryText.opacity(0.18), lineWidth: 1) }
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Badvice menu")
+                .accessibilityHint("Opens history, ideas, party mode, and settings")
+                .accessibilityIdentifier("generate.brandMenu")
+            }
 
+            HStack(alignment: .center, spacing: 8) {
+                Text("badvice.")
+                    .font(.system(size: mastheadSize, weight: .black, design: .serif))
+                    .tracking(-2.5)
+                    .foregroundStyle(primaryText)
+                    .minimumScaleFactor(0.65)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                VStack(spacing: 2) {
+                    Text("100%")
+                        .font(.system(.title3, design: .serif, weight: .black))
+                    Text("QUESTIONABLE")
+                        .font(.system(size: 8, weight: .black, design: .monospaced))
+                        .tracking(0.8)
+                }
+                .dynamicTypeSize(...DynamicTypeSize.large)
+                .foregroundStyle(accent)
+                .padding(12)
+                .overlay { RoundedRectangle(cornerRadius: 4).stroke(accent, lineWidth: 2) }
+                .rotationEffect(.degrees(-8))
+                .accessibilityHidden(true)
+            }
+
+            HStack(alignment: .firstTextBaseline) {
+                Text("Good intentions. Terrible advice.")
+                    .font(.subheadline)
+                    .foregroundStyle(secondaryText)
                 Spacer(minLength: 4)
-
                 if viewModel.challengeStreakDays > 0 {
-                    Label("\(viewModel.challengeStreakDays)", systemImage: "flame.fill")
-                        .font(.caption.weight(.bold).monospacedDigit())
-                        .foregroundStyle(Theme.parchmentWarm)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(.black.opacity(0.3), in: Capsule(style: .continuous))
+                    Label("\(viewModel.challengeStreakDays)d", systemImage: "flame.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(accent)
                         .accessibilityLabel("\(viewModel.challengeStreakDays) day streak")
                 }
             }
-            .padding(16)
-
-            VStack {
-                HStack {
-                    Spacer()
-
-                    Button(action: openBrandMenu) {
-                        Image(systemName: "line.3.horizontal")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(Theme.parchmentWarm)
-                            .frame(width: 44, height: 44)
-                            .background(.black.opacity(0.34), in: Circle())
-                            .overlay {
-                                Circle().stroke(Theme.parchmentWarm.opacity(0.22), lineWidth: 1)
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Badvice menu")
-                    .accessibilityHint("Opens casebook, dares, dispatches, and settings")
-                    .accessibilityIdentifier("generate.brandMenu")
-                }
-
-                Spacer()
-            }
-            .padding(12)
+            Rectangle().fill(primaryText).frame(height: 2)
         }
-        .frame(height: 168)
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(accent.opacity(0.28), lineWidth: 1)
-        }
-        .shadow(color: Theme.espressoInk.opacity(0.22), radius: 18, y: 9)
-        .dynamicTypeSize(...DynamicTypeSize.large)
         .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("generate.header")
     }
 
     private var workspace: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            workspaceHeader
-            laneSelector
-            Divider().overlay(secondaryText.opacity(0.12))
-            voiceSelector
-            Divider().overlay(secondaryText.opacity(0.12))
-            contextComposer
-            Divider().overlay(secondaryText.opacity(0.12))
-            intensityDial
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                Menu {
+                    ForEach(AdviceCategory.allCases) { category in
+                        Button(category.title) {
+                            viewModel.updateCategory(category, autoGenerate: false)
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        }
+                    }
+                } label: {
+                    briefSelection("TOPIC", value: viewModel.selectedCategory.title, icon: viewModel.selectedCategory.icon)
+                }
+                .accessibilityIdentifier("generate.category.menu")
+
+                Menu {
+                    ForEach(ToneMode.allCases) { tone in
+                        Button(tone.voice.name) {
+                            viewModel.updateTone(tone, autoGenerate: false)
+                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                        }
+                    }
+                } label: {
+                    briefSelection("VOICE", value: selectedVoice.name, icon: selectedVoice.systemImage)
+                }
+                .accessibilityIdentifier("generate.tone.menu")
+            }
+            .buttonStyle(.plain)
+
+            TextField("Your situation", text: $viewModel.scenarioText, prompt: Text("Your situation (optional)").foregroundColor(secondaryText), axis: .vertical)
+                .font(.body)
+                .foregroundStyle(primaryText)
+                .lineLimit(1...3)
+                .padding(14)
+                .background(canvas, in: RoundedRectangle(cornerRadius: 12))
+                .focused($composerField, equals: .situation)
+                .accessibilityLabel("Your situation, optional")
+                .accessibilityIdentifier("generate.situation")
+
             primaryActions
+
+            Button {
+                showingCustomization.toggle()
+            } label: {
+                HStack {
+                    Label("Tune the chaos", systemImage: "slider.horizontal.3")
+                    Spacer()
+                    Image(systemName: showingCustomization ? "chevron.up" : "chevron.down")
+                }
+                .font(.subheadline.weight(.semibold)).foregroundStyle(secondaryText)
+                .padding(.vertical, 8)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(showingCustomization ? "Expanded" : "Collapsed")
+            .accessibilityIdentifier("generate.customize")
+            if showingCustomization {
+                VStack(alignment: .leading, spacing: 0) {
+                    laneSelector
+                    voiceSelector
+                    if viewModel.selectedTone == .friendRoast {
+                        TextField("Friend's name (optional)", text: $viewModel.friendName)
+                            .textFieldStyle(.roundedBorder)
+                            .focused($composerField, equals: .friendName)
+                            .accessibilityIdentifier("generate.friendName")
+                    }
+                    intensityDial
+                }
+            }
         }
         .padding(18)
-        .background {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(cardColor.opacity(0.82))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [accent.opacity(0.14), .clear, Color.black.opacity(0.08)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [accent.opacity(0.44), accent.opacity(0.12), secondaryAccent.opacity(0.16)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        }
-        .shadow(color: Theme.cardShadow(for: settings.theme).color.opacity(0.24), radius: 18, y: 9)
+        .background(cardColor, in: RoundedRectangle(cornerRadius: 20))
+        .overlay { RoundedRectangle(cornerRadius: 20).stroke(secondaryText.opacity(0.16), lineWidth: 1) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("generate.commandCard")
     }
 
-    private var workspaceHeader: some View {
-        HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(viewModel.isGenerating ? "BUILDING THE TAKE" : "COMMISSION A TAKE")
-                    .font(.caption2.weight(.black))
-                    .tracking(1.5)
-                    .foregroundStyle(accent)
-                Text(viewModel.current == nil ? "Set the brief" : "Tune the next dispatch")
-                    .font(.system(.title3, design: .serif, weight: .bold))
-                    .foregroundStyle(primaryText)
-                Text(viewModel.isGenerating ? "The local bureau is arranging its worst instincts." : "A little context makes the wrong answer feel personal.")
-                    .font(.caption)
-                    .foregroundStyle(secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
+    private func briefSelection(_ title: String, value: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption2.weight(.bold))
+                .tracking(1.2)
+                .foregroundStyle(secondaryText)
+            HStack(spacing: 6) {
+                Image(systemName: icon).foregroundStyle(accent)
+                Text(value)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down").font(.caption2.weight(.bold))
             }
-
-            Spacer(minLength: 0)
-
-            ZStack {
-                Circle()
-                    .fill(Theme.copperEmbossGradient)
-                    .frame(width: 45, height: 45)
-                    .shadow(color: Theme.copperFoilDeep.opacity(0.3), radius: 8, y: 4)
-                Image(systemName: viewModel.isGenerating ? "hourglass" : selectedVoice.systemImage)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(Theme.espressoInk)
-            }
-            .accessibilityHidden(true)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(primaryText)
+            .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
         }
-        .padding(.bottom, 18)
+        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 
     private var laneSelector: some View {
         VStack(alignment: .leading, spacing: 10) {
             selectorHeader(
-                title: "Lane",
+                title: "Topic",
                 selectedValue: viewModel.selectedCategory.title,
                 identifier: "generate.category"
             )
@@ -381,75 +390,6 @@ struct GenerateTabView: View {
         .padding(.vertical, 16)
     }
 
-    private var contextComposer: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 8) {
-                Text("Context")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(primaryText)
-                Text("OPTIONAL")
-                    .font(.caption2.weight(.black))
-                    .tracking(0.8)
-                    .foregroundStyle(secondaryText.opacity(0.7))
-
-                Spacer(minLength: 0)
-
-                if !viewModel.scenarioText.isEmpty {
-                    Button("Clear", systemImage: "xmark.circle.fill") {
-                        viewModel.scenarioText = ""
-                    }
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(accent)
-                    .buttonStyle(.plain)
-                }
-            }
-
-            Text("One real detail lets the bureau aim its bad judgment.")
-                .font(.caption)
-                .foregroundStyle(secondaryText)
-
-            TextField("e.g. awkward first date, new manager, group chat", text: $viewModel.scenarioText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .font(Theme.bodyFont(for: settings.theme))
-                .foregroundStyle(primaryText)
-                .lineLimit(1...4)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .frame(minHeight: 50)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(canvas.opacity(0.78))
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(secondaryText.opacity(0.14), lineWidth: 1)
-                }
-                .accessibilityIdentifier("generate.situation")
-                .focused($isComposerFocused)
-
-            if viewModel.selectedTone == .friendRoast {
-                TextField("Friend's name (optional)", text: $viewModel.friendName)
-                    .textFieldStyle(.plain)
-                    .font(Theme.bodyFont(for: settings.theme))
-                    .foregroundStyle(primaryText)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .frame(minHeight: 46)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(canvas.opacity(0.78))
-                    )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(accent.opacity(0.22), lineWidth: 1)
-                    }
-                    .accessibilityIdentifier("generate.friendName")
-                    .focused($isComposerFocused)
-            }
-        }
-        .padding(.vertical, 16)
-    }
-
     private var intensityDial: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
@@ -499,7 +439,7 @@ struct GenerateTabView: View {
             .tint(accent)
             .accessibilityIdentifier("generate.intensity")
             .accessibilityValue(viewModel.selectedIntensity.title)
-            .accessibilityHint("Adjusts how dramatically wrong the local Bureau Engine should be")
+            .accessibilityHint("Adjusts the comedic exaggeration of your advice")
 
             Text(viewModel.selectedIntensity.detail)
                 .font(.caption)
@@ -515,7 +455,7 @@ struct GenerateTabView: View {
                 HStack(spacing: 9) {
                     Image(systemName: viewModel.isGenerating ? "hourglass" : "sparkles")
                         .font(.body.weight(.bold))
-                    Text(viewModel.isGenerating ? "Building the take…" : viewModel.primaryActionTitle)
+                    Text(viewModel.isGenerating ? "Cooking up bad advice…" : "Give me bad advice")
                         .font(.body.weight(.bold))
                     Spacer(minLength: 0)
                     Image(systemName: "arrow.up.right")
@@ -524,10 +464,10 @@ struct GenerateTabView: View {
                 .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
                 .padding(.horizontal, 18)
             }
-            .buttonStyle(CopperPillButtonStyle(isEnabled: !viewModel.isGenerating, reduceMotion: reduceMotion))
+            .buttonStyle(MagazineButtonStyle(theme: settings.theme, reduceMotion: reduceMotion))
             .disabled(viewModel.isGenerating)
             .accessibilityIdentifier("generate.primary")
-            .accessibilityHint("Generates a new advice card using the selected lane and voice")
+            .accessibilityHint("Generates a new advice card using the selected topic and voice")
 
             HStack(spacing: 10) {
                 compactAction(
@@ -568,15 +508,20 @@ struct GenerateTabView: View {
             }
             .dynamicTypeSize(...DynamicTypeSize.large)
 
+            if let source = viewModel.generationSourceBadgeText, !viewModel.isGenerating {
+                Label(source, systemImage: source.hasPrefix("Apple") ? "apple.intelligence" : "bolt.shield")
+                    .font(.caption.weight(.semibold)).foregroundStyle(secondaryText)
+                    .accessibilityIdentifier("generate.source")
+            }
+
             ZStack {
                 if let record = viewModel.current, !viewModel.isGenerating {
                     AdviceCardView(
                         record: record,
                         theme: settings.theme,
                         reduceMotion: reduceMotion,
-                        sourceBadgeText: viewModel.generationSourceBadgeText
+                        showsRealityCheck: false
                     )
-                    .accessibilityIdentifier("advice.card")
                     .transition(reduceMotion ? .identity : .opacity.combined(with: .scale(scale: 0.98)))
                 } else if viewModel.isGenerating {
                     GenerationStateView(theme: settings.theme, reduceMotion: reduceMotion)
@@ -589,9 +534,27 @@ struct GenerateTabView: View {
 
             if !viewModel.isGenerating {
                 resultActions
-                revisionControls
                 realityCheck
-                votingRow
+                Button {
+                    showingPlayTools.toggle()
+                } label: {
+                    HStack {
+                        Label("Again, but make it…", systemImage: "wand.and.stars")
+                        Spacer()
+                        Image(systemName: showingPlayTools ? "chevron.up" : "chevron.down")
+                    }
+                    .font(.subheadline.weight(.semibold)).foregroundStyle(primaryText)
+                    .padding(.vertical, 8)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityValue(showingPlayTools ? "Expanded" : "Collapsed")
+                .accessibilityIdentifier("generate.playTools")
+                if showingPlayTools {
+                    revisionControls
+                    votingRow
+                }
             }
         }
     }
@@ -620,7 +583,7 @@ struct GenerateTabView: View {
                 )
                 resultActionButton(title: "Copy", systemImage: "doc.on.doc", identifier: "generate.copy", action: copyAdvice)
                 resultActionButton(title: "Share", systemImage: "square.and.arrow.up", identifier: "generate.share", action: shareAdvice)
-                resultActionButton(title: "Remix", systemImage: "arrow.triangle.2.circlepath", identifier: "generate.remix", action: remixAdvice)
+                resultActionButton(title: "Another", systemImage: "arrow.clockwise", identifier: "generate.remix", action: generateAdvice)
             }
             .dynamicTypeSize(...DynamicTypeSize.large)
         }
@@ -642,7 +605,7 @@ struct GenerateTabView: View {
                     Text("Again, but…")
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(primaryText)
-                    Text("Instant local rewrites—no model required.")
+                    Text("Same bad idea. A fresh delivery.")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 }
@@ -709,7 +672,7 @@ struct GenerateTabView: View {
                         Text("Reality check")
                             .font(.subheadline.weight(.bold))
                             .foregroundStyle(primaryText)
-                        Text("Reveal the useful local counterpoint")
+                        Text("The sensible answer, if you insist")
                             .font(.caption)
                             .foregroundStyle(secondaryText)
                     }
@@ -788,10 +751,10 @@ struct GenerateTabView: View {
                     .background(Circle().fill(accent.opacity(0.12)))
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Nothing sealed yet.")
+                    Text("Your next bad idea starts here.")
                         .font(.system(.title3, design: .serif, weight: .bold))
                         .foregroundStyle(primaryText)
-                    Text("Your first questionable decision is one tap away.")
+                    Text("Pick a topic, borrow a personality, and let us make it worse.")
                         .font(.subheadline)
                         .foregroundStyle(secondaryText)
                 }
@@ -884,10 +847,10 @@ struct GenerateTabView: View {
                 Image(systemName: "ellipsis.rectangle")
                     .foregroundStyle(accent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Studio details")
+                    Text("Your mischief so far")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(primaryText)
-                    Text("Progress, the failure note, and battles")
+                    Text("Streaks, saved takes, and your taste in terrible ideas")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
                 }
@@ -1133,7 +1096,7 @@ struct GenerateTabView: View {
     }
 
     private func generateAdvice() {
-        isComposerFocused = false
+        composerField = nil
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
         Task {
             await viewModel.generate()
@@ -1142,13 +1105,13 @@ struct GenerateTabView: View {
     }
 
     private func surpriseAndGenerate() {
-        isComposerFocused = false
+        composerField = nil
         viewModel.surpriseMeAndGenerate()
         onDataChanged()
     }
 
     private func generateDailyDrop() {
-        isComposerFocused = false
+        composerField = nil
         viewModel.generateDailyDrop()
         onDataChanged()
     }

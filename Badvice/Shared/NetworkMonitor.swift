@@ -42,7 +42,7 @@ struct OfflineBanner: View {
         HStack(spacing: 8) {
             Image(systemName: "wifi.slash")
                 .font(.caption.weight(.semibold))
-            Text("Showing cached results — you're offline")
+            Text("Offline — local advice and party mode still work")
                 .font(.caption.weight(.medium))
         }
         .foregroundStyle(.white)
@@ -51,6 +51,6 @@ struct OfflineBanner: View {
         .frame(maxWidth: .infinity)
         .background(Color(red: 0.2, green: 0.2, blue: 0.22).opacity(0.92))
         .transition(.move(edge: .top).combined(with: .opacity))
-        .accessibilityLabel("You are offline. Showing cached results.")
+        .accessibilityLabel("You are offline. Local advice and party mode still work.")
     }
 }

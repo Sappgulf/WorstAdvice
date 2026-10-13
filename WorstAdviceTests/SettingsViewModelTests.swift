@@ -150,13 +150,13 @@ final class SettingsViewModelTests: XCTestCase {
         let container = try makeInMemoryContainer()
         let session = AppSessionViewModel(context: ModelContext(container))
         
-        XCTAssertEqual(session.settings.preferredGenerationProvider, .classic)
+        XCTAssertEqual(session.settings.preferredGenerationProvider, .appleOnDevice)
         
         session.settings.preferredGenerationProvider = .classic
         XCTAssertEqual(session.settings.preferredGenerationProvider, .classic)
     }
 
-    func testLegacyAutoProviderMigratesToLocalBureauEngine() throws {
+    func testLegacyAutoProviderMigratesToAppleFoundationModel() throws {
         let container = try makeInMemoryContainer()
         let context = ModelContext(container)
         let legacySettings = AppSettingsEntity(preferredGenerationProvider: .auto)
@@ -166,8 +166,23 @@ final class SettingsViewModelTests: XCTestCase {
         let repository = AdviceRepository(context: context)
         let settings = SettingsViewModel(repository: repository)
 
-        XCTAssertEqual(settings.preferredGenerationProvider, .classic)
-        XCTAssertEqual(repository.ensureSettings().preferredGenerationProvider, .classic)
+        XCTAssertEqual(settings.preferredGenerationProvider, .appleOnDevice)
+        XCTAssertEqual(repository.ensureSettings().preferredGenerationProvider, .appleOnDevice)
+    }
+
+    func testLegacyBureauDefaultMigratesOnceAndLaterChoicePersists() throws {
+        let container = try makeInMemoryContainer()
+        let context = ModelContext(container)
+        let legacy = AppSettingsEntity(preferredGenerationProvider: .classic)
+        legacy.foundationRoutingVersion = nil
+        context.insert(legacy)
+        try context.save()
+        let repository = AdviceRepository(context: context)
+        let first = SettingsViewModel(repository: repository)
+        XCTAssertEqual(first.preferredGenerationProvider, .appleOnDevice)
+        first.preferredGenerationProvider = .classic
+        let restored = SettingsViewModel(repository: repository)
+        XCTAssertEqual(restored.preferredGenerationProvider, .classic)
     }
 
     func testLaunchLocalModelPreparationSkipsClassicProvider() async throws {

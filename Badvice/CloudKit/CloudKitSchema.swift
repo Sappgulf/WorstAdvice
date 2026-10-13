@@ -223,3 +223,35 @@ enum SocialHandleNormalizer {
         return String(trimmed.prefix(40))
     }
 }
+
+/// Missing optional records are empty data; a network or authorization failure is not.
+enum CloudKitFetchPolicy {
+    static func isOnlyMissingRecords(_ error: Error) -> Bool {
+        guard let error = error as? CKError else { return false }
+        if error.code == .unknownItem { return true }
+        guard error.code == .partialFailure,
+              let failures = error.partialErrorsByItemID, !failures.isEmpty else { return false }
+        return failures.values.allSatisfy { isOnlyMissingRecords($0) }
+    }
+}
+
+/// Resolve identity without converting failed reads into a missing profile.
+enum CloudKitProfileResolver {
+    static func resolve(
+        storedRecordName: String?,
+        ownerRecordName: String,
+        fetchRecord: (String) async throws -> CKRecord?,
+        findByOwner: () async throws -> CKRecord?
+    ) async throws -> CKRecord? {
+        if let storedRecordName, !storedRecordName.isEmpty,
+           let record = try await fetchRecord(storedRecordName),
+           record[CloudKitSocialSchema.Field.ownerUserRecordName] as? String == ownerRecordName {
+            return record
+        }
+        guard let record = try await findByOwner() else { return nil }
+        guard record[CloudKitSocialSchema.Field.ownerUserRecordName] as? String == ownerRecordName else {
+            throw SocialError.permissionDenied
+        }
+        return record
+    }
+}

@@ -731,12 +731,12 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .generate: return "Desk"
-        case .chaosHub: return "Dares"
+        case .generate: return "Advice"
+        case .chaosHub: return "Play"
         case .explore: return "Starters"
-        case .groupChallenges: return "Groups"
-        case .quotes: return "Dispatches"
-        case .favorites: return "Casebook"
+        case .groupChallenges: return "Party"
+        case .quotes: return "Daily"
+        case .favorites: return "Saved"
         case .history: return "Recent"
         case .settings: return "Settings"
         }
@@ -744,12 +744,12 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var compactTitle: String {
         switch self {
-        case .generate: return "Desk"
-        case .chaosHub: return "Dares"
+        case .generate: return "Advice"
+        case .chaosHub: return "Play"
         case .explore: return "Ideas"
-        case .groupChallenges: return "Groups"
-        case .quotes: return "Dispatch"
-        case .favorites: return "Files"
+        case .groupChallenges: return "Party"
+        case .quotes: return "Daily"
+        case .favorites: return "Saved"
         case .history: return "Recent"
         case .settings: return "Settings"
         }
@@ -757,7 +757,7 @@ enum AppTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var systemImage: String {
         switch self {
-        case .generate: return "deskclock.fill"
+        case .generate: return "sparkles"
         case .chaosHub: return "flag.checkered.2.crossed"
         case .explore: return "lightbulb.max.fill"
         case .groupChallenges: return "person.3.fill"
@@ -793,12 +793,12 @@ extension AppTab: AppEnum {
     static let typeDisplayName = LocalizedStringResource("Badvice tab")
 
     static let caseDisplayRepresentations: [Self: DisplayRepresentation] = [
-        .generate: "Desk",
-        .chaosHub: "Dares",
+        .generate: "Advice",
+        .chaosHub: "Play",
         .explore: "Starters",
-        .groupChallenges: "Groups",
-        .quotes: "Dispatches",
-        .favorites: "Casebook",
+        .groupChallenges: "Party",
+        .quotes: "Daily",
+        .favorites: "Saved",
         .history: "Recent",
         .settings: "Settings",
     ]

@@ -17,6 +17,7 @@ struct AdviceCardView: View {
     let theme: ThemeMode
     var reduceMotion: Bool = false
     var sourceBadgeText: String? = nil
+    var showsRealityCheck = true
 
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -95,7 +96,7 @@ struct AdviceCardView: View {
         let providerBadgeTint = Theme.secondaryAccent(for: theme) ?? accent
         let toneBadgeTint = secondaryText
         let cardRadius = Theme.cardCornerRadius + 2
-        let takeFont = Theme.editorialCardFont(for: theme, tone: record.tone)
+        let takeFont = theme == .badvice ? Font.system(.title2, design: .serif, weight: .bold) : Theme.editorialCardFont(for: theme, tone: record.tone)
 
         VStack(alignment: .leading, spacing: 0) {
             // Context rail — two lines so category/tone never clip the wax seal
@@ -139,8 +140,12 @@ struct AdviceCardView: View {
 
                 Spacer(minLength: 4)
 
-                // Wax seal — brand mark stamped on each take
+                // A small editorial stamp; alternate themes retain the existing mark.
                 ZStack {
+                    if theme == .badvice {
+                        RoundedRectangle(cornerRadius: 4).stroke(accent, lineWidth: 1.5).frame(width: 40, height: 36)
+                        Text("BAD\nIDEA").font(.system(.caption2, design: .monospaced, weight: .black)).foregroundStyle(accent).multilineTextAlignment(.center)
+                    } else {
                     Circle()
                         .fill(Theme.copperEmbossGradient)
                         .frame(width: 36, height: 36)
@@ -157,6 +162,7 @@ struct AdviceCardView: View {
                         Text("B")
                             .font(.system(size: 15, weight: .black, design: .rounded))
                             .foregroundStyle(Theme.espressoInk)
+                    }
                     }
                 }
                 .scaleEffect(sealScale)
@@ -207,6 +213,7 @@ struct AdviceCardView: View {
                 .opacity(Double(revealProgress))
                 .accessibilityLabel("Advice")
                 .accessibilityValue(record.adviceLine)
+                .accessibilityIdentifier("advice.text")
 
             if shouldCollapseAdvice {
                 Button {
@@ -223,7 +230,7 @@ struct AdviceCardView: View {
                 .accessibilityIdentifier("advice.card.readMore")
             }
 
-            if let rationale = record.rationaleLine, !rationale.isEmpty {
+            if showsRealityCheck, let rationale = record.rationaleLine, !rationale.isEmpty {
                 Rectangle()
                     .fill(secondaryText.opacity(0.15))
                     .frame(height: 1)
@@ -238,7 +245,7 @@ struct AdviceCardView: View {
                         .font(.footnote)
                         .lineSpacing(2)
                         .foregroundStyle(secondaryText)
-                        .accessibilityLabel("Fake rationale")
+                        .accessibilityLabel("Reality check")
                         .accessibilityValue(rationale)
                 }
             } else {
@@ -248,6 +255,7 @@ struct AdviceCardView: View {
             BadviceScoreView(record: record, accent: accent, primaryText: primaryText, secondaryText: secondaryText)
                 .padding(.top, 14)
 
+            if showsRealityCheck {
             DisclosureGroup(
                 isExpanded: $isGoodAdviceRevealed.animation(isMotionReduced ? nil : .easeInOut(duration: Theme.animFast))
             ) {
@@ -263,6 +271,7 @@ struct AdviceCardView: View {
             }
             .padding(.top, 10)
             .accessibilityIdentifier("advice.card.goodAdvice")
+            }
         }
         .padding(Theme.cardPadding)
         .padding(.leading, 6)
@@ -279,7 +288,7 @@ struct AdviceCardView: View {
                 }
 
                 // Soft top copper wash for default editorial theme
-                if theme == .badvice {
+                if theme == .ember {
                     RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
                         .fill(
                             LinearGradient(
@@ -305,7 +314,7 @@ struct AdviceCardView: View {
                         .blur(radius: 3)
                 }
             }
-            .conditionalDrawingGroup(!isMotionReduced)
+            .conditionalDrawingGroup(theme != .badvice && !isMotionReduced)
         }
         .overlay(
             RoundedRectangle(cornerRadius: cardRadius, style: .continuous)
@@ -324,6 +333,7 @@ struct AdviceCardView: View {
         )
         // Intensity rail — wrongness drives copper edge weight
         .overlay(alignment: .leading) {
+            if theme != .badvice {
             RoundedRectangle(cornerRadius: 2, style: .continuous)
                 .fill(
                     LinearGradient(
@@ -341,6 +351,7 @@ struct AdviceCardView: View {
                 .padding(.leading, 6)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
+            }
         }
         .clipShape(RoundedRectangle(cornerRadius: cardRadius, style: .continuous))
         .overlay {

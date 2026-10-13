@@ -506,6 +506,7 @@ struct SocialQueuedAction: Identifiable, Codable, Sendable {
     var nextRetryAt: Date
     var attemptCount: Int
     let payload: SocialQueuedActionPayload
+    var ownerProfileRecordName: String? = nil
 }
 
 enum SocialReportLogger {
@@ -539,6 +540,7 @@ protocol SocialBackend: Sendable {
     func fetchBlockedUsers() async throws -> [SocialUser]
     func fetchFriends() async throws -> [SocialUser]
     func createPost(type: SocialPostType, text: String) async throws -> SocialPost
+    func createPost(type: SocialPostType, text: String, clientID: UUID) async throws -> SocialPost
     func fetchFriendsFeed() async throws -> [SocialPost]
     func submitChaosScore(seasonId: String, score: Int64) async throws
     func fetchLeaderboard(seasonId: String, limit: Int) async throws -> [SocialChaosScore]
@@ -552,6 +554,12 @@ protocol SocialBackend: Sendable {
     func fetchMyCollabDocs() async throws -> [SocialCollabDoc]
     func fetchCollabDoc(id: String) async throws -> SocialCollabDoc?
     func submitModerationReport(_ report: SocialModerationReport) async throws
+}
+
+extension SocialBackend {
+    func createPost(type: SocialPostType, text: String, clientID: UUID) async throws -> SocialPost {
+        try await createPost(type: type, text: text)
+    }
 }
 
 actor SocialActionQueueStore {
@@ -580,7 +588,8 @@ actor SocialActionQueueStore {
             createdAt: action.createdAt,
             nextRetryAt: action.nextRetryAt,
             attemptCount: action.attemptCount,
-            payload: action.payload
+            payload: action.payload,
+            ownerProfileRecordName: action.ownerProfileRecordName
         )
         actions.append(normalizedAction)
         save(actions)
@@ -665,26 +674,21 @@ enum SocialBackendFactory {
     static func make() -> any SocialBackend {
         let arguments = ProcessInfo.processInfo.arguments
         let isRunningUnderXCTest =
-            ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            AppLaunchEnvironment.isHostedUnitTesting
         let isUITestingLaunch = arguments.contains("-ui-testing")
         let allowLiveCloudKit = arguments.contains("-ui-testing-cloudkit-live")
             || arguments.contains("-social-live")
-        let isRunningOnSimulator: Bool = {
-            #if targetEnvironment(simulator)
-                return true
-            #else
-                return false
-            #endif
-        }()
         let shouldUseMockBackend =
             arguments.contains("-ui-testing-social-mock")
-            || (!allowLiveCloudKit && (isUITestingLaunch || isRunningUnderXCTest || isRunningOnSimulator))
+            || (!allowLiveCloudKit && (isUITestingLaunch || isRunningUnderXCTest))
         if shouldUseMockBackend {
             return UITestSocialBackend(
                 forceUnavailable: arguments.contains("-ui-testing-force-social-unavailable"),
                 seededIncomingRequests: intArgument(after: "-ui-testing-social-seed-incoming") ?? 0
             )
         }
+        let signingAllowed = (Bundle.main.object(forInfoDictionaryKey: "BadviceCloudKitSigningAllowed") as? String)?.uppercased() == "YES"
+        guard signingAllowed else { return UnavailableSocialBackend() }
         return CloudKitStore()
     }
 
@@ -1114,4 +1118,45 @@ actor UITestSocialBackend: SocialBackend {
             )
         }
     }
+}
+
+
+/// A real unavailable state for unsigned local builds: no invented profiles or successful writes.
+struct UnavailableSocialBackend: SocialBackend {
+    static let reason = "This build is unsigned. Use a signed build with iCloud entitlements to connect CloudKit."
+    func backendDisplayName() async -> String { "CloudKit unavailable — unsigned build" }
+    func availabilityState() async -> SocialAvailabilityState {
+        SocialAvailabilityState(isAvailable: false, diagnostics: SocialCloudKitDiagnostics(
+            accountStatus: .couldNotDetermine,
+            containerIdentifier: CloudKitSocialConfig.containerIdentifier,
+            databaseScope: CloudKitManager.socialDatabaseScope,
+            environmentName: CloudKitSocialConfig.environmentName,
+            lastError: SocialCloudKitErrorDiagnostic(operation: "build-signing", domain: "Badvice.Build",
+                code: "unsigned_build", localizedDescription: Self.reason, recordType: nil,
+                recordNames: [], normalizedHandle: nil, predicateSummary: nil, fieldNames: [], sortKeys: [],
+                containerIdentifier: CloudKitSocialConfig.containerIdentifier,
+                databaseScope: CloudKitManager.socialDatabaseScope, environmentName: CloudKitSocialConfig.environmentName,
+                isRetryable: false, partialFailureDetails: [], debugUserInfo: nil)))
+    }
+    func setStoredCurrentUserRecordName(_ recordName: String?) async {}
+    func fetchCurrentUserIfStored() async throws -> SocialUser? { throw SocialError.iCloudUnavailable(Self.reason) }
+    func getOrCreateCurrentUser(handle: String, displayName: String?) async throws -> SocialUser { throw SocialError.iCloudUnavailable(Self.reason) }
+    func findUserByHandle(_ handle: String) async throws -> SocialUser? { throw SocialError.iCloudUnavailable(Self.reason) }
+    func sendFriendRequest(toUser target: SocialUser) async throws -> SocialFriendRequest { throw SocialError.iCloudUnavailable(Self.reason) }
+    func fetchIncomingFriendRequests() async throws -> [SocialFriendRequest] { throw SocialError.iCloudUnavailable(Self.reason) }
+    func fetchOutgoingFriendRequests() async throws -> [SocialFriendRequest] { throw SocialError.iCloudUnavailable(Self.reason) }
+    func acceptFriendRequest(_ request: SocialFriendRequest) async throws { throw SocialError.iCloudUnavailable(Self.reason) }
+    func declineFriendRequest(_ request: SocialFriendRequest) async throws { throw SocialError.iCloudUnavailable(Self.reason) }
+    func blockUser(_ user: SocialUser) async throws { throw SocialError.iCloudUnavailable(Self.reason) }
+    func fetchBlockedUsers() async throws -> [SocialUser] { throw SocialError.iCloudUnavailable(Self.reason) }
+    func fetchFriends() async throws -> [SocialUser] { throw SocialError.iCloudUnavailable(Self.reason) }
+    func createPost(type: SocialPostType, text: String) async throws -> SocialPost { throw SocialError.iCloudUnavailable(Self.reason) }
+    func createPost(type: SocialPostType, text: String, clientID: UUID) async throws -> SocialPost { throw SocialError.iCloudUnavailable(Self.reason) }
+    func fetchFriendsFeed() async throws -> [SocialPost] { throw SocialError.iCloudUnavailable(Self.reason) }
+    func submitChaosScore(seasonId: String, score: Int64) async throws { throw SocialError.iCloudUnavailable(Self.reason) }
+    func fetchLeaderboard(seasonId: String, limit: Int) async throws -> [SocialChaosScore] { throw SocialError.iCloudUnavailable(Self.reason) }
+    func createOrUpdateCollabDoc( docID: String?, type: SocialPostType, content: String, contributorIDs: [CKRecord.ID], expectedVersion: Int64? ) async throws -> SocialCollabDoc { throw SocialError.iCloudUnavailable(Self.reason) }
+    func fetchMyCollabDocs() async throws -> [SocialCollabDoc] { throw SocialError.iCloudUnavailable(Self.reason) }
+    func fetchCollabDoc(id: String) async throws -> SocialCollabDoc? { throw SocialError.iCloudUnavailable(Self.reason) }
+    func submitModerationReport(_ report: SocialModerationReport) async throws { throw SocialError.iCloudUnavailable(Self.reason) }
 }

@@ -353,6 +353,21 @@ struct ChaosMeterBar: View {
 }
 
 /// Copper foil primary CTA for editorial default.
+/// A solid ink action with a small press response, shared by the magazine surfaces.
+struct MagazineButtonStyle: ButtonStyle {
+    let theme: ThemeMode
+    var reduceMotion = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Theme.buttonText(for: theme))
+            .background(Theme.accent(for: theme), in: RoundedRectangle(cornerRadius: 14))
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
 struct CopperPillButtonStyle: ButtonStyle {
     var isEnabled: Bool = true
     var reduceMotion: Bool = false
@@ -667,13 +682,13 @@ struct ThemeBackgroundView: View {
         ZStack {
             Theme.canvasColor(for: mode)
             Theme.backgroundGradient(for: mode)
-            ThemeAtmosphereView(mode: mode)
+            if mode != .badvice { ThemeAtmosphereView(mode: mode) }
 
             if scenePhase == .active && shouldRenderEffects {
                 let allowsDynamic = budget != .reduced && !lowPowerModeEnabled
                 let allowsFullEffects = budget == .full && !lowPowerModeEnabled
 
-                if allowsDynamic && mode != .minimal {
+                if allowsDynamic && mode != .minimal && mode != .badvice {
                     DynamicChaosView(theme: mode, budget: budget)
                         .opacity(allowsFullEffects ? 0.4 : 0.26)
                         .blendMode(.screen)
@@ -738,7 +753,7 @@ struct ThemeBackgroundView: View {
             }
 
             CinematicVignetteView()
-                .opacity(mode == .minimal ? 0.24 : 0.52)
+                .opacity(mode == .badvice ? 0 : mode == .minimal ? 0.24 : 0.52)
                 .allowsHitTesting(false)
         }
         .onChange(of: scenePhase) { _, newPhase in

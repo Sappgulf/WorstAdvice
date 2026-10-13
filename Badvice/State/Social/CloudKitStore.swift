@@ -101,36 +101,30 @@ actor CloudKitStore: SocialBackend {
     }
 
     func fetchCurrentUserIfStored() async throws -> SocialUser? {
-        if let cachedCurrentUser {
-            return cachedCurrentUser
-        }
-        if let recordName = userDefaults.string(forKey: currentUserRecordNameKey),
-            !recordName.isEmpty
-        {
-            let recordID = CKRecord.ID(recordName: recordName)
-            do {
-                guard let record = try await fetchRecord(
-                    recordID: recordID,
+        if let cachedCurrentUser { return cachedCurrentUser }
+        let owner = try await fetchCurrentICloudUserRecordName()
+        let record = try await CloudKitProfileResolver.resolve(
+            storedRecordName: userDefaults.string(forKey: currentUserRecordNameKey),
+            ownerRecordName: owner,
+            fetchRecord: { name in
+                try await self.fetchRecord(
+                    recordID: CKRecord.ID(recordName: name),
                     desiredKeys: CloudKitSocialSchema.Projection.userProfile,
                     allowsMissingRecord: true,
                     operation: "loadStoredCurrentUserProfile",
-                    recordType: CloudKitSocialSchema.RecordType.userProfile,
-                    fieldNames: CloudKitSocialSchema.Projection.userProfile
-                ) else {
-                    userDefaults.removeObject(forKey: currentUserRecordNameKey)
-                    cachedCurrentUser = nil
-                    return try await findCurrentUserByOwnerRecordName()
-                }
-                let user = try socialUser(from: record)
-                cachedCurrentUser = user
-                return user
-            } catch {
-                userDefaults.removeObject(forKey: currentUserRecordNameKey)
-                cachedCurrentUser = nil
-                return try await findCurrentUserByOwnerRecordName()
-            }
+                    recordType: CloudKitSocialSchema.RecordType.userProfile
+                )
+            },
+            findByOwner: { try await self.findCurrentUserRecordByOwnerRecordName(owner) }
+        )
+        guard let record else {
+            userDefaults.removeObject(forKey: currentUserRecordNameKey)
+            return nil
         }
-        return try await findCurrentUserByOwnerRecordName()
+        let user = try socialUser(from: record)
+        cachedCurrentUser = user
+        userDefaults.set(user.recordID.recordName, forKey: currentUserRecordNameKey)
+        return user
     }
 
     func getOrCreateCurrentUser(handle: String, displayName: String?) async throws -> SocialUser {
@@ -445,7 +439,20 @@ actor CloudKitStore: SocialBackend {
     }
 
     func createPost(type: SocialPostType, text: String) async throws -> SocialPost {
+        try await createPost(type: type, text: text, clientID: UUID())
+    }
+
+    func createPost(type: SocialPostType, text: String, clientID: UUID) async throws -> SocialPost {
         let current = try await requireCurrentUser()
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw SocialError.invalidRecord }
+        // A retry after a lost response must return the original post, not publish twice.
+        let recordID = CKRecord.ID(recordName: "post_\(current.recordID.recordName)_\(clientID.uuidString)")
+        if let existing = try await fetchRecord(recordID: recordID) {
+            guard let post = socialPost(from: existing, usersByID: [current.recordID: current]),
+                  post.authorUserID == current.recordID else { throw SocialError.permissionDenied }
+            return post
+        }
         guard consumeRateBudget(
             key: "\(postRateLimitKey).\(current.recordID.recordName)",
             maxCount: 6,
@@ -454,9 +461,7 @@ actor CloudKitStore: SocialBackend {
             throw SocialError.rateLimited("Posting is temporarily limited. Try again in a minute.")
         }
 
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw SocialError.invalidRecord }
-        let record = CKRecord(recordType: CloudKitSocialSchema.RecordType.post)
+        let record = CKRecord(recordType: CloudKitSocialSchema.RecordType.post, recordID: recordID)
         record[CloudKitSocialSchema.Field.authorRef] = CKRecord.Reference(
             recordID: current.recordID,
             action: .none
@@ -1292,13 +1297,15 @@ actor CloudKitStore: SocialBackend {
     }
 
     private func findCurrentUserByOwnerRecordName() async throws -> SocialUser? {
-        let ownerUserRecordName: String
-        do {
-            ownerUserRecordName = try await fetchCurrentICloudUserRecordName()
-        } catch {
-            return nil
-        }
+        let owner = try await fetchCurrentICloudUserRecordName()
+        guard let record = try await findCurrentUserRecordByOwnerRecordName(owner) else { return nil }
+        let user = try socialUser(from: record)
+        cachedCurrentUser = user
+        userDefaults.set(user.recordID.recordName, forKey: currentUserRecordNameKey)
+        return user
+    }
 
+    private func findCurrentUserRecordByOwnerRecordName(_ ownerUserRecordName: String) async throws -> CKRecord? {
         let records: [CKRecord]
         do {
             records = try await queryRecords(
@@ -1325,11 +1332,7 @@ actor CloudKitStore: SocialBackend {
             }
         }
 
-        guard let record = records.first else { return nil }
-        let user = try socialUser(from: record)
-        cachedCurrentUser = user
-        userDefaults.set(user.recordID.recordName, forKey: currentUserRecordNameKey)
-        return user
+        return records.first
     }
 
     private func isSchemaIndexingError(_ details: String) -> Bool {
@@ -1409,51 +1412,44 @@ actor CloudKitStore: SocialBackend {
         desiredKeys: [String]?,
         resultsLimit: Int
     ) async throws -> ([CKRecord], CKQueryOperation.Cursor?) {
-        try await withCheckedThrowingContinuation { continuation in
-            let operation: CKQueryOperation
-            if let cursor {
-                operation = CKQueryOperation(cursor: cursor)
-            } else if let query {
-                operation = CKQueryOperation(query: query)
-            } else {
-                continuation.resume(throwing: SocialError.invalidRecord)
-                return
-            }
-            operation.desiredKeys = desiredKeys
-            operation.resultsLimit = resultsLimit
-            var records: [CKRecord] = []
-            var firstError: Error?
-            operation.recordMatchedBlock = { _, result in
-                switch result {
-                case .success(let record):
-                    records.append(record)
-                case .failure(let error):
-                    if firstError == nil {
-                        firstError = error
-                    }
-                }
-            }
-            operation.queryResultBlock = { result in
-                switch result {
-                case .success(let cursor):
-                    if let firstError {
-                        continuation.resume(throwing: firstError)
-                        return
-                    }
-                    continuation.resume(returning: (records, cursor))
-                case .failure(let error):
-                    continuation.resume(throwing: error)
-                    return
-                }
-            }
-            publicDB.add(operation)
+        let result: (
+            matchResults: [(CKRecord.ID, Result<CKRecord, Error>)],
+            queryCursor: CKQueryOperation.Cursor?
+        )
+        if let cursor {
+            result = try await publicDB.records(
+                continuingMatchFrom: cursor,
+                desiredKeys: desiredKeys,
+                resultsLimit: resultsLimit
+            )
+        } else if let query {
+            result = try await publicDB.records(
+                matching: query,
+                inZoneWith: nil,
+                desiredKeys: desiredKeys,
+                resultsLimit: resultsLimit
+            )
+        } else {
+            throw SocialError.invalidRecord
         }
+
+        var records: [CKRecord] = []
+        records.reserveCapacity(result.matchResults.count)
+        for (_, matchResult) in result.matchResults {
+            switch matchResult {
+            case .success(let record):
+                records.append(record)
+            case .failure(let error):
+                throw error
+            }
+        }
+        return (records, result.queryCursor)
     }
 
     private func fetchRecord(
         recordID: CKRecord.ID,
         desiredKeys: [String]? = nil,
-        allowsMissingRecord: Bool = false,
+        allowsMissingRecord: Bool = true,
         operation: String = "fetchRecord",
         recordType: String? = nil,
         normalizedHandle: String? = nil,
@@ -1492,42 +1488,26 @@ actor CloudKitStore: SocialBackend {
             "CloudKit call start: \(operation, privacy: .public) count=\(recordIDs.count)"
         )
         do {
-            let records = try await withCheckedThrowingContinuation {
-                (continuation: CheckedContinuation<[CKRecord], Error>) in
-                let operation = CKFetchRecordsOperation(recordIDs: recordIDs)
-                operation.desiredKeys = desiredKeys
-                var recordsByID: [CKRecord.ID: CKRecord] = [:]
-                var firstError: Error?
-                operation.perRecordResultBlock = { recordID, result in
-                    switch result {
-                    case .success(let record):
-                        recordsByID[recordID] = record
-                    case .failure(let error):
-                        if allowsMissingRecords,
-                            let ckError = error as? CKError,
-                            ckError.code == .unknownItem
-                        {
-                            return
-                        }
-                        if firstError == nil {
-                            firstError = error
-                        }
-                    }
+            let resultsByID = try await publicDB.records(for: recordIDs, desiredKeys: desiredKeys)
+            var records: [CKRecord] = []
+            records.reserveCapacity(recordIDs.count)
+            for recordID in recordIDs {
+                guard let result = resultsByID[recordID] else {
+                    if allowsMissingRecords { continue }
+                    throw CKError(.unknownItem)
                 }
-                operation.fetchRecordsResultBlock = { result in
-                    switch result {
-                    case .success:
-                        if let firstError {
-                            continuation.resume(throwing: firstError)
-                            return
-                        }
-                        let ordered = recordIDs.compactMap { recordsByID[$0] }
-                        continuation.resume(returning: ordered)
-                    case .failure(let error):
-                        continuation.resume(throwing: error)
+                switch result {
+                case .success(let record):
+                    records.append(record)
+                case .failure(let error):
+                    if allowsMissingRecords,
+                        let ckError = error as? CKError,
+                        ckError.code == .unknownItem
+                    {
+                        continue
                     }
+                    throw error
                 }
-                publicDB.add(operation)
             }
             cloudKitLogger.info(
                 "CloudKit call success: \(operation, privacy: .public) count=\(records.count)"
@@ -1581,45 +1561,34 @@ actor CloudKitStore: SocialBackend {
             "CloudKit call start: saveRecords count=\(records.count) database=\(Self.databaseDescription(for: self.publicDB), privacy: .public)"
         )
         do {
-            let savedRecords = try await withCheckedThrowingContinuation {
-                (continuation: CheckedContinuation<[CKRecord], Error>) in
-                let operation = CKModifyRecordsOperation(recordsToSave: records, recordIDsToDelete: nil)
-                operation.isAtomic = false
-                operation.savePolicy = savePolicy
-                var savedByID: [CKRecord.ID: CKRecord] = [:]
-                var firstError: Error?
-                operation.perRecordSaveBlock = { recordID, result in
-                    switch result {
-                    case .success(let record):
-                        savedByID[recordID] = record
-                    case .failure(let error):
-                        let wrapped = Self.wrapCloudKitError(
-                            error,
-                            context: perRecordContexts[recordID] ?? context
-                        )
-                        Self.logCloudKitError(wrapped, context: "saving record \(recordID.recordName)")
-                        if firstError == nil {
-                            firstError = wrapped
-                        }
-                    }
+            let (saveResults, _) = try await publicDB.modifyRecords(
+                saving: records,
+                deleting: [],
+                savePolicy: savePolicy,
+                atomically: false
+            )
+            var savedRecords: [CKRecord] = []
+            savedRecords.reserveCapacity(records.count)
+            var firstError: Error?
+            for record in records {
+                guard let result = saveResults[record.recordID] else {
+                    let error = CKError(.internalError)
+                    if firstError == nil { firstError = error }
+                    continue
                 }
-                operation.modifyRecordsResultBlock = { result in
-                    switch result {
-                    case .success:
-                        if let firstError {
-                            continuation.resume(throwing: firstError)
-                            return
-                        }
-                        let ordered = records.compactMap { savedByID[$0.recordID] ?? $0 }
-                        continuation.resume(returning: ordered)
-                    case .failure(let error):
-                        let wrapped = Self.wrapCloudKitError(error, context: context)
-                        Self.logCloudKitError(wrapped, context: "finishing record save batch")
-                        continuation.resume(throwing: wrapped)
-                    }
+                switch result {
+                case .success(let savedRecord):
+                    savedRecords.append(savedRecord)
+                case .failure(let error):
+                    let wrapped = Self.wrapCloudKitError(
+                        error,
+                        context: perRecordContexts[record.recordID] ?? context
+                    )
+                    Self.logCloudKitError(wrapped, context: "saving record \(record.recordID.recordName)")
+                    if firstError == nil { firstError = wrapped }
                 }
-                publicDB.add(operation)
             }
+            if let firstError { throw firstError }
             cloudKitLogger.info("CloudKit call success: saveRecords count=\(savedRecords.count)")
             return savedRecords
         } catch {
@@ -1637,36 +1606,24 @@ actor CloudKitStore: SocialBackend {
         )
         cloudKitLogger.info("CloudKit call start: deleteRecords count=\(recordIDs.count)")
         do {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                let operation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: recordIDs)
-                operation.isAtomic = false
-                var firstBlockingError: Error?
-                operation.perRecordDeleteBlock = { _, result in
-                    guard case .failure(let error) = result else { return }
+            let (_, deleteResults) = try await publicDB.modifyRecords(
+                saving: [],
+                deleting: recordIDs,
+                atomically: false
+            )
+            for recordID in recordIDs {
+                guard let result = deleteResults[recordID] else {
+                    throw Self.wrapCloudKitError(CKError(.internalError), context: context)
+                }
+                switch result {
+                case .success:
+                    continue
+                case .failure(let error):
                     if let ckError = error as? CKError, ckError.code == .unknownItem {
-                        return
+                        continue
                     }
-                    if firstBlockingError == nil {
-                        firstBlockingError = error
-                    }
+                    throw Self.wrapCloudKitError(error, context: context)
                 }
-                operation.modifyRecordsResultBlock = { result in
-                    switch result {
-                    case .success:
-                        if let firstBlockingError {
-                            continuation.resume(throwing: firstBlockingError)
-                        } else {
-                            continuation.resume()
-                        }
-                    case .failure(let error):
-                        if let ckError = error as? CKError, ckError.code == .unknownItem {
-                            continuation.resume()
-                        } else {
-                            continuation.resume(throwing: Self.wrapCloudKitError(error, context: context))
-                        }
-                    }
-                }
-                publicDB.add(operation)
             }
             cloudKitLogger.info("CloudKit call success: deleteRecords count=\(recordIDs.count)")
         } catch {

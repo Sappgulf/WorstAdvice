@@ -54,7 +54,7 @@ The exporter waits 24 seconds for the first tab on each simulator and 12 seconds
 For multi-device capture, pass comma-separated Simulator UDIDs. With more than one simulator, each device writes into a slugged subfolder:
 
 ```bash
-SIMULATOR_IDS="47F86C58-BDC0-472D-9A4F-3AC719B015FB,OTHER-UDID" scripts/capture_screenshot_mode.sh
+SIMULATOR_IDS="YOUR_SIMULATOR_UDID,OTHER_UDID" scripts/capture_screenshot_mode.sh
 ```
 
 ### One-shot App Store matrix (recommended)

@@ -26,8 +26,9 @@ final class SettingsViewModel {
                 }
             }
         }
-        if settings.preferredGenerationProvider == .auto {
-            settings.preferredGenerationProvider = .classic
+        if settings.foundationRoutingVersion == nil || settings.preferredGenerationProvider == .auto {
+            settings.preferredGenerationProvider = .appleOnDevice
+            settings.foundationRoutingVersion = 1
             repository.save()
         }
         normalizeStreakFreezeState(for: Date())
@@ -100,7 +101,7 @@ final class SettingsViewModel {
             settings.dailyNotificationsEnabled = newValue
             repository.save()
             if newValue {
-                NotificationManager.requestPermissionAndScheduleDaily(hour: settings.dailyNotificationHour)
+                NotificationManager.requestPermissionAndScheduleDaily(hour: settings.dailyNotificationHour, streakEnabled: settings.streakNotificationsEnabled)
             } else {
                 NotificationManager.cancelDailyNotification()
             }
@@ -113,7 +114,9 @@ final class SettingsViewModel {
             guard settings.streakNotificationsEnabled != newValue else { return }
             settings.streakNotificationsEnabled = newValue
             repository.save()
-            NotificationManager.scheduleDaily(hour: settings.dailyNotificationHour, streakEnabled: newValue)
+            if settings.dailyNotificationsEnabled {
+                NotificationManager.scheduleDaily(hour: settings.dailyNotificationHour, streakEnabled: newValue)
+            }
         }
     }
 
@@ -194,7 +197,7 @@ final class SettingsViewModel {
     }
 
     var appleOnDeviceModelStatusText: String {
-        appleOnDeviceModelStatusSummary.message
+        appleOnDeviceModelAvailability.statusText
     }
 
     var appleOnDeviceModelStatusKey: String {

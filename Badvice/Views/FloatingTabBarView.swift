@@ -94,7 +94,7 @@ struct FloatingTabBarView: View {
                 )
             }
         }
-        .dynamicTypeSize(...DynamicTypeSize.large)
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .ignoresSafeArea(.container, edges: .bottom)
         .ignoresSafeArea(.keyboard)
     }
@@ -105,7 +105,7 @@ struct FloatingTabBarView: View {
         let isSelected = (selectedTab == tab && !showingSettingsRoot)
             || (tab == .settings && showingSettingsRoot)
         let isHighlighted = tabDragHighlight == tab
-        let titleText = isSelected ? tab.title : tab.compactTitle
+        let titleText = tab.compactTitle
 
         return Button {
             handleTap(on: tab)
@@ -125,13 +125,13 @@ struct FloatingTabBarView: View {
                         .foregroundStyle(
                             isSelected
                                 ? accent
-                                : (isHighlighted ? accent.opacity(0.78) : secondaryText.opacity(0.62))
+                                : (isHighlighted ? accent.opacity(0.78) : secondaryText)
                         )
                         .scaleEffect(isSelected ? 1.04 : (isHighlighted ? 1.02 : 0.96))
                 }
 
                 Text(titleText)
-                    .font(.system(size: isSelected ? 10 : 9, weight: isSelected ? .semibold : .regular, design: .rounded))
+                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular, design: .rounded))
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
                     .frame(height: 12)
@@ -139,7 +139,7 @@ struct FloatingTabBarView: View {
             .foregroundStyle(
                 isSelected
                     ? accent
-                    : (isHighlighted ? accent.opacity(0.58) : secondaryText.opacity(0.62))
+                    : (isHighlighted ? accent.opacity(0.58) : secondaryText)
             )
             .frame(maxWidth: .infinity)
             .frame(minHeight: Theme.floatingTabItemMinHeight)
@@ -206,7 +206,7 @@ struct FloatingTabBarView: View {
                 .foregroundStyle(isSelected ? accent : secondaryText.opacity(0.74))
 
                 Text(selectedTabIsOverflow ? selectedTab.compactTitle : "More")
-                    .font(.system(size: 9, weight: isSelected ? .semibold : .regular, design: .rounded))
+                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular, design: .rounded))
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
                     .frame(height: 12)

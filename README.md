@@ -1,221 +1,73 @@
-# Badvice (iOS)
+# Badvice
 
-A SwiftUI satire app that generates confidently wrong advice that still sounds plausible.
+A native SwiftUI satire app for confidently wrong advice. The default design is **Mischief magazine**: warm paper, editorial type, red ink, and playful stamps.
 
-## Version
-- `6.4`
+## The experience
 
-## Features
-- Focused main shell with `Advice`, `Social`, `Missions`, and `Library` in the tab bar
-- `More` quick access keeps Saved, History, Explore, Challenges, Settings, and diagnostics reachable without crowding the primary flow
-- User-customizable main tab order with Advice pinned first
-- Categories (14 + Random Mix): Dating, Fitness, Career, Money, Parenting, Tech, Social, Cooking, Travel, Productivity, Pets, Relationships, Spirituality, Crypto
-- Tone modes (14 + Random Mix): Corporate Consultant, Alpha Podcast, Wizard, Influencer, Toxic Best Friend, Boomer, Crypto Bro, Minimalist Monk, Friend Roast, Life Coach, Conspiracy Theorist, Gen Z, Reddit Commenter, LinkedIn Influencer
-- Themes (12): Badvice, Minimal, Ember, Slate, Evergreen, Fallout, Neon Nights, Midnight Oil, Golden Hour, Cosmic Chaos, Retro Wave, Cybernetic
-- Rule-based advice engine:
-  - Category rules define bad principles, keywords, forbidden patterns, and templates
-  - Content packs (`Classic`, `Office Meltdown`, `Weekend Chaos`, `Chronically Online`) expand phrase banks without changing app flow
-  - Tone profiles define phrasing/rhetorical style
-  - Multi-shape output composition increases variety while staying plausibly wrong
-  - Output includes advice line plus optional fake rationale line
-  - Optional user situation prompt is woven into output when safe
-- Safety layer blocks hateful, self-harm, and wrongdoing-oriented outputs
-- SwiftData persistence:
-  - Favorites storage
-  - History capped to last 50 generated items
-  - Persistent no-repeat advice fingerprint memory
-  - Category+tone no-repeat fingerprint pools for stricter repeat blocking
-  - Per-advice local vote state (`like` / `dislike`)
-  - User suggestion queue for recommended advice lines by topic/category
-  - Quote suggestion queue for user-submitted bad quotes
-  - Per-quote local vote state (`like` / `dislike`)
-  - Optional community-only generation mode backed by local suggestions
-  - Persisted settings
-- Share-first workflow:
-  - One-tap copy/share
-  - Dynamic primary CTA on Advice tab (`Advise Me` rotates to fresh prompts every few generations)
-  - `Surprise Me` and deterministic `Daily Drop` quick generation actions
-  - Image card export with branded templates, subtle noise, rounded card, watermark, and command/generate/share rail
-  - Supports square and story aspect ratios
-  - Optional footer disclaimer: `For entertainment only`
-- Quotes:
-  - Deterministic `Bad Quote of the Day` shared across all users each calendar day
-  - Dedicated `Quotes` tab with searchable/filterable quote library
-  - Ranking modes: `Recent`, `Top Liked`, `Top Disliked`
-  - Expanded built-in quote bank for broader daily rotation and fewer repeats
-  - Per-quote like/dislike + copy/share actions with analytics hooks
-  - Quote Suggestion Lab for community quote submissions (moderated)
-- App Shortcuts:
-  - Open Badvice directly to useful destinations
-  - Generate bad advice with optional category, tone, friend, and scenario inputs
-  - Open today's quote ritual in Quotes
-  - Return today's quote inline without opening the app
-- Homescreen:
-  - WidgetKit extension (`WorstAdviceWidget`) with a daily bad quote card (small/medium)
-- Viral loops:
-  - Share caption presets (`Deadpan`, `Chaotic`, `Faux Expert`)
-  - Streak challenge progress (3/7/14/30-day goals)
-  - Missions progression path connecting Generate, Save, Streak, and Social
-  - Friend Roast flow with friend-name targeting
-  - Lightweight analytics event logging hooks for key actions
-  - Local voting feedback on generated advice (`like` / `dislike`)
-  - Suggestion Lab for user-submitted bad advice ideas
-  - Community Pulse leaderboard for top suggested topics and top liked/disliked lines
-- Social layer (CloudKit-backed):
-  - Guided setup funnel for profile, first friend, first share, and first collab
-  - Profile creation with validated handles
-  - Friends discovery, request/accept/decline/block flows
-  - Friends feed sharing (advice + quotes)
-  - Chaos leaderboard submissions
-  - Collaboration document drafts/edits
-  - Moderation report submission pipeline
-  - Offline retry queue for social writes (friend request/share/score/report)
-  - Settings diagnostics for social backend + queue health
-- Discovery workflows:
-  - Favorites supports list/grid plus search and category filters
-  - History supports search, category filters, and ranking modes (`Recent`, `Top Liked`, `Top Disliked`)
-- Accessibility/perf:
-  - Warm/Sepia themes use paper-like textured backgrounds and soft contrast for long sessions
-  - Neon contrast tuned with darker cards/text pairing for better readability
-  - Dynamic Type-friendly layout
-  - VoiceOver labels for key controls
-  - Large tap targets and high-contrast theme tokens
-  - Instant local generation and rendering
+- **Advice:** choose a topic and voice, optionally describe your situation, and generate a take. Save, copy, export an image, rewrite it, or reveal a sensible reality check.
+- **Saved:** search and organize saved advice, or browse recent history. History is capped at 50 entries.
+- **Play:** daily and weekly missions, streaks, and an advice bracket.
+- **Daily:** the daily quote, a searchable quote archive, and starter prompts.
+- **Party:** a real pass-the-phone game for 2–8 players. Each player gets a take, votes for someone else's, and sees the winner or tie. The round survives relaunch.
+- **Settings:** themes, content packs, accessibility preferences, sharing, Apple Intelligence, local account security, suggestions, and social diagnostics.
+
+Guest mode has a stable, separate local history. Protected accounts keep their existing password workflow. Local Badvice accounts are not Apple IDs and do not provide cross-device account sync.
+
+Advice prefers Apple’s on-device Foundation Models on iOS 26+ when Apple Intelligence is enabled and ready. Every topic, voice, intensity and rewrite uses the same structured request contract. Successful Apple requests stay in the Apple candidate pool. The screen identifies the actual source; unavailability or generation failure falls back to the offline Bureau Engine. Legacy settings migrate once to Apple; later explicit engine choices persist. Party games and the widget’s daily quotes use local content. Advice is entertainment, not guidance.
 
 ## Architecture
-- UI: SwiftUI
-- Pattern: MVVM
-- Persistence: SwiftData (`AdviceRecord`, `AdviceFingerprint`, `UserAdviceSuggestion`, `UserQuoteSuggestion`, `QuoteVoteRecord`, `LearningStatRecord`, `MissionProgressRecord`, `AppSettingsEntity`)
-- Core modules:
-  - `Badvice/Models/AdviceModels.swift`: enums + shared models
-  - `Badvice/Data/AdviceStore.swift`: category/tone rule definitions
-  - `Badvice/Engine/AdviceEngine.swift`: deterministic template engine + moderation
-  - `Badvice/State/AppState.swift`: SwiftData models, repository, tab view models, daily quote service
-  - `Badvice/Views/*.swift`: tab screens, advice card, theming, share-card renderer
 
-## Repository Layout
-- Canonical source tree: this repository root (`/Users/austinbeatty/Downloads/WorstAdvice`).
-- App source: `Badvice/`
-- Widget source: `WorstAdviceWidget/`
-- Tests: `WorstAdviceTests/`
-- Build/test scripts: `scripts/`
-- Do not reintroduce nested repo/submodule copies (for example `WorstAdvice/` as a gitlink).
+- SwiftUI + Observation for presentation and state.
+- SwiftData for local advice, votes, suggestions, settings, and progression, scoped by account.
+- Keychain for protected-account credentials; guest state stays separate in local preferences.
+- CloudKit CKRecords for optional social data in `iCloud.com.worstadvice.app`.
+- WidgetKit for daily quotes and streak activities.
+- Minimum deployment target: iOS 18.6. Swift language mode: Swift 5.
 
-## Build & Run
-1. Open `Badvice.xcodeproj` in Xcode.
-2. Select the `Badvice` scheme.
-3. Run on simulator.
+Local SwiftData deliberately uses `cloudKitDatabase: .none`: its unique constraints and required fields are incompatible with automatic CloudKit persistence. Social data has a separate backend. Local history does not sync across devices.
 
-CLI build:
+## Build and test
 
-If simulator names differ on your machine, resolve one dynamically first:
-```bash
-xcodebuild -showdestinations -project Badvice.xcodeproj -scheme Badvice
-```
+Open `Badvice.xcodeproj`, select the `Badvice` scheme, and choose an installed simulator. Command-line workflows use the selected Xcode (`xcode-select -p`), without a machine-specific beta path.
 
-```bash
-xcodebuild build \
-  -project "Badvice.xcodeproj" \
-  -scheme "Badvice" \
-  -destination "platform=iOS Simulator"
-```
-
-## Social (CloudKit) Setup
-Social features (`Friends`, feed, leaderboard, collaboration) require CloudKit setup in addition to local app build.
-
-1. In Xcode target settings for `Badvice`, confirm:
-   - iCloud capability is enabled.
-   - Container includes `iCloud.com.worstadvice.app`.
-   - `Badvice/Badvice.entitlements` is attached to the app target.
-2. Sign into an iCloud account on your test device/simulator host machine.
-3. Launch the app once in Development environment to initialize CloudKit record types.
-4. In CloudKit Dashboard, verify schema for:
-   - `UserProfile`
-   - `FriendRequest`
-   - `FriendEdge`
-   - Queryable fields described in `docs/cloudkit_schema_setup.md`
-5. Before TestFlight/App Store builds, deploy the Development schema to Production in CloudKit Dashboard.
-6. If handle/friend queries fail with index/queryable errors, follow the checklist in `docs/cloudkit_schema_setup.md`.
-
-### UI Test Mock Social Backend
-For deterministic UI tests without iCloud dependencies:
-
-```bash
--ui-testing-social-mock
-```
-
-Optional seeded incoming friend requests count:
-
-```bash
--ui-testing-social-seed-incoming 3
-```
-
-## Test
 ```bash
 node scripts/check_project_sources.js
+python3 scripts/check_dev_configuration.py
+xcrun simctl list devices available
 ```
+
+Choose an explicit simulator UDID:
 
 ```bash
-bash scripts/ci_xcodebuild_tests.sh
+SIMULATOR_UDID="YOUR_SIMULATOR_UDID" bash scripts/ci_xcodebuild_tests.sh
 ```
 
-## QA Checklist
-- Advice tab:
-  - Generate creates instant advice with selected category + tone.
-  - Primary action flow is one dominant Advice CTA plus compact secondary icon rail.
-  - Situation prompt influences output when safe.
-  - Friend Roast mode uses optional friend name.
-  - Suggestion chips fill the prompt quickly.
-  - Surprise Me randomizes category + tone and generates.
-  - Daily Drop produces deterministic daily advice.
-  - Challenge card updates streak goals and progress.
-  - No-repeat status reflects growing unique output count.
-  - Like/Dislike vote toggles persist for each generated advice card.
-  - Save toggles favorite state.
-  - Copy writes text to clipboard.
-  - Share opens share sheet with exported image card.
-  - If community-only mode is enabled without suggestions, generation shows a clear notice.
-- Share export:
-  - All 3 templates render correctly.
-  - Both square/story aspect ratios render correctly.
-  - Disclaimer appears only when enabled in settings.
-- Settings:
-  - Theme picker shows all 12 themes and applies instantly.
-  - Neon remains readable across Advice card, chips, and controls.
-- Favorites tab:
-  - List and grid modes both render correctly.
-  - Search and category filters narrow results correctly.
-  - Detail view opens and can share.
-  - Delete and unsave actions work.
-- History tab:
-  - New generations appear at top.
-  - Ranking modes show expected results for Recent, Top Liked, and Top Disliked.
-  - Search and category filters narrow results correctly.
-  - Save from history marks items as favorites.
-  - History never exceeds 50 items.
-- Quotes tab:
-  - Daily quote remains stable throughout the same day.
-  - Daily quote changes the next day.
-  - Search and category filters narrow quote library results correctly.
-  - Sort modes (`Recent`, `Top Liked`, `Top Disliked`) filter as expected.
-  - Per-quote like/dislike toggles persist.
-  - Per-quote copy/share actions work from the visible row action menu.
-- Settings:
-  - Theme changes app visuals immediately.
-  - Reduce Motion and Haptics toggles affect behavior.
-  - Include fake rationale toggle affects newly generated advice.
-  - Content pack picker changes generation style immediately.
-  - Community-only toggle forces generation to use moderated user suggestions only.
-  - Suggestion Lab navigation opens submit/list/delete flow for community suggestions.
-  - Community Pulse view shows top suggested topics and local like/dislike leaders.
-  - Quote Suggestion Lab navigation opens submit/list/delete flow for community quotes.
-  - Share caption style picker affects copied/shared text captions.
-  - Strict no-repeat toggle enforces global uniqueness across generated advice lines.
-- More keeps Saved, History, Explore, Challenges, Settings, and diagnostics reachable while tab customization reorders the main shell.
-- Visual comfort:
-  - Warm theme shows soft paper-like background texture and comfortable contrast for extended reading.
-- Widget:
-  - `Daily Bad Quote` widget appears in widget gallery.
-  - Widget quote updates daily and matches app daily quote cycle.
-- Safety:
-  - Outputs remain satirical and avoid hateful/self-harm/wrongdoing content.
+For a shorter integration/UI smoke pass:
+
+```bash
+DESTINATION="platform=iOS Simulator,id=YOUR_SIMULATOR_UDID" bash scripts/ci_ios_smoke.sh
+```
+
+Scripts share incremental build caches, build the active simulator architecture, run tests serially, and preserve old result bundles. Set `RESULT_BUNDLE_PATH` to a new path for each run. Unsigned simulator tests do not validate signed iCloud entitlements or production services.
+
+## Simulator fixtures
+
+UI tests use `-ui-testing -skip-onboarding -skip-splash`. Add `-ui-testing-auth-skip` for a protected test account, or exercise `auth.guest` for guest entry. `-ui-testing-reset-data` resets the current test account's data. `-ui-testing-social-mock` uses the explicit mock backend; `-ui-testing-force-social-unavailable` exercises the unavailable state.
+
+For deterministic visual captures:
+
+```bash
+SIMULATOR_ID="YOUR_SIMULATOR_UDID" bash scripts/capture_screenshot_mode.sh
+```
+
+The UI suites save named screenshots in their xcresult attachments. They test current controls, persistence, validation, exports, large text, onboarding, account workflows, and social diagnostics. Retired demo invite-code behavior is replaced by actual party-game tests.
+
+## iCloud
+
+Read [CloudKit setup](docs/cloudkit_schema_setup.md) before testing social features. The optional backend uses the **public database**. A client-side friends filter does not enforce private sharing. Do not post sensitive content.
+
+The local fixes cover optional-record fetches, transient profile failures, iCloud identity validation and change notifications, account-scoped retry queues, and stable share IDs. The app registers the `badvice://` URL scheme used by widget links. Unsigned builds report CloudKit as unavailable without constructing a container or manufacturing profiles. Signed builds use the live backend. Server schema deployment, security roles, and cross-user writes still need signed development and two-user verification. Do not enable broad public write access to make those operations pass.
+
+## Repository
+
+The canonical app source is `Badvice/`, widgets are in `WorstAdviceWidget/`, unit tests in `WorstAdviceTests/`, and UI tests in `BadviceUITests/`. Keep build artifacts in ignored `.build/`. Do not reintroduce nested repository copies.

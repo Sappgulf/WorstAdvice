@@ -4,32 +4,31 @@ set -euo pipefail
 PROJECT_PATH="${PROJECT_PATH:-Badvice.xcodeproj}"
 SCHEME="${SCHEME:-Badvice}"
 DESTINATION="${DESTINATION:-platform=iOS Simulator}"
-DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PWD/.build/DerivedDataSmoke}"
-RESULT_BUNDLE_PATH="${RESULT_BUNDLE_PATH:-$PWD/.build/SmokeTests.xcresult}"
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PWD/.build/DerivedData}"
+RESULT_BUNDLE_PATH="${RESULT_BUNDLE_PATH:-$PWD/.build/SmokeTests-$(date +%Y%m%d-%H%M%S).xcresult}"
 SMOKE_MODE="${SMOKE_MODE:-all}" # all | integration | ui
 
 mkdir -p "$(dirname "$DERIVED_DATA_PATH")"
 mkdir -p "$(dirname "$RESULT_BUNDLE_PATH")"
 if [ -e "$RESULT_BUNDLE_PATH" ]; then
-  for attempt in 1 2 3; do
-    if /bin/rm -rf "$RESULT_BUNDLE_PATH"; then
-      break
-    fi
-    sleep 1
-  done
-  if [ -e "$RESULT_BUNDLE_PATH" ]; then
-    echo "Failed to remove existing result bundle: $RESULT_BUNDLE_PATH" >&2
-    exit 1
-  fi
+  echo "Result bundle already exists. Choose a fresh RESULT_BUNDLE_PATH: $RESULT_BUNDLE_PATH" >&2
+  exit 1
 fi
 
 node scripts/check_project_sources.js
+python3 scripts/check_dev_configuration.py
 
 if ! xcodebuild -showdestinations -project "$PROJECT_PATH" -scheme "$SCHEME" 2>/dev/null \
   | grep -q "platform:iOS Simulator"; then
   echo "No eligible iOS Simulator destinations are installed for Xcode." >&2
   echo "Install a simulator runtime in Xcode > Settings > Components or set DESTINATION manually." >&2
   exit 1
+fi
+
+if [[ "$DESTINATION" == "platform=iOS Simulator" ]]; then
+  SMOKE_SIM_ID="$(xcodebuild -showdestinations -project "$PROJECT_PATH" -scheme "$SCHEME" 2>/dev/null | awk '/platform:iOS Simulator/ && /id:/ && !/Placeholder/ {print; exit}' | sed -E 's/.*id:([^,}]+).*/\1/')"
+  [[ -n "$SMOKE_SIM_ID" ]] || { echo "No simulator destination resolved." >&2; exit 1; }
+  DESTINATION="platform=iOS Simulator,id=$SMOKE_SIM_ID"
 fi
 
 echo "Running iOS smoke tests on: $DESTINATION"
@@ -59,4 +58,7 @@ xcodebuild test \
   "${ONLY_TESTING_ARGS[@]}" \
   -derivedDataPath "$DERIVED_DATA_PATH" \
   -resultBundlePath "$RESULT_BUNDLE_PATH" \
+  -parallel-testing-enabled NO \
+  ONLY_ACTIVE_ARCH=YES \
+  COMPILER_INDEX_STORE_ENABLE=NO \
   CODE_SIGNING_ALLOWED=NO

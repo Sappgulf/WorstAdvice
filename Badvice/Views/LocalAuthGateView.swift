@@ -158,10 +158,10 @@ struct LocalAuthGateView: View {
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .frame(maxWidth: .infinity, minHeight: 38)
-                .foregroundStyle(isSelected ? Theme.espressoInk : accent)
+                .foregroundStyle(isSelected ? Theme.buttonText(for: .badvice) : accent)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(isSelected ? AnyShapeStyle(Theme.copperEmbossGradient) : AnyShapeStyle(Color.clear))
+                        .fill(isSelected ? AnyShapeStyle(accent) : AnyShapeStyle(Color.clear))
                 )
                 .overlay(
                     Capsule(style: .continuous)
@@ -203,21 +203,13 @@ struct LocalAuthGateView: View {
     }
 
     var body: some View {
-        let accent = Theme.copperFoilMid
-        let parchment = Theme.parchmentWarm
-        let secondary = Color(hex: "D0C0D0")
+        let accent = Theme.accent(for: .badvice)
+        let parchment = Theme.primaryText(for: .badvice)
+        let secondary = Theme.secondaryText(for: .badvice)
 
         ZStack {
             Theme.backgroundGradient(for: .badvice)
                 .ignoresSafeArea()
-
-            FloatingParticlesView(theme: .badvice, reduceMotion: true, isGenerating: false)
-                .opacity(0.28)
-                .ignoresSafeArea()
-
-            CinematicVignetteView()
-                .opacity(0.55)
-                .allowsHitTesting(false)
 
             ScrollView {
                 VStack(spacing: 24) {
@@ -235,17 +227,17 @@ struct LocalAuthGateView: View {
                                 .foregroundStyle(Theme.espressoInk)
                         }
 
-                        Text("LOCAL SEAL REQUIRED")
+                        Text("BAD IDEAS. NO COMMITMENT.")
                             .font(.caption2.weight(.heavy))
                             .tracking(1.3)
                             .foregroundStyle(accent)
 
-                        Text("Local account required")
+                        Text("Welcome to badvice.")
                             .font(.system(.title2, design: .serif, weight: .bold))
                             .foregroundStyle(parchment)
 
                         Text(
-                            "Create a Badvice account on this device, or sign back in to keep your chaos behind a real password."
+                            "A little laughter. A lot of questionable judgment. Start now, or use a local account to keep your saved takes behind a password."
                         )
                         .font(.subheadline)
                         .multilineTextAlignment(.center)
@@ -255,6 +247,22 @@ struct LocalAuthGateView: View {
                         FlexibleChipRow(items: authPills, accent: accent)
                             .padding(.top, 4)
                     }
+
+                    Button {
+                        auth.continueAsGuest()
+                        if auth.isAuthenticated { onAuthenticated() }
+                    } label: {
+                        Label("Jump in as a guest", systemImage: "arrow.right")
+                            .font(.body.weight(.bold))
+                            .frame(maxWidth: .infinity, minHeight: 56)
+                    }
+                    .buttonStyle(MagazineButtonStyle(theme: .badvice))
+                    .accessibilityIdentifier("auth.guest")
+
+                    Text("Guest takes stay on this device, without a password. Local accounts are separate from your iCloud identity.")
+                        .font(.caption)
+                        .foregroundStyle(secondary)
+                        .multilineTextAlignment(.center)
 
                     VStack(spacing: 18) {
                         VStack(alignment: .leading, spacing: 10) {
@@ -466,7 +474,19 @@ struct LocalAuthGateView: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
-        .preferredColorScheme(.dark)
+        .safeAreaInset(edge: .bottom) {
+            if focusedField != nil {
+                HStack {
+                    Spacer()
+                    Button("Done") { focusedField = nil }
+                        .buttonStyle(.bordered).tint(accent)
+                        .accessibilityIdentifier("keyboard.done")
+                }
+                .padding(.horizontal, 20).padding(.vertical, 6)
+                .background(Theme.cardColor(for: .badvice))
+            }
+        }
+        .preferredColorScheme(.light)
         .onAppear {
             if !auth.hasAccounts {
                 authMode = .signUp
@@ -520,10 +540,10 @@ private extension LocalAuthGateView {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color(hex: "D0C0D0").opacity(0.8))
+                .foregroundStyle(Theme.secondaryText(for: .badvice))
             Text(value)
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Theme.parchmentWarm)
+                .foregroundStyle(Theme.primaryText(for: .badvice))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

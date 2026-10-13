@@ -252,3 +252,60 @@ extension Array where Element: Hashable {
         return counts.max(by: { $0.value < $1.value })?.key
     }
 }
+
+// A pass-the-phone game. No remote players, invite service, or invented activity.
+struct PartyRound: Codable, Equatable {
+    struct Entry: Codable, Equatable, Identifiable {
+        let id: Int
+        let player: String
+        let advice: String
+    }
+
+    let entries: [Entry]
+    let category: AdviceCategory
+    private(set) var votes: [Int: Int] = [:]
+
+    var voterIndex: Int { votes.count }
+    var isComplete: Bool { votes.count == entries.count }
+    var isValid: Bool {
+        (2...8).contains(entries.count)
+            && entries.enumerated().allSatisfy { $0.offset == $0.element.id && !$0.element.player.isEmpty && !$0.element.advice.isEmpty }
+            && votes.keys.sorted() == Array(0..<votes.count)
+            && votes.allSatisfy { entries.indices.contains($0.key) && entries.indices.contains($0.value) && $0.key != $0.value }
+    }
+    var leaders: [Entry] {
+        guard isComplete else { return [] }
+        let counts = Dictionary(grouping: votes.values, by: { $0 }).mapValues(\.count)
+        let highest = counts.values.max() ?? 0
+        return entries.filter { counts[$0.id, default: 0] == highest }
+    }
+    func voteCount(for entry: Entry) -> Int { votes.values.filter { $0 == entry.id }.count }
+
+    @discardableResult
+    mutating func castVote(for entryID: Int) -> Bool {
+        guard isValid, !isComplete, entries.indices.contains(entryID), entryID != voterIndex else { return false }
+        votes[voterIndex] = entryID
+        return true
+    }
+
+    static func playerNames(from input: String) -> [String] {
+        input.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+    }
+
+    static func make(players: [String], category: AdviceCategory, seed: Int) -> PartyRound? {
+        let players = players.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard (2...8).contains(players.count),
+              players.allSatisfy({ !$0.isEmpty && $0.count <= 24 }),
+              Set(players.map { $0.lowercased() }).count == players.count
+        else { return nil }
+        let engine = BureauAdviceEngine()
+        let entries = players.enumerated().map { index, player in
+            let take = engine.generate(
+                category: category, tone: ToneMode.concrete[index % ToneMode.concrete.count],
+                includeRationale: false, revision: .oneSentence, seed: seed &+ index &* 131
+            )
+            return Entry(id: index, player: player, advice: take.adviceLine)
+        }
+        return PartyRound(entries: entries, category: category)
+    }
+}

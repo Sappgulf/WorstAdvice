@@ -2155,3 +2155,24 @@ final class PersistenceTests: XCTestCase {
         }
     }
 }
+
+final class BureauReadabilityRegressionTests: XCTestCase {
+    func testDefaultIntensityAvoidsRepeatingThenInTheSameTake() {
+        let engine = BureauAdviceEngine()
+        for seed in 0..<24 {
+            let take = engine.generate(category: .career, tone: .corporateConsultant, includeRationale: false, intensity: .bold, seed: seed)
+            XCTAssertLessThanOrEqual(take.adviceLine.components(separatedBy: ", then ").count - 1, 1, take.adviceLine)
+        }
+    }
+}
+
+final class DailyQuoteCategoryRegressionTests: XCTestCase {
+    func testExpandedQuotesKeepTheirActualTopicCategory() throws {
+        let topics = ["pantry audits": "cooking", "bedtime routines": "parenting", "gaming tilt": "gaming", "wedding spreadsheets": "weddings", "pet negotiations": "pets", "crypto conviction": "financeCrypto"]
+        for (topic, category) in topics {
+            let quote = try XCTUnwrap(SharedDailyQuoteSource.allQuotes.first { $0.id.hasPrefix("shared-exp-") && $0.text.contains(topic) })
+            XCTAssertEqual(quote.categoryRaw, category, quote.text)
+            XCTAssertNotNil(AdviceCategory(rawValue: quote.categoryRaw))
+        }
+    }
+}

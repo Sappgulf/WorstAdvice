@@ -92,3 +92,98 @@ final class SocialRegressionTests: XCTestCase {
         }
     }
 }
+
+@MainActor
+final class SocialQueueLifecycleTests: XCTestCase {
+    func testFirstAuthContextPreservesPersistedQueueAndICloudSwitchClearsIt() async throws {
+        let name = "SocialQueueLifecycleTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let queue = SocialActionQueueStore(userDefaults: defaults, storageKey: "queue")
+        await queue.enqueue(SocialQueuedAction(id: UUID(), dedupeKey: nil, createdAt: Date(), nextRetryAt: Date(), attemptCount: 0, payload: .chaosScore(seasonId: "test", score: 12)))
+        let backend = InspectableSocialBackend(storedUser: nil)
+        let viewModel = SocialViewModel(cloudStore: backend, actionQueue: queue)
+        await viewModel.applyAuthContext(email: "returning@badvice.test", linkedSocialRecordName: nil)
+        let retained = await queue.totalCount()
+        XCTAssertEqual(retained, 1, "Restoring a local account must not discard pending offline work")
+        await viewModel.handleICloudAccountChange()
+        let cleared = await queue.totalCount()
+        XCTAssertEqual(cleared, 0, "Writes belonging to the previous iCloud identity must never replay")
+        XCTAssertNil(viewModel.currentUser)
+        XCTAssertTrue(viewModel.friends.isEmpty)
+    }
+}
+
+@MainActor
+final class SocialQueueIdentityTests: XCTestCase {
+    func testQueuePreservesIdentityBindingAcrossPersistence() async throws {
+        let name = "SocialQueueIdentityTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let queue = SocialActionQueueStore(userDefaults: defaults, storageKey: "queue")
+        let action = SocialQueuedAction(id: UUID(), dedupeKey: nil, createdAt: Date(), nextRetryAt: Date(), attemptCount: 0, payload: .sharePost(type: .advice, text: "The same post"), ownerProfileRecordName: "owner-A")
+        await queue.enqueue(action)
+        let restored = SocialActionQueueStore(userDefaults: defaults, storageKey: "queue")
+        let entries = await restored.readyActions()
+        XCTAssertEqual(entries.first?.ownerProfileRecordName, "owner-A")
+        XCTAssertEqual(entries.first?.id, action.id)
+        await restored.reschedule(id: action.id, retryAt: Date())
+        let retried = await restored.readyActions()
+        XCTAssertEqual(retried.first?.id, action.id)
+        XCTAssertEqual(retried.first?.ownerProfileRecordName, "owner-A")
+    }
+}
+
+@MainActor
+final class SocialIdentityRaceTests: XCTestCase {
+    func testOldIdentityResponseCannotRepopulateNewIdentityCollections() async throws {
+        let name = "SocialIdentityRaceTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let previous = SocialUser(recordID: CKRecord.ID(recordName: "previous-profile"), handle: "previous", displayName: "Previous", createdAt: Date())
+        let backend = InspectableSocialBackend(storedUser: previous, friendsValue: [previous], friendsDelay: .milliseconds(150))
+        let viewModel = SocialViewModel(cloudStore: backend, actionQueue: SocialActionQueueStore(userDefaults: defaults, storageKey: "queue"))
+        viewModel.availability = .available
+        viewModel.currentUser = previous
+        let refresh = Task { await viewModel.refreshSocialData() }
+        for _ in 0..<50 {
+            if await backend.friendsCallCount() > 0 { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        await viewModel.handleICloudAccountChange()
+        await refresh.value
+        XCTAssertNil(viewModel.currentUser)
+        XCTAssertTrue(viewModel.friends.isEmpty, "A delayed response for the old identity must not populate the new one")
+        XCTAssertTrue(viewModel.incomingRequests.isEmpty)
+    }
+
+    func testFreshAvailabilityFailureIsNotErasedByRetry() async throws {
+        let diagnostic = try XCTUnwrap(SocialCloudKitErrorDiagnostic.make(from: CKError(.networkFailure), context: .generic(operation: "accountStatus"), isRetryable: true))
+        let backend = InspectableSocialBackend(storedUser: nil, availabilityValue: .available.withLastError(diagnostic))
+        let viewModel = SocialViewModel(cloudStore: backend)
+        await viewModel.refreshAvailability(preservingLastError: false)
+        XCTAssertEqual(viewModel.availability.diagnostics.lastError?.operation, "accountStatus")
+        XCTAssertEqual(viewModel.availability.diagnostics.lastError?.code, diagnostic.code)
+    }
+}
+
+extension SocialRegressionTests {
+    func testUnsignedBuildBackendRejectsWritesWithoutInventingProfiles() async {
+        let backend = UnavailableSocialBackend()
+        let state = await backend.availabilityState()
+        XCTAssertFalse(state.isAccountAvailable)
+        XCTAssertEqual(state.diagnostics.lastError?.code, "unsigned_build")
+        do {
+            _ = try await backend.getOrCreateCurrentUser(handle: "tester", displayName: "Tester")
+            XCTFail("An unsigned build must not invent an iCloud profile")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("unsigned"))
+        }
+        do {
+            _ = try await backend.createPost(type: .advice, text: "An imaginary committee.")
+            XCTFail("An unavailable backend must not claim successful publication")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("unsigned"))
+        }
+    }
+}

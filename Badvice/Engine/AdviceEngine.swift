@@ -1134,7 +1134,7 @@ struct BureauAdviceEngine: Sendable {
         case .plausible:
             return "\(move) and describe it as the practical option"
         case .bold:
-            return "\(move), then defend it before anyone objects"
+            return "\(move) with absolute confidence"
         case .careerLimiting:
             return "\(move), copy the widest possible audience, and call the visibility alignment"
         case .legendaryMistake:

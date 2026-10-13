@@ -25,7 +25,7 @@ private struct BureauTabHeader: View {
                     .foregroundStyle(accent)
 
                 Text(title)
-                    .font(.system(size: 30, weight: .bold, design: .serif))
+                    .font(.system(.largeTitle, design: .serif, weight: .bold))
                     .foregroundStyle(primaryText)
 
                 Text(detail)
@@ -38,10 +38,9 @@ private struct BureauTabHeader: View {
 
             Image(systemName: systemImage)
                 .font(.system(size: 19, weight: .bold))
-                .foregroundStyle(Theme.espressoInk)
+                .foregroundStyle(accent)
                 .frame(width: 48, height: 48)
-                .background(Theme.copperEmbossGradient, in: Circle())
-                .shadow(color: Theme.copperFoilDeep.opacity(0.28), radius: 9, y: 4)
+                .background(accent.opacity(0.08), in: Circle())
                 .accessibilityHidden(true)
         }
     }
@@ -256,8 +255,8 @@ struct CasebookTabView: View {
                     LazyVStack(alignment: .leading, spacing: 14) {
                         BureauTabHeader(
                             eyebrow: "Favorites & history",
-                            title: "Casebook",
-                            detail: "The takes worth keeping—and the ones best used as evidence.",
+                            title: "Saved & recent",
+                            detail: "Your greatest misses, all in one place.",
                             systemImage: "books.vertical.fill",
                             theme: settings.theme
                         )
@@ -327,7 +326,7 @@ struct CasebookTabView: View {
                 .scrollIndicators(.hidden)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 shelf = initialShelf
@@ -381,7 +380,7 @@ struct CasebookTabView: View {
                 }
 
                 HStack(spacing: 8) {
-                    casebookMetric("\(monthRecords.count)", label: "Filed")
+                    casebookMetric("\(monthRecords.count)", label: "Saved")
                     casebookMetric("\(legendaryCount)", label: "Legendary")
                     casebookMetric(leadingCategory?.title ?? "Open", label: "Top lane")
                 }
@@ -607,6 +606,8 @@ private struct CasebookOrganizationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var folder: String
     @State private var tags: String
+    private enum Field: Hashable { case folder, tags }
+    @FocusState private var focusedField: Field?
 
     init(record: AdviceRecord, organizer: CasebookOrganizer, theme: ThemeMode) {
         self.record = record
@@ -646,6 +647,7 @@ private struct CasebookOrganizationSheet: View {
                         TextField("e.g. Best Of, Office, Shareable", text: $folder)
                             .textFieldStyle(.roundedBorder)
                             .accessibilityIdentifier("casebook.organize.folder")
+                            .focused($focusedField, equals: .folder)
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
@@ -669,6 +671,7 @@ private struct CasebookOrganizationSheet: View {
                             .textFieldStyle(.roundedBorder)
                             .textInputAutocapitalization(.never)
                             .accessibilityIdentifier("casebook.organize.tags")
+                            .focused($focusedField, equals: .tags)
                         Text("Separate up to six tags with commas.")
                             .font(.caption)
                             .foregroundStyle(secondaryText)
@@ -676,10 +679,15 @@ private struct CasebookOrganizationSheet: View {
                 }
                 .padding(18)
             }
+            .scrollDismissesKeyboard(.interactively)
             .background(canvas.ignoresSafeArea())
             .navigationTitle("Organize Case")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { focusedField = nil }.accessibilityIdentifier("keyboard.done")
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
@@ -729,7 +737,7 @@ struct DaresTabView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         BureauTabHeader(
                             eyebrow: "Missions",
-                            title: "Dares",
+                            title: "Play",
                             detail: "Tiny assignments for keeping your worst instincts in fighting shape.",
                             systemImage: "flag.checkered.2.crossed",
                             theme: settings.theme
@@ -773,7 +781,7 @@ struct DaresTabView: View {
 
                         BureauPanel(theme: settings.theme) {
                             VStack(alignment: .leading, spacing: 14) {
-                                Text("YOUR FIELD NOTES")
+                                Text("YOUR MISCHIEF")
                                     .font(.caption2.weight(.black))
                                     .tracking(1.3)
                                     .foregroundStyle(accent)
@@ -781,7 +789,7 @@ struct DaresTabView: View {
                                 HStack(spacing: 0) {
                                     metric("\(generate.todayGeneratedCount)", label: "Today")
                                     Divider().frame(height: 40)
-                                    metric("\(generate.favoriteCount)", label: "Filed")
+                                    metric("\(generate.favoriteCount)", label: "Saved")
                                     Divider().frame(height: 40)
                                     metric("\(generate.challengeStreakDays)", label: "Streak")
                                 }
@@ -794,10 +802,10 @@ struct DaresTabView: View {
                                     .font(.caption2.weight(.black))
                                     .tracking(1.3)
                                     .foregroundStyle(accent)
-                                Text("Play a bracket or bring in accomplices.")
+                                Text("Crown the worst. Bring your friends.")
                                     .font(.system(.title3, design: .serif, weight: .bold))
                                     .foregroundStyle(primaryText)
-                                Text("Solo works everywhere. Group challenges appear when social services are available.")
+                                Text("Pick the worse advice in a bracket, or pass your phone around for a party round.")
                                     .font(.subheadline)
                                     .foregroundStyle(secondaryText)
 
@@ -814,7 +822,7 @@ struct DaresTabView: View {
                                     Button {
                                         onOpenTab(.groupChallenges)
                                     } label: {
-                                        Label("Groups", systemImage: "person.3.fill")
+                                        Label("Party mode", systemImage: "person.3.fill")
                                             .frame(maxWidth: .infinity, minHeight: 44)
                                     }
                                     .buttonStyle(.bordered)
@@ -838,7 +846,7 @@ struct DaresTabView: View {
                 .scrollIndicators(.hidden)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 tabBarVisible.wrappedValue = true
@@ -999,8 +1007,8 @@ struct DispatchesTabView: View {
                     LazyVStack(alignment: .leading, spacing: 14) {
                         BureauTabHeader(
                             eyebrow: "Quotes & prompts",
-                            title: "Dispatches",
-                            detail: "A daily bad idea, plus useful ways to start your own.",
+                            title: "The daily bad idea",
+                            detail: "A fresh quote every day. A little inspiration for your next mistake.",
                             systemImage: "envelope.open.fill",
                             theme: settings.theme
                         )
@@ -1029,7 +1037,7 @@ struct DispatchesTabView: View {
                 .scrollIndicators(.hidden)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar(.hidden, for: .navigationBar)
             .preferredColorScheme(Theme.colorScheme(for: settings.theme))
             .onAppear {
                 desk = initialDesk
@@ -1048,7 +1056,7 @@ struct DispatchesTabView: View {
         return BureauPanel(theme: settings.theme, emphasized: true) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Text("TODAY'S DISPATCH")
+                    Text("TODAY'S BAD IDEA")
                         .font(.caption2.weight(.black))
                         .tracking(1.4)
                         .foregroundStyle(accent)
@@ -1238,6 +1246,7 @@ struct BureauSettingsTabView: View {
     @Bindable var social: SocialViewModel
     @Bindable var auth: AuthViewModel
     var achievementsManager: AchievementsManager
+    var onOpenTab: (AppTab) -> Void
     var onSignOut: () -> Void
     var onDeleteAccount: (_ password: String) async -> Void
 
@@ -1262,7 +1271,7 @@ struct BureauSettingsTabView: View {
 
                 BureauPanel(theme: viewModel.theme, emphasized: true) {
                     VStack(alignment: .leading, spacing: 14) {
-                        settingsLabel("ADVICE ENGINE", detail: "Local by default. Apple Intelligence is optional.")
+                        settingsLabel("ADVICE ENGINE", detail: "Apple Intelligence on device, with a local fallback.")
 
                         Picker("Advice engine", selection: $viewModel.preferredGenerationProvider) {
                             ForEach(AdviceGenerationProvider.userSelectable) { provider in
@@ -1340,7 +1349,7 @@ struct BureauSettingsTabView: View {
 
                 BureauPanel(theme: viewModel.theme) {
                     VStack(alignment: .leading, spacing: 13) {
-                        settingsLabel("LOOK", detail: "Choose the bureau's lighting.")
+                        settingsLabel("LOOK", detail: "Set the mood. The advice stays questionable.")
 
                         Picker("Theme", selection: $viewModel.theme) {
                             ForEach(ThemeMode.allCases) { theme in
@@ -1379,6 +1388,19 @@ struct BureauSettingsTabView: View {
                     }
                 }
 
+                NavigationLink {
+                    SocialConnectionView(social: social, settings: viewModel, generate: generateViewModel, onOpenTab: onOpenTab)
+                } label: {
+                    BureauPanel(theme: viewModel.theme) {
+                        Label("iCloud & friends", systemImage: "person.2.fill")
+                            .font(.headline).foregroundStyle(accent)
+                        Text("Connect a handle, find friends, and share a take.")
+                            .font(.subheadline).foregroundStyle(secondaryText)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.social.connection")
+
                 BureauPanel(theme: viewModel.theme) {
                     VStack(alignment: .leading, spacing: 13) {
                         settingsLabel("ACCOUNT", detail: "Stored locally on this device.")
@@ -1395,7 +1417,7 @@ struct BureauSettingsTabView: View {
                                     .font(.headline)
                                     .foregroundStyle(primaryText)
                                     .accessibilityIdentifier("settings.auth.displayName")
-                                Text(auth.signedInEmail ?? "Signed in")
+                                Text(auth.signedInEmail ?? "Guest • this device only")
                                     .font(.caption)
                                     .foregroundStyle(secondaryText)
                                     .accessibilityIdentifier("settings.auth.email")
@@ -1403,6 +1425,7 @@ struct BureauSettingsTabView: View {
                             Spacer()
                         }
 
+                        if !auth.isGuest {
                         HStack(spacing: 10) {
                             advancedAccountLink(
                                 title: "Security",
@@ -1416,8 +1439,10 @@ struct BureauSettingsTabView: View {
                             )
                         }
 
+                        }
+
                         Button(role: .destructive, action: onSignOut) {
-                            Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                            Label(auth.isGuest ? "Leave guest mode" : "Sign out", systemImage: "rectangle.portrait.and.arrow.right")
                                 .font(.subheadline.weight(.bold))
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
@@ -1460,7 +1485,7 @@ struct BureauSettingsTabView: View {
         .scrollIndicators(.hidden)
         .background(canvas.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar)
         .preferredColorScheme(Theme.colorScheme(for: viewModel.theme))
         .onAppear {
             tabBarVisible.wrappedValue = true
@@ -1522,5 +1547,124 @@ struct BureauSettingsTabView: View {
         .buttonStyle(.bordered)
         .tint(accent)
         .accessibilityIdentifier(identifier)
+    }
+}
+
+/// CloudKit actions stay explicit; the local account is separate from the iCloud identity.
+struct SocialConnectionView: View {
+    @Bindable var social: SocialViewModel
+    let settings: SettingsViewModel
+    let generate: GenerateViewModel
+    let onOpenTab: (AppTab) -> Void
+    @State private var handle = ""
+    @State private var displayName = ""
+    @State private var search = ""
+    @State private var confirmingShare = false
+    private enum Field: Hashable { case handle, displayName, search }
+    @FocusState private var focusedField: Field?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                BureauTabHeader(eyebrow: "YOUR PEOPLE", title: "iCloud & friends",
+                    detail: "Your iCloud identity connects your social profile. Your saved advice and party games stay on this device.",
+                    systemImage: "person.2.fill", theme: settings.theme)
+                Text("Profiles and shared takes use CloudKit's public database. Share only content you are comfortable making public.")
+                    .font(.caption).foregroundStyle(Theme.secondaryText(for: settings.theme))
+                if let message = social.statusMessage {
+                    Text(message).font(.subheadline).accessibilityIdentifier("social.status")
+                }
+                if social.isSubmittingAction || social.isRefreshingSocialData {
+                    ProgressView("Checking the social desk…")
+                }
+                if let user = social.currentUser {
+                    BureauPanel(theme: settings.theme) {
+                        Text("@\(user.handle)").font(.title2.bold()).accessibilityIdentifier("social.profile")
+                        TextField("Friend's handle", text: $search)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                            .textFieldStyle(.roundedBorder).accessibilityIdentifier("social.search.handle")
+                            .focused($focusedField, equals: .search)
+                        Button("Find friend") { Task { await social.searchUserByHandle(search) } }
+                            .accessibilityIdentifier("social.search")
+                        if let result = social.latestSearchResult {
+                            Text("@\(result.handle) · \(result.displayName)")
+                            Button("Send friend request") { Task { await social.sendFriendRequest(to: result) } }
+                                .accessibilityIdentifier("social.request")
+                        }
+                    }
+                    if !social.incomingRequests.isEmpty {
+                        Text("Incoming requests").font(.headline)
+                        ForEach(social.incomingRequests) { request in
+                            BureauPanel(theme: settings.theme) {
+                                Text(request.fromUser.map { "@\($0.handle)" } ?? "Badvice member")
+                                HStack {
+                                    Button("Accept") { Task { await social.acceptRequest(request) } }
+                                        .accessibilityIdentifier("social.accept.\(request.id)")
+                                    Button("Decline") { Task { await social.declineRequest(request) } }
+                                        .accessibilityIdentifier("social.decline.\(request.id)")
+                                }
+                            }
+                        }
+                    }
+                    Text("Friends · \(social.friends.count)").font(.headline)
+                    ForEach(social.friends) { friend in
+                        Label("@\(friend.handle)", systemImage: "person.crop.circle")
+                    }
+                    NavigationLink("Open friends feed") {
+                        GlobalCommunityFeedView(social: social, settings: settings) { category, tone in
+                            generate.updateSelections(category: category, tone: tone, autoGenerate: false)
+                            onOpenTab(.generate)
+                        }
+                    }.accessibilityIdentifier("social.feed")
+                    if generate.current != nil {
+                        Button("Publish current take") { confirmingShare = true }
+                            .accessibilityIdentifier("social.publish")
+                    }
+                } else if social.needsProfileSetup {
+                    BureauPanel(theme: settings.theme) {
+                        Text("Choose your handle").font(.headline)
+                        TextField("Handle", text: $handle)
+                            .textInputAutocapitalization(.never).autocorrectionDisabled()
+                            .textFieldStyle(.roundedBorder).accessibilityIdentifier("social.handle")
+                            .focused($focusedField, equals: .handle)
+                        TextField("Display name (optional)", text: $displayName)
+                            .textFieldStyle(.roundedBorder).accessibilityIdentifier("social.displayName")
+                            .focused($focusedField, equals: .displayName)
+                        Button("Create iCloud profile") {
+                            Task { await social.createProfile(handle: handle, displayName: displayName) }
+                        }.accessibilityIdentifier("social.createProfile")
+                    }
+                } else {
+                    Text(social.availability.diagnostics.userVisibleMessage)
+                        .accessibilityIdentifier("social.availability")
+                }
+                Button("Recheck iCloud") { Task { await social.retryFriendsLoad() } }
+                    .accessibilityIdentifier("social.retry")
+                Text("Queued actions: \(social.queuedActionCount)").font(.caption)
+            }
+            .padding(20)
+            .foregroundStyle(Theme.primaryText(for: settings.theme))
+            .disabled(social.isSubmittingAction)
+        }
+        .safeAreaPadding(.bottom, Theme.tabContentBottomInset)
+        .scrollDismissesKeyboard(.interactively)
+        .background(Theme.canvasColor(for: settings.theme).ignoresSafeArea())
+        .tint(Theme.accent(for: settings.theme))
+        .navigationTitle("iCloud & friends")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { focusedField = nil }.accessibilityIdentifier("keyboard.done")
+            }
+        }
+        .task { await social.loadBackendDisplayNameIfNeeded(); await social.retryFriendsLoad() }
+        .confirmationDialog("Publish this take to CloudKit's public database?", isPresented: $confirmingShare) {
+            Button("Publish") {
+                guard let text = generate.current?.adviceLine else { return }
+                Task { await social.shareAdviceToFriends(text: text) }
+            }
+        } message: { Text("Your handle and take may be accessible outside your friends list.") }
     }
 }

@@ -39,6 +39,16 @@ struct QuoteSuggestionLabView: View {
                 .padding()
             }
         }
+        .tint(accent)
+        .safeAreaPadding(.bottom, Theme.tabContentBottomInset)
+        .scrollDismissesKeyboard(.interactively)
+        .tint(accent)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { focusedField = nil }.accessibilityIdentifier("keyboard.done")
+            }
+        }
         .navigationTitle("Quote Suggestion Lab")
         .toolbarBackground(.hidden, for: .navigationBar)
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))

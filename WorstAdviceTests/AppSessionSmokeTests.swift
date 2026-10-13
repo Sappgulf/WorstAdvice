@@ -50,6 +50,7 @@ final class AppSessionSmokeTests: XCTestCase {
         let container = try makeInMemoryContainer()
         let session = AppSessionViewModel(context: ModelContext(container))
 
+        session.settings.preferredGenerationProvider = .classic
         XCTAssertNil(session.generate.current)
         session.bootstrapExperienceIfNeeded(autoGenerateInitialAdvice: true)
         XCTAssertTrue(session.generate.isGenerating)
@@ -90,7 +91,7 @@ final class AppSessionSmokeTests: XCTestCase {
             selectedModelBeforeGeneration
         )
         XCTAssertFalse(session.settings.isPreparingAppleOnDeviceModel)
-        XCTAssertNil(session.generate.generationSourceBadgeText)
+        XCTAssertEqual(session.generate.generationSourceBadgeText, "Bureau Engine • local")
     }
 
     func testRandomToneRespectsSelectedCategoryCompatibility() async throws {
@@ -411,5 +412,156 @@ final class AppSessionSmokeTests: XCTestCase {
             ),
             defaults
         )
+    }
+}
+
+final class PartyRoundTests: XCTestCase {
+    func testPartyRoundValidatesNamesAndBlocksSelfVoting() throws {
+        XCTAssertEqual(PartyRound.playerNames(from: " Alex, , Sam , Jordan "), ["Alex", "Sam", "Jordan"])
+        XCTAssertNil(PartyRound.make(players: ["Solo"], category: .career, seed: 1))
+        XCTAssertNil(PartyRound.make(players: ["Alex", "alex"], category: .career, seed: 1))
+        XCTAssertNil(PartyRound.make(players: [String(repeating: "a", count: 25), "Sam"], category: .career, seed: 1))
+        var round = try XCTUnwrap(PartyRound.make(players: ["Alex", "Sam", "Jordan"], category: .career, seed: 42))
+        XCTAssertTrue(round.isValid)
+        XCTAssertFalse(round.castVote(for: 0))
+        XCTAssertFalse(round.castVote(for: 99))
+        XCTAssertEqual(round.voterIndex, 0)
+        XCTAssertTrue(round.castVote(for: 1))
+        let saved = try JSONEncoder().encode(round)
+        round = try JSONDecoder().decode(PartyRound.self, from: saved)
+        XCTAssertEqual(round.voterIndex, 1)
+        XCTAssertTrue(round.castVote(for: 0))
+        XCTAssertTrue(round.castVote(for: 0))
+        XCTAssertTrue(round.isComplete)
+        XCTAssertTrue(round.isValid)
+        XCTAssertEqual(round.leaders.map(\.player), ["Alex"])
+        XCTAssertFalse(round.castVote(for: 1))
+    }
+
+    func testTwoPlayerTieIsHonestAndEveryTakeIsSafe() throws {
+        var round = try XCTUnwrap(PartyRound.make(players: ["Alex", "Sam"], category: .random, seed: 7))
+        XCTAssertTrue(round.castVote(for: 1))
+        XCTAssertTrue(round.castVote(for: 0))
+        XCTAssertEqual(round.leaders.count, 2)
+        let moderation = ContentModeration()
+        for entry in round.entries {
+            XCTAssertFalse(entry.advice.isEmpty)
+            XCTAssertTrue(moderation.isSafe(text: entry.advice))
+        }
+    }
+}
+
+
+@MainActor
+private final class RecordingAppleGenerator: AppleAdviceGenerating {
+    var requests: [(AdviceCategory, ToneMode, BadviceIntensity, AdviceRevisionStyle?)] = []
+    var fails = false
+    var delay: Duration = .zero
+    func generateCandidate(category: AdviceCategory, tone: ToneMode, situation: String?,
+        includeRationale: Bool, seed: Int, now: Date, intensity: BadviceIntensity,
+        revision: AdviceRevisionStyle?) async throws -> GeneratedAdvice {
+        requests.append((category, tone, intensity, revision))
+        if delay != .zero { try await Task.sleep(for: delay) }
+        if fails { throw CocoaError(.coderInvalidValue) }
+        return GeneratedAdvice(category: category, tone: tone,
+            adviceLine: "Appoint your \(category.title.lowercased()) notebook CEO of an imaginary committee.",
+            rationaleLine: includeRationale ? "Notebooks cannot lead. Make one practical decision instead." : nil, createdAt: now)
+    }
+}
+
+extension AppSessionSmokeTests {
+    func testFoundationRequestCoversEveryCategoryToneAndIntensity() {
+        var count = 0
+        for category in AdviceCategory.allCases {
+            for tone in ToneMode.allCases {
+                for intensity in BadviceIntensity.allCases {
+                    let request = AppleOnDeviceAdviceBridge.adviceRequest(category: category, tone: tone,
+                        situation: "Test situation", seed: 42, intensity: intensity, revision: .oneSentence)
+                    XCTAssertTrue(request.prompt.contains(category.title))
+                    XCTAssertTrue(request.prompt.contains(tone.title))
+                    XCTAssertTrue(request.prompt.contains(intensity.title))
+                    XCTAssertTrue(request.prompt.contains("One sentence"))
+                    XCTAssertTrue(request.instructions.contains("Keep people and animals safe"))
+                    XCTAssertTrue(request.prompt.contains("<situation>Test situation</situation>"))
+                    count += 1
+                }
+            }
+        }
+        XCTAssertEqual(count, AdviceCategory.allCases.count * ToneMode.allCases.count * 5)
+    }
+
+    func testAppleRoutingUsesModelAcrossEveryConcreteCategoryAndTone() async throws {
+        let session = AppSessionViewModel(context: ModelContext(try makeInMemoryContainer()))
+        session.settings.strictNoRepeats = false
+        let bridge = RecordingAppleGenerator()
+        let model = GenerateViewModel(repository: session.repository, settingsViewModel: session.settings,
+            achievementsManager: session.achievements, appleOnDeviceBridge: bridge, appleAvailability: { .ready })
+        for category in AdviceCategory.concrete {
+            for tone in ToneMode.allCases where tone != .random {
+                model.selectedCategory = category
+                model.selectedTone = tone
+                model.selectedIntensity = .legendaryMistake
+                await model.generate(seed: bridge.requests.count + 42, revision: .oneSentence)
+                let output = try XCTUnwrap(model.current)
+                XCTAssertEqual(output.category, category)
+                XCTAssertEqual(output.tone, tone)
+                XCTAssertTrue(output.adviceLine.hasPrefix("Appoint"), "Apple candidate must reach the screen")
+                XCTAssertEqual(model.generationSourceBadgeText, "Apple Intelligence • on device")
+                XCTAssertEqual(bridge.requests.last?.2, .legendaryMistake)
+                XCTAssertEqual(bridge.requests.last?.3, .oneSentence)
+            }
+        }
+        XCTAssertEqual(bridge.requests.count, AdviceCategory.concrete.count * (ToneMode.allCases.count - 1))
+    }
+
+    func testAppleFailureFallsBackHonestlyAndConcurrentRequestsDoNotOverlap() async throws {
+        let session = AppSessionViewModel(context: ModelContext(try makeInMemoryContainer()))
+        let bridge = RecordingAppleGenerator()
+        bridge.fails = true
+        bridge.delay = .milliseconds(100)
+        let model = GenerateViewModel(repository: session.repository, settingsViewModel: session.settings,
+            achievementsManager: session.achievements, appleOnDeviceBridge: bridge, appleAvailability: { .ready })
+        let first = Task { await model.generate(seed: 1) }
+        await Task.yield()
+        await model.generate(seed: 2)
+        await first.value
+        XCTAssertEqual(bridge.requests.count, 1)
+        XCTAssertNotNil(model.current)
+        XCTAssertEqual(model.generationSourceBadgeText, "Bureau Engine • local")
+        XCTAssertTrue(model.generationNotice?.contains("Using classic generator") == true)
+        XCTAssertFalse(model.isGenerating)
+    }
+
+    func testLiveAppleFoundationModelSmokeWhenAvailable() async throws {
+        let availability = AppleOnDeviceAdviceBridge.currentAvailability()
+        guard availability.isReady else { throw XCTSkip("Live Apple model: \(availability.statusText)") }
+        let session = AppSessionViewModel(context: ModelContext(try makeInMemoryContainer()))
+        session.settings.preferredGenerationProvider = .appleOnDevice
+        session.settings.strictNoRepeats = false
+        session.generate.scenarioText = "I am overthinking a small decision."
+        var appleCount = 0
+        var fallbackCount = 0
+        for (index, category) in AdviceCategory.concrete.enumerated() {
+            let tone = ToneMode.concrete[index % ToneMode.concrete.count]
+            session.generate.selectedCategory = category
+            session.generate.selectedTone = tone
+            await session.generate.generate(seed: 42 + index)
+            let result = try XCTUnwrap(session.generate.current)
+            XCTAssertEqual(result.category, category)
+            XCTAssertEqual(result.tone, tone)
+            XCTAssertFalse(result.adviceLine.isEmpty)
+            if session.generate.generationSourceBadgeText == "Apple Intelligence • on device" {
+                appleCount += 1
+                XCTAssertLessThanOrEqual(result.adviceLine.count, 220)
+            } else {
+                fallbackCount += 1
+                XCTAssertEqual(session.generate.generationSourceBadgeText, "Bureau Engine • local")
+                XCTAssertFalse(session.generate.generationNotice?.isEmpty ?? true, "A real fallback must explain its reason")
+            }
+            print("LIVE APP GENERATOR: \(category.rawValue)/\(tone.rawValue) — \(session.generate.generationSourceBadgeText ?? "missing source") — \(session.generate.generationNotice ?? result.adviceLine)")
+        }
+        XCTAssertGreaterThan(appleCount, 0, "The live check must actually produce Apple output")
+        XCTAssertEqual(appleCount + fallbackCount, AdviceCategory.concrete.count)
+        print("LIVE APP GENERATOR TOTAL: Apple=\(appleCount), explained fallback=\(fallbackCount)")
     }
 }

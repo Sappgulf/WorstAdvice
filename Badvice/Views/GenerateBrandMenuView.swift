@@ -93,11 +93,11 @@ struct GenerateBrandMenuView: View {
             )
 
             VStack(alignment: .leading, spacing: 5) {
-                Text("BUREAU INDEX")
+                Text("THE SMALL PRINT")
                     .font(.caption2.weight(.black))
                     .tracking(1.5)
                     .foregroundStyle(Theme.copperFoilLight)
-                Text("Everything else, filed neatly.")
+                Text("More ways to misbehave.")
                     .font(.system(.title2, design: .serif, weight: .bold))
                     .foregroundStyle(Theme.parchmentWarm)
                 Text(socialStatusText)
@@ -121,7 +121,7 @@ struct GenerateBrandMenuView: View {
                 Text("Quick Access")
                     .font(.headline.weight(.bold))
                     .foregroundStyle(primaryText)
-                Text("Open a secondary desk without crowding the four primary tabs.")
+                Text("History, fresh prompts, party mode, and your preferences.")
                     .font(.caption)
                     .foregroundStyle(secondaryText)
             }
@@ -237,8 +237,8 @@ struct GenerateBrandMenuView: View {
             return "Casebook timeline"
         case "Starters":
             return "Starter briefs"
-        case "Groups":
-            return "Shared dares"
+        case "Party":
+            return "Pass-the-phone game"
         default:
             return "Open"
         }

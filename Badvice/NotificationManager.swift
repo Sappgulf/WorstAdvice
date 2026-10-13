@@ -33,7 +33,7 @@ enum NotificationManager {
                     scheduleDaily(hour: hour, streakEnabled: streakEnabled)
                 }
             case .denied:
-                center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
+                center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID, dailyChallengeID])
             @unknown default:
                 break
             }
@@ -43,13 +43,13 @@ enum NotificationManager {
     static func cancelDailyNotification() {
         guard !isRunningTests else { return }
         UNUserNotificationCenter.current()
-            .removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
+            .removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID, dailyChallengeID])
     }
 
     static func scheduleDaily(hour: Int = 9, streakEnabled: Bool = true) {
         guard !isRunningOnSimulator, !isRunningTests else { return }
         let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID])
+        center.removePendingNotificationRequests(withIdentifiers: [channelID, streakRiskID, dailyChallengeID])
 
         let selectedCopy = bodies.randomElement() ?? .defaultDaily
         let content = UNMutableNotificationContent()

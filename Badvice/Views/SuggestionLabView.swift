@@ -38,6 +38,15 @@ struct SuggestionLabView: View {
             }
             .padding()
         }
+        .safeAreaPadding(.bottom, Theme.tabContentBottomInset)
+        .scrollDismissesKeyboard(.interactively)
+        .tint(accent)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { focusedField = nil }.accessibilityIdentifier("keyboard.done")
+            }
+        }
         .navigationTitle("Suggestion Lab")
         .toolbarBackground(.hidden, for: .navigationBar)
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))

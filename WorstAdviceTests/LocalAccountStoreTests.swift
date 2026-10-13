@@ -104,3 +104,31 @@ final class LocalAccountStoreTests: XCTestCase {
         )
     }
 }
+
+final class GuestSessionTests: XCTestCase {
+    func testGuestRestoresAndResumesSeparatelyFromProtectedAccounts() throws {
+        let name = "GuestSessionTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let credentials = LocalAccountInMemoryStore()
+        let store = LocalAccountStore(userDefaults: defaults, credentialsStore: credentials)
+        let guest = try store.startGuestSession()
+        XCTAssertTrue(guest.isGuest)
+        XCTAssertFalse(store.hasAccounts())
+        XCTAssertEqual(store.restoreSession()?.accountID, guest.accountID)
+        let linked = try store.updateLinkedSocialProfileRecordName("guest-social", for: guest.accountID)
+        XCTAssertEqual(linked.linkedSocialProfileRecordName, "guest-social")
+        store.signOut()
+        XCTAssertNil(store.restoreSession())
+        let protected = try store.signUp(email: "protected@badvice.test", displayName: "Protected", password: "Badvice123")
+        XCTAssertFalse(protected.isGuest)
+        XCTAssertNotEqual(protected.accountID, guest.accountID)
+        store.signOut()
+        let restored = LocalAccountStore(userDefaults: defaults, credentialsStore: credentials)
+        XCTAssertEqual(try restored.startGuestSession().accountID, guest.accountID)
+        XCTAssertEqual(try restored.signIn(email: protected.email, password: "Badvice123").accountID, protected.accountID)
+        restored.removeAllAccounts()
+        XCTAssertNil(restored.restoreSession())
+        XCTAssertNotEqual(try restored.startGuestSession().accountID, guest.accountID)
+    }
+}

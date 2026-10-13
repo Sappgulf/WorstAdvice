@@ -43,7 +43,12 @@ final class SocialViewModel {
     var lastQueueDrainError: String?
     var lastSocialRefreshAt: Date?
     var lastLeaderboardRefreshAt: Date?
+#if DEBUG
+    var cloudKitSchemaCheckMessage: String?
+    var isRunningCloudKitSchemaCheck = false
+#endif
     private var isBootstrapping = false
+    private var isDrainingQueue = false
     private var isRefreshingLeaderboard = false
     private var socialRefreshGeneration: Int = 0
     @ObservationIgnored private var hasLoadedBackendDisplayName = false
@@ -96,7 +101,7 @@ final class SocialViewModel {
         }
 
         socialRefreshGeneration &+= 1
-        let accountChanged = email != activeAccountEmail
+        let accountChanged = activeAccountEmail != nil && email != activeAccountEmail
         activeAccountEmail = email
         activeLinkedSocialRecordName = linkedSocialRecordName
 
@@ -127,8 +132,10 @@ final class SocialViewModel {
 
     func refreshAvailability(preservingLastError: Bool = true) async {
         lastAvailabilityCheckAt = Date()
+        let checkGeneration = socialRefreshGeneration
         let refreshed = await cloudStore.availabilityState()
-        let lastError = preservingLastError ? availability.diagnostics.lastError : nil
+        guard checkGeneration == socialRefreshGeneration else { return }
+        let lastError = refreshed.diagnostics.lastError ?? (preservingLastError ? availability.diagnostics.lastError : nil)
         availability = refreshed.withLastError(lastError)
         if !availability.isAccountAvailable {
             clearLoadedSocialState()
@@ -138,9 +145,52 @@ final class SocialViewModel {
         await refreshQueueDiagnostics()
     }
 
+    func handleICloudAccountChange() async {
+        socialRefreshGeneration &+= 1
+        clearLoadedSocialState()
+        statusMessage = nil
+        // Pending writes belong to the previous iCloud identity, even if the local
+        // Badvice account stayed signed in. Never replay them as the new identity.
+        await actionQueue.clear()
+        await cloudStore.setStoredCurrentUserRecordName(nil)
+        activeLinkedSocialRecordName = nil
+        await reloadFriendsFlow(preservingLastError: false)
+    }
+
     func retryAvailabilityStatus() async {
         await reloadFriendsFlow(preservingLastError: false)
     }
+
+#if DEBUG
+    func runDevelopmentCloudKitSchemaCheck() async {
+        guard !isRunningCloudKitSchemaCheck else { return }
+        guard CloudKitSocialConfig.environmentName == "Development" else {
+            cloudKitSchemaCheckMessage = "Refusing to run a schema probe outside Development."
+            return
+        }
+
+        isRunningCloudKitSchemaCheck = true
+        cloudKitSchemaCheckMessage = nil
+        defer { isRunningCloudKitSchemaCheck = false }
+
+        let container = CloudKitManager.socialContainer()
+        let checker = CloudKitSchemaHealthChecker(
+            container: container,
+            publicDatabase: CloudKitManager.socialDatabase(container: container),
+            containerIdentifier: CloudKitSocialConfig.containerIdentifier,
+            environmentName: CloudKitSocialConfig.environmentName
+        )
+        do {
+            _ = try await checker.validateFriendsSchema()
+            cloudKitSchemaCheckMessage =
+                "Passed: iCloud account, Development Public database, profile create/read, handle query, and probe cleanup."
+        } catch let error as CloudKitSchemaHealthCheckFailed {
+            cloudKitSchemaCheckMessage = error.report.message
+        } catch {
+            cloudKitSchemaCheckMessage = "CloudKit schema check failed: \(error.localizedDescription)"
+        }
+    }
+#endif
 
     func retryFriendsLoad() async {
         await reloadFriendsFlow(preservingLastError: false)
@@ -276,14 +326,21 @@ final class SocialViewModel {
                 )
             }
 
-            incomingRequests = try await incoming
-            outgoingRequests = try await outgoing
-            friends = try await friendsResult
-            blockedUsers = try await blocked
-            feedPosts = try await feedResult
-            collabDocs = try await collabResult
-            leaderboard = try await leaderboardResult
+            let loadedIncoming = try await incoming
+            let loadedOutgoing = try await outgoing
+            let loadedFriends = try await friendsResult
+            let loadedBlocked = try await blocked
+            let loadedFeed = try await feedResult
+            let loadedCollabs = try await collabResult
+            let loadedLeaderboard = try await leaderboardResult
             guard refreshGeneration == socialRefreshGeneration else { return }
+            incomingRequests = loadedIncoming
+            outgoingRequests = loadedOutgoing
+            friends = loadedFriends
+            blockedUsers = loadedBlocked
+            feedPosts = loadedFeed
+            collabDocs = loadedCollabs
+            leaderboard = loadedLeaderboard
             lastSocialRefreshAt = Date()
             // Clear any transient lastError from optional fetches — the core load succeeded.
             availability = availability.withLastError(nil)
@@ -298,6 +355,7 @@ final class SocialViewModel {
             guard refreshGeneration == socialRefreshGeneration else { return }
             await drainQueuedActions()
         } catch {
+            guard refreshGeneration == socialRefreshGeneration else { return }
             handlePipelineError(error)
         }
     }
@@ -395,17 +453,20 @@ final class SocialViewModel {
     }
 
     private func shareToFriends(text: String, type: SocialPostType) async {
+        guard socialFeaturesEnabled, !isSubmittingAction else { return }
+        let actionID = UUID()
         isSubmittingAction = true
         defer { isSubmittingAction = false }
         do {
-            _ = try await cloudStore.createPost(type: type, text: text)
-            statusMessage = "Shared with friends."
+            _ = try await cloudStore.createPost(type: type, text: text, clientID: actionID)
+            statusMessage = "Posted to the friends feed. Posts use the public CloudKit database."
             feedPosts = try await cloudStore.fetchFriendsFeed()
         } catch {
             if shouldQueueForRetry(error) {
                 await enqueueAction(
                     payload: .sharePost(type: type, text: text),
-                    dedupeKey: nil
+                    dedupeKey: nil,
+                    actionID: actionID
                 )
                 statusMessage = "Share queued. It will retry automatically."
             } else {
@@ -589,14 +650,15 @@ final class SocialViewModel {
         statusMessage = message(for: error)
     }
 
-    private func enqueueAction(payload: SocialQueuedActionPayload, dedupeKey: String?) async {
+    private func enqueueAction(payload: SocialQueuedActionPayload, dedupeKey: String?, actionID: UUID = UUID()) async {
         let action = SocialQueuedAction(
-            id: UUID(),
+            id: actionID,
             dedupeKey: dedupeKey,
             createdAt: Date(),
             nextRetryAt: Date(),
             attemptCount: 0,
-            payload: payload
+            payload: payload,
+            ownerProfileRecordName: currentUser?.recordID.recordName
         )
         await actionQueue.enqueue(action)
         await refreshQueueDiagnostics()
@@ -604,6 +666,10 @@ final class SocialViewModel {
     }
 
     private func drainQueuedActions() async {
+        guard !isDrainingQueue else { return }
+        isDrainingQueue = true
+        defer { isDrainingQueue = false }
+        let drainGeneration = socialRefreshGeneration
         guard socialFeaturesEnabled else {
             await refreshQueueDiagnostics()
             return
@@ -616,18 +682,22 @@ final class SocialViewModel {
         }
 
         for action in ready {
+            guard drainGeneration == socialRefreshGeneration else { break }
             do {
                 try await execute(action: action)
+                guard drainGeneration == socialRefreshGeneration else { break }
                 await actionQueue.markSucceeded(id: action.id)
                 lastQueueDrainError = nil
             } catch {
+                guard drainGeneration == socialRefreshGeneration else { break }
                 if shouldQueueForRetry(error) {
                     let retryAt = Date().addingTimeInterval(retryDelay(forAttempt: action.attemptCount))
                     await actionQueue.reschedule(id: action.id, retryAt: retryAt)
                     lastQueueDrainError = message(for: error)
                 } else {
                     await actionQueue.markSucceeded(id: action.id)
-                    lastQueueDrainError = nil
+                    lastQueueDrainError = message(for: error)
+                    statusMessage = "A queued action could not be sent: \(message(for: error))"
                 }
             }
         }
@@ -637,9 +707,11 @@ final class SocialViewModel {
     }
 
     private func reloadFriendsFlow(preservingLastError: Bool) async {
+        let reloadGeneration = socialRefreshGeneration
         statusMessage = nil
         friendsLoadState = .checkingCloudKit
         await refreshAvailability(preservingLastError: preservingLastError)
+        guard reloadGeneration == socialRefreshGeneration else { return }
         guard availability.isAccountAvailable else {
             friendsLoadState = .failed(message: availability.message)
             return
@@ -706,6 +778,10 @@ final class SocialViewModel {
     }
 
     private func execute(action: SocialQueuedAction) async throws {
+        if let owner = action.ownerProfileRecordName,
+           owner != currentUser?.recordID.recordName {
+            throw SocialError.permissionDenied
+        }
         switch action.payload {
         case .friendRequest(let handle):
             guard let target = try await cloudStore.findUserByHandle(handle) else {
@@ -713,7 +789,7 @@ final class SocialViewModel {
             }
             _ = try await cloudStore.sendFriendRequest(toUser: target)
         case .sharePost(let type, let text):
-            _ = try await cloudStore.createPost(type: type, text: text)
+            _ = try await cloudStore.createPost(type: type, text: text, clientID: action.id)
         case .chaosScore(let seasonId, let score):
             try await cloudStore.submitChaosScore(seasonId: seasonId, score: score)
         case .moderationReport(let report):

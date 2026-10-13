@@ -10,6 +10,8 @@ struct LocalAccountSession: Codable, Equatable, Sendable {
     let displayName: String
     let signedInAt: Date
     let linkedSocialProfileRecordName: String?
+
+    var isGuest: Bool { email.isEmpty }
 }
 
 struct LocalAccountRecord: Equatable, Identifiable, Sendable, Codable {
@@ -250,8 +252,20 @@ final class AuthViewModel {
         currentSession != nil
     }
 
+    var isGuest: Bool { currentSession?.isGuest == true }
+
     var signedInEmail: String? {
-        currentSession?.email
+        guard let session = currentSession, !session.isGuest else { return nil }
+        return session.email
+    }
+
+    func continueAsGuest() {
+        do {
+            currentSession = try store.startGuestSession()
+            statusMessage = nil
+        } catch {
+            statusMessage = error.localizedDescription
+        }
     }
 
     var displayName: String {
@@ -507,6 +521,7 @@ struct LocalAccountPasswordHasher {
 
 final class LocalAccountStore {
     static let accountsKey = "auth.localAccounts.v1"
+    static let guestSessionKey = "auth.localGuest.v1"
     static let currentAccountIDKey = "auth.localAccounts.currentAccountID.v1"
 
     private let userDefaults: UserDefaults
@@ -523,6 +538,10 @@ final class LocalAccountStore {
     }
 
     func restoreSession() -> LocalAccountSession? {
+        if let guest = storedGuestSession(),
+           userDefaults.string(forKey: Self.currentAccountIDKey) == guest.accountID.uuidString {
+            return guest
+        }
         guard let currentAccountID = userDefaults.string(forKey: Self.currentAccountIDKey),
             let accountID = UUID(uuidString: currentAccountID),
             let account = loadAccounts().first(where: { $0.id == accountID })
@@ -537,6 +556,23 @@ final class LocalAccountStore {
             signedInAt: account.lastSignedInAt,
             linkedSocialProfileRecordName: account.linkedSocialProfileRecordName
         )
+    }
+
+    /// Guest history uses its own stable account key; protected accounts stay separate.
+    func startGuestSession() throws -> LocalAccountSession {
+        let guest = storedGuestSession() ?? LocalAccountSession(
+            accountID: UUID(), email: "", displayName: "Guest",
+            signedInAt: Date(), linkedSocialProfileRecordName: nil
+        )
+        let data = try encoder.encode(guest)
+        userDefaults.set(data, forKey: Self.guestSessionKey)
+        userDefaults.set(guest.accountID.uuidString, forKey: Self.currentAccountIDKey)
+        return guest
+    }
+
+    private func storedGuestSession() -> LocalAccountSession? {
+        guard let data = userDefaults.data(forKey: Self.guestSessionKey) else { return nil }
+        return try? decoder.decode(LocalAccountSession.self, from: data)
     }
 
     func hasAccounts() -> Bool {
@@ -639,6 +675,7 @@ final class LocalAccountStore {
     func removeAllAccounts() {
         credentialsStore.removeAllCredentials()
         userDefaults.removeObject(forKey: Self.accountsKey)
+        userDefaults.removeObject(forKey: Self.guestSessionKey)
         userDefaults.removeObject(forKey: Self.currentAccountIDKey)
     }
 
@@ -707,6 +744,14 @@ final class LocalAccountStore {
         _ recordName: String?,
         for accountID: UUID
     ) throws -> LocalAccountSession {
+        if let guest = storedGuestSession(), guest.accountID == accountID {
+            let updated = LocalAccountSession(
+                accountID: guest.accountID, email: "", displayName: guest.displayName,
+                signedInAt: guest.signedInAt, linkedSocialProfileRecordName: recordName
+            )
+            userDefaults.set(try encoder.encode(updated), forKey: Self.guestSessionKey)
+            return updated
+        }
         var accounts = loadAccounts()
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else {
             throw LocalAuthError.accountUnavailable
