@@ -92,12 +92,23 @@ final class BadvicePolishedSmokeTests: BadviceUITestCase {
         type("office, keeper", field: "casebook.organize.tags", in: app)
         tap("casebook.organize.save", in: app)
         XCTAssertTrue(app.staticTexts["Best disasters"].waitForExistence(timeout: 8))
+
+        type("office", field: "casebook.search", in: app)
+        XCTAssertTrue(control("casebook.tag.office", in: app).waitForExistence(timeout: 8))
+        app.buttons["Clear search"].tap()
+        type("not-in-this-casebook", field: "casebook.search", in: app)
+        tap("inlineSearch.done", in: app)
+        XCTAssertTrue(control("casebook.empty.filtered", in: app).waitForExistence(timeout: 8))
+        tap("casebook.clearFilters", in: app)
+        XCTAssertTrue(control("casebook.tag.office", in: app).waitForExistence(timeout: 8))
+
         app.terminate()
         app.launchArguments = ["-ui-testing", "-skip-onboarding", "-skip-splash"]
         app.launch()
         XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 15))
         tap("tab.favorites", in: app)
         XCTAssertTrue(app.staticTexts["Best disasters"].waitForExistence(timeout: 8))
+        XCTAssertTrue(control("casebook.tag.office", in: app).waitForExistence(timeout: 8))
     }
 
     func testPartyValidationVotingPersistenceAndVerdict() {

@@ -216,9 +216,28 @@ struct CasebookTabView: View {
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var records: [AdviceRecord] {
-        let base = shelf == .saved ? favorites.filteredFavorites : history.filteredHistory
+        let base = shelf == .saved ? savedSearchResults : history.filteredHistory
         guard shelf == .saved, let selectedFolder else { return base }
         return base.filter { organizer.metadata(for: $0.id).folder == selectedFolder }
+    }
+    private var savedSearchResults: [AdviceRecord] {
+        let contentMatches = favorites.filteredFavorites
+        let query = favorites.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return contentMatches }
+
+        let matchingIDs = Set(contentMatches.map(\.id))
+        let normalizedQuery = query.normalizedForFiltering
+        return favorites.favorites.filter { record in
+            guard favorites.selectedCategory == nil || record.category == favorites.selectedCategory else {
+                return false
+            }
+
+            let metadata = organizer.metadata(for: record.id)
+            let searchableMetadata = ([metadata.folder].compactMap { $0 } + metadata.tags)
+                .joined(separator: " ")
+                .normalizedForFiltering
+            return matchingIDs.contains(record.id) || searchableMetadata.contains(normalizedQuery)
+        }
     }
     private var searchText: Binding<String> {
         Binding(
@@ -234,6 +253,16 @@ struct CasebookTabView: View {
     }
     private var selectedCategory: AdviceCategory? {
         shelf == .saved ? favorites.selectedCategory : history.selectedCategory
+    }
+    private var hasUnfilteredRecords: Bool {
+        shelf == .saved ? !favorites.favorites.isEmpty : !history.history.isEmpty
+    }
+    private var hasActiveFilters: Bool {
+        let hasSearch = !searchText.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return hasSearch || selectedCategory != nil || (shelf == .saved && selectedFolder != nil)
+    }
+    private var isFilteredEmpty: Bool {
+        records.isEmpty && hasUnfilteredRecords && hasActiveFilters
     }
     private var availableFolders: [String] {
         Array(
@@ -276,7 +305,8 @@ struct CasebookTabView: View {
                                         prompt: shelf == .saved ? "Search saved takes" : "Search recent takes",
                                         accent: accent,
                                         secondaryText: secondaryText,
-                                        surfaceColor: cardColor
+                                        surfaceColor: cardColor,
+                                        fieldAccessibilityIdentifier: "casebook.search"
                                     )
 
                                     Menu {
@@ -299,14 +329,31 @@ struct CasebookTabView: View {
                                     }
                                     .accessibilityLabel("Filter casebook by lane")
                                 }
+
+                                if hasActiveFilters {
+                                    HStack {
+                                        Spacer()
+                                        Button(action: clearCasebookFilters) {
+                                            Label("Clear filters", systemImage: "line.3.horizontal.decrease.circle")
+                                                .font(.caption.weight(.bold))
+                                                .padding(.horizontal, 12)
+                                                .padding(.vertical, 8)
+                                                .background(accent.opacity(0.1), in: Capsule())
+                                        }
+                                        .buttonStyle(.plain)
+                                        .foregroundStyle(accent)
+                                        .accessibilityIdentifier("casebook.clearFilters")
+                                        .accessibilityHint("Shows every saved or recent case again")
+                                    }
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                                }
                             }
                         }
-                        .accessibilityIdentifier(
-                            shelf == .saved ? "favorites.command.card" : "history.command.card"
-                        )
 
                         if shelf == .saved, !favorites.favorites.isEmpty {
-                            monthlyRecap
+                            if !hasActiveFilters {
+                                monthlyRecap
+                            }
                             folderFilters
                         }
 
@@ -411,34 +458,61 @@ struct CasebookTabView: View {
     private var emptyState: some View {
         BureauPanel(theme: settings.theme) {
             VStack(spacing: 14) {
-                Image("BureauCasebook")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 150)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .accessibilityHidden(true)
+                if isFilteredEmpty {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .frame(width: 68, height: 68)
+                        .background(accent.opacity(0.1), in: Circle())
+                        .accessibilityHidden(true)
+                } else {
+                    Image("BureauCasebook")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 150)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .accessibilityHidden(true)
+                }
 
-                Text(shelf == .saved ? "No filed takes yet" : "The recent file is clean")
+                Text(isFilteredEmpty
+                     ? "No cases match"
+                     : (shelf == .saved ? "No filed takes yet" : "The recent file is clean"))
                     .font(.system(.title3, design: .serif, weight: .bold))
                     .foregroundStyle(primaryText)
+                    .accessibilityIdentifier(isFilteredEmpty ? "casebook.empty.filtered" : "casebook.empty")
 
-                Text(shelf == .saved
-                     ? "Save a result from Desk and it will land here."
-                     : "Commission a take and its paper trail will appear here.")
+                Text(isFilteredEmpty
+                     ? "Try another search or lane."
+                     : (shelf == .saved
+                        ? "Save a result from Desk and it will land here."
+                        : "Commission a take and its paper trail will appear here."))
                     .font(.subheadline)
                     .foregroundStyle(secondaryText)
                     .multilineTextAlignment(.center)
 
-                Button(action: onJumpToGenerate) {
-                    Label("Open Desk", systemImage: "sparkles")
-                        .font(.subheadline.weight(.bold))
-                        .frame(maxWidth: .infinity, minHeight: 46)
+                if !isFilteredEmpty {
+                    Button(action: onJumpToGenerate) {
+                        Label("Open Desk", systemImage: "sparkles")
+                            .font(.subheadline.weight(.bold))
+                            .frame(maxWidth: .infinity, minHeight: 46)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(accent)
+                    .accessibilityIdentifier("favorites.generate")
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(accent)
-                .accessibilityIdentifier("favorites.generate")
             }
             .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func clearCasebookFilters() {
+        selectedFolder = nil
+        if shelf == .saved {
+            favorites.searchText = ""
+            favorites.selectedCategory = nil
+        } else {
+            history.searchText = ""
+            history.selectedCategory = nil
         }
     }
 
@@ -479,6 +553,7 @@ struct CasebookTabView: View {
                             }
                             ForEach(metadata.tags, id: \.self) { tag in
                                 BureauTag(title: "#\(tag)", systemImage: "tag.fill", accent: secondaryText)
+                                    .accessibilityIdentifier("casebook.tag.\(tag)")
                             }
                         }
                     }

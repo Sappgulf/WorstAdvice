@@ -1202,12 +1202,26 @@ private struct GlitchView: View {
 
 // MARK: - Inline Search Field
 
+private struct OptionalSearchFieldIdentifier: ViewModifier {
+    let identifier: String?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let identifier {
+            content.accessibilityIdentifier(identifier)
+        } else {
+            content
+        }
+    }
+}
+
 struct InlineSearchField: View {
     @Binding var text: String
     let prompt: String
     let accent: Color
     let secondaryText: Color
     var surfaceColor: Color? = nil
+    var fieldAccessibilityIdentifier: String? = nil
 
     @FocusState private var isFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
@@ -1229,6 +1243,7 @@ struct InlineSearchField: View {
                 .focused($isFocused)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
+                .modifier(OptionalSearchFieldIdentifier(identifier: fieldAccessibilityIdentifier))
 
             if !text.isEmpty {
                 Button {
@@ -1288,6 +1303,14 @@ struct InlineSearchField: View {
             accessibilityReduceMotion ? nil : .easeInOut(duration: Theme.animFast),
             value: text.isEmpty
         )
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { isFocused = false }
+                    .accessibilityIdentifier("inlineSearch.done")
+                    .accessibilityHint("Dismisses the keyboard while keeping the search")
+            }
+        }
     }
 }
 
