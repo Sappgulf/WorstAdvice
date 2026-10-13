@@ -174,19 +174,12 @@ struct AdviceCardView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(record.category.title), \(record.tone.title)")
 
-            Rectangle()
-                .fill(accent.opacity(0.16))
-                .frame(height: 1)
-                .padding(.top, 10)
-
             HStack(spacing: 8) {
                 Text(takeLabel)
                     .font(.caption2.weight(.heavy))
                     .tracking(1.4)
                     .foregroundStyle(secondaryText.opacity(0.72))
-                Rectangle()
-                    .fill(secondaryText.opacity(0.18))
-                    .frame(height: 1)
+                Spacer(minLength: 8)
                 Text("\(intensityScore)%")
                     .font(.caption2.weight(.heavy))
                     .foregroundStyle(accent.opacity(0.75))
@@ -231,11 +224,6 @@ struct AdviceCardView: View {
             }
 
             if showsRealityCheck, let rationale = record.rationaleLine, !rationale.isEmpty {
-                Rectangle()
-                    .fill(secondaryText.opacity(0.15))
-                    .frame(height: 1)
-                    .padding(.vertical, 14)
-
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.caption.weight(.semibold))

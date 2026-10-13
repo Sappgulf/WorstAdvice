@@ -150,19 +150,6 @@ struct TabCommandCard<Metrics: View, Actions: View>: View {
                     lineWidth: 1
                 )
         )
-        .overlay(alignment: .top) {
-            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [accent.opacity(0.8), accent.opacity(0.14), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1.5)
-                .padding(.horizontal, 16)
-                .padding(.top, 1)
-        }
     }
 }
 
@@ -275,19 +262,6 @@ struct SectionShell<Header: View, Content: View>: View {
             RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
                 .stroke(accent.opacity(0.12), lineWidth: 1)
         )
-        .overlay(alignment: .top) {
-            RoundedRectangle(cornerRadius: Theme.shellSectionCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [accent.opacity(0.55), accent.opacity(0.08), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1.1)
-                .padding(.horizontal, 16)
-                .padding(.top, 1)
-        }
     }
 }
 

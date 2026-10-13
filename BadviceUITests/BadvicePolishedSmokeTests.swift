@@ -17,6 +17,20 @@ final class BadvicePolishedSmokeTests: BadviceUITestCase {
         starters.tap()
         XCTAssertTrue(app.staticTexts["Start with a situation"].waitForExistence(timeout: 8))
 
+        tap("quotes.ideas.surprise", in: app)
+        let starterSituation = control("generate.situation", in: app)
+        XCTAssertTrue(starterSituation.waitForExistence(timeout: 8))
+        XCTAssertTrue([
+            "I need to explain a project delay without sounding worried.",
+            "They keep taking hours to text me back.",
+            "I want to buy something unnecessary and call it self-care.",
+            "The group chat went quiet after I made it awkward.",
+            "I have a new app idea and no time to build it.",
+            "I am planning every minute of a vacation.",
+        ].contains(starterSituation.value as? String ?? ""))
+
+        tap("tab.quotes", in: app)
+
         let archive = app.buttons["Archive"].firstMatch
         reveal(archive, in: app)
         archive.tap()

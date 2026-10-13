@@ -964,6 +964,7 @@ struct DispatchesTabView: View {
     @State private var shareItems: [Any] = []
     @State private var showingShareSheet = false
     @State private var activeToast: ToastMessage?
+    @State private var lastSurpriseStarterID: String?
 
     init(
         quotes: QuotesViewModel,
@@ -1052,7 +1053,10 @@ struct DispatchesTabView: View {
                         case .daily:
                             dailyDispatch
                         case .ideas:
-                            starterDispatches
+                            VStack(spacing: 12) {
+                                starterSurprise
+                                starterDispatches
+                            }
                         case .archive:
                             archiveDispatches
                         }
@@ -1174,6 +1178,48 @@ struct DispatchesTabView: View {
             }
             .buttonStyle(.plain)
         }
+    }
+
+    private var starterSurprise: some View {
+        Button(action: useRandomStarter) {
+            BureauPanel(theme: settings.theme, emphasized: true) {
+                HStack(spacing: 13) {
+                    Image(systemName: "die.face.5.fill")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(Theme.espressoInk)
+                        .frame(width: 42, height: 42)
+                        .background(Theme.copperEmbossGradient, in: Circle())
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Dealer’s choice")
+                            .font(.system(.headline, design: .serif, weight: .bold))
+                            .foregroundStyle(primaryText)
+                        Text("Deal me a situation and a voice")
+                            .font(.subheadline)
+                            .foregroundStyle(secondaryText)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Image(systemName: "shuffle")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(accent)
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("quotes.ideas.surprise")
+        .accessibilityHint("Loads a randomly chosen starter in Advice. Consecutive picks do not repeat.")
+    }
+
+    private func useRandomStarter() {
+        let availableStarters = starters.filter { $0.id != lastSurpriseStarterID }
+        guard let starter = (availableStarters.isEmpty ? starters : availableStarters).randomElement() else {
+            return
+        }
+        lastSurpriseStarterID = starter.id
+        onUseStarter(starter.category, starter.tone, starter.prompt)
     }
 
     private var archiveDispatches: some View {

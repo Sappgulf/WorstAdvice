@@ -153,29 +153,6 @@ struct FloatingTabBarView: View {
                         .padding(.horizontal, 3)
                 }
             }
-            .overlay(alignment: .top) {
-                if isSelected || isHighlighted {
-                    Capsule(style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    accent.opacity(isSelected ? 1 : 0.5),
-                                    (Theme.secondaryAccent(for: theme) ?? accent).opacity(isSelected ? 0.85 : 0.35),
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(height: isSelected ? 3 : 2)
-                        .shadow(color: accent.opacity(isSelected ? 0.45 : 0), radius: 4, y: 0)
-                        .padding(.horizontal, max(12, tabBarStyle.indicatorInset + 10))
-                        .padding(.top, 1)
-                        .animation(
-                            reduceMotion ? nil : Theme.badBounce,
-                            value: isSelected
-                        )
-                }
-            }
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -228,15 +205,6 @@ struct FloatingTabBarView: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(accent.opacity(0.09))
                         .padding(.horizontal, 3)
-                }
-            }
-            .overlay(alignment: .top) {
-                if isSelected {
-                    Capsule(style: .continuous)
-                        .fill(accent.opacity(0.9))
-                        .frame(height: 3)
-                        .padding(.horizontal, max(12, tabBarStyle.indicatorInset + 10))
-                        .padding(.top, 1)
                 }
             }
         }

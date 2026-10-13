@@ -207,7 +207,6 @@ struct GenerateTabView: View {
                         .accessibilityLabel("\(viewModel.challengeStreakDays) day streak")
                 }
             }
-            Rectangle().fill(primaryText).frame(height: 2)
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("generate.header")
@@ -496,9 +495,7 @@ struct GenerateTabView: View {
                     .font(.caption2.weight(.black))
                     .tracking(1.5)
                     .foregroundStyle(accent)
-                Rectangle()
-                    .fill(secondaryText.opacity(0.18))
-                    .frame(height: 1)
+                Spacer(minLength: 0)
                 if !viewModel.isGenerating {
                     Text(viewModel.isCurrentFavorite ? "SAVED" : "UNSAVED")
                         .font(.caption2.weight(.black))
