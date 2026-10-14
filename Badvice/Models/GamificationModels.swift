@@ -253,12 +253,34 @@ extension Array where Element: Hashable {
     }
 }
 
-// A pass-the-phone game. No remote players, invite service, or invented activity.
-struct PartyRound: Codable, Equatable {
-    struct Entry: Codable, Equatable, Identifiable {
+// Party rounds support both pass-the-phone play and Game Center turn-based play.
+struct PartyAdviceTake: Codable, Equatable, Sendable {
+    let advice: String
+    let source: AdviceGenerationProvider
+    let notice: String?
+}
+
+struct PartyRound: Codable, Equatable, Sendable {
+    struct Entry: Codable, Equatable, Identifiable, Sendable {
         let id: Int
         let player: String
         let advice: String
+        let generationSource: AdviceGenerationProvider?
+        let generationNotice: String?
+
+        init(
+            id: Int,
+            player: String,
+            advice: String,
+            generationSource: AdviceGenerationProvider? = nil,
+            generationNotice: String? = nil
+        ) {
+            self.id = id
+            self.player = player
+            self.advice = advice
+            self.generationSource = generationSource
+            self.generationNotice = generationNotice
+        }
     }
 
     let entries: [Entry]
@@ -281,6 +303,26 @@ struct PartyRound: Codable, Equatable {
     }
     func voteCount(for entry: Entry) -> Int { votes.values.filter { $0 == entry.id }.count }
 
+    var generationSummary: String {
+        let appleCount = entries.filter { $0.generationSource == .appleOnDevice }.count
+        let localCount = entries.filter { $0.generationSource == .classic }.count
+
+        switch (appleCount, localCount) {
+        case (0, _):
+            return "Bureau Engine • local"
+        case (_, 0):
+            return "Apple Intelligence • on device"
+        default:
+            return "Apple Intelligence + local fallback"
+        }
+    }
+
+    var generationNotice: String? {
+        var seen = Set<String>()
+        let notices = entries.compactMap(\.generationNotice).filter { seen.insert($0).inserted }
+        return notices.isEmpty ? nil : notices.prefix(2).joined(separator: " ")
+    }
+
     @discardableResult
     mutating func castVote(for entryID: Int) -> Bool {
         guard isValid, !isComplete, entries.indices.contains(entryID), entryID != voterIndex else { return false }
@@ -292,20 +334,187 @@ struct PartyRound: Codable, Equatable {
         input.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
     }
 
-    static func make(players: [String], category: AdviceCategory, seed: Int) -> PartyRound? {
-        let players = players.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-        guard (2...8).contains(players.count),
-              players.allSatisfy({ !$0.isEmpty && $0.count <= 24 }),
-              Set(players.map { $0.lowercased() }).count == players.count
+    static func validatedPlayerNames(from input: String) -> [String]? {
+        validatedPlayerNames(playerNames(from: input))
+    }
+
+    static func validatedPlayerNames(_ players: [String]) -> [String]? {
+        let normalized = players.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard (2...8).contains(normalized.count),
+              normalized.allSatisfy({ !$0.isEmpty && $0.count <= 24 }),
+              Set(normalized.map { $0.lowercased() }).count == normalized.count
         else { return nil }
+        return normalized
+    }
+
+    static func make(players: [String], category: AdviceCategory, seed: Int) -> PartyRound? {
+        guard let players = validatedPlayerNames(players) else { return nil }
         let engine = BureauAdviceEngine()
-        let entries = players.enumerated().map { index, player in
+        let takes = players.enumerated().map { index, _ in
             let take = engine.generate(
                 category: category, tone: ToneMode.concrete[index % ToneMode.concrete.count],
                 includeRationale: false, revision: .oneSentence, seed: seed &+ index &* 131
             )
-            return Entry(id: index, player: player, advice: take.adviceLine)
+            return PartyAdviceTake(advice: take.adviceLine, source: .classic, notice: nil)
+        }
+        return make(players: players, category: category, takes: takes)
+    }
+
+    static func make(
+        players: [String],
+        category: AdviceCategory,
+        takes: [PartyAdviceTake]
+    ) -> PartyRound? {
+        guard let players = validatedPlayerNames(players),
+              takes.count == players.count,
+              takes.allSatisfy({
+                  !$0.advice.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+              })
+        else { return nil }
+
+        let entries = zip(players, takes).enumerated().map { index, values in
+            Entry(
+                id: index,
+                player: values.0,
+                advice: values.1.advice,
+                generationSource: values.1.source,
+                generationNotice: values.1.notice
+            )
         }
         return PartyRound(entries: entries, category: category)
+    }
+
+    static func restoring(entries: [Entry], category: AdviceCategory, votes: [Int: Int]) -> PartyRound? {
+        let round = PartyRound(entries: entries, category: category, votes: votes)
+        return round.isValid ? round : nil
+    }
+}
+
+/// Codable turn state shared through Game Center between each player's move.
+struct OnlinePartyRoundState: Codable, Equatable, Sendable {
+    enum Phase: String, Codable, Sendable {
+        case writing
+        case voting
+        case complete
+    }
+
+    struct Take: Codable, Equatable, Sendable {
+        let participantIndex: Int
+        let advice: String
+        let source: AdviceGenerationProvider
+        let notice: String?
+    }
+
+    static let currentVersion = 1
+    private(set) var version = currentVersion
+    let participantCount: Int
+    let category: AdviceCategory
+    private(set) var phase = Phase.writing
+    private(set) var takes: [Take?]
+    private(set) var votes: [Int: Int] = [:]
+
+    init?(participantCount: Int, category: AdviceCategory) {
+        guard (2...8).contains(participantCount) else { return nil }
+        self.participantCount = participantCount
+        self.category = category
+        self.takes = Array(repeating: nil, count: participantCount)
+    }
+
+    var nextActorIndex: Int? {
+        switch phase {
+        case .writing:
+            takes.firstIndex(where: { $0 == nil })
+        case .voting:
+            (0..<participantCount).first(where: { votes[$0] == nil })
+        case .complete:
+            nil
+        }
+    }
+
+    var completedTakeCount: Int { takes.compactMap { $0 }.count }
+
+    var isValid: Bool {
+        let moderation = ContentModeration()
+        guard version == Self.currentVersion,
+              (2...8).contains(participantCount),
+              takes.count == participantCount,
+              takes.enumerated().allSatisfy({ index, take in
+                  guard let take else { return true }
+                  return take.participantIndex == index
+                      && !take.advice.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                      && take.advice.count <= 1_000
+                      && moderation.isSafe(text: take.advice)
+                      && (take.notice?.count ?? 0) <= 500
+                      && moderation.isSafe(text: take.notice ?? "")
+              }),
+              votes.keys.sorted() == Array(0..<votes.count),
+              votes.allSatisfy({ voter, target in
+                  (0..<participantCount).contains(voter)
+                      && (0..<participantCount).contains(target)
+                      && voter != target
+              })
+        else { return false }
+
+        switch phase {
+        case .writing:
+            return votes.isEmpty && completedTakeCount < participantCount
+                && takes.drop(while: { $0 != nil }).allSatisfy({ $0 == nil })
+        case .voting:
+            return completedTakeCount == participantCount && votes.count < participantCount
+        case .complete:
+            return completedTakeCount == participantCount && votes.count == participantCount
+        }
+    }
+
+    func round(participantNames: [String]) -> PartyRound? {
+        guard participantNames.count == participantCount,
+              takes.allSatisfy({ $0 != nil })
+        else { return nil }
+
+        let entries = takes.enumerated().compactMap { index, take -> PartyRound.Entry? in
+            guard let take else { return nil }
+            let displayName = participantNames[index].trimmingCharacters(in: .whitespacesAndNewlines)
+            return PartyRound.Entry(
+                id: index,
+                player: displayName.isEmpty ? "Player \(index + 1)" : String(displayName.prefix(40)),
+                advice: take.advice,
+                generationSource: take.source,
+                generationNotice: take.notice
+            )
+        }
+        return PartyRound.restoring(entries: entries, category: category, votes: votes)
+    }
+
+    @discardableResult
+    mutating func submit(_ take: PartyAdviceTake, for participantIndex: Int) -> Bool {
+        guard isValid, phase == .writing, nextActorIndex == participantIndex,
+              takes.indices.contains(participantIndex),
+              !take.advice.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              take.advice.count <= 1_000,
+              ContentModeration().isSafe(text: take.advice),
+              (take.notice?.count ?? 0) <= 500,
+              ContentModeration().isSafe(text: take.notice ?? "")
+        else { return false }
+
+        takes[participantIndex] = Take(
+            participantIndex: participantIndex,
+            advice: take.advice,
+            source: take.source,
+            notice: take.notice
+        )
+        if completedTakeCount == participantCount { phase = .voting }
+        return isValid
+    }
+
+    @discardableResult
+    mutating func castVote(for entryIndex: Int, by participantIndex: Int) -> Bool {
+        guard isValid, phase == .voting, nextActorIndex == participantIndex,
+              (0..<participantCount).contains(entryIndex),
+              participantIndex != entryIndex
+        else { return false }
+
+        votes[participantIndex] = entryIndex
+        if votes.count == participantCount { phase = .complete }
+        return isValid
     }
 }

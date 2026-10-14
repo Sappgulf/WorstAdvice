@@ -477,6 +477,75 @@ final class PartyRoundTests: XCTestCase {
             XCTAssertTrue(moderation.isSafe(text: entry.advice))
         }
     }
+
+    func testGeneratedSourcesAndFallbackNoticePersistAndLegacyRoundsStillDecode() throws {
+        let round = try XCTUnwrap(
+            PartyRound.make(
+                players: ["Alex", "Sam"],
+                category: .dating,
+                takes: [
+                    PartyAdviceTake(
+                        advice: "Appoint the group chat your advisor.",
+                        source: .appleOnDevice,
+                        notice: nil
+                    ),
+                    PartyAdviceTake(
+                        advice: "Schedule a meeting with your snack drawer.",
+                        source: .classic,
+                        notice: "Apple Intelligence is unavailable. The local Bureau Engine wrote this take."
+                    ),
+                ]
+            )
+        )
+        let savedRound = try JSONDecoder().decode(PartyRound.self, from: JSONEncoder().encode(round))
+        XCTAssertEqual(savedRound, round)
+        XCTAssertEqual(savedRound.generationSummary, "Apple Intelligence + local fallback")
+        XCTAssertTrue(savedRound.generationNotice?.contains("Apple Intelligence is unavailable") == true)
+
+        let legacyRound = Data(
+            #"{"entries":[{"id":0,"player":"Alex","advice":"A legacy take."},{"id":1,"player":"Sam","advice":"Another old take."}],"category":"career","votes":{}}"#.utf8
+        )
+        let decodedLegacyRound = try JSONDecoder().decode(PartyRound.self, from: legacyRound)
+        XCTAssertTrue(decodedLegacyRound.isValid)
+        XCTAssertEqual(decodedLegacyRound.generationSummary, "Bureau Engine • local")
+    }
+
+    func testOnlinePartyStateEnforcesTakeAndVoteTurnsAndSurvivesSerialization() throws {
+        var state = try XCTUnwrap(OnlinePartyRoundState(participantCount: 3, category: .dating))
+        XCTAssertTrue(state.isValid)
+        XCTAssertEqual(state.nextActorIndex, 0)
+        XCTAssertFalse(
+            state.submit(PartyAdviceTake(advice: "Steal a coworker's password.", source: .classic, notice: nil), for: 0),
+            "Online turns must apply the same safety policy to incoming advice as local generation."
+        )
+        XCTAssertTrue(state.isValid)
+
+        let takes = [
+            PartyAdviceTake(advice: "Appoint the group chat as your advisor.", source: .appleOnDevice, notice: nil),
+            PartyAdviceTake(advice: "Schedule a meeting with your snack drawer.", source: .classic, notice: "Local fallback."),
+            PartyAdviceTake(advice: "Ask a houseplant to approve your calendar.", source: .appleOnDevice, notice: nil),
+        ]
+        XCTAssertFalse(state.submit(takes[0], for: 1))
+        for index in takes.indices {
+            XCTAssertTrue(state.submit(takes[index], for: index))
+            XCTAssertTrue(state.isValid)
+        }
+        XCTAssertEqual(state.phase, .voting)
+        XCTAssertEqual(state.nextActorIndex, 0)
+        XCTAssertFalse(state.castVote(for: 0, by: 0), "Players cannot vote for their own take.")
+        XCTAssertFalse(state.castVote(for: 1, by: 1), "Players must vote in Game Center turn order.")
+        XCTAssertTrue(state.castVote(for: 1, by: 0))
+        XCTAssertTrue(state.castVote(for: 0, by: 1))
+        XCTAssertTrue(state.castVote(for: 1, by: 2))
+        XCTAssertEqual(state.phase, .complete)
+
+        let restored = try JSONDecoder().decode(OnlinePartyRoundState.self, from: JSONEncoder().encode(state))
+        XCTAssertEqual(restored, state)
+        let round = try XCTUnwrap(restored.round(participantNames: ["Alex", "Sam", "Jordan"]))
+        XCTAssertEqual(round.leaders.map(\.player), ["Sam"])
+        XCTAssertEqual(round.generationSummary, "Apple Intelligence + local fallback")
+        XCTAssertTrue(round.generationNotice?.contains("Local fallback") == true)
+    }
 }
 
 
@@ -616,6 +685,112 @@ extension AppSessionSmokeTests {
             }
         }
         XCTAssertEqual(bridge.requests.count, AdviceCategory.concrete.count * (ToneMode.allCases.count - 1))
+    }
+
+    func testPartyTakesHonorAppleProviderAcrossEveryConcreteCategoryAndTone() async throws {
+        let session = AppSessionViewModel(context: ModelContext(try makeInMemoryContainer()))
+        session.settings.preferredGenerationProvider = .appleOnDevice
+        let bridge = RecordingAppleGenerator()
+        let model = GenerateViewModel(
+            repository: session.repository,
+            settingsViewModel: session.settings,
+            achievementsManager: session.achievements,
+            appleOnDeviceBridge: bridge,
+            appleAvailability: { .ready }
+        )
+
+        for category in AdviceCategory.concrete {
+            for tone in ToneMode.concrete {
+                let take = try await model.generatePartyTake(
+                    category: category,
+                    tone: tone,
+                    seed: bridge.requests.count + 420
+                )
+                XCTAssertEqual(take.source, .appleOnDevice)
+                XCTAssertTrue(take.advice.hasPrefix("Appoint"))
+                XCTAssertEqual(bridge.requests.last?.0, category)
+                XCTAssertEqual(bridge.requests.last?.1, tone)
+                XCTAssertEqual(bridge.requests.last?.3, .oneSentence)
+            }
+        }
+        XCTAssertEqual(bridge.requests.count, AdviceCategory.concrete.count * ToneMode.concrete.count)
+    }
+
+    func testPartyTakesUseHonestLocalFallbackWhenAppleIsUnavailableOrFails() async throws {
+        let session = AppSessionViewModel(context: ModelContext(try makeInMemoryContainer()))
+        session.settings.preferredGenerationProvider = .appleOnDevice
+        let unavailableBridge = RecordingAppleGenerator()
+        let unavailableModel = GenerateViewModel(
+            repository: session.repository,
+            settingsViewModel: session.settings,
+            achievementsManager: session.achievements,
+            appleOnDeviceBridge: unavailableBridge,
+            appleAvailability: { .unavailable("Apple Intelligence is unavailable in this test.") }
+        )
+        let unavailableTake = try await unavailableModel.generatePartyTake(
+            category: .dating,
+            tone: .wizard,
+            seed: 1
+        )
+        XCTAssertEqual(unavailableTake.source, .classic)
+        XCTAssertTrue(unavailableTake.notice?.contains("unavailable in this test") == true)
+        XCTAssertTrue(unavailableBridge.requests.isEmpty)
+
+        let failedBridge = RecordingAppleGenerator()
+        failedBridge.fails = true
+        let failedModel = GenerateViewModel(
+            repository: session.repository,
+            settingsViewModel: session.settings,
+            achievementsManager: session.achievements,
+            appleOnDeviceBridge: failedBridge,
+            appleAvailability: { .ready }
+        )
+        let failedTake = try await failedModel.generatePartyTake(
+            category: .dating,
+            tone: .wizard,
+            seed: 2
+        )
+        XCTAssertEqual(failedTake.source, .classic)
+        XCTAssertTrue(failedTake.notice?.contains("local Bureau Engine") == true)
+        XCTAssertFalse(failedTake.advice.isEmpty)
+    }
+
+    func testCancellingPartyTakeDoesNotFallBackOrChangeTheCurrentDraft() async throws {
+        let session = AppSessionViewModel(context: ModelContext(try makeInMemoryContainer()))
+        session.settings.preferredGenerationProvider = .appleOnDevice
+        let bridge = RecordingAppleGenerator()
+        bridge.delay = .seconds(1)
+        let model = GenerateViewModel(
+            repository: session.repository,
+            settingsViewModel: session.settings,
+            achievementsManager: session.achievements,
+            appleOnDeviceBridge: bridge,
+            appleAvailability: { .ready }
+        )
+        model.selectedCategory = .pets
+        model.selectedTone = .wizard
+        model.scenarioText = "Keep this generator draft."
+        let originalCurrent = model.current
+        let originalHistoryCount = session.repository.historyCount()
+
+        let task = Task {
+            try await model.generatePartyTake(category: .dating, tone: .cryptoBro, seed: 42)
+        }
+        try await Task.sleep(for: .milliseconds(20))
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            XCTFail("Cancelling a Party take should not silently produce a local fallback.")
+        } catch is CancellationError {
+            // Expected: the round is cancelled before it can be saved.
+        }
+        XCTAssertEqual(model.selectedCategory, .pets)
+        XCTAssertEqual(model.selectedTone, .wizard)
+        XCTAssertEqual(model.scenarioText, "Keep this generator draft.")
+        XCTAssertEqual(model.current, originalCurrent)
+        XCTAssertEqual(session.repository.historyCount(), originalHistoryCount)
+        XCTAssertEqual(bridge.requests.count, 1)
     }
 
     func testAppleFailureFallsBackHonestlyAndConcurrentRequestsDoNotOverlap() async throws {

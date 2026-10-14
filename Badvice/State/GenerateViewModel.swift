@@ -8,6 +8,7 @@ private let logger = Logger(subsystem: "com.worstadvice.app", category: "state")
 
 private enum AppleOnDeviceGenerationError: Error, Equatable {
     case timedOut
+    case invalidOutput
 }
 
 @MainActor
@@ -336,6 +337,103 @@ final class GenerateViewModel {
     func bootstrapCurrentAdviceIfNeeded(seed: Int) async {
         guard current == nil, !isGenerating else { return }
         await generate(seed: seed, isBootstrap: true)
+    }
+
+    /// Generates one isolated Party take without changing the user's current prompt,
+    /// selected category/voice, or saved advice history.
+    func generatePartyTake(
+        category: AdviceCategory,
+        tone: ToneMode,
+        seed: Int
+    ) async throws -> PartyAdviceTake {
+        try Task.checkCancellation()
+
+        guard settingsViewModel.preferredGenerationProvider != .classic else {
+            return localPartyTake(category: category, tone: tone, seed: seed, notice: nil)
+        }
+
+        let availability = appleAvailability()
+        guard availability.isReady else {
+            return localPartyTake(
+                category: category,
+                tone: tone,
+                seed: seed,
+                notice: availability.statusText
+            )
+        }
+
+        do {
+            let candidate = try await appleOnDeviceCandidate(
+                category: category,
+                tone: tone,
+                situation: nil,
+                includeRationale: false,
+                seed: seed,
+                now: Date(),
+                intensity: selectedIntensity,
+                revision: .oneSentence,
+                timeout: .seconds(25)
+            )
+            try Task.checkCancellation()
+            guard candidate.category == category,
+                  candidate.tone == tone,
+                  !candidate.adviceLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  engine.validateOutput(candidate, for: category)
+            else {
+                throw AppleOnDeviceGenerationError.invalidOutput
+            }
+
+            return PartyAdviceTake(
+                advice: candidate.adviceLine,
+                source: .appleOnDevice,
+                notice: nil
+            )
+        } catch {
+            if Task.isCancelled || error is CancellationError {
+                throw CancellationError()
+            }
+
+            let fallbackNotice: String
+            if AppleOnDeviceAdviceBridge.isGuardrailRefusal(error) {
+                fallbackNotice = "Apple Intelligence declined this take. The local Bureau Engine wrote it instead."
+            } else if (error as? AppleOnDeviceGenerationError) == .timedOut {
+                fallbackNotice = "Apple Intelligence took too long. The local Bureau Engine wrote this take."
+            } else if (error as? AppleOnDeviceGenerationError) == .invalidOutput {
+                fallbackNotice = "Apple Intelligence produced a take that did not pass checks. The local Bureau Engine wrote it instead."
+            } else {
+                fallbackNotice = "Apple Intelligence could not write this take. The local Bureau Engine wrote it instead."
+            }
+            return localPartyTake(
+                category: category,
+                tone: tone,
+                seed: seed,
+                notice: fallbackNotice
+            )
+        }
+    }
+
+    private func localPartyTake(
+        category: AdviceCategory,
+        tone: ToneMode,
+        seed: Int,
+        notice: String?
+    ) -> PartyAdviceTake {
+        let candidate = bureauEngine.generate(
+            category: category,
+            tone: tone,
+            includeRationale: false,
+            contentPack: settingsViewModel.preferredContentPack,
+            situation: nil,
+            intensity: selectedIntensity,
+            revision: .oneSentence,
+            seed: seed,
+            now: Date()
+        )
+        return PartyAdviceTake(
+            advice: candidate.adviceLine,
+            source: .classic,
+            notice: notice
+        )
     }
 
     func generate(

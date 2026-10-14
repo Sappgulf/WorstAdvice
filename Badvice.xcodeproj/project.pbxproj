@@ -73,6 +73,7 @@
 		A1000005000000000000DD02 /* FloatingTabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005000000000000DD02 /* FloatingTabBarView.swift */; };
 		A1000007000000000000FF01 /* Shared/ShareKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000007000000000000FF01 /* Shared/ShareKit.swift */; };
 		A1000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift */; };
+		D123456789ABCDEF12345671 /* GameCenterPartyCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D123456789ABCDEF12345672 /* GameCenterPartyCoordinator.swift */; };
 		A1000009000000000000AM01 /* GamificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM01 /* GamificationModels.swift */; };
 		A1000009000000000000AM02 /* AppModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000009000000000000AM02 /* AppModels.swift */; };
 		A100000A0000000000AA11 /* SuggestionLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000A0000000000AA11 /* SuggestionLabView.swift */; };
@@ -210,6 +211,7 @@
 		A2000005000000000000DD02 /* FloatingTabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingTabBarView.swift; sourceTree = "<group>"; };
 		A2000007000000000000FF01 /* Shared/ShareKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/ShareKit.swift; sourceTree = "<group>"; };
 		A2000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badvice/State/Social/CloudKitStore.swift; sourceTree = SOURCE_ROOT; };
+		D123456789ABCDEF12345672 /* GameCenterPartyCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenterPartyCoordinator.swift; sourceTree = "<group>"; };
 		A2000009000000000000AM01 /* GamificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationModels.swift; sourceTree = "<group>"; };
 		A2000009000000000000AM02 /* AppModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModels.swift; sourceTree = "<group>"; };
 		A200000A0000000000AA11 /* SuggestionLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuggestionLabView.swift; sourceTree = "<group>"; };
@@ -416,6 +418,7 @@
 				A2000001000000000000003B /* HistoryViewModel.swift */,
 				A2000001000000000000003C /* QuotesViewModel.swift */,
 				A2000001000000000000003F /* SettingsViewModel.swift */,
+				D123456789ABCDEF12345672 /* GameCenterPartyCoordinator.swift */,
 				F9000001000000000000004F /* GenerationLoadingMessages.swift */,
 				A70000010000000000000011 /* Social */,
 			);
@@ -608,6 +611,11 @@
 				TargetAttributes = {
 					A40000010000000000000001 = {
 						CreatedOnToolsVersion = 15.4;
+						SystemCapabilities = {
+							com.apple.GameCenter = {
+								enabled = 1;
+							};
+						};
 					};
 					A40000010000000000000002 = {
 						CreatedOnToolsVersion = 15.4;
@@ -727,6 +735,7 @@
 				A1000001000000000000003D /* Badvice/State/Social/SocialModels.swift in Sources */,
 				A1000001000000000000003E /* Badvice/State/Social/SocialViewModel.swift in Sources */,
 				A1000008000000000000CK01 /* Badvice/State/Social/CloudKitStore.swift in Sources */,
+				D123456789ABCDEF12345671 /* GameCenterPartyCoordinator.swift in Sources */,
 				A10000010000000000000041 /* GenerationLoadingMessages.swift in Sources */,
 				A1000001000000000000003F /* SettingsViewModel.swift in Sources */,
 				8FBB37C624DF5072622F2BA2 /* GlobalCommunityFeedView.swift in Sources */,
