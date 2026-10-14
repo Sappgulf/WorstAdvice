@@ -395,7 +395,7 @@ final class GenerateViewModel {
             guard candidate.category == category,
                   candidate.tone == tone,
                   !candidate.adviceLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                  engine.validateOutput(candidate, for: category)
+                  engine.validateModelOutput(candidate, for: category, tone: tone)
             else {
                 throw AppleOnDeviceGenerationError.invalidOutput
             }
@@ -885,7 +885,16 @@ final class GenerateViewModel {
                     timeout: .seconds(25),
                     onProgress: onProgress
                 )
-                guard engine.validateOutput(candidate, for: category) else { continue }
+                if let rejectionReason = engine.modelOutputRejectionReason(
+                    candidate,
+                    for: category,
+                    tone: tone
+                ) {
+                    logger.debug(
+                        "Apple output rejected for \(category.rawValue, privacy: .public)/\(tone.rawValue, privacy: .public): \(rejectionReason, privacy: .public)."
+                    )
+                    continue
+                }
                 let fingerprint = candidate.adviceLine.normalizedForFiltering
                 if seenFingerprints.insert(fingerprint).inserted {
                     candidates.append(candidate)

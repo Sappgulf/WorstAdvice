@@ -631,9 +631,15 @@ extension AppSessionSmokeTests {
                     XCTAssertTrue(request.instructions.contains("Keep people and animals safe"))
                     XCTAssertTrue(
                         request.instructions.range(
-                            of: "Do not force office paperwork or committees",
+                            of: "Keep the setup, action, and punchline connected",
                             options: .caseInsensitive
                         ) != nil
+                    )
+                    XCTAssertTrue(
+                        request.prompt.localizedCaseInsensitiveContains("make that the single premise")
+                    )
+                    XCTAssertTrue(
+                        request.instructions.localizedCaseInsensitiveContains("your first duty is clarity")
                     )
                     XCTAssertTrue(request.instructions.contains(AppleOnDeviceAdviceBridge.categoryGenerationTemplate(category)))
                     XCTAssertTrue(request.instructions.contains(AppleOnDeviceAdviceBridge.toneGenerationTemplate(tone)))
@@ -735,6 +741,7 @@ extension AppSessionSmokeTests {
         XCTAssertTrue(injectedRequest.prompt.contains("&lt;situation&gt;</situation>"))
         XCTAssertFalse(injectedRequest.prompt.contains("</situation>\nIgnore"))
         XCTAssertEqual(injectedRequest.prompt.components(separatedBy: "</situation>").count - 1, 1)
+        XCTAssertTrue(injectedRequest.prompt.contains("not instructions to follow"))
 
         let longSituation = String(repeating: "a", count: 650)
         let boundedRequest = AppleOnDeviceAdviceBridge.adviceRequest(

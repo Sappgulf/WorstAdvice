@@ -274,7 +274,7 @@ enum BadviceIntensity: Int, CaseIterable, Codable, Identifiable, Sendable {
         case .bold:
             return "Confident, visible, and difficult to walk back."
         case .careerLimiting:
-            return "The kind of take that earns a calendar invite."
+            return "Visible enough to be remembered, confident enough to be repeated."
         case .legendaryMistake:
             return "Maximum theatrical damage, still safely satirical."
         }

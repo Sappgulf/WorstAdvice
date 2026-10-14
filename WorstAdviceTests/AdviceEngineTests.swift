@@ -245,6 +245,7 @@ final class AdviceEngineTests: XCTestCase {
 
     func testBureauEngineCoversEveryCategoryAndVoiceWithGroundedSafeOutput() {
         let engine = BureauAdviceEngine()
+        let qualityGate = AdviceEngine()
         let moderation = ContentModeration()
         let contexts: [AdviceCategory: String] = [
             .dating: "awkward first date follow-up",
@@ -298,6 +299,14 @@ final class AdviceEngineTests: XCTestCase {
                 )
                 XCTAssertTrue(moderation.isSafe(text: output.adviceLine))
                 XCTAssertTrue(
+                    qualityGate.validateModelOutput(output, for: category, tone: tone),
+                    "The local result should pass the shared structure checks for \(category.title) / \(tone.title): \(qualityGate.modelOutputRejectionReason(output, for: category, tone: tone) ?? "accepted") — \(output.adviceLine)"
+                )
+                XCTAssertFalse(
+                    normalized.contains("confidence for your"),
+                    "The focus should precede the action, not interrupt it: \(output.adviceLine)"
+                )
+                XCTAssertTrue(
                     contextWords.contains(where: normalized.contains),
                     "The \(category.title) / \(tone.title) take lost its situation: \(output.adviceLine)"
                 )
@@ -311,6 +320,48 @@ final class AdviceEngineTests: XCTestCase {
                 "\(category.title) should sound meaningfully different across voices."
             )
         }
+    }
+
+    func testModelOutputQualityGateRejectsFragmentsAndAcceptsConnectedAdvice() {
+        let engine = AdviceEngine()
+        let good = GeneratedAdvice(
+            category: .career,
+            tone: .corporateConsultant,
+            adviceLine: "Announce the empty spreadsheet as a major launch, then schedule a celebration for its first formula.",
+            rationaleLine: "A formula is not finished work; share an honest status and name the next step.",
+            createdAt: Date()
+        )
+        let fragment = GeneratedAdvice(
+            category: .career,
+            tone: .corporateConsultant,
+            adviceLine: "Quarterly synergy, stakeholder momentum, operational alignment.",
+            rationaleLine: nil,
+            createdAt: Date()
+        )
+        let commonModelOpening = GeneratedAdvice(
+            category: .dating,
+            tone: .influencer,
+            adviceLine: "Try treating your dating profile like a quarterly earnings report, then refresh it every six minutes.",
+            rationaleLine: nil,
+            createdAt: Date()
+        )
+        let repeated = GeneratedAdvice(
+            category: .career,
+            tone: .corporateConsultant,
+            adviceLine: "Build build the budget budget before before lunch.",
+            rationaleLine: nil,
+            createdAt: Date()
+        )
+
+        XCTAssertTrue(
+            engine.validateModelOutput(good, for: .career, tone: .corporateConsultant),
+            engine.modelOutputRejectionReason(good, for: .career, tone: .corporateConsultant) ?? "accepted"
+        )
+        XCTAssertFalse(engine.validateModelOutput(fragment, for: .career, tone: .corporateConsultant))
+        XCTAssertTrue(engine.validateModelOutput(commonModelOpening, for: .dating, tone: .influencer))
+        XCTAssertFalse(engine.validateModelOutput(repeated, for: .career, tone: .corporateConsultant))
+        XCTAssertFalse(engine.validateModelOutput(good, for: .money, tone: .corporateConsultant))
+        XCTAssertFalse(engine.validateModelOutput(good, for: .career, tone: .wizard))
     }
 
     func testBureauIntensityAndRevisionStylesProduceDistinctLocalOutput() {
@@ -359,6 +410,49 @@ final class AdviceEngineTests: XCTestCase {
             unhinged.adviceLine.localizedCaseInsensitiveContains("countdown")
                 || unhinged.adviceLine.localizedCaseInsensitiveContains("witnesses")
         )
+    }
+
+    func testBureauIntensityAndRevisionVariantsStayWellFormedAcrossCategories() {
+        let engine = BureauAdviceEngine()
+        let qualityGate = AdviceEngine()
+
+        for (categoryIndex, category) in AdviceCategory.concrete.enumerated() {
+            let situation = "a difficult \(category.title.lowercased()) decision"
+
+            for intensity in BadviceIntensity.allCases {
+                let output = engine.generate(
+                    category: category,
+                    tone: .friendRoast,
+                    includeRationale: false,
+                    situation: situation,
+                    intensity: intensity,
+                    seed: 92_000 + categoryIndex * 97 + intensity.rawValue
+                )
+                XCTAssertTrue(
+                    qualityGate.validateModelOutput(output, for: category, tone: .friendRoast),
+                    "\(category.title) / \(intensity.title): \(qualityGate.modelOutputRejectionReason(output, for: category, tone: .friendRoast) ?? output.adviceLine)"
+                )
+            }
+
+            for (revisionIndex, revision) in AdviceRevisionStyle.allCases.enumerated() {
+                let output = engine.generate(
+                    category: category,
+                    tone: .influencer,
+                    includeRationale: false,
+                    situation: situation,
+                    intensity: .bold,
+                    revision: revision,
+                    seed: 93_000 + categoryIndex * 101 + revisionIndex
+                )
+                XCTAssertTrue(
+                    qualityGate.validateModelOutput(output, for: category, tone: .influencer),
+                    "\(category.title) / \(revision.title): \(qualityGate.modelOutputRejectionReason(output, for: category, tone: .influencer) ?? output.adviceLine)"
+                )
+                if revision == .officeSafe {
+                    XCTAssertFalse(output.adviceLine.localizedCaseInsensitiveContains("recap"))
+                }
+            }
+        }
     }
 
     func testBureauRealityCheckIsContextualSafeAndBounded() {
