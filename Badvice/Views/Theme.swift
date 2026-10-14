@@ -76,8 +76,8 @@ enum Theme {
 
     // MARK: - Infernal copper foil (brand metal)
 
-    static let copperFoilLight = Color(hex: "F0C4A0")
-    static let copperFoilMid = Color(hex: "E88D72")
+    static let copperFoilLight = Color(hex: "F5C282")
+    static let copperFoilMid = Color(hex: "E89858")
     static let copperFoilDeep = Color(hex: "8F4A22")
     static let espressoInk = Color(hex: "1C130A")
     static let parchmentWarm = Color(hex: "FFF8F0")
@@ -96,7 +96,7 @@ enum Theme {
                 Color.white.opacity(0.35),
                 copperFoilLight.opacity(0.9),
                 copperFoilMid,
-                copperFoilDeep.opacity(0.95),
+                Color(hex: "BD7139"),
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
@@ -353,7 +353,7 @@ enum Theme {
             return custom
         }
         switch mode {
-        case .badvice: return Color(hex: "B52C2C") // Magazine red ink
+        case .badvice: return copperFoilDeep
         case .minimal: return Color(hex: "1C1C1E") // Black
         case .ember: return Color(hex: "FF6B47") // Vibrant Ember Orange
         case .slate: return Color(hex: "8EC5FC") // Cool Blue accent for better contrast
@@ -372,7 +372,7 @@ enum Theme {
     static func secondaryAccent(for mode: ThemeMode) -> Color? {
         switch mode {
         case .badvice:
-            return Color(hex: "C76942")
+            return Color(hex: "A45D32")
         case .sunset:
             return Color(hex: "FF6B35") // Coral complement to gold
         case .cosmic:
@@ -508,7 +508,7 @@ enum Theme {
 
     static func particleColor(for mode: ThemeMode) -> Color {
         switch mode {
-        case .badvice: return Color(hex: "E88D72")
+        case .badvice: return copperFoilMid
         case .minimal: return Color(hex: "1C1C1E")
         case .ember: return Color(hex: "FF6B47")
         case .slate: return Color(hex: "8EC5FC")
@@ -623,7 +623,7 @@ enum Theme {
         switch mode {
         case .badvice:
             return ThemePersonality(
-                descriptor: "Mischief magazine — warm paper and red ink",
+                descriptor: "Mischief magazine — warm paper and copper ink",
                 surfaceMood: "Sunday mischief",
                 bestFor: "Best for the core Badvice vibe",
                 effectIntensity: 0.22,

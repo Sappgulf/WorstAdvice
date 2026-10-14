@@ -300,7 +300,7 @@ struct ShareCardRenderer {
             let contentRect = cardRect.insetBy(dx: sideInset, dy: sideInset)
             let ink = UIColor(red: 0.16, green: 0.08, blue: 0.06, alpha: 1)
             let mutedInk = UIColor(red: 0.34, green: 0.19, blue: 0.14, alpha: 0.82)
-            let oxblood = UIColor(red: 0.38, green: 0.07, blue: 0.06, alpha: 1)
+            let oxblood = UIColor(red: 0.56, green: 0.29, blue: 0.13, alpha: 1)
             let copper = UIColor(red: 0.56, green: 0.29, blue: 0.13, alpha: 1)
 
             NSString(string: "THE BADVICE BUREAU").draw(
