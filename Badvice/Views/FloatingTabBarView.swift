@@ -24,6 +24,7 @@ struct FloatingTabBarView: View {
 
     private var tabBarStyle: ThemeTabBarStyle { Theme.tabBarStyle(for: theme) }
     private var accent: Color { Theme.accent(for: theme) }
+    private var primaryText: Color { Theme.primaryText(for: theme) }
     private var secondaryText: Color { Theme.secondaryText(for: theme) }
 
     var body: some View {
@@ -56,7 +57,8 @@ struct FloatingTabBarView: View {
                         cornerRadius: Theme.floatingTabBarCornerRadius,
                         style: .continuous
                     )
-                    .stroke(tabBarStyle.borderTop.opacity(0.7), lineWidth: 0.8)
+                    // Keep the edge quiet; the selected tile already carries the accent.
+                    .stroke(primaryText.opacity(0.10), lineWidth: 0.8)
                 }
                 .shadow(
                     color: tabBarStyle.shadow,

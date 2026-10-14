@@ -32,6 +32,7 @@ final class SettingsViewModelTests: XCTestCase {
         let session = AppSessionViewModel(context: ModelContext(container))
         
         XCTAssertEqual(session.settings.theme, .badvice)
+        XCTAssertEqual(Theme.accent(for: session.settings.theme), Theme.copperFoilDeep)
         XCTAssertTrue(session.settings.hapticsEnabled)
         XCTAssertFalse(session.settings.reduceMotion)
         XCTAssertFalse(session.settings.performanceMode)

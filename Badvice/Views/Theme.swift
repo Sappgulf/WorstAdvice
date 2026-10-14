@@ -737,13 +737,10 @@ enum Theme {
         }()
         let isEditorialTheme = mode == .badvice
         return ThemeTabBarStyle(
-            backgroundTint: tabBarBackground(for: mode).opacity(isEditorialTheme ? 0.96 : 0.66),
-            materialOverlayOpacity: isEditorialTheme ? 0.08 : min(max(glassStrength, 0.12), 0.52),
-            borderTop: accent(for: mode).opacity(0.18 + personality.effectIntensity * 0.08),
-            borderBottom: .white.opacity(0.06 + personality.effectIntensity * 0.04),
+            backgroundTint: tabBarBackground(for: mode).opacity(isEditorialTheme ? 0.99 : 0.66),
+            materialOverlayOpacity: isEditorialTheme ? 0.02 : min(max(glassStrength, 0.12), 0.52),
             shadow: cardShadow(for: mode).color.opacity(0.28),
             shadowRadius: CGFloat(8 + personality.effectIntensity * 5),
-            indicatorInset: personality.indicatorInset,
             selectedScale: CGFloat(1.02 + personality.effectIntensity * 0.015),
             glow: glow
         )
@@ -761,11 +758,8 @@ struct ThemePersonality: Sendable {
 struct ThemeTabBarStyle: Sendable {
     let backgroundTint: Color
     let materialOverlayOpacity: Double
-    let borderTop: Color
-    let borderBottom: Color
     let shadow: Color
     let shadowRadius: CGFloat
-    let indicatorInset: CGFloat
     let selectedScale: CGFloat
     let glow: Color?
 }
