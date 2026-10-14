@@ -1252,8 +1252,8 @@ private struct GenerateChoiceSheet: View {
                                 dismiss()
                             } label: {
                                 choiceRow(
-                                    title: tone.voice.name,
-                                    description: tone.voice.descriptor,
+                                    title: tone.title,
+                                    description: "\(tone.voice.name) · \(tone.voice.descriptor)",
                                     icon: tone.voice.systemImage,
                                     isSelected: selectedTone == tone
                                 )

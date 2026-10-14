@@ -190,6 +190,7 @@ struct CasebookTabView: View {
     @State private var organizer = CasebookOrganizer()
     @State private var organizingRecord: AdviceRecord?
     @State private var selectedFolder: String?
+    @State private var selectedToneFilter: ToneMode?
 
     init(
         favorites: FavoritesViewModel,
@@ -216,9 +217,14 @@ struct CasebookTabView: View {
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var records: [AdviceRecord] {
-        let base = shelf == .saved ? savedSearchResults : history.filteredHistory
-        guard shelf == .saved, let selectedFolder else { return base }
-        return base.filter { organizer.metadata(for: $0.id).folder == selectedFolder }
+        var filtered = shelf == .saved ? savedSearchResults : history.filteredHistory
+        if shelf == .saved, let selectedFolder {
+            filtered = filtered.filter { organizer.metadata(for: $0.id).folder == selectedFolder }
+        }
+        if let selectedToneFilter {
+            filtered = filtered.filter { $0.tone == selectedToneFilter }
+        }
+        return filtered
     }
     private var savedSearchResults: [AdviceRecord] {
         let contentMatches = favorites.filteredFavorites
@@ -259,7 +265,8 @@ struct CasebookTabView: View {
     }
     private var hasActiveFilters: Bool {
         let hasSearch = !searchText.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return hasSearch || selectedCategory != nil || (shelf == .saved && selectedFolder != nil)
+        return hasSearch || selectedCategory != nil || selectedToneFilter != nil
+            || (shelf == .saved && selectedFolder != nil)
     }
     private var isFilteredEmpty: Bool {
         records.isEmpty && hasUnfilteredRecords && hasActiveFilters
@@ -310,24 +317,52 @@ struct CasebookTabView: View {
                                     )
 
                                     Menu {
-                                        Button("All lanes") {
-                                            setCategory(nil)
+                                        Section("Topic") {
+                                            Button {
+                                                setCategory(nil)
+                                            } label: {
+                                                filterMenuLabel("All lanes", isSelected: selectedCategory == nil)
+                                            }
+                                            .accessibilityIdentifier("casebook.filter.category.all")
+
+                                            ForEach(AdviceCategory.concrete) { category in
+                                                Button {
+                                                    setCategory(category)
+                                                } label: {
+                                                    filterMenuLabel(category.title, isSelected: selectedCategory == category)
+                                                }
+                                                .accessibilityIdentifier("casebook.filter.category.\(category.rawValue)")
+                                            }
                                         }
-                                        ForEach(AdviceCategory.concrete) { category in
-                                            Button(category.title) {
-                                                setCategory(category)
+
+                                        Section("Voice") {
+                                            Button {
+                                                selectedToneFilter = nil
+                                            } label: {
+                                                filterMenuLabel("All voices", isSelected: selectedToneFilter == nil)
+                                            }
+                                            .accessibilityIdentifier("casebook.filter.tone.all")
+
+                                            ForEach(ToneMode.concrete) { tone in
+                                                Button {
+                                                    selectedToneFilter = tone
+                                                } label: {
+                                                    filterMenuLabel(tone.title, isSelected: selectedToneFilter == tone)
+                                                }
+                                                .accessibilityIdentifier("casebook.filter.tone.\(tone.rawValue)")
                                             }
                                         }
                                     } label: {
-                                        Image(systemName: selectedCategory == nil
+                                        Image(systemName: selectedCategory == nil && selectedToneFilter == nil
                                               ? "line.3.horizontal.decrease.circle"
                                               : "line.3.horizontal.decrease.circle.fill")
                                             .font(.system(size: 19, weight: .semibold))
-                                            .foregroundStyle(selectedCategory == nil ? secondaryText : accent)
+                                            .foregroundStyle(selectedCategory == nil && selectedToneFilter == nil ? secondaryText : accent)
                                             .frame(width: 48, height: 48)
                                             .background(canvas.opacity(0.72), in: RoundedRectangle(cornerRadius: 15))
                                     }
-                                    .accessibilityLabel("Filter casebook by lane")
+                                    .accessibilityLabel("Filter saved and recent by topic or voice")
+                                    .accessibilityIdentifier("casebook.filter")
                                 }
 
                                 if hasActiveFilters {
@@ -507,6 +542,7 @@ struct CasebookTabView: View {
 
     private func clearCasebookFilters() {
         selectedFolder = nil
+        selectedToneFilter = nil
         if shelf == .saved {
             favorites.searchText = ""
             favorites.selectedCategory = nil
@@ -634,6 +670,17 @@ struct CasebookTabView: View {
             favorites.selectedCategory = category
         } else {
             history.selectedCategory = category
+        }
+    }
+
+    private func filterMenuLabel(_ title: String, isSelected: Bool) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            if isSelected {
+                Image(systemName: "checkmark")
+                    .accessibilityHidden(true)
+            }
         }
     }
 

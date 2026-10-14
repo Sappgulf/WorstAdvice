@@ -121,11 +121,32 @@ final class BadvicePolishedSmokeTests: BadviceUITestCase {
         XCTAssertTrue(control("advice.text", in: app).waitForExistence(timeout: 12))
     }
 
+    func testTonePickerShowsCanonicalToneAndPersonaTogether() {
+        let app = launch()
+        tap("generate.tone.menu", in: app)
+
+        let operatorVoice = app.buttons["generate.tone.option.corporateConsultant"].firstMatch
+        XCTAssertTrue(operatorVoice.waitForExistence(timeout: 8))
+        XCTAssertTrue(operatorVoice.label.contains("Corporate Consultant"))
+        XCTAssertTrue(operatorVoice.label.contains("The Operator"))
+    }
+
     func testSavedAdviceOrganizationPersists() {
         let app = launch()
+        tap("generate.tone.menu", in: app)
+        tap("generate.tone.option.corporateConsultant", in: app)
         generate(app)
         tap("generate.save", in: app)
         tap("tab.favorites", in: app)
+
+        tap("casebook.filter", in: app)
+        tap("casebook.filter.tone.corporateConsultant", in: app)
+        XCTAssertFalse(control("casebook.empty.filtered", in: app).exists)
+        tap("casebook.filter", in: app)
+        tap("casebook.filter.tone.wizard", in: app)
+        XCTAssertTrue(control("casebook.empty.filtered", in: app).waitForExistence(timeout: 8))
+        tap("casebook.clearFilters", in: app)
+
         let organize = app.buttons["Organize"].firstMatch
         reveal(organize, in: app)
         organize.tap()
