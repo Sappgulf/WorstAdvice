@@ -128,6 +128,23 @@ final class GenerateViewModel {
     var generationNotice: String?
     var generationNoticeStyle: ToastStyle = .info
     var generationSourceBadgeText: String?
+    private var completedGenerationProgress = 0.0
+    private var appleModelDraftProgress = 0.0
+    var generationStage: AdviceGenerationStage = .preparing {
+        didSet {
+            completedGenerationProgress = max(completedGenerationProgress, generationStage.progress)
+        }
+    }
+    var generationProgress: Double {
+        let appleDraftProgress =
+            AdviceGenerationStage.draftingApple.progress
+            + (AdviceGenerationStage.reviewing.progress - AdviceGenerationStage.draftingApple.progress)
+            * appleModelDraftProgress
+        return max(
+            completedGenerationProgress,
+            generationStage == .draftingApple ? appleDraftProgress : generationStage.progress
+        )
+    }
     var primaryActionTitle: String = "Advise Me"
     var hapticTrigger: Int = 0
     var hapticWeight: Double = 0.5  // 0.0 to 1.0 mapping to intensity
@@ -450,6 +467,9 @@ final class GenerateViewModel {
         generationNotice = nil
         generationNoticeStyle = .info
         generationSourceBadgeText = nil
+        completedGenerationProgress = 0
+        appleModelDraftProgress = 0
+        generationStage = .preparing
         let baseSeed = seed ?? Int(Date().timeIntervalSince1970 * 1_000)
         if let current {
             repository.recordLearningSignal(
@@ -495,6 +515,7 @@ final class GenerateViewModel {
         logger.debug(
             "Generate started: category=\(self.selectedCategory.rawValue) resolved=\(resolvedCategory.rawValue) tone=\(self.selectedTone.rawValue) resolvedTone=\(resolvedTone.rawValue) seed=\(baseSeed)"
         )
+        generationStage = .checkingContext
         if communityOnlyMode,
            (await suggestionCandidates(for: resolvedCategory, situation: situation)).isEmpty {
             generationNotice =
@@ -511,6 +532,7 @@ final class GenerateViewModel {
         }
 
         if !communityOnlyMode, isBootstrap, generationProvider != .appleOnDevice {
+            generationStage = .draftingBureau
             let output = bureauEngine.generate(
                 category: resolvedCategory,
                 tone: resolvedTone,
@@ -522,12 +544,14 @@ final class GenerateViewModel {
                 seed: baseSeed,
                 now: Date()
             )
+            generationStage = .reviewing
             rememberFingerprint(for: output)
             rememberPoolFingerprint(for: output)
             generationSourceBadgeText = generationSourceBadgeLabel(for: "bureau")
             lastWhyTerrible =
                 "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
             current = repository.insert(output)
+            generationStage = .complete
             invalidateRetentionSnapshot()
             NotificationManager.updateGenerationActivity(date: output.createdAt)
             refreshNotificationSchedule()
@@ -552,6 +576,9 @@ final class GenerateViewModel {
 
         var candidatePool: [(candidate: GeneratedAdvice, source: String)] = []
         var generationProviderNotice: String?
+        generationStage = communityOnlyMode
+            ? .draftingCommunity
+            : (generationProvider == .appleOnDevice ? .draftingApple : .draftingBureau)
         if !communityOnlyMode {
             var appleCandidates: [GeneratedAdvice] = []
             if generationProvider != .classic {
@@ -564,7 +591,14 @@ final class GenerateViewModel {
                     maxCount: 1,
                     intensity: selectedIntensity,
                     revision: revision,
-                    requestedProvider: generationProvider
+                    requestedProvider: generationProvider,
+                    onProgress: { [weak self] progress in
+                        guard let self, self.generationStage == .draftingApple else { return }
+                        self.appleModelDraftProgress = max(
+                            self.appleModelDraftProgress,
+                            min(max(progress, 0), 1)
+                        )
+                    }
                 )
                 appleCandidates = appleBatch.candidates
                 generationProviderNotice = appleBatch.notice
@@ -584,6 +618,7 @@ final class GenerateViewModel {
             let shouldUseClassicEngines =
                 generationProvider != .appleOnDevice || appleCandidates.isEmpty
             if shouldUseClassicEngines {
+                generationStage = .draftingBureau
                 let bureauCandidates = bureauEngine.generateCandidates(
                     category: resolvedCategory,
                     tone: resolvedTone,
@@ -614,6 +649,7 @@ final class GenerateViewModel {
             candidatePool.append(contentsOf: communityCandidates.map { ($0, "community") })
         }
 
+        generationStage = .reviewing
         guard !candidatePool.isEmpty else {
             generationNotice = "Community suggestions were filtered by safety checks."
             generationNoticeStyle = .error
@@ -638,6 +674,7 @@ final class GenerateViewModel {
         } else {
             semanticScoresByCandidate = nil
         }
+        generationStage = .ranking
         var ranked:
             [(
                 candidate: GeneratedAdvice, source: String, score: Double, fingerprint: String,
@@ -750,11 +787,13 @@ final class GenerateViewModel {
             output = forceUniqueVariant(from: output)
         }
 
+        generationStage = .filing
         rememberFingerprint(for: output)
         rememberPoolFingerprint(for: output)
         lastWhyTerrible =
             "Why this is awful: \(store.rules(for: output.category, contentPack: selectedPack).badPrinciples.randomElement() ?? "certainty without evidence")."
         current = repository.insert(output)
+        generationStage = .complete
         invalidateRetentionSnapshot()
         NotificationManager.updateGenerationActivity(date: output.createdAt)
         refreshNotificationSchedule()
@@ -816,7 +855,8 @@ final class GenerateViewModel {
         maxCount: Int,
         intensity: BadviceIntensity,
         revision: AdviceRevisionStyle?,
-        requestedProvider: AdviceGenerationProvider
+        requestedProvider: AdviceGenerationProvider,
+        onProgress: (@MainActor @Sendable (Double) -> Void)? = nil
     ) async -> (candidates: [GeneratedAdvice], notice: String?, fallbackReason: String?) {
         let availability = appleAvailability()
         let requestedExplicitly = requestedProvider == .appleOnDevice
@@ -842,7 +882,8 @@ final class GenerateViewModel {
                     now: Date(),
                     intensity: intensity,
                     revision: revision,
-                    timeout: .seconds(25)
+                    timeout: .seconds(25),
+                    onProgress: onProgress
                 )
                 guard engine.validateOutput(candidate, for: category) else { continue }
                 let fingerprint = candidate.adviceLine.normalizedForFiltering
@@ -894,11 +935,27 @@ final class GenerateViewModel {
         now: Date,
         intensity: BadviceIntensity,
         revision: AdviceRevisionStyle?,
-        timeout: Duration
+        timeout: Duration,
+        onProgress: (@MainActor @Sendable (Double) -> Void)? = nil
     ) async throws -> GeneratedAdvice {
         try await withThrowingTaskGroup(of: GeneratedAdvice.self) { group in
             group.addTask { [appleOnDeviceBridge] in
-                try await appleOnDeviceBridge.generateCandidate(
+                if let onProgress,
+                   let streamingBridge = appleOnDeviceBridge as? any AppleAdviceStreamingGenerating
+                {
+                    return try await streamingBridge.generateCandidate(
+                        category: category,
+                        tone: tone,
+                        situation: situation,
+                        includeRationale: includeRationale,
+                        seed: seed,
+                        now: now,
+                        intensity: intensity,
+                        revision: revision,
+                        onProgress: onProgress
+                    )
+                }
+                return try await appleOnDeviceBridge.generateCandidate(
                     category: category,
                     tone: tone,
                     situation: situation,

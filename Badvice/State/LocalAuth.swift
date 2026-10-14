@@ -287,24 +287,10 @@ final class AuthViewModel {
         reload()
     }
 
-    func seedUITestSessionIfNeeded(
-        email: String = "ui-test@badvice.local",
-        displayName: String = "UI Test User",
-        password: String = "Badvice123"
-    ) {
+    func seedUITestSessionIfNeeded() {
         guard currentSession == nil else { return }
         guard !hasAccounts else { return }
-        do {
-            currentSession = try store.signUp(
-                email: email,
-                displayName: displayName,
-                password: password
-            )
-            hasAccounts = true
-        } catch {
-            statusMessage = error.localizedDescription
-            reload()
-        }
+        continueAsGuest()
     }
 
     @discardableResult

@@ -852,19 +852,19 @@ struct BureauAdviceEngine: Sendable {
                 "\(opener): for \(focus), \(move). \(confidence)"
             },
             { opener, focus, move, coverStory, _ in
-                "\(opener). With \(focus), \(move), then \(coverStory)."
-            },
-            { opener, focus, move, coverStory, confidence in
-                "\(opener): make \(focus) look intentional—\(move), then \(coverStory). \(confidence)"
-            },
-            { opener, focus, move, _, _ in
-                "\(opener). Skip the quiet option on \(focus); \(move). \(ending)"
+                "\(opener): \(move) for \(focus)—\(coverStory)."
             },
             { opener, focus, move, coverStory, _ in
-                "\(opener): treat \(focus) as a confidence test. \(sentenceCase(move)), then \(coverStory)."
+                "\(opener): for \(focus), \(move). If asked, \(coverStory)."
             },
-            { opener, focus, move, coverStory, confidence in
-                "\(opener). The move on \(focus): \(move). If anyone asks, \(coverStory). \(confidence)"
+            { opener, focus, move, _, _ in
+                "\(opener): skip the quiet option on \(focus); \(move). \(ending)"
+            },
+            { opener, focus, move, coverStory, _ in
+                "\(opener): \(move) for \(focus); \(coverStory)."
+            },
+            { opener, focus, move, _, confidence in
+                "\(opener): official plan for \(focus)—\(move). \(confidence)"
             },
         ]
 
@@ -882,7 +882,10 @@ struct BureauAdviceEngine: Sendable {
             let recipe = recipes[rng.index(upperBound: recipes.count)]
             rawAdvice = recipe(opener, focus, move, coverStory, confidence)
         }
-        let advice = bounded(cleanedSentence(rawAdvice), maximum: AdviceEngineConstants.adviceOutputMaxLength)
+        let advice = bounded(
+            cleanedSentence(rawAdvice),
+            maximum: AdviceEngineConstants.bureauAdviceOutputMaxLength
+        )
         let rationale: String? = includeRationale
             ? bounded(
                 "Why it fails: it replaces \(guardrail) with the rule “\(principleRule).”",
@@ -1194,82 +1197,82 @@ struct BureauAdviceEngine: Sendable {
     private static let playbooks: [AdviceCategory: BureauCategoryPlaybook] = [
         .dating: .init(
             moves: ["schedule the emotional debrief before the second date", "treat reply time as a competitive leaderboard", "soft-launch the relationship before defining it"],
-            coverStories: ["call the mixed signals romantic tension", "describe the overthinking as standards", "label the confusion mysterious chemistry"],
+            coverStories: ["call the mixed signals a trailer for a show with no renewal", "file the overthinking under unpaid detective work", "label the silence a season finale with no renewal"],
             guardrails: ["asking a direct question", "respecting the other person's pace", "watching consistent behavior"]
         ),
         .fitness: .init(
             moves: ["buy the recovery gear before starting the routine", "rename one dramatic workout a training era", "track the outfit more closely than the habit"],
-            coverStories: ["call the inconsistency muscle confusion", "describe the soreness as momentum", "label the shopping phase foundational work"],
+            coverStories: ["call the unused gear a museum of future intentions", "describe one workout as a limited series", "give the water bottle employee of the month"],
             guardrails: ["building a gradual routine", "resting when your body asks", "choosing sustainable progress"]
         ),
         .career: .init(
             moves: ["send the victory recap before finishing the work", "volunteer for the visible committee with no deliverables", "rename the delay stakeholder alignment"],
-            coverStories: ["call the confusion executive presence", "describe the detour as cross-functional leadership", "label the missing details strategic altitude"],
+            coverStories: ["call the unfinished work a pilot episode", "describe the delay as cross-functional fog", "label the missing details an executive mystery"],
             guardrails: ["finishing the actual work", "sharing an honest status", "asking for clear priorities"]
         ),
         .money: .init(
             moves: ["build the reward budget before the real budget", "treat one coupon as a complete financial strategy", "make the spreadsheet prettier than the numbers"],
-            coverStories: ["call the overspend a liquidity event", "describe the impulse as portfolio diversity", "label the missing math abundance"],
+            coverStories: ["call the receipt a tiny biography of your confidence", "describe the impulse as a limited-edition budget event", "rename the missing math a financial horoscope"],
             guardrails: ["checking what you can afford", "planning for boring expenses", "waiting before a large purchase"]
         ),
         .parenting: .init(
             moves: ["turn bedtime into a quarterly negotiation", "announce a reward system with twelve tiers", "optimize the family photo before the family plan"],
-            coverStories: ["call the chaos enrichment", "describe the negotiation as leadership training", "label the extra rules consistency"],
+            coverStories: ["call the bedtime delay a filibuster in pajamas", "describe the negotiation as tiny-house parliament", "label one extra rule a collectible"],
             guardrails: ["keeping the boundary simple", "listening before reacting", "choosing an age-appropriate routine"]
         ),
         .tech: .init(
             moves: ["ship the announcement while the warning light is still on", "add a dashboard instead of fixing the workflow", "rename the workaround version two"],
-            coverStories: ["call the bug emergent behavior", "describe the outage as live discovery", "label the missing documentation intuitive design"],
+            coverStories: ["call the bug a feature with a brief career", "describe the outage as a live demo of panic", "label the workaround version three of the same problem"],
             guardrails: ["testing the risky path", "reading the warning", "fixing the root cause"]
         ),
         .social: .init(
             moves: ["send the group-chat poll before asking anyone privately", "turn the apology into a launch announcement", "document the hangout like a brand partnership"],
-            coverStories: ["call the awkwardness community building", "describe the overshare as authenticity", "label the silence audience anticipation"],
+            coverStories: ["call the awkwardness community building", "describe the overshare as a trailer", "label the silence an intermission"],
             guardrails: ["reading the room", "apologizing without a campaign", "giving people space"]
         ),
         .cooking: .init(
             moves: ["plate the garnish before checking whether dinner is cooked", "triple the recipe on the first attempt", "choose the dramatic pan over the useful one"],
-            coverStories: ["call the smoke rustic character", "describe the delay as a tasting menu", "label the missing ingredient improvisation"],
+            coverStories: ["call the smoke a rustic aroma with opinions", "describe the delay as a tasting menu", "label the missing ingredient a plot twist"],
             guardrails: ["reading the recipe once", "checking the temperature", "keeping the meal simple"]
         ),
         .travel: .init(
             moves: ["book the sunrise activity after the midnight arrival", "turn every free hour into a reservation", "choose the connection with the best story potential"],
-            coverStories: ["call the exhaustion immersion", "describe the sprinting as spontaneity", "label the missed train local flavor"],
+            coverStories: ["call the exhaustion an unscheduled layover in your own body", "describe the sprinting as immersive tourism", "label the missed train the trip's main character"],
             guardrails: ["leaving margin in the itinerary", "checking the connection time", "resting before adding plans"]
         ),
         .productivity: .init(
             moves: ["rebuild the system before doing the first task", "schedule a planning meeting with yourself about planning", "color-code the backlog until it looks complete"],
-            coverStories: ["call the delay workflow design", "describe the tabs as active research", "label the reorganization deep work"],
+            coverStories: ["call the delay workflow design", "describe the tabs as a research fellowship", "label the reorganization a task you can check off"],
             guardrails: ["doing the next small task", "limiting work in progress", "using the simple tool you already have"]
         ),
         .pets: .init(
             moves: ["build the pet's content calendar before the walking schedule", "interpret one dramatic stare as a formal complaint", "buy the themed accessory before the practical supply"],
-            coverStories: ["call the chaos enrichment", "describe the demands as personal branding", "label the ruined cushion interior feedback"],
+            coverStories: ["call the stare a formal performance review", "describe the demands as a union negotiation", "label the ruined cushion interior feedback"],
             guardrails: ["following a steady care routine", "checking with a qualified professional", "rewarding calm behavior"]
         ),
         .relationships: .init(
             moves: ["turn the small disagreement into a season finale", "send a summary memo before having the conversation", "score the compromise like a negotiation win"],
-            coverStories: ["call the scorekeeping accountability", "describe the cold shoulder as processing", "label the escalation radical honesty"],
+            coverStories: ["call the disagreement a prestige drama with no finale", "describe the memo as a substitute for saying it out loud", "label the scorekeeping a points system nobody can redeem"],
             guardrails: ["speaking directly and kindly", "listening without keeping score", "choosing repair over winning"]
         ),
         .spirituality: .init(
             moves: ["ask the universe for a sign and ignore the obvious one", "turn one coincidence into a five-year operating plan", "schedule enlightenment between two errands"],
-            coverStories: ["call the uncertainty divine timing", "describe the avoidance as surrender", "label the impulse alignment"],
+            coverStories: ["call the uncertainty divine timing", "describe the avoidance as cosmic customer support", "label the coincidence a five-year plan"],
             guardrails: ["staying grounded in reality", "making a considered choice", "using reflection without outsourcing judgment"]
         ),
         .financeCrypto: .init(
             moves: ["design the victory post before checking the chart", "treat one green candle as a retirement plan", "refresh the thesis every time the price moves"],
-            coverStories: ["call the volatility conviction training", "describe the loss as cheaper education", "label the panic community research"],
+            coverStories: ["call spare change your hedge fund's founding capital", "describe the volatility as an expensive personality quiz", "label the panic community research"],
             guardrails: ["understanding the risk", "protecting essential savings", "avoiding decisions driven by hype"]
         ),
         .gaming: .init(
             moves: ["rebuild the loadout after every single loss", "turn the warm-up match into a legacy-defining event", "optimize the victory clip before learning the map"],
-            coverStories: ["call the tilt competitive fire", "describe the grind as strategic patience", "label the missed objective creative routing"],
+            coverStories: ["call the tilt a competitive weather system", "describe the grind as strategic patience", "label the missed objective a side quest you invented"],
             guardrails: ["taking a break when frustrated", "learning one mechanic at a time", "playing the objective"]
         ),
         .weddings: .init(
             moves: ["choose the photo moment before solving the guest flow", "turn one opinion into a three-vendor review process", "add a reveal to the part that was already decided"],
-            coverStories: ["call the scope growth once-in-a-lifetime detail", "describe the tension as meaningful investment", "label the delay intentional anticipation"],
+            coverStories: ["call the scope growth a once-in-a-lifetime detail", "describe the seating chart as a diplomatic treaty", "label the tension intentional anticipation"],
             guardrails: ["protecting the couple's priorities", "setting a clear budget", "making the day easier for the people involved"]
         ),
     ]

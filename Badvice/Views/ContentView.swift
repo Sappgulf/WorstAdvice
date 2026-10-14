@@ -63,6 +63,7 @@ struct ContentView: View {
     @State private var pendingDeepLinks: [URL] = []
     @State private var showConfetti = false
     @State private var showSplash = true
+    @State private var initialRouteReady = false
     @State private var hasResetUITestData = false
     @State private var tabBarVisible = true
     @State private var authMode: LocalAuthMode = .signIn
@@ -120,7 +121,7 @@ struct ContentView: View {
     @ViewBuilder
     private var appRootView: some View {
         if showSplash {
-            SplashView(isShowing: $showSplash)
+            SplashView(isShowing: $showSplash, isReadyToDismiss: initialRouteReady)
                 .transition(.opacity)
         } else if let auth {
             if auth.isAuthenticated, let session {
@@ -382,8 +383,14 @@ struct ContentView: View {
 
         applyUITestLaunchOverridesIfNeeded()
 
-        guard let auth else { return }
-        guard auth.isAuthenticated else { return }
+        guard let auth else {
+            initialRouteReady = true
+            return
+        }
+        guard auth.isAuthenticated else {
+            initialRouteReady = true
+            return
+        }
 
         if session == nil {
             let newSession = AppSessionViewModel(
@@ -404,6 +411,7 @@ struct ContentView: View {
             }
             applyScreenshotStartTabIfNeeded(session: newSession)
         }
+        initialRouteReady = true
     }
 
     private func startBootstrapLoadingMessageRotation() {

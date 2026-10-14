@@ -94,9 +94,9 @@ final class BadvicePolishedSmokeTests: BadviceUITestCase {
     func testGenerateCustomizationAndRealityCheck() {
         let app = launch()
         tap("generate.category.menu", in: app)
-        app.buttons["Dating"].tap()
+        tap("generate.category.option.dating", in: app)
         tap("generate.tone.menu", in: app)
-        app.buttons["The Wizard"].tap()
+        tap("generate.tone.option.wizard", in: app)
         type("I am planning an awkward first date.", field: "generate.situation", in: app)
         generate(app)
         tap("generate.realityCheck", in: app)

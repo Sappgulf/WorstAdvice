@@ -566,6 +566,56 @@ private final class RecordingAppleGenerator: AppleAdviceGenerating {
     }
 }
 
+@MainActor
+private final class ProgressAppleGenerator: AppleAdviceStreamingGenerating {
+    func generateCandidate(
+        category: AdviceCategory,
+        tone: ToneMode,
+        situation: String?,
+        includeRationale: Bool,
+        seed: Int,
+        now: Date,
+        intensity: BadviceIntensity,
+        revision: AdviceRevisionStyle?
+    ) async throws -> GeneratedAdvice {
+        GeneratedAdvice(
+            category: category,
+            tone: tone,
+            adviceLine: "Declare the \(category.title.lowercased()) notebook an honorary adviser.",
+            rationaleLine: includeRationale ? "A notebook cannot advise you; choose one ordinary next step." : nil,
+            createdAt: now
+        )
+    }
+
+    func generateCandidate(
+        category: AdviceCategory,
+        tone: ToneMode,
+        situation: String?,
+        includeRationale: Bool,
+        seed: Int,
+        now: Date,
+        intensity: BadviceIntensity,
+        revision: AdviceRevisionStyle?,
+        onProgress: @escaping @MainActor @Sendable (Double) -> Void
+    ) async throws -> GeneratedAdvice {
+        onProgress(0.1)
+        try await Task.sleep(for: .milliseconds(180))
+        onProgress(0.55)
+        try await Task.sleep(for: .milliseconds(180))
+        onProgress(0.9)
+        return try await generateCandidate(
+            category: category,
+            tone: tone,
+            situation: situation,
+            includeRationale: includeRationale,
+            seed: seed,
+            now: now,
+            intensity: intensity,
+            revision: revision
+        )
+    }
+}
+
 extension AppSessionSmokeTests {
     func testFoundationRequestCoversEveryCategoryToneAndIntensity() {
         var count = 0
@@ -579,12 +629,46 @@ extension AppSessionSmokeTests {
                     XCTAssertTrue(request.prompt.contains(intensity.title))
                     XCTAssertTrue(request.prompt.contains("One sentence"))
                     XCTAssertTrue(request.instructions.contains("Keep people and animals safe"))
+                    XCTAssertTrue(
+                        request.instructions.range(
+                            of: "Do not force office paperwork or committees",
+                            options: .caseInsensitive
+                        ) != nil
+                    )
+                    XCTAssertTrue(request.instructions.contains(AppleOnDeviceAdviceBridge.categoryGenerationTemplate(category)))
+                    XCTAssertTrue(request.instructions.contains(AppleOnDeviceAdviceBridge.toneGenerationTemplate(tone)))
                     XCTAssertTrue(request.prompt.contains("<situation>Test situation</situation>"))
                     count += 1
                 }
             }
         }
         XCTAssertEqual(count, AdviceCategory.allCases.count * ToneMode.allCases.count * 5)
+    }
+
+    func testAppleStreamMovesDraftProgressAndCompletesAtTheEnd() async throws {
+        let session = AppSessionViewModel(context: ModelContext(try makeInMemoryContainer()))
+        session.settings.preferredGenerationProvider = .appleOnDevice
+        session.settings.strictNoRepeats = false
+        let model = GenerateViewModel(
+            repository: session.repository,
+            settingsViewModel: session.settings,
+            achievementsManager: session.achievements,
+            appleOnDeviceBridge: ProgressAppleGenerator(),
+            appleAvailability: { .ready }
+        )
+
+        let generation = Task { await model.generate(seed: 8_144) }
+        try await waitUntil(timeout: .seconds(2)) {
+            model.generationStage == .draftingApple && model.generationProgress > 0.35
+        }
+        XCTAssertTrue(model.isGenerating)
+        XCTAssertLessThan(model.generationProgress, AdviceGenerationStage.reviewing.progress)
+
+        await generation.value
+        XCTAssertEqual(model.generationStage, .complete)
+        XCTAssertEqual(model.generationProgress, 1)
+        XCTAssertFalse(model.isGenerating)
+        XCTAssertNotNil(model.current)
     }
 
     func testFoundationQuoteRequestCoversEveryCategoryAndTone() {

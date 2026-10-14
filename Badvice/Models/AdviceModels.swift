@@ -45,6 +45,28 @@ enum AdviceCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
+    var descriptor: String {
+        switch self {
+        case .dating: return "Crushes, first dates, and texts with too much analysis."
+        case .fitness: return "Workouts, rest days, and athletic overconfidence."
+        case .career: return "Meetings, managers, and executive-level overthinking."
+        case .money: return "Budgets, purchases, and fiscal decisions made with swagger."
+        case .parenting: return "Family logistics, bedtime diplomacy, and tiny bosses."
+        case .tech: return "Apps, devices, updates, and technology with a mind of its own."
+        case .social: return "Group chats, gatherings, and public-facing confidence."
+        case .cooking: return "Recipes, kitchen mishaps, and culinary process theater."
+        case .travel: return "Trips, packing, itineraries, and airport ambition."
+        case .productivity: return "To-do lists, deadlines, and avoidance disguised as systems."
+        case .pets: return "Pet logistics, treats, and suspiciously ambitious animal plans."
+        case .relationships: return "Partnerships, shared decisions, and emotional paperwork."
+        case .spirituality: return "Meaning, rituals, and cosmic explanations for ordinary chaos."
+        case .financeCrypto: return "Crypto, markets, and pretend financial wizardry."
+        case .gaming: return "Games, quests, and main-character strategy."
+        case .weddings: return "Ceremonies, guest lists, and event-planning diplomacy."
+        case .random: return "A surprise subject from the whole bureau."
+        }
+    }
+
     var icon: String {
         switch self {
         case .dating: return "heart.fill"

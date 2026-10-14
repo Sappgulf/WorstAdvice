@@ -39,4 +39,21 @@ final class GenerationLoadingMessageProviderTests: XCTestCase {
         XCTAssertTrue(!GenerationLoadingMessages.phaseTitle(forTick: 30).isEmpty)
         XCTAssertTrue(!GenerationLoadingMessages.phaseTitle(forTick: 48).isEmpty)
     }
+
+    func testAdviceGenerationStagesHaveMonotonicProgressAndUsefulCopy() {
+        let stages = AdviceGenerationStage.allCases
+        let progress = stages.map(\.progress)
+
+        XCTAssertEqual(progress, progress.sorted())
+        XCTAssertEqual(stages.last, .complete)
+        XCTAssertEqual(stages.last?.progress, 1)
+        XCTAssertTrue(stages.allSatisfy { !$0.title.isEmpty })
+
+        let writing = AdviceGenerationStage.draftingApple.message(
+            category: .career,
+            tone: .wizard
+        )
+        XCTAssertTrue(writing.localizedCaseInsensitiveContains("career"))
+        XCTAssertTrue(writing.localizedCaseInsensitiveContains("wizard"))
+    }
 }

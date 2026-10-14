@@ -106,6 +106,25 @@ final class LocalAccountStoreTests: XCTestCase {
 }
 
 final class GuestSessionTests: XCTestCase {
+    @MainActor
+    func testUITestAuthSeedUsesGuestSessionWithoutCreatingPasswordAccount() throws {
+        let name = "GuestSessionTests.UITestSeed.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = LocalAccountStore(
+            userDefaults: defaults,
+            credentialsStore: LocalAccountInMemoryStore()
+        )
+        let auth = AuthViewModel(store: store)
+
+        auth.seedUITestSessionIfNeeded()
+
+        XCTAssertTrue(auth.isAuthenticated)
+        XCTAssertTrue(auth.isGuest)
+        XCTAssertFalse(auth.hasAccounts)
+        XCTAssertTrue(store.storedAccounts().isEmpty)
+    }
+
     func testGuestRestoresAndResumesSeparatelyFromProtectedAccounts() throws {
         let name = "GuestSessionTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))

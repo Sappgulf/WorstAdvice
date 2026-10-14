@@ -243,6 +243,76 @@ final class AdviceEngineTests: XCTestCase {
         )
     }
 
+    func testBureauEngineCoversEveryCategoryAndVoiceWithGroundedSafeOutput() {
+        let engine = BureauAdviceEngine()
+        let moderation = ContentModeration()
+        let contexts: [AdviceCategory: String] = [
+            .dating: "awkward first date follow-up",
+            .fitness: "first week training routine",
+            .career: "manager status update",
+            .money: "surprise apartment expense",
+            .parenting: "bedtime routine negotiation",
+            .tech: "production deploy warning",
+            .social: "group chat apology",
+            .cooking: "dinner temperature problem",
+            .travel: "tight airport connection",
+            .productivity: "overdue planning backlog",
+            .pets: "puppy walking schedule",
+            .relationships: "small disagreement repair",
+            .spirituality: "important life decision",
+            .financeCrypto: "volatile savings gamble",
+            .gaming: "ranked match frustration",
+            .weddings: "guest list budget",
+        ]
+
+        for (categoryIndex, category) in AdviceCategory.concrete.enumerated() {
+            let situation = contexts[category] ?? "\(category.title) decision"
+            let contextWords = situation.normalizedForFiltering.split(separator: " ")
+                .filter { $0.count >= 4 }
+                .map(String.init)
+            var voiceVariants = Set<String>()
+
+            for tone in ToneMode.concrete {
+                let output = engine.generate(
+                    category: category,
+                    tone: tone,
+                    includeRationale: true,
+                    situation: situation,
+                    intensity: .bold,
+                    seed: 91_000 + categoryIndex * 131
+                )
+                let normalized = output.adviceLine.normalizedForFiltering
+
+                XCTAssertEqual(output.category, category)
+                XCTAssertEqual(output.tone, tone)
+                XCTAssertFalse(output.adviceLine.isEmpty)
+                XCTAssertLessThanOrEqual(
+                    output.adviceLine.count,
+                    AdviceEngineConstants.bureauAdviceOutputMaxLength,
+                    "\(category.title) / \(tone.title)"
+                )
+                XCTAssertLessThanOrEqual(
+                    output.rationaleLine?.count ?? 0,
+                    AdviceEngineConstants.rationaleOutputMaxLength,
+                    "\(category.title) / \(tone.title) notes"
+                )
+                XCTAssertTrue(moderation.isSafe(text: output.adviceLine))
+                XCTAssertTrue(
+                    contextWords.contains(where: normalized.contains),
+                    "The \(category.title) / \(tone.title) take lost its situation: \(output.adviceLine)"
+                )
+                XCTAssertFalse(normalized.contains("confidence is the evidence"))
+                voiceVariants.insert(normalized)
+            }
+
+            XCTAssertGreaterThanOrEqual(
+                voiceVariants.count,
+                12,
+                "\(category.title) should sound meaningfully different across voices."
+            )
+        }
+    }
+
     func testBureauIntensityAndRevisionStylesProduceDistinctLocalOutput() {
         let engine = BureauAdviceEngine()
         let intensityOutputs = BadviceIntensity.allCases.map { intensity in

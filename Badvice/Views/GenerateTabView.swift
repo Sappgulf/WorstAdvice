@@ -30,6 +30,7 @@ struct GenerateTabView: View {
     @State private var showingDetails = false
     @State private var showingCustomization = false
     @State private var showingPlayTools = false
+    @State private var activePicker: GeneratePickerKind?
     @ScaledMetric(relativeTo: .largeTitle) private var mastheadSize: CGFloat = 54
     @State private var activeToast: ToastMessage?
     @State private var pendingBrandMenuTab: AppTab?
@@ -120,6 +121,25 @@ struct GenerateTabView: View {
         .toast(item: $activeToast, accentColor: accent)
         .sheet(isPresented: $showingShareSheet) {
             ActivityShareSheet(items: shareItems)
+        }
+        .sheet(item: $activePicker) { kind in
+            GenerateChoiceSheet(
+                kind: kind,
+                theme: settings.theme,
+                selectedCategory: viewModel.selectedCategory,
+                selectedTone: viewModel.selectedTone,
+                onSelectCategory: { category in
+                    viewModel.updateCategory(category, autoGenerate: false)
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                },
+                onSelectTone: { tone in
+                    viewModel.updateTone(tone, autoGenerate: false)
+                    HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(canvas)
         }
         .sheet(isPresented: $showingBrandMenu, onDismiss: handleBrandMenuDismiss) {
             GenerateBrandMenuView(
@@ -215,29 +235,21 @@ struct GenerateTabView: View {
     private var workspace: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
-                Menu {
-                    ForEach(AdviceCategory.allCases) { category in
-                        Button(category.title) {
-                            viewModel.updateCategory(category, autoGenerate: false)
-                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        }
-                    }
+                Button {
+                    activePicker = .category
                 } label: {
                     briefSelection("TOPIC", value: viewModel.selectedCategory.title, icon: viewModel.selectedCategory.icon)
                 }
                 .accessibilityIdentifier("generate.category.menu")
+                .accessibilityHint("Search topics and see what each one covers")
 
-                Menu {
-                    ForEach(ToneMode.allCases) { tone in
-                        Button(tone.voice.name) {
-                            viewModel.updateTone(tone, autoGenerate: false)
-                            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
-                        }
-                    }
+                Button {
+                    activePicker = .voice
                 } label: {
                     briefSelection("VOICE", value: selectedVoice.name, icon: selectedVoice.systemImage)
                 }
                 .accessibilityIdentifier("generate.tone.menu")
+                .accessibilityHint("Search voices and preview each personality")
             }
             .buttonStyle(.plain)
 
@@ -521,7 +533,14 @@ struct GenerateTabView: View {
                     )
                     .transition(reduceMotion ? .identity : .opacity.combined(with: .scale(scale: 0.98)))
                 } else if viewModel.isGenerating {
-                    GenerationStateView(theme: settings.theme, reduceMotion: reduceMotion)
+                    GenerationStateView(
+                        theme: settings.theme,
+                        reduceMotion: reduceMotion,
+                        stage: viewModel.generationStage,
+                        category: viewModel.selectedCategory,
+                        tone: viewModel.selectedTone,
+                        progress: viewModel.generationProgress
+                    )
                         .transition(reduceMotion ? .identity : .opacity)
                 }
             }
@@ -1159,23 +1178,178 @@ struct GenerateTabView: View {
     }
 }
 
+private enum GeneratePickerKind: String, Identifiable, Equatable {
+    case category
+    case voice
+
+    var id: String { rawValue }
+    var title: String { self == .category ? "Choose a topic" : "Choose a voice" }
+    var searchPrompt: String { self == .category ? "Search topics" : "Search voices" }
+}
+
+private struct GenerateChoiceSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
+
+    let kind: GeneratePickerKind
+    let theme: ThemeMode
+    let selectedCategory: AdviceCategory
+    let selectedTone: ToneMode
+    let onSelectCategory: (AdviceCategory) -> Void
+    let onSelectTone: (ToneMode) -> Void
+
+    private var accent: Color { Theme.accent(for: theme) }
+    private var canvas: Color { Theme.canvasColor(for: theme) }
+    private var card: Color { Theme.cardColor(for: theme) }
+    private var primaryText: Color { Theme.primaryText(for: theme) }
+    private var secondaryText: Color { Theme.secondaryText(for: theme) }
+
+    private var filteredCategories: [AdviceCategory] {
+        AdviceCategory.allCases.filter {
+            matches(searchText, fields: [$0.title, $0.descriptor])
+        }
+    }
+
+    private var filteredTones: [ToneMode] {
+        ToneMode.allCases.filter {
+            matches(searchText, fields: [$0.title, $0.voice.name, $0.voice.descriptor])
+        }
+    }
+
+    private var hasNoMatches: Bool {
+        kind == .category ? filteredCategories.isEmpty : filteredTones.isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if kind == .category {
+                    Section("Pick the subject") {
+                        ForEach(filteredCategories) { category in
+                            Button {
+                                onSelectCategory(category)
+                                dismiss()
+                            } label: {
+                                choiceRow(
+                                    title: category.title,
+                                    description: category.descriptor,
+                                    icon: category.icon,
+                                    isSelected: selectedCategory == category
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("generate.category.option.\(category.rawValue)")
+                            .accessibilityValue(selectedCategory == category ? "Selected" : "")
+                            .listRowBackground(rowBackground(isSelected: selectedCategory == category))
+                            .listRowSeparator(.hidden)
+                        }
+                    }
+                } else {
+                    Section("Pick the personality") {
+                        ForEach(filteredTones) { tone in
+                            Button {
+                                onSelectTone(tone)
+                                dismiss()
+                            } label: {
+                                choiceRow(
+                                    title: tone.voice.name,
+                                    description: tone.voice.descriptor,
+                                    icon: tone.voice.systemImage,
+                                    isSelected: selectedTone == tone
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("generate.tone.option.\(tone.rawValue)")
+                            .accessibilityValue(selectedTone == tone ? "Selected" : "")
+                            .listRowBackground(rowBackground(isSelected: selectedTone == tone))
+                            .listRowSeparator(.hidden)
+                        }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(canvas)
+            .overlay {
+                if hasNoMatches {
+                    ContentUnavailableView(
+                        "No matches",
+                        systemImage: "magnifyingglass",
+                        description: Text("Try another topic or voice.")
+                    )
+                }
+            }
+            .searchable(text: $searchText, prompt: kind.searchPrompt)
+            .navigationTitle(kind.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(accent)
+                }
+            }
+        }
+        .background(canvas)
+    }
+
+    private func matches(_ query: String, fields: [String]) -> Bool {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedQuery.isEmpty || fields.contains {
+            $0.localizedCaseInsensitiveContains(trimmedQuery)
+        }
+    }
+
+    private func rowBackground(isSelected: Bool) -> Color {
+        isSelected ? accent.opacity(0.1) : card
+    }
+
+    private func choiceRow(
+        title: String,
+        description: String,
+        icon: String,
+        isSelected: Bool
+    ) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(accent)
+                .frame(width: 42, height: 42)
+                .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(accent)
+                    .accessibilityHidden(true)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+}
+
 private struct GenerationStateView: View {
     let theme: ThemeMode
     let reduceMotion: Bool
+    let stage: AdviceGenerationStage
+    let category: AdviceCategory
+    let tone: ToneMode
+    let progress: Double
 
-    @State private var tick = 0
-    @State private var task: Task<Void, Never>?
-
-    private let messages = [
-        "Finding the least defensible angle…",
-        "Replacing nuance with confidence…",
-        "Consulting the committee of one…",
-        "Polishing the red flags…",
-    ]
+    @State private var isSpinning = false
 
     private var accent: Color { Theme.accent(for: theme) }
     private var primaryText: Color { Theme.primaryText(for: theme) }
-    private var secondaryText: Color { Theme.secondaryText(for: theme) }
     private var cardColor: Color { Theme.cardColor(for: theme) }
 
     var body: some View {
@@ -1188,31 +1362,35 @@ private struct GenerationStateView: View {
                     .trim(from: 0.08, to: 0.76)
                     .stroke(accent, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                     .frame(width: 64, height: 64)
-                    .rotationEffect(.degrees(reduceMotion ? 0 : 360))
-                    .animation(reduceMotion ? nil : .linear(duration: 1).repeatForever(autoreverses: false), value: tick)
+                    .rotationEffect(.degrees(isSpinning ? 360 : 0))
+                    .animation(
+                        reduceMotion ? nil : .linear(duration: 1.1).repeatForever(autoreverses: false),
+                        value: isSpinning
+                    )
                 Image(systemName: "sparkles")
                     .font(.title3.weight(.bold))
                     .foregroundStyle(accent)
             }
 
-            Text("GENERATING ADVICE")
+            Text(stage.title)
                 .font(.caption2.weight(.black))
                 .tracking(1.4)
                 .foregroundStyle(accent)
 
-            Text(messages[tick % messages.count])
+            Text(stage.message(category: category, tone: tone))
                 .font(.system(.headline, design: .serif, weight: .bold))
                 .foregroundStyle(primaryText)
                 .multilineTextAlignment(.center)
-                .animation(.easeInOut(duration: 0.2), value: tick)
+                .contentTransition(.opacity)
+                .animation(.easeInOut(duration: 0.2), value: stage)
 
-            ChaosMeterBar(
-                progress: min(0.2 + Double(tick % 5) * 0.15, 0.9),
-                accent: accent,
-                track: secondaryText.opacity(0.12),
-                height: 6,
-                reduceMotion: reduceMotion
-            )
+            ProgressView(value: progress)
+                .progressViewStyle(.linear)
+                .tint(accent)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.42), value: progress)
+                .accessibilityLabel("Generation progress")
+                .accessibilityValue(stage.accessibilityStatus)
+                .accessibilityIdentifier("generate.loading.progress")
         }
         .padding(24)
         .frame(maxWidth: .infinity, minHeight: 230)
@@ -1226,21 +1404,13 @@ private struct GenerationStateView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("generate.loading")
-        .accessibilityLabel("Generating advice — \(messages[tick % messages.count])")
+        .accessibilityLabel("Generating advice — \(stage.title.lowercased()). \(stage.message(category: category, tone: tone))")
         .onAppear {
             guard !reduceMotion else { return }
-            task?.cancel()
-            task = Task {
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .milliseconds(900))
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run { tick += 1 }
-                }
-            }
+            isSpinning = true
         }
         .onDisappear {
-            task?.cancel()
-            task = nil
+            isSpinning = false
         }
     }
 }

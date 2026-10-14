@@ -120,6 +120,32 @@ class BadviceUITestCase: XCTestCase {
 }
 
 final class BadviceUITests: BadviceUITestCase {
+    func testLaunchShowsBrandedSplashUntilInitialScreenIsReady() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing",
+            "-skip-onboarding",
+            "-ui-testing-auth-reset",
+            "-ui-testing-reset-data",
+            "-ui-testing-auth-skip",
+        ]
+        app.launch()
+
+        let splash = app.descendants(matching: .any)
+            .matching(identifier: "splash.screen")
+            .firstMatch
+        XCTAssertTrue(splash.waitForExistence(timeout: 5), app.debugDescription)
+        XCTAssertTrue(splash.label.contains("Badvice"), app.debugDescription)
+        capture("Badvice launch splash", app: app)
+
+        let splashDismissal = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: splash
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [splashDismissal], timeout: 8), .completed, app.debugDescription)
+        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 20), app.debugDescription)
+    }
+
     func testSmokeNavigationAndCoreInteractions() {
         let app = launch()
         capture("Advice — first viewport", app: app)

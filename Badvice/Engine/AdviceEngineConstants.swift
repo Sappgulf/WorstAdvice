@@ -50,6 +50,8 @@ enum AdviceEngineConstants {
 
     /// Hard cap on advice text after polishing.
     static let adviceOutputMaxLength: Int = 260
+    /// The Bureau favors shorter, shareable takes over multi-clause filler.
+    static let bureauAdviceOutputMaxLength: Int = 220
 
     /// Maximum character length for the optional "why this is bad" line.
     static let rationaleOutputMaxLength: Int = 132

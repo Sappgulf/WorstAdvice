@@ -2,8 +2,11 @@ import SwiftUI
 
 struct SplashView: View {
     @Binding var isShowing: Bool
+    let isReadyToDismiss: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared = false
+    @State private var minimumDisplayElapsed = false
+    @State private var maximumDisplayElapsed = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -99,9 +102,32 @@ struct SplashView: View {
         .accessibilityIdentifier("splash.screen")
         .task {
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.24)) { appeared = true }
-            do { try await Task.sleep(for: .milliseconds(reduceMotion ? 150 : 650)) }
-            catch { return }
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) { isShowing = false }
+            do {
+                try await Task.sleep(for: .milliseconds(1_500))
+                minimumDisplayElapsed = true
+                dismissIfReady()
+                guard isShowing else { return }
+
+                try await Task.sleep(for: .milliseconds(4_500))
+                maximumDisplayElapsed = true
+                dismissIfReady()
+            } catch {
+                return
+            }
         }
+        .onChange(of: isReadyToDismiss) { _, isReady in
+            guard isReady else { return }
+            dismissIfReady()
+        }
+    }
+
+    private func dismissIfReady() {
+        guard isShowing,
+              minimumDisplayElapsed,
+              isReadyToDismiss || maximumDisplayElapsed
+        else {
+            return
+        }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { isShowing = false }
     }
 }

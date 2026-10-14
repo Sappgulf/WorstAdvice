@@ -1,5 +1,84 @@
 import Foundation
 
+enum AdviceGenerationStage: String, CaseIterable, Identifiable, Sendable {
+    case preparing
+    case checkingContext
+    case draftingApple
+    case draftingBureau
+    case draftingCommunity
+    case reviewing
+    case ranking
+    case filing
+    case complete
+
+    var id: String { rawValue }
+
+    /// Completed work in the generation pipeline. Drafting remains a stable
+    /// milestone while Foundation Models returns its non-streaming response.
+    var progress: Double {
+        return switch self {
+        case .preparing: 0.06
+        case .checkingContext: 0.16
+        case .draftingApple, .draftingBureau, .draftingCommunity: 0.35
+        case .reviewing: 0.68
+        case .ranking: 0.82
+        case .filing: 0.94
+        case .complete: 1
+        }
+    }
+
+    var title: String {
+        return switch self {
+        case .preparing: "PREPARING THE BRIEF"
+        case .checkingContext: "CHECKING THE FILE"
+        case .draftingApple: "APPLE INTELLIGENCE IS WRITING"
+        case .draftingBureau: "THE BUREAU IS DRAFTING"
+        case .draftingCommunity: "CURATING THE COMMUNITY TAKE"
+        case .reviewing: "RUNNING THE QUALITY CHECK"
+        case .ranking: "PICKING THE STRONGEST LINE"
+        case .filing: "SEALING THE CASE FILE"
+        case .complete: "FILED"
+        }
+    }
+
+    var accessibilityStatus: String {
+        return switch self {
+        case .preparing: "Preparing the advice brief"
+        case .checkingContext: "Checking the selected topic and situation"
+        case .draftingApple: "Writing with Apple Intelligence on device"
+        case .draftingBureau: "Writing with the local Bureau Engine"
+        case .draftingCommunity: "Matching community suggestions"
+        case .reviewing: "Reviewing safety, topic fit, and repeated lines"
+        case .ranking: "Choosing the strongest candidate"
+        case .filing: "Saving the new advice"
+        case .complete: "Advice is ready"
+        }
+    }
+
+    func message(category: AdviceCategory, tone: ToneMode) -> String {
+        return switch self {
+        case .preparing:
+            "Tuning a \(category.title.lowercased()) brief for \(tone.voice.name)."
+        case .checkingContext:
+            "Checking your situation, saved takes, and repeat filters."
+        case .draftingApple:
+            "Writing a fresh \(category.title.lowercased()) take in \(tone.voice.name)'s voice."
+        case .draftingBureau:
+            "Building a fresh \(category.title.lowercased()) take from the Bureau's local playbook."
+        case .draftingCommunity:
+            "Matching community suggestions to your topic and voice."
+        case .reviewing:
+            "Checking topic fit, voice, safety, and repeated lines."
+        case .ranking:
+            "Choosing the strongest fit for this brief."
+        case .filing:
+            "Saving the take and its case details."
+        case .complete:
+            "Your new bad advice is ready."
+        }
+    }
+}
+
 enum GenerationLoadingMessages {
     private static let bootstrapMessages: [String] = [
         "Summoning bad judgment…",
