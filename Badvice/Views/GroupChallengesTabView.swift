@@ -55,10 +55,11 @@ struct GroupChallengesTabView: View {
                         }
                         if let round {
                             if round.isComplete { results(round) } else { voting(round) }
+                            onlinePartyCard
                         } else {
+                            onlinePartyCard
                             setup
                         }
-                        onlinePartyCard
                         if let storageMessage {
                             Text(storageMessage).font(.caption).foregroundStyle(accent)
                         }
@@ -206,24 +207,38 @@ struct GroupChallengesTabView: View {
     }
 
     private var onlinePartyCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("PLAY FROM ANYWHERE")
-                .font(.caption.weight(.black)).tracking(1.2).foregroundStyle(accent)
-            Text("Game Center party")
-                .font(.system(.title2, design: .serif, weight: .bold)).foregroundStyle(ink)
-            Text("Invite 2–8 Game Center friends. Each player writes one take and votes on their own turn; Game Center saves the round between turns.")
-                .font(.subheadline).foregroundStyle(muted)
-
+        VStack(alignment: .leading, spacing: 12) {
             Button {
                 gameCenter.inviteOrResume(category: category)
             } label: {
-                Label(
-                    gameCenter.currentMatch == nil ? "Invite friends or resume" : "Open online games",
-                    systemImage: "person.2.wave.2.fill"
-                )
-                .font(.body.weight(.bold)).frame(maxWidth: .infinity, minHeight: 54)
+                HStack(spacing: 12) {
+                    Image(systemName: "person.2.wave.2.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .frame(width: 44, height: 44)
+                        .background(accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(gameCenter.currentMatch == nil ? "Play online" : "Open online game")
+                            .font(.headline)
+                            .foregroundStyle(ink)
+                        Text("Invite 2–8 Game Center friends")
+                            .font(.caption)
+                            .foregroundStyle(muted)
+                    }
+
+                    Spacer(minLength: 8)
+                    Image(systemName: "arrow.up.right")
+                        .font(.body.weight(.bold))
+                        .foregroundStyle(accent)
+                }
+                .padding(14)
+                .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .buttonStyle(MagazineButtonStyle(theme: settings.theme, reduceMotion: settings.reduceMotion))
+            .buttonStyle(.plain)
+            .background(Theme.canvasColor(for: settings.theme), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityLabel("Play online with Game Center")
+            .accessibilityHint("Invite friends or resume an online party on your own devices.")
             .accessibilityIdentifier("party.online.open")
 
             if let statusMessage = gameCenter.statusMessage {
@@ -237,8 +252,9 @@ struct GroupChallengesTabView: View {
                 onlineMatchContent
             }
         }
-        .padding(20)
+        .padding(14)
         .background(Theme.cardColor(for: settings.theme), in: RoundedRectangle(cornerRadius: 20))
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("party.online.card")
     }
 

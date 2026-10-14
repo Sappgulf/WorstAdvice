@@ -735,9 +735,10 @@ enum Theme {
             default: return nil
             }
         }()
+        let isEditorialTheme = mode == .badvice
         return ThemeTabBarStyle(
-            backgroundTint: tabBarBackground(for: mode).opacity(mode == .badvice ? 0.78 : 0.66),
-            materialOverlayOpacity: min(max(glassStrength, 0.12), 0.52),
+            backgroundTint: tabBarBackground(for: mode).opacity(isEditorialTheme ? 0.96 : 0.66),
+            materialOverlayOpacity: isEditorialTheme ? 0.08 : min(max(glassStrength, 0.12), 0.52),
             borderTop: accent(for: mode).opacity(0.18 + personality.effectIntensity * 0.08),
             borderBottom: .white.opacity(0.06 + personality.effectIntensity * 0.04),
             shadow: cardShadow(for: mode).color.opacity(0.28),

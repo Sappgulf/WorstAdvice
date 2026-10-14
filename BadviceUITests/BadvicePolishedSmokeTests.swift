@@ -156,7 +156,7 @@ final class BadvicePolishedSmokeTests: BadviceUITestCase {
         let app = launch()
         openParty(app)
         XCTAssertTrue(control("party.generation.providerDetail", in: app).exists)
-        XCTAssertTrue(control("party.online.open", in: app).exists)
+        reveal(control("party.online.open", in: app), in: app)
         capture("Party setup and provider choice", app: app)
         tap("party.start", in: app)
         XCTAssertTrue(app.staticTexts["party.validation"].waitForExistence(timeout: 5))

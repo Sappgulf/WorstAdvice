@@ -67,25 +67,23 @@ struct FloatingTabBarView: View {
                 .padding(.horizontal, Theme.floatingTabBarHorizontalPadding)
                 .padding(.bottom, max(8, proxy.safeAreaInsets.bottom * 0.24))
                 .background(alignment: .bottom) {
-                    if reduceMotion {
-                        LinearGradient(
-                            colors: [
-                                Theme.canvasColor(for: theme).opacity(0),
-                                Theme.canvasColor(for: theme).opacity(0.72),
-                                Theme.canvasColor(for: theme),
-                                Theme.canvasColor(for: theme),
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
+                    LinearGradient(
+                        colors: [
+                            Theme.canvasColor(for: theme).opacity(0),
+                            Theme.canvasColor(for: theme).opacity(0.72),
+                            Theme.canvasColor(for: theme),
+                            Theme.canvasColor(for: theme),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                        .frame(
+                            height: Theme.floatingTabBarReservedHeight
+                                + max(26, proxy.safeAreaInsets.bottom + 16)
+                                + 18
                         )
-                            .frame(
-                                height: Theme.floatingTabBarReservedHeight
-                                    + max(26, proxy.safeAreaInsets.bottom + 16)
-                                    + 18
-                            )
-                            .frame(maxWidth: .infinity)
-                            .ignoresSafeArea(.container, edges: .bottom)
-                    }
+                        .frame(maxWidth: .infinity)
+                        .ignoresSafeArea(.container, edges: .bottom)
                 }
                 .offset(y: tabBarVisible ? 0 : 120)
                 .animation(
