@@ -50,7 +50,13 @@ final class BadviceFullSmokeTests: BadviceUITestCase {
     }
 
     func testLocalAuthPasswordChangeAndDeleteFlow() {
-        let app = launch()
+        let app = launch(authenticated: false)
+        type("Security QA", field: "auth.displayName", in: app)
+        type("security@badvice.test", field: "auth.email", in: app)
+        type("Badvice123", field: "auth.password", in: app)
+        type("Badvice123", field: "auth.confirmPassword", in: app)
+        tap("auth.primary", in: app)
+        XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 15))
         openSettings(app)
         tap("settings.auth.changePassword", in: app)
         // The root shortcut opens Advanced; password management remains a deliberate sheet.

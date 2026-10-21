@@ -29,6 +29,7 @@ struct AdviceBracketView: View {
     @State private var round: Int = 0
     @State private var currentPairIndex: Int = 0
     @State private var champion: String? = nil
+    @State private var showingChampionShare = false
     @State private var leftScale: CGFloat = 1.0
     @State private var rightScale: CGFloat = 1.0
     @State private var leftOpacity: Double = 1.0
@@ -85,6 +86,11 @@ struct AdviceBracketView: View {
         }
         .onAppear { loadContestants() }
         .onDisappear { voteTask?.cancel() }
+        .sheet(isPresented: $showingChampionShare) {
+            if let champion {
+                ActivityShareSheet(items: ["The Worst Advice Champion 🏆\n\n\"\(champion)\"\n\n— via Badvice"])
+            }
+        }
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
     }
 
@@ -161,58 +167,56 @@ struct AdviceBracketView: View {
     // MARK: Champion View
 
     private func championView(advice: String) -> some View {
-        VStack(spacing: 24) {
-            Spacer()
-            Text("🏆")
-                .font(.system(size: 64))
-                .accessibilityHidden(true)
-            Text("Champion")
-                .font(.title.weight(.black))
-                .foregroundStyle(accent)
-                .accessibilityAddTraits(.isHeader)
-            Text(advice)
-                .font(.body.weight(.medium))
-                .foregroundStyle(primaryText)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-                .accessibilityLabel("Winning advice: \(advice)")
+        ScrollView {
+            VStack(spacing: 24) {
+                Text("🏆")
+                    .font(.system(size: 64))
+                    .accessibilityHidden(true)
+                Text("Champion")
+                    .font(.title.weight(.black))
+                    .foregroundStyle(accent)
+                    .accessibilityAddTraits(.isHeader)
+                Text(advice)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(primaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                    .accessibilityLabel("Winning advice: \(advice)")
 
-            VStack(spacing: 12) {
-                Button {
-                    let text = "The Worst Advice Champion 🏆\n\n\"\(advice)\"\n\n— via Badvice"
-                    // Share via system share sheet
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let root = windowScene.windows.first?.rootViewController {
-                        let vc = UIActivityViewController(activityItems: [text], applicationActivities: nil)
-                        root.present(vc, animated: true)
+                VStack(spacing: 12) {
+                    Button {
+                        showingChampionShare = true
+                        HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
+                    } label: {
+                        Label("Share Champion", systemImage: "square.and.arrow.up")
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 20).padding(.vertical, 12)
+                            .background(Capsule().fill(accent))
+                            .foregroundStyle(Theme.buttonText(for: settings.theme))
                     }
-                    HapticsManager.playSuccess(isEnabled: settings.hapticsEnabled)
-                } label: {
-                    Label("Share Champion", systemImage: "square.and.arrow.up")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 20).padding(.vertical, 12)
-                        .background(Capsule().fill(accent))
-                        .foregroundStyle(Theme.buttonText(for: settings.theme))
-                }
 
-                Button {
-                    restart()
-                } label: {
-                    Label("New Bracket", systemImage: "arrow.clockwise")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 20).padding(.vertical, 12)
-                        .background(Capsule().fill(accent.opacity(0.12)))
-                        .foregroundStyle(accent)
+                    Button {
+                        restart()
+                    } label: {
+                        Label("New Bracket", systemImage: "arrow.clockwise")
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 20).padding(.vertical, 12)
+                            .background(Capsule().fill(accent.opacity(0.12)))
+                            .foregroundStyle(accent)
+                    }
                 }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-            Spacer()
+            .padding(24)
+            .frame(maxWidth: .infinity)
         }
     }
+
 
     // MARK: Logic
 
     private func loadContestants() {
+        leftScale = 1; rightScale = 1; leftOpacity = 1; rightOpacity = 1
         var records: [AdviceRecord] = []
         let history = generateViewModel.leaderboardTopLiked + generateViewModel.leaderboardTopShared
         let unique = Array(Set(history.map { $0.id }).compactMap { id in history.first { $0.id == id } })

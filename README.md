@@ -9,7 +9,7 @@ A native SwiftUI satire app for confidently wrong advice. The default design is 
 - **Play:** daily and weekly missions, streaks, and an advice bracket.
 - **Daily:** the daily quote, a searchable quote archive, and starter prompts.
 - **Party:** local pass-the-phone play plus 2–8 player Game Center matches. Online players take turns generating advice and voting; Game Center keeps the match available between turns.
-- **Settings:** themes, content packs, accessibility preferences, sharing, Apple Intelligence, local account security, suggestions, and social diagnostics.
+- **Settings:** themes, ten bundled offline content packs with a persistent selection, accessibility preferences, sharing, Apple Intelligence, local account security, suggestions, and social diagnostics. All current features are included without paid unlocks or subscriptions.
 
 Guest mode has a stable, separate local history. Protected accounts keep their existing password workflow. Local Badvice accounts are not Apple IDs and do not provide cross-device account sync.
 
@@ -54,7 +54,7 @@ Scripts share incremental build caches, build the active simulator architecture,
 
 ## Simulator fixtures
 
-UI tests use `-ui-testing -skip-onboarding -skip-splash`. Add `-ui-testing-auth-skip` for a protected test account, or exercise `auth.guest` for guest entry. `-ui-testing-reset-data` resets the current test account's data. `-ui-testing-social-mock` uses the explicit mock backend; `-ui-testing-force-social-unavailable` exercises the unavailable state.
+UI tests use `-ui-testing -skip-onboarding -skip-splash`. Add `-ui-testing-auth-skip` for a guest test session, or exercise `auth.guest` for guest entry. Protected-account tests create an account through signup. `-ui-testing-reset-data` resets the current test account's data. `-ui-testing-social-mock` uses the explicit mock backend; `-ui-testing-force-social-unavailable` exercises the unavailable state.
 
 For deterministic visual captures:
 

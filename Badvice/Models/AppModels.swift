@@ -172,39 +172,6 @@ struct CategoryToneCompatibility {
     ]
 }
 
-// MARK: - Offline Pack State (#3)
-
-enum OfflinePackStatus: String, Codable, Sendable {
-    case notCached
-    case downloading
-    case cached
-    case stale
-
-    var label: String {
-        switch self {
-        case .notCached: return "Available"
-        case .downloading: return "Downloading…"
-        case .cached: return "Downloaded"
-        case .stale: return "Update available"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .notCached: return "arrow.down.circle"
-        case .downloading: return "arrow.down.circle.dotted"
-        case .cached: return "checkmark.circle.fill"
-        case .stale: return "exclamationmark.circle"
-        }
-    }
-}
-
-struct OfflinePackCacheEntry: Codable, Sendable {
-    let packID: String
-    let cachedAt: Date
-    let version: Int
-}
-
 // MARK: - Collab Advice Session (#7)
 
 

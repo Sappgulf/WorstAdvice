@@ -140,10 +140,12 @@ final class BadvicePolishedSmokeTests: BadviceUITestCase {
         tap("tab.favorites", in: app)
 
         tap("casebook.filter", in: app)
-        tap("casebook.filter.tone.corporateConsultant", in: app)
+        app.buttons["Voice"].tap()
+        app.buttons["Corporate Consultant"].tap()
         XCTAssertFalse(control("casebook.empty.filtered", in: app).exists)
         tap("casebook.filter", in: app)
-        tap("casebook.filter.tone.wizard", in: app)
+        app.buttons["Voice"].tap()
+        app.buttons["Wizard"].tap()
         XCTAssertTrue(control("casebook.empty.filtered", in: app).waitForExistence(timeout: 8))
         tap("casebook.clearFilters", in: app)
 
@@ -216,13 +218,27 @@ final class BadvicePolishedSmokeTests: BadviceUITestCase {
 
     func testAccessibilityTextSizeAndReducedMotion() {
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-skip-onboarding", "-skip-splash", "-ui-testing-auth-reset", "-ui-testing-auth-skip", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launchArguments = ["-ui-testing", "-skip-onboarding", "-skip-splash", "-ui-testing-auth-reset", "-ui-testing-auth-skip", "-ui-testing-reset-data", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
         XCTAssertTrue(app.buttons["generate.primary"].waitForExistence(timeout: 20))
         generate(app)
         capture("Accessibility text — advice", app: app)
+        tap("generate.save", in: app)
         tap("tab.quotes", in: app)
         XCTAssertTrue(control("quotes.dailyHero", in: app).waitForExistence(timeout: 8))
         capture("Accessibility text — daily", app: app)
+        tap("tab.favorites", in: app)
+        XCTAssertTrue(app.staticTexts["Saved & recent"].waitForExistence(timeout: 8))
+        reveal(app.buttons["Organize"].firstMatch, in: app, swipes: 14)
+        capture("Accessibility text — saved", app: app)
+        tap("tab.chaosHub", in: app)
+        reveal(control("chaos.mission.daily.action", in: app), in: app)
+        capture("Accessibility text — play", app: app)
+        openSettings(app)
+        tap("settings.offlinePacks", in: app)
+        tap("offlinePacks.pack.officeMeltdown", in: app)
+        capture("Accessibility text — offline packs", app: app)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.staticTexts["ADVICE ENGINE"].waitForExistence(timeout: 8))
     }
 }

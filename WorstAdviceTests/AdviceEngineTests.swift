@@ -362,6 +362,17 @@ final class AdviceEngineTests: XCTestCase {
         XCTAssertFalse(engine.validateModelOutput(repeated, for: .career, tone: .corporateConsultant))
         XCTAssertFalse(engine.validateModelOutput(good, for: .money, tone: .corporateConsultant))
         XCTAssertFalse(engine.validateModelOutput(good, for: .career, tone: .wizard))
+
+        for opening in ["Appoint", "Declare"] {
+            let imperative = GeneratedAdvice(
+                category: .career,
+                tone: .corporateConsultant,
+                adviceLine: "\(opening) your notebook CEO of an imaginary committee.",
+                rationaleLine: nil,
+                createdAt: Date()
+            )
+            XCTAssertTrue(engine.validateModelOutput(imperative, for: .career, tone: .corporateConsultant))
+        }
     }
 
     func testBureauIntensityAndRevisionStylesProduceDistinctLocalOutput() {
@@ -571,6 +582,19 @@ final class AdviceEngineTests: XCTestCase {
 
         XCTAssertTrue(moderation.isSafe(text: benign))
         XCTAssertGreaterThan(moderation.safetyScore(for: benign), 0.95)
+    }
+
+    func testCategoryFilterKeepsBlockedPrefixesWithoutMatchingInsideBenignWords() {
+        let engine = AdviceEngine()
+        func output(_ line: String) -> GeneratedAdvice {
+            GeneratedAdvice(category: .spirituality, tone: .wizard,
+                adviceLine: line, rationaleLine: nil, createdAt: Date())
+        }
+        XCTAssertTrue(engine.validateOutput(output("Treat a difficult decision as a scheduling puzzle."), for: .spirituality))
+        XCTAssertFalse(engine.validateOutput(output("Turn the committee into a cult."), for: .spirituality))
+        XCTAssertFalse(engine.validateOutput(output("Turn the committee into a CULT!"), for: .spirituality))
+        XCTAssertFalse(engine.validateOutput(output("Call it a ‘cult’ and start a committee."), for: .spirituality))
+        XCTAssertFalse(engine.validateOutput(output("Make a harmful choice sound practical."), for: .spirituality))
     }
 
     func testSemanticTextScorerBatchMatchesIndividualScores() async throws {

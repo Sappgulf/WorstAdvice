@@ -185,6 +185,7 @@ struct CasebookTabView: View {
     var onJumpToGenerate: () -> Void
 
     @Environment(\.tabBarVisible) private var tabBarVisible
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var shelf: Shelf
     @State private var activeToast: ToastMessage?
     @State private var organizer = CasebookOrganizer()
@@ -216,6 +217,11 @@ struct CasebookTabView: View {
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
+    private var metadataLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 8))
+    }
     private var records: [AdviceRecord] {
         var filtered = shelf == .saved ? savedSearchResults : history.filteredHistory
         if shelf == .saved, let selectedFolder {
@@ -317,7 +323,7 @@ struct CasebookTabView: View {
                                     )
 
                                     Menu {
-                                        Section("Topic") {
+                                        Menu("Topic") {
                                             Button {
                                                 setCategory(nil)
                                             } label: {
@@ -335,7 +341,7 @@ struct CasebookTabView: View {
                                             }
                                         }
 
-                                        Section("Voice") {
+                                        Menu("Voice") {
                                             Button {
                                                 selectedToneFilter = nil
                                             } label: {
@@ -555,12 +561,12 @@ struct CasebookTabView: View {
     private func recordRow(_ record: AdviceRecord) -> some View {
         BureauPanel(theme: settings.theme) {
             VStack(alignment: .leading, spacing: 13) {
-                HStack(spacing: 8) {
+                metadataLayout {
                     Text("CASE \(record.caseNumber)")
                         .font(.caption2.weight(.black).monospaced())
                         .tracking(0.8)
                         .foregroundStyle(secondaryText)
-                    Spacer(minLength: 0)
+                    if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
                     BureauTag(
                         title: record.caseRarity.title,
                         systemImage: record.caseRarity.systemImage,
@@ -571,13 +577,13 @@ struct CasebookTabView: View {
                 Text(record.adviceLine)
                     .font(.system(.body, design: .serif, weight: .semibold))
                     .foregroundStyle(primaryText)
-                    .lineLimit(4)
+                    .fixedSize(horizontal: false, vertical: true)
                     .lineSpacing(2)
 
-                HStack(spacing: 7) {
+                metadataLayout {
                     BureauTag(title: record.category.title, systemImage: record.category.icon, accent: accent)
                     BureauTag(title: record.tone.voice.name, systemImage: record.tone.voice.systemImage, accent: secondaryText)
-                    Spacer(minLength: 0)
+                    if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: 0) }
                 }
 
                 let metadata = organizer.metadata(for: record.id)
@@ -595,39 +601,41 @@ struct CasebookTabView: View {
                     }
                 }
 
-                HStack(spacing: 8) {
+                metadataLayout {
                     Text(record.createdAt.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption2)
                         .foregroundStyle(secondaryText)
 
-                    Spacer()
+                    if !dynamicTypeSize.isAccessibilitySize { Spacer() }
 
-                    if shelf == .saved {
-                        rowAction("Organize", systemImage: "folder.badge.plus") {
-                            organizingRecord = record
-                        }
-                    }
-
-                    rowAction("Copy", systemImage: "doc.on.doc") {
-                        UIPasteboard.general.string = record.adviceLine
-                        activeToast = ToastMessage(message: "Copied to clipboard", style: .success)
-                    }
-
-                    rowAction("Use", systemImage: "arrow.up.right") {
-                        onUseRecord(record)
-                    }
-
-                    rowAction(
-                        shelf == .saved ? "Remove" : "Save",
-                        systemImage: shelf == .saved ? "bookmark.slash" : "bookmark"
-                    ) {
+                    HStack(spacing: 8) {
                         if shelf == .saved {
-                            favorites.remove(record)
-                            organizer.remove(recordID: record.id)
-                        } else {
-                            history.saveFromHistory(record)
+                            rowAction("Organize", systemImage: "folder.badge.plus") {
+                                organizingRecord = record
+                            }
                         }
-                        onDataChanged()
+
+                        rowAction("Copy", systemImage: "doc.on.doc") {
+                            UIPasteboard.general.string = record.adviceLine
+                            activeToast = ToastMessage(message: "Copied to clipboard", style: .success)
+                        }
+
+                        rowAction("Use", systemImage: "arrow.up.right") {
+                            onUseRecord(record)
+                        }
+
+                        rowAction(
+                            shelf == .saved ? "Remove" : "Save",
+                            systemImage: shelf == .saved ? "bookmark.slash" : "bookmark"
+                        ) {
+                            if shelf == .saved {
+                                favorites.remove(record)
+                                organizer.remove(recordID: record.id)
+                            } else {
+                                history.saveFromHistory(record)
+                            }
+                            onDataChanged()
+                        }
                     }
                 }
             }
@@ -656,7 +664,7 @@ struct CasebookTabView: View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
                 .labelStyle(.iconOnly)
-                .font(.caption.weight(.bold))
+                .font(.system(size: 16, weight: .bold))
                 .frame(width: 44, height: 44)
                 .background(accent.opacity(0.1), in: Circle())
         }
@@ -1597,6 +1605,16 @@ struct BureauSettingsTabView: View {
                         }
                         .pickerStyle(.menu)
                         .tint(accent)
+
+                        NavigationLink {
+                            OfflinePacksView(settings: viewModel)
+                        } label: {
+                            Label("Browse included packs", systemImage: "shippingbox.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        }
+                        .tint(accent)
+                        .accessibilityIdentifier("settings.offlinePacks")
                     }
                 }
 

@@ -493,7 +493,12 @@ struct AdviceEngine {
 
     private func containsForbidden(_ text: String, forbidden: [String]) -> Bool {
         let normalized = text.normalizedForFiltering
-        return forbidden.contains { normalized.contains($0.normalizedForFiltering) }
+        return forbidden.contains { term in
+            let escaped = NSRegularExpression.escapedPattern(for: term.normalizedForFiltering)
+            // Keep prefix matches (e.g. "harmful") without matching "cult" inside "difficult".
+            let pattern = "(?<![\\p{L}\\p{N}])\(escaped)"
+            return normalized.range(of: pattern, options: .regularExpression) != nil
+        }
     }
 
     private func defaultSeed(from date: Date) -> Int {
@@ -848,9 +853,9 @@ private enum AdviceOutputQualityGate {
     // runtime. These are common imperative verbs used by the Bureau and expected
     // from model-written advice; they keep the fragment check deterministic on-device.
     private static let actionWords: Set<String> = [
-        "accept", "add", "admit", "announce", "apologize", "ask", "avoid", "begin", "book",
+        "accept", "add", "admit", "announce", "apologize", "appoint", "ask", "avoid", "begin", "book",
         "bring", "build", "buy", "call", "change", "check", "choose", "code", "color",
-        "consider", "create", "cut", "design", "do", "document", "draft", "find", "get",
+        "consider", "create", "cut", "declare", "design", "do", "document", "draft", "find", "get",
         "give", "go", "ignore", "interpret", "invest", "keep", "launch", "leave", "make",
         "mix", "move", "offer", "open", "optimize", "pick", "plan", "plate", "post",
         "practice", "pretend", "prioritize", "put", "read", "rebuild", "refresh", "rename",
@@ -988,10 +993,12 @@ struct BureauAdviceEngine: Sendable {
         } else {
             rawAdvice = "\(opener): for \(focus), \(move). If asked, \(coverStory)."
         }
-        let advice = bounded(
-            cleanedSentence(rawAdvice),
-            maximum: AdviceEngineConstants.bureauAdviceOutputMaxLength
-        )
+        // Keep a complete joke when customization makes the two-beat recipe too long.
+        // Cutting characters off the end can remove the punchline mid-clause.
+        let completeAdvice = cleanedSentence(rawAdvice)
+        let compactAdvice = cleanedSentence("\(opener): for \(focus), \(move).")
+        let advice = completeAdvice.count <= AdviceEngineConstants.bureauAdviceOutputMaxLength
+            ? completeAdvice : compactAdvice
         let rationale: String? = includeRationale
             ? bounded(
                 "Why it fails: it replaces \(guardrail) with the rule “\(principleRule).”",
@@ -1228,11 +1235,11 @@ struct BureauAdviceEngine: Sendable {
         case .colder:
             return "\(move), and make “No follow-up questions” your entire explanation"
         case .officeSafe:
-            return "\(move), then deliver it with a perfectly straight face"
+            return "\(move.replacingOccurrences(of: "victory recap", with: "status update")), with a straight face"
         case .oneSentence:
             return move
         case .completelyUnhinged:
-            return "\(move), then start a countdown and stage a victory ceremony before seeing how it goes"
+            return "\(move), then start a premature victory countdown"
         case .none:
             break
         }
@@ -1304,7 +1311,7 @@ struct BureauAdviceEngine: Sendable {
         .dating: .init(
             ideas: [
                 .init(move: "treat reply time like a live weather alert", coverStory: "call every refresh a forecast update"),
-                .init(move: "draft three versions of a casual follow-up", coverStory: "send the fourth one marked final-final"),
+                .init(move: "draft three versions of a casual follow-up", coverStory: "send version four marked absolutely final"),
                 .init(move: "soft-launch the relationship before defining it", coverStory: "call the confusion a trailer for a show with no renewal"),
             ],
             guardrails: ["asking a direct question", "respecting the other person's pace", "watching consistent behavior"]

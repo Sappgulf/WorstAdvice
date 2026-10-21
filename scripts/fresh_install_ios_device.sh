@@ -42,12 +42,29 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 1
 fi
 
-echo "Uninstalling existing $BUNDLE_ID from device, if present"
-xcrun devicectl device uninstall app \
+echo "Checking for an existing $BUNDLE_ID installation"
+xcrun devicectl device info apps \
   --device "$INSTALL_DEVICE_ID" \
-  "$BUNDLE_ID" \
+  --filter "bundleIdentifier == '$BUNDLE_ID'" \
   --timeout 60 \
-  --json-output "$JSON_OUTPUT_DIR/uninstall.json" >/dev/null 2>&1 || true
+  --json-output "$JSON_OUTPUT_DIR/before.json"
+
+APP_INSTALLED="$(python3 - "$JSON_OUTPUT_DIR/before.json" <<'PY'
+import json
+import sys
+with open(sys.argv[1]) as source:
+    installed = bool(json.load(source)["result"]["apps"])
+print("yes" if installed else "no")
+PY
+)"
+if [[ "$APP_INSTALLED" == "yes" ]]; then
+  echo "Uninstalling existing $BUNDLE_ID"
+  xcrun devicectl device uninstall app \
+    --device "$INSTALL_DEVICE_ID" \
+    "$BUNDLE_ID" \
+    --timeout 60 \
+    --json-output "$JSON_OUTPUT_DIR/uninstall.json"
+fi
 
 echo "Installing fresh build: $APP_PATH"
 xcrun devicectl device install app \

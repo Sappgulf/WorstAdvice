@@ -17,7 +17,6 @@
 		6023FF49F2203A380675F04A /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA4E285DDB5972C81A405FFA /* SwiftUI.framework */; };
 		71EB77B62B215677E29E8766 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C0C112D36AF44AC7271B25 /* LiveActivityManager.swift */; };
 		752D7962F4B643C07ADACB3E /* SpotlightManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BAD1019A3BB68796107B331 /* SpotlightManager.swift */; };
-		849CE4DFFEEE89521945A41D /* OfflinePackCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F152C81A6A99BC970CEE6C3 /* OfflinePackCache.swift */; };
 		8FBB37C624DF5072622F2BA2 /* GlobalCommunityFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E273C3DA489ED7E3D5D44E0 /* GlobalCommunityFeedView.swift */; };
 		973C67C703EAAFA8D5C94C4D /* SuggestionPipelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BCEE47F69102E4E4FAC043F /* SuggestionPipelineView.swift */; };
 		99BADEF42679E9E97A271378 /* AppSessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A5EDD883F062B6F7D61AF6 /* AppSessionViewModel.swift */; };
@@ -147,7 +146,6 @@
 		2852BC2A6024C1FC29AAFEB6 /* WorstAdviceQuoteWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorstAdviceQuoteWidget.swift; path = WorstAdviceWidget/WorstAdviceQuoteWidget.swift; sourceTree = "<group>"; };
 		2BAD1019A3BB68796107B331 /* SpotlightManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpotlightManager.swift; sourceTree = "<group>"; };
 		2BCEE47F69102E4E4FAC043F /* SuggestionPipelineView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SuggestionPipelineView.swift; sourceTree = "<group>"; };
-		2F152C81A6A99BC970CEE6C3 /* OfflinePackCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OfflinePackCache.swift; sourceTree = "<group>"; };
 		483627CFD355C31E4D420824 /* WorstAdviceWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = WorstAdviceWidgetBundle.swift; path = WorstAdviceWidget/WorstAdviceWidgetBundle.swift; sourceTree = "<group>"; };
 		537EABC7909023C6B45AAB4F /* LocalAuth.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalAuth.swift; sourceTree = "<group>"; };
 		53A5EDD883F062B6F7D61AF6 /* AppSessionViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppSessionViewModel.swift; sourceTree = "<group>"; };
@@ -509,7 +507,6 @@
 				A200000B000000000000LM01 /* LocalModelStore.swift */,
 				1C250B6FD91B852804C06C42 /* StoreKitManager.swift */,
 				2BAD1019A3BB68796107B331 /* SpotlightManager.swift */,
-				2F152C81A6A99BC970CEE6C3 /* OfflinePackCache.swift */,
 				86C0C112D36AF44AC7271B25 /* LiveActivityManager.swift */,
 			);
 			path = Services;
@@ -720,7 +717,6 @@
 				52AD82A6DA1A7B7DA9223525 /* CloudKitSchemaSeeder.swift in Sources */,
 				2BF026CE4629AB5BD5E11B23 /* StoreKitManager.swift in Sources */,
 				752D7962F4B643C07ADACB3E /* SpotlightManager.swift in Sources */,
-				849CE4DFFEEE89521945A41D /* OfflinePackCache.swift in Sources */,
 				71EB77B62B215677E29E8766 /* LiveActivityManager.swift in Sources */,
 				A10000010000000000000034 /* SchemaMigrationManager.swift in Sources */,
 				A1000007000000000000FF01 /* Shared/ShareKit.swift in Sources */,

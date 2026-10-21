@@ -27,16 +27,17 @@ class BadviceUITestCase: XCTestCase {
         }
         _ = element.waitForExistence(timeout: 1)
         for _ in 0..<swipes {
+            let viewport = contentViewport(in: app)
             if element.exists {
                 let key = element.identifier.isEmpty ? element.label : element.identifier
                 let navigationControl = key.hasPrefix("tab.") || key == "casebook.organize.save"
                     || ["BackButton", "Back", "Close", "Cancel", "Save", "Done", "keyboard.done"].contains(key)
-                let visibleCenter = element.frame.midY > 24 && element.frame.midY < app.frame.height - 124
+                let visibleCenter = element.frame.midY > viewport.minY && element.frame.midY < viewport.maxY
                 if (element.isHittable || !element.isEnabled) && (navigationControl || visibleCenter) { break }
             }
             let key = element.exists ? (element.identifier.isEmpty ? element.label : element.identifier) : ""
             let containing = app.scrollViews.containing(.any, identifier: key)
-            let isVerticallyVisible = element.exists && element.frame.midY > 74 && element.frame.midY < app.frame.height - 124
+            let isVerticallyVisible = element.exists && element.frame.midY > viewport.minY && element.frame.midY < viewport.maxY
             if isVerticallyVisible && (element.frame.midX < 0 || element.frame.midX > app.frame.width) {
                 let horizontal = containing.allElementsBoundByIndex.last(where: { $0.isHittable }) ?? app.scrollViews.firstMatch
                 swipeContent(horizontal, in: app, direction: element.frame.midX < 0 ? "right" : "left")
@@ -44,8 +45,10 @@ class BadviceUITestCase: XCTestCase {
                 let outer = containing.firstMatch
                 let scroll = !key.isEmpty && outer.exists && outer.isHittable
                     ? outer : app.scrollViews.allElementsBoundByIndex.first(where: { $0.isHittable }) ?? app.scrollViews.firstMatch
-                let scrollDown = element.exists ? element.frame.midY < 74 : direction == "down"
-                swipeContent(scroll, in: app, direction: scrollDown ? "down" : "up")
+                let scrollDown = element.exists ? element.frame.midY < viewport.minY : direction == "down"
+                // Small corrections keep a nearby row from oscillating past both edges.
+                let correction = element.exists ? min(abs(element.frame.midY - viewport.midY), 260) : nil
+                swipeContent(scroll, in: app, direction: scrollDown ? "down" : "up", distance: correction)
             }
         }
         if !element.exists || (element.isEnabled && !element.isHittable) {
@@ -56,18 +59,27 @@ class BadviceUITestCase: XCTestCase {
         if element.isEnabled { XCTAssertTrue(element.isHittable, "Control is not reachable: \(element)") }
     }
 
+    private func contentViewport(in app: XCUIApplication) -> CGRect {
+        let navigation = app.navigationBars.firstMatch
+        let tab = app.buttons["tab.generate"]
+        let top = navigation.exists ? max(app.frame.minY + 80, navigation.frame.maxY + 8) : app.frame.minY + 80
+        let bottom = tab.exists ? min(app.frame.maxY - 24, tab.frame.minY - 12) : app.frame.maxY - 24
+        return CGRect(x: app.frame.minX, y: top, width: app.frame.width, height: max(1, bottom - top))
+    }
+
     /// Keep gestures above the floating navigation and below the native title bar.
-    func swipeContent(_ scroll: XCUIElement, in app: XCUIApplication, direction: String) {
-        let bounds = scroll.frame.intersection(CGRect(x: 0, y: 80, width: app.frame.width, height: app.frame.height - 204))
+    func swipeContent(_ scroll: XCUIElement, in app: XCUIApplication, direction: String, distance: CGFloat? = nil) {
+        let bounds = scroll.frame.intersection(contentViewport(in: app))
         XCTAssertFalse(bounds.isEmpty, "Scroll content must be visible before a gesture")
         let origin = app.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
         let horizontal = direction == "left" || direction == "right"
         let start = horizontal
             ? CGPoint(x: direction == "left" ? bounds.maxX - 20 : bounds.minX + 20, y: bounds.midY)
             : CGPoint(x: bounds.midX, y: direction == "up" ? bounds.maxY - 25 : bounds.minY + 25)
+        let verticalTravel = min(max(distance ?? (bounds.height - 50), 80), bounds.height - 50)
         let end = horizontal
             ? CGPoint(x: direction == "left" ? bounds.minX + 20 : bounds.maxX - 20, y: bounds.midY)
-            : CGPoint(x: bounds.midX, y: direction == "up" ? bounds.minY + 25 : bounds.maxY - 25)
+            : CGPoint(x: bounds.midX, y: start.y + (direction == "up" ? -verticalTravel : verticalTravel))
         origin.withOffset(CGVector(dx: start.x, dy: start.y)).press(forDuration: 0.05,
             thenDragTo: origin.withOffset(CGVector(dx: end.x, dy: end.y)))
     }

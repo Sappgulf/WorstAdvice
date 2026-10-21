@@ -1,91 +1,60 @@
-# Browser Screenshot QA
+# Simulator Screenshot QA
 
-Use this checklist for browser-visible simulator proof and App Store screenshot prep.
+Capture the running SwiftUI app after the functional tests pass. Use the selected Xcode (`xcode-select -p`) and an explicit simulator UDID from `xcrun simctl list devices available`.
 
-## Required Screens
+## Current product tour
 
-- Generate: command card, selected lane/tone, situation field, primary action, and a generated advice card.
-- Missions: Mission Command, Progression Path, Daily Mission, Weekly Mission, and Season Status.
-- Quotes: Daily pick, Daily Ritual, Quote Spotlight, and visible quote rows.
-- Explore: Explore Ideas, starter filters, and at least one seeded idea.
-- Challenges: Group Challenge Command, active/completed challenge state, and create/join actions.
-- Library: Quotes and Saved with at least one seeded card when available.
-- History: History command, filters, and at least one seeded history card when available.
-- Settings: theme picker, share settings, upgrade entry, and diagnostics surfaces.
+- **Advice:** topic, voice, optional situation, generation, intensity, rewrites, reality check, save, copy, and system export.
+- **Saved:** saved advice, recent history, search, category/voice filters, folders, and tags.
+- **Play:** daily/weekly missions, progress, and the advice bracket through champion, sharing, and restart.
+- **Daily:** today's quote, likes, remix, starter prompts, and archive.
+- **More:** starter ideas, Party, recent history, and Settings.
+- **Party:** provider choice, player validation, pass-the-phone voting, restored rounds, verdict, and export. Online matches need two signed Game Center accounts.
+- **Settings:** engine, pack, theme, accessibility, and local account controls. Advanced settings include achievements, suggestions, community activity, offline packs, included features, Apple model status, and social diagnostics.
+- **First use:** splash, guest entry, optional protected-account signup, and onboarding.
 
-## Browser Proof
+Inspect normal and maximum accessibility text. Check sheet dismissal, keyboard dismissal, the floating tab bar, long advice, empty results, unavailable services, and persisted selections. A successful build alone does not validate these interactions.
 
-1. Build and install Badvice on the selected iOS Simulator.
-2. Launch with screenshot-mode UI-test arguments for deterministic startup:
-   `-ui-testing -skip-onboarding -skip-splash -ui-testing-auth-reset -ui-testing-auth-skip -screenshot-mode -debug-polish-seed 424242`.
-   Add `-screenshot-start-tab generate`, `chaosHub`, `explore`, `groupChallenges`, `quotes`, `favorites`, `history`, or `settings` for the first frame you want.
-3. Start `serve-sim` pinned to the same Simulator UDID.
-4. Open the printed local URL in the Codex in-app browser.
-5. Confirm the browser shows the real running app frame, not just the helper page.
-6. Capture proof screenshots under `.build/browser-proof/`.
-
-## Scripted Export
-
-Use the screenshot-mode exporter when you need repeatable tab captures without the browser mirror:
+## Repeatable tab captures
 
 ```bash
-scripts/capture_screenshot_mode.sh
+SIMULATOR_ID="YOUR_SIMULATOR_UDID" scripts/capture_screenshot_mode.sh
 ```
 
-By default it builds with the beta Xcode toolchain, installs on the `iPhone 17 Pro` simulator, and writes:
+The script builds and installs the app, then launches each tab with deterministic UI-test fixtures. It writes PNGs into `.build/screenshots/screenshot-mode/`. The default set is `generate`, `chaosHub`, `quotes`, `favorites`, `history`, `settings`, `explore`, and `groupChallenges`.
 
-- `.build/screenshots/screenshot-mode/badvice-generate.png`
-- `.build/screenshots/screenshot-mode/badvice-chaosHub.png`
-- `.build/screenshots/screenshot-mode/badvice-explore.png`
-- `.build/screenshots/screenshot-mode/badvice-groupChallenges.png`
-- `.build/screenshots/screenshot-mode/badvice-quotes.png`
-- `.build/screenshots/screenshot-mode/badvice-favorites.png`
-- `.build/screenshots/screenshot-mode/badvice-history.png`
-- `.build/screenshots/screenshot-mode/badvice-settings.png`
-
-Pass tab raw values to capture a smaller set, for example:
+To reuse the existing build or capture selected tabs:
 
 ```bash
-  BUILD=0 scripts/capture_screenshot_mode.sh generate chaosHub explore groupChallenges quotes
+BUILD=0 SIMULATOR_ID="YOUR_SIMULATOR_UDID" \
+  scripts/capture_screenshot_mode.sh generate chaosHub quotes
 ```
 
-The exporter waits 24 seconds for the first tab on each simulator and 12 seconds for later tabs so fresh simulator launches, screenshot-mode fixtures, and tab routing can settle. Override with `FIRST_CAPTURE_DELAY` and `CAPTURE_DELAY=6` only after checking the requested tab is captured reliably.
+Set `SIMULATOR_IDS` to comma-separated UDIDs for multiple devices. Each device gets its own subfolder. Keep the default settling delays unless you have confirmed the requested screen is captured reliably.
 
-For multi-device capture, pass comma-separated Simulator UDIDs. With more than one simulator, each device writes into a slugged subfolder:
+## Maximum text size
+
+For a repeatable device-level check, set the QA simulator's preferred size explicitly rather than relying only on app launch defaults:
 
 ```bash
-SIMULATOR_IDS="YOUR_SIMULATOR_UDID,OTHER_UDID" scripts/capture_screenshot_mode.sh
+xcrun simctl ui YOUR_SIMULATOR_UDID content_size accessibility-extra-extra-extra-large
+xcrun simctl ui YOUR_SIMULATOR_UDID content_size
 ```
 
-### One-shot App Store matrix (recommended)
+Run the accessibility workflow, inspect its screenshot pixels, then restore with `content_size large`. A passed test name alone does not establish the applied text size.
+
+## Live browser mirror
+
+Use the iOS Simulator Browser skill to start `serve-sim` pinned to the same UDID. Open its printed localhost URL in the Codex browser and confirm a real app frame appears. Stop only that simulator's helper when done. Do not interact with a simulator while XCTest is controlling it, or reuse a simulator owned by another active task.
+
+## Evidence and store assets
+
+The UI tests retain named screenshots in the xcresult attachments. Export them with:
 
 ```bash
-scripts/capture_app_store_matrix.sh
+xcrun xcresulttool export attachments \
+  --path .build/YOUR_RESULT.xcresult \
+  --output-path .build/qa-attachments
 ```
 
-This prepares screenshot simulators (if needed), captures the Infernal Editorial primary set
-(`generate`, `chaosHub`, `quotes`, `favorites`, `history`, `settings`), and writes a `MANIFEST.md`
-under `.build/screenshots/app-store-matrix/`.
-
-Or compose manually:
-
-```bash
-SIMULATOR_IDS="$(scripts/prepare_screenshot_simulators.sh)" \
-  OUTPUT_DIR=.build/screenshots/app-store-matrix \
-  scripts/capture_screenshot_mode.sh generate chaosHub quotes favorites history settings
-```
-
-Example output:
-
-- `.build/screenshots/app-store-matrix/iphone-17-pro/badvice-generate.png`
-- `.build/screenshots/app-store-matrix/iphone-17-pro/badvice-chaosHub.png`
-- `.build/screenshots/app-store-matrix/MANIFEST.md`
-
-## App Store Notes
-
-- Capture current primary surfaces after the smoke suite passes.
-- Prefer real app UI over mocked marketing comps.
-- Use screenshot mode for proof captures; it preloads deterministic polish fixtures, reduces motion, skips onboarding/splash, and can open a selected tab.
-- Keep screenshots readable at phone scale: no tiny debug-only text, no overlapping controls, and no stale old tab labels.
-- Infernal Editorial check: espresso parchment, copper CTA/seal, intensity rail on the advice card, chaos meter on Missions, copper gear on Settings.
-- Also refresh homescreen widget + lock screen complications when marketing those surfaces.
+Review the actual pixels for overlapping controls, clipped text, unreadable colors, and content hidden by the tab bar. Debug fixtures are QA evidence; review them separately before using them as App Store assets. Refresh widget screenshots when marketing widget features. Simulator captures do not establish signed CloudKit, Game Center, StoreKit purchase, or physical-device behavior.

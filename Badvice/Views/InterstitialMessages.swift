@@ -984,14 +984,14 @@ struct SettingsTabView: View {
     // MARK: - Discover & Upgrades
 
     private var discoverSection: some View {
-        settingsCard(title: "Discover & Upgrades", icon: "star.circle") {
+        settingsCard(title: "Discover", icon: "star.circle") {
             VStack(spacing: 12) {
                 NavigationLink {
                     UpgradeStoreView(settings: viewModel)
                 } label: {
                     settingsNavRow(
-                        "Upgrade & Store",
-                        systemImage: "star.fill",
+                        "What's included",
+                        systemImage: "gift.fill",
                         badge: nil
                     )
                 }

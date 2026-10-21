@@ -1,14 +1,13 @@
 import SwiftUI
 
 struct OfflinePacksView: View {
-    let settings: SettingsViewModel
-    @State private var cache = OfflinePackCache()
+    @Bindable var settings: SettingsViewModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var accent: Color { Theme.accent(for: settings.theme) }
     private var primaryText: Color { Theme.primaryText(for: settings.theme) }
     private var secondaryText: Color { Theme.secondaryText(for: settings.theme) }
     private var cardColor: Color { Theme.cardColor(for: settings.theme) }
-    private var buttonText: Color { Theme.buttonText(for: settings.theme) }
 
     var body: some View {
         ZStack {
@@ -17,38 +16,27 @@ struct OfflinePacksView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     SectionShell(accent: accent, cardColor: cardColor) {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill(Theme.copperEmbossGradient)
-                                    .frame(width: 44, height: 44)
-                                Image(systemName: "arrow.down.circle.fill")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundStyle(Theme.espressoInk)
-                            }
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("OFFLINE VAULT")
-                                    .font(.caption2.weight(.heavy))
-                                    .tracking(1.1)
-                                    .foregroundStyle(accent)
-                                Text("Download content packs for offline chaos.")
-                                    .font(.system(.subheadline, design: .serif, weight: .semibold))
-                                    .foregroundStyle(primaryText)
-                                Text("Packs expand phrase banks without changing the flow. Cache them for flights and dead zones.")
-                                    .font(.caption)
-                                    .foregroundStyle(secondaryText)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("OFFLINE VAULT", systemImage: "shippingbox.fill")
+                                .font(.caption.weight(.heavy))
+                                .foregroundStyle(accent)
+                            Text("Ten packs. Zero signal required.")
+                                .font(.system(.title3, design: .serif, weight: .bold))
+                                .foregroundStyle(primaryText)
+                            Text("Every phrase bank is included with Badvice and ready offline. Pick a flavor for the Bureau Engine; Apple Intelligence uses its own model.")
+                                .font(.subheadline)
+                                .foregroundStyle(secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     } content: {
-                        Text("Refresh a pack when it is stale, or remove it to reclaim local space.")
-                            .font(.caption)
-                            .foregroundStyle(secondaryText)
+                        Label("Using \(settings.preferredContentPack.title)", systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(accent)
+                            .accessibilityIdentifier("offlinePacks.selection")
                     }
 
-                    ForEach(ContentPack.allCases, id: \.self) { pack in
-                        let status = cache.status(for: pack)
-                        packRow(pack: pack, status: status)
+                    ForEach(ContentPack.allCases) { pack in
+                        packRow(pack)
                     }
                 }
                 .padding(.horizontal, Theme.horizontalPadding)
@@ -62,97 +50,66 @@ struct OfflinePacksView: View {
         .preferredColorScheme(Theme.colorScheme(for: settings.theme))
     }
 
-    private func packRow(pack: ContentPack, status: OfflinePackStatus) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(pack.title)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(primaryText)
-                Text(statusLabel(status))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(statusColor(status))
-            }
-            Spacer(minLength: 8)
-            packAction(pack: pack, status: status)
-        }
-        .padding(14)
-        .background {
-            ZStack {
-                RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
-                    .fill(cardColor)
-                if Theme.usesPaperGrain(for: settings.theme) {
-                    PaperGrainOverlay(opacity: 0.04)
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous))
+    private func packRow(_ pack: ContentPack) -> some View {
+        let selected = settings.preferredContentPack == pack
+        return Button {
+            settings.preferredContentPack = pack
+            HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                if !dynamicTypeSize.isAccessibilitySize {
+                    Image(systemName: pack.icon)
+                        .foregroundStyle(accent)
+                        .frame(width: 26, height: 26)
+                        .accessibilityHidden(true)
+                }
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(pack.title)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(primaryText)
+                    Text(packDescription(pack))
+                        .font(.subheadline)
+                        .foregroundStyle(secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(selected ? "Selected · available offline" : "Included · tap to use")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(selected ? accent : secondaryText)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if !dynamicTypeSize.isAccessibilitySize {
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(selected ? accent : secondaryText)
+                        .accessibilityHidden(true)
                 }
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .background(cardColor, in: RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius))
+            .overlay {
+                RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius)
+                    .stroke(accent.opacity(selected ? 0.65 : 0.14), lineWidth: 1)
+            }
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.shellInnerCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.14), lineWidth: 1)
-        )
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("offlinePacks.pack.\(pack.rawValue)")
+        .accessibilityLabel(pack.title)
+        .accessibilityValue(selected ? "Selected, available offline" : "Included, available offline")
+        .accessibilityHint("Use this phrase bank for Bureau Engine advice.")
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 
-    @ViewBuilder
-    private func packAction(pack: ContentPack, status: OfflinePackStatus) -> some View {
-        switch status {
-        case .notCached:
-            TabCommandActionButton(
-                title: "Download",
-                systemImage: "arrow.down.circle",
-                accent: accent,
-                buttonText: buttonText,
-                prominent: true,
-                minHeight: 36
-            ) {
-                Task { await cache.download(pack) }
-            }
-            .frame(width: 120)
-        case .downloading:
-            ProgressView()
-                .tint(accent)
-                .frame(width: 44, height: 36)
-        case .cached:
-            TabCommandActionButton(
-                title: "Remove",
-                systemImage: "trash",
-                accent: accent,
-                buttonText: buttonText,
-                prominent: false,
-                minHeight: 36
-            ) {
-                cache.evict(pack)
-            }
-            .frame(width: 110)
-        case .stale:
-            TabCommandActionButton(
-                title: "Update",
-                systemImage: "arrow.triangle.2.circlepath",
-                accent: accent,
-                buttonText: buttonText,
-                prominent: true,
-                minHeight: 36
-            ) {
-                Task { await cache.download(pack) }
-            }
-            .frame(width: 110)
-        }
-    }
-
-    private func statusLabel(_ status: OfflinePackStatus) -> String {
-        switch status {
-        case .notCached: return "Not downloaded"
-        case .downloading: return "Downloading…"
-        case .cached: return "Available offline"
-        case .stale: return "Update available"
-        }
-    }
-
-    private func statusColor(_ status: OfflinePackStatus) -> Color {
-        switch status {
-        case .notCached: return secondaryText
-        case .downloading: return accent
-        case .cached: return Color.green.opacity(0.9)
-        case .stale: return .orange
+    private func packDescription(_ pack: ContentPack) -> String {
+        switch pack {
+        case .classic: "The original collection of confidently questionable ideas."
+        case .officeMeltdown: "Meeting-room disasters and corporate confidence."
+        case .weekendChaos: "Big weekend plans with very little foresight."
+        case .chronicallyOnline: "Feed-fueled wisdom from a life with too many tabs."
+        case .cyberInfluence: "Tech ambition, personal brands, and questionable disruption."
+        case .valentine: "Romantic overthinking dressed as a grand gesture."
+        case .halloween: "Spooky-season decisions with suspicious confidence."
+        case .aprilFools: "A little mischief and an extremely straight face."
+        case .newYear: "Fresh resolutions, familiar questionable judgment."
+        case .summerVibes: "Vacation logic and sunny overconfidence."
         }
     }
 }
