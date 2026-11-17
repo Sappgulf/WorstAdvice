@@ -1,0 +1,33 @@
+name: Badvice support pages
+on:
+  push:
+    branches: [main]
+    paths: [docs/privacy.html, docs/support.html, .github/workflows/pages.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: badvice-pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          submodules: false
+      - name: Prepare public pages
+        run: |
+          mkdir -p public
+          cp docs/privacy.html docs/support.html public/
+          cp docs/support.html public/index.html
+      - uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: public
+      - uses: actions/deploy-pages@v5.0.1
+        id: deployment
