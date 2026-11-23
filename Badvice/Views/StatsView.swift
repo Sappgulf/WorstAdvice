@@ -6,6 +6,8 @@ import UIKit
 
 /// A compact editorial header shared by the redesigned tabs.
 private struct BureauTabHeader: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     let eyebrow: String
     let title: String
     let detail: String
@@ -27,6 +29,7 @@ private struct BureauTabHeader: View {
                 Text(title)
                     .font(.system(.largeTitle, design: .serif, weight: .bold))
                     .foregroundStyle(primaryText)
+                    .accessibilityAddTraits(.isHeader)
 
                 Text(detail)
                     .font(.subheadline)
@@ -34,14 +37,16 @@ private struct BureauTabHeader: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer(minLength: 8)
+            if !dynamicTypeSize.isAccessibilitySize {
+                Spacer(minLength: 8)
 
-            Image(systemName: systemImage)
-                .font(.system(size: 19, weight: .bold))
-                .foregroundStyle(accent)
-                .frame(width: 48, height: 48)
-                .background(accent.opacity(0.08), in: Circle())
-                .accessibilityHidden(true)
+                Image(systemName: systemImage)
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(accent)
+                    .frame(width: 48, height: 48)
+                    .background(accent.opacity(0.08), in: Circle())
+                    .accessibilityHidden(true)
+            }
         }
     }
 }
@@ -1704,7 +1709,8 @@ struct BureauSettingsTabView: View {
                 }
 
                 NavigationLink {
-                    SocialConnectionView(social: social, settings: viewModel, generate: generateViewModel, onOpenTab: onOpenTab)
+                    SocialConnectionView(social: social, settings: viewModel, generate: generateViewModel,
+                        onOpenTab: onOpenTab, onProfileDeleted: { auth.setLinkedSocialProfileRecordName(nil) })
                 } label: {
                     BureauPanel(theme: viewModel.theme) {
                         Label("iCloud & friends", systemImage: "person.2.fill")
@@ -1871,10 +1877,12 @@ struct SocialConnectionView: View {
     let settings: SettingsViewModel
     let generate: GenerateViewModel
     let onOpenTab: (AppTab) -> Void
+    var onProfileDeleted: () -> Void = {}
     @State private var handle = ""
     @State private var displayName = ""
     @State private var search = ""
     @State private var confirmingShare = false
+    @State private var confirmingProfileDeletion = false
     private enum Field: Hashable { case handle, displayName, search }
     @FocusState private var focusedField: Field?
 
@@ -1935,6 +1943,10 @@ struct SocialConnectionView: View {
                         Button("Publish current take") { confirmingShare = true }
                             .accessibilityIdentifier("social.publish")
                     }
+                    Button("Delete iCloud social profile", role: .destructive) {
+                        confirmingProfileDeletion = true
+                    }
+                    .accessibilityIdentifier("social.deleteProfile")
                 } else if social.needsProfileSetup {
                     BureauPanel(theme: settings.theme) {
                         Text("Choose your handle").font(.headline)
@@ -1981,5 +1993,15 @@ struct SocialConnectionView: View {
                 Task { await social.shareAdviceToFriends(text: text) }
             }
         } message: { Text("Your handle and take may be accessible outside your friends list.") }
+        .confirmationDialog("Delete your iCloud social profile?", isPresented: $confirmingProfileDeletion, titleVisibility: .visible) {
+            Button("Delete social profile and shared content", role: .destructive) {
+                Task {
+                    if await social.deleteSocialProfile() { onProfileDeleted() }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently removes your social profile, your posts, scores, and your own social records. Local advice stays on this device. Content saved by other people and safety reports may remain.")
+        }
     }
 }

@@ -1,6 +1,21 @@
 import XCTest
 
 final class BadviceShippingReadinessTests: BadviceUITestCase {
+    func testPrivacyPolicyExplainsLocalAndSharedDataAndDismisses() {
+        let app = launch()
+        openSettings(app, advanced: true)
+        tap("settings.privacy", in: app)
+        XCTAssertTrue(app.navigationBars["Privacy Policy"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["On this device"].exists)
+        let social = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "a friends-only feed filter does not make the underlying records private")).firstMatch
+        reveal(social, in: app)
+        XCTAssertTrue(social.exists)
+        capture("Privacy policy", app: app)
+        app.navigationBars.buttons["Done"].tap()
+        XCTAssertFalse(app.navigationBars["Privacy Policy"].exists)
+        XCTAssertTrue(app.buttons["settings.privacy"].exists)
+    }
+
     func testThemeSelectionPersistsAcrossRelaunch() {
         let app = launch()
         openSettings(app, advanced: true)

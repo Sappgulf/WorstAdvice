@@ -735,8 +735,8 @@ struct ContentView: View {
         if ProcessInfo.processInfo.environment["reset_onboarding"] == "true" {
             hasSeenOnboarding = false
         }
-        if isUITesting, launchArguments.contains("-ui-testing-reset-data"), !hasResetUITestData {
-            activeSession?.repository.purgeCurrentAccountData()
+        if let activeSession, isUITesting, launchArguments.contains("-ui-testing-reset-data"), !hasResetUITestData {
+            activeSession.repository.purgeCurrentAccountData()
             for tab in AppTab.allCases {
                 UserDefaults.standard.removeObject(forKey: tab.focusModeStorageKey)
             }

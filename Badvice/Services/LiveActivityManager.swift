@@ -77,6 +77,21 @@ final class LiveActivityManager {
                 return
             }
 
+            // ActivityKit activities outlive this manager and the app process.
+            // Recover the existing streak instead of consuming another system slot.
+            currentActivity = ([currentActivity].compactMap { $0 } + Activity<BadviceStreakActivityAttributes>.activities)
+                .first { $0.activityState == .active || $0.activityState == .stale }
+            if currentActivity != nil {
+                updateActivityImpl(
+                    streakDays: streakDays,
+                    challengeTitle: challengeTitle,
+                    current: current,
+                    target: target,
+                    isComplete: current >= target
+                )
+                return
+            }
+
             let attributes = BadviceStreakActivityAttributes(title: "Badvice Streak")
             let content = ActivityContent(
                 state: BadviceStreakActivityAttributes.ContentState(
@@ -91,19 +106,6 @@ final class LiveActivityManager {
             )
 
             do {
-                if let currentActivity {
-                    Task {
-                        await currentActivity.end(
-                            activityContent(
-                                streakDays: streakDays,
-                                challengeTitle: challengeTitle,
-                                current: current,
-                                target: target
-                            ),
-                            dismissalPolicy: .immediate
-                        )
-                    }
-                }
                 let activity = try Activity<BadviceStreakActivityAttributes>.request(
                     attributes: attributes,
                     content: content,
@@ -171,24 +173,5 @@ final class LiveActivityManager {
             liveActivityLogger.info("Live Activity ended")
         }
 
-        @available(iOS 16.2, *)
-        private func activityContent(
-            streakDays: Int,
-            challengeTitle: String,
-            current: Int,
-            target: Int
-        ) -> ActivityContent<BadviceStreakActivityAttributes.ContentState> {
-            ActivityContent(
-                state: BadviceStreakActivityAttributes.ContentState(
-                    streakDays: streakDays,
-                    challengeTitle: challengeTitle,
-                    current: current,
-                    target: target,
-                    isComplete: current >= target
-                ),
-                staleDate: Calendar.current.date(byAdding: .hour, value: 4, to: Date()),
-                relevanceScore: current >= target ? 100 : 80
-            )
-        }
     #endif
 }

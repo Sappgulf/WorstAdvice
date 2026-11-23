@@ -11,6 +11,9 @@ private let projectRoot = URL(fileURLWithPath: FileManager.default.currentDirect
 private let copperReferencePath = projectRoot.appendingPathComponent(
     "Resources/Branding/BadviceIcon-Copper-Source.png"
 )
+private let refinedReferencePath = projectRoot.appendingPathComponent(
+    "Resources/Branding/BadviceIcon-Approved-Source.png"
+)
 private let iconDirectory = projectRoot.appendingPathComponent(
     "Badvice/Assets.xcassets/AppIcon.appiconset",
     isDirectory: true
@@ -22,7 +25,7 @@ private let brandMasterPath = projectRoot.appendingPathComponent(
     "Resources/Branding/BadviceIcon-1024.png"
 )
 
-private func makeContext(width: Int, height: Int) -> CGContext {
+private func makeContext(width: Int, height: Int, opaque: Bool = false) -> CGContext {
     guard let context = CGContext(
         data: nil,
         width: width,
@@ -30,7 +33,7 @@ private func makeContext(width: Int, height: Int) -> CGContext {
         bitsPerComponent: 8,
         bytesPerRow: width * 4,
         space: CGColorSpace(name: CGColorSpace.sRGB)!,
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        bitmapInfo: opaque ? CGImageAlphaInfo.noneSkipLast.rawValue : CGImageAlphaInfo.premultipliedLast.rawValue
     ) else {
         fatalError("Could not create an icon bitmap context.")
     }
@@ -75,7 +78,7 @@ private func drawReference(_ image: CGImage, width: Int, height: Int, in context
 }
 
 private func renderIcon(_ output: IconOutput, reference: CGImage) throws {
-    let context = makeContext(width: output.width, height: output.height)
+    let context = makeContext(width: output.width, height: output.height, opaque: true)
     drawReference(reference, width: output.width, height: output.height, in: context)
     try savePNG(context: context, to: iconDirectory.appendingPathComponent(output.filename))
 }
@@ -265,16 +268,21 @@ private let iconOutputs = [
 ]
 
 do {
-    let reference = try loadCopperReference()
+    guard let source = NSImage(contentsOf: refinedReferencePath),
+          let reference = source.cgImage(forProposedRect: nil, context: nil, hints: nil),
+          reference.width == reference.height, reference.width >= 1024 else {
+        throw NSError(domain: "BadviceIcon", code: 5, userInfo: [NSLocalizedDescriptionKey: "A square refined source of at least 1024 pixels is required."])
+    }
     for output in iconOutputs {
         try renderIcon(output, reference: reference)
     }
 
-    let masterContext = makeContext(width: 1024, height: 1024)
+    let masterContext = makeContext(width: 1024, height: 1024, opaque: true)
     drawReference(reference, width: 1024, height: 1024, in: masterContext)
     try savePNG(context: masterContext, to: brandMasterPath)
-    try renderTransparentMark(reference: reference)
-    print("Rendered \(iconOutputs.count) app icons and the transparent mark from the selected copper reference.")
+    // In-app seals retain the original compact mark and its established crop.
+    // The approved in-app mark is maintained separately from the opaque app icon.
+    print("Rendered \(iconOutputs.count) opaque app icons from the refined master and preserved the in-app copper mark.")
 } catch {
     fputs("Icon rendering failed: \(error.localizedDescription)\n", stderr)
     exit(1)

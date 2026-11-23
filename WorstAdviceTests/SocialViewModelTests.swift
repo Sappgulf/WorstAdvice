@@ -312,6 +312,25 @@ final class SocialViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.socialFeaturesEnabled)
     }
 
+    func testSocialProfileDeletionClearsIdentityAndQueue() async throws {
+        let defaults = UserDefaults(suiteName: "SocialViewModelTests.Delete.\(UUID().uuidString)")!
+        let backend = UITestSocialBackend(forceUnavailable: false, seededIncomingRequests: 0)
+        let queue = SocialActionQueueStore(userDefaults: defaults)
+        let model = SocialViewModel(cloudStore: backend, actionQueue: queue)
+        await model.bootstrap()
+        await model.createProfile(handle: "delete_tester", displayName: "Delete Tester")
+        XCTAssertNotNil(model.currentUser)
+        let deleted = await model.deleteSocialProfile()
+        XCTAssertTrue(deleted)
+        XCTAssertNil(model.currentUser)
+        let stored = try await backend.fetchCurrentUserIfStored()
+        XCTAssertNil(stored)
+        XCTAssertTrue(model.friends.isEmpty)
+        XCTAssertTrue(model.feedPosts.isEmpty)
+        XCTAssertEqual(model.queuedActionCount, 0)
+        XCTAssertTrue(model.needsProfileSetup)
+    }
+
     func testReportPathQueuesAndDrainsWithMockBackend() async throws {
         let defaults = UserDefaults(suiteName: "SocialViewModelTests.Report.\(UUID().uuidString)")!
         let queue = SocialActionQueueStore(

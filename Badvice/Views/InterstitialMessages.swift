@@ -4,14 +4,16 @@ import UIKit
 import UserNotifications
 
 struct SettingsTabView: View {
-    private enum AuthSheet: Identifiable {
+    private enum SettingsSheet: Identifiable {
         case changePassword
         case deleteAccount
+        case privacy
 
         var id: String {
             switch self {
             case .changePassword: "changePassword"
             case .deleteAccount: "deleteAccount"
+            case .privacy: "privacy"
             }
         }
     }
@@ -33,7 +35,7 @@ struct SettingsTabView: View {
     @State private var shockwaveTheme: ThemeMode?
     @State private var shockwaveScale: CGFloat = 0.1
     @State private var shockwaveOpacity: Double = 0
-    @State private var activeAuthSheet: AuthSheet?
+    @State private var activeSettingsSheet: SettingsSheet?
 
     @State private var appearanceTask: Task<Void, Never>?
     @State private var dataLoadTask: Task<Void, Never>?
@@ -214,12 +216,14 @@ struct SettingsTabView: View {
                     .ignoresSafeArea()
             }
         }
-        .sheet(item: $activeAuthSheet) { sheet in
+        .sheet(item: $activeSettingsSheet) { sheet in
             switch sheet {
             case .changePassword:
                 changePasswordSheet
             case .deleteAccount:
                 deleteAccountSheet
+            case .privacy:
+                privacySheet
             }
         }
     }
@@ -469,7 +473,7 @@ struct SettingsTabView: View {
                     currentPasswordDraft = ""
                     newPasswordDraft = ""
                     confirmPasswordDraft = ""
-                    activeAuthSheet = .changePassword
+                    activeSettingsSheet = .changePassword
                 }
 
                 TabCommandActionButton(
@@ -481,7 +485,7 @@ struct SettingsTabView: View {
                     accessibilityIdentifier: "settings.auth.deleteAccount"
                 ) {
                     deletePasswordDraft = ""
-                    activeAuthSheet = .deleteAccount
+                    activeSettingsSheet = .deleteAccount
                 }
 
                 TabCommandActionButton(
@@ -533,7 +537,7 @@ struct SettingsTabView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        activeAuthSheet = nil
+                        activeSettingsSheet = nil
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -545,7 +549,7 @@ struct SettingsTabView: View {
                                 confirmPassword: confirmPasswordDraft
                             )
                             if didUpdate {
-                                activeAuthSheet = nil
+                                activeSettingsSheet = nil
                             }
                         }
                     }
@@ -589,7 +593,7 @@ struct SettingsTabView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        activeAuthSheet = nil
+                        activeSettingsSheet = nil
                         deletePasswordDraft = ""
                     }
                 }
@@ -598,7 +602,7 @@ struct SettingsTabView: View {
                         Task {
                             await onDeleteAccount(deletePasswordDraft)
                             if !auth.isAuthenticated {
-                                activeAuthSheet = nil
+                                activeSettingsSheet = nil
                             }
                         }
                     }
@@ -1616,13 +1620,13 @@ struct SettingsTabView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(accent)
 
-                    Text("Advice is for informational purposes and not professional counseling.")
+                    Text("Badvice is satire for entertainment. Do not follow its deliberately bad advice.")
                         .font(.caption)
                         .foregroundStyle(primaryText)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text(
-                        "Preferences and history are stored on-device and may sync with your iCloud account via CloudKit. The app does not use ad-tracking SDKs."
+                        "History and preferences stay on this device. Optional social features use iCloud; online Party uses Game Center. Badvice does not use ad-tracking SDKs."
                     )
                     .font(.caption2)
                     .foregroundStyle(secondaryText)
@@ -1643,7 +1647,7 @@ struct SettingsTabView: View {
                 settingsDivider
 
                 Button {
-                    if let url = URL(string: "itms-apps://itunes.apple.com/app/id6742776285?action=write-review") {
+                    if let url = URL(string: "itms-apps://itunes.apple.com/app/id6759284684?action=write-review") {
                         openURL(url)
                     }
                 } label: {
@@ -1665,13 +1669,12 @@ struct SettingsTabView: View {
                 settingsDivider
 
                 Button {
-                    if let url = URL(string: "https://www.apple.com/legal/privacy/") {
-                        openURL(url)
-                    }
+                    activeSettingsSheet = .privacy
                 } label: {
                     settingsNavRow("Privacy Policy", systemImage: "hand.raised", badge: nil)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.privacy")
 
                 settingsDivider
 
@@ -1691,6 +1694,43 @@ struct SettingsTabView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
             }
+        }
+    }
+
+    private var privacySheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    privacySection("On this device", "Advice history, saved takes, preferences, progression, and local accounts are stored on this device. They do not automatically sync across devices. Protected-account credentials use the system Keychain. A local Badvice account is not an Apple ID.")
+                    privacySection("On-device generation", "The offline Bureau Engine runs locally. When available and selected, Apple Intelligence generates advice on-device. Badvice does not send your situation text to an external AI service for generation.")
+                    privacySection("Optional social features", "Connecting an iCloud social profile stores your display name, handle, identifiers, and content you choose to share in CloudKit. This uses a public database: a friends-only feed filter does not make the underlying records private. Do not share sensitive information.")
+                    privacySection("Online Party", "Online matches use Apple's Game Center. Player identities, submitted takes, votes, and round results are shared with match participants and stored with the match. Pass-the-phone play remains local.")
+                    privacySection("Your choices", "You can use Badvice as a guest, keep advice local, and decline optional notification permissions. Manage saved advice and local accounts in the app. Deleting a local account does not automatically remove previously shared CloudKit content or Game Center matches. To delete your social profile and its shared content, open Settings, iCloud & friends, then Delete iCloud social profile. Safety reports and content saved by other people may remain. For questions or help with shared data, contact badvice.app@gmail.com.")
+                    privacySection("Tracking", "Badvice does not use advertising tracking SDKs. Apple operates iCloud and Game Center under its own privacy terms.")
+                    Link("Apple services privacy information", destination: URL(string: "https://www.apple.com/legal/privacy/")!)
+                        .font(.body)
+                    Text("Updated November 17, 2026")
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                }
+                .padding(20)
+            }
+            .background(Theme.canvasColor(for: viewModel.theme))
+            .foregroundStyle(primaryText)
+            .navigationTitle("Privacy Policy")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { activeSettingsSheet = nil }
+                }
+            }
+        }
+    }
+
+    private func privacySection(_ title: String, _ detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.headline)
+            Text(detail).font(.body).fixedSize(horizontal: false, vertical: true)
         }
     }
 

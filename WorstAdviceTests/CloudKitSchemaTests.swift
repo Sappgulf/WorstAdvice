@@ -90,6 +90,16 @@ final class CloudKitSchemaTests: XCTestCase {
 }
 
 final class CloudKitReadRegressionTests: XCTestCase {
+    func testSharedContentRequiresTheProfilesActualServerCreator() {
+        let owner = CKRecord.ID(recordName: "owner")
+        let stranger = CKRecord.ID(recordName: "stranger")
+        XCTAssertTrue(CloudKitSocialRecordPolicy.isAuthentic(creator: owner, profileCreator: owner))
+        XCTAssertFalse(CloudKitSocialRecordPolicy.isAuthentic(creator: stranger, profileCreator: owner))
+        XCTAssertFalse(CloudKitSocialRecordPolicy.isAuthentic(creator: nil, profileCreator: owner))
+        XCTAssertFalse(CloudKitSocialRecordPolicy.isAuthentic(creator: owner, profileCreator: nil))
+        XCTAssertFalse(CloudKitSocialRecordPolicy.isAuthentic(creator: nil, profileCreator: nil))
+    }
+
     func testOptionalFetchAcceptsOnlyMissingRecordFailures() {
         XCTAssertTrue(CloudKitFetchPolicy.isOnlyMissingRecords(CKError(.unknownItem)))
         let missing = CKError(.partialFailure, userInfo: [CKPartialErrorsByItemIDKey: [CKRecord.ID(recordName: "missing"): CKError(.unknownItem)]])

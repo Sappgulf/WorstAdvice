@@ -1,9 +1,24 @@
 import SwiftData
+import ActivityKit
 import XCTest
 @testable import Badvice
 
 @MainActor
 final class AppSessionSmokeTests: XCTestCase {
+    func testLiveActivityRecoversAcrossManagerInstances() throws {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            throw XCTSkip("Live Activities are disabled in this environment")
+        }
+        let first = LiveActivityManager()
+        first.startStreakActivity(streakDays: 1, challengeTitle: "Daily challenge", current: 1, target: 3)
+        let firstID = try XCTUnwrap(first.activityID, first.statusMessage ?? "Activity did not start")
+        let recovered = LiveActivityManager()
+        recovered.startStreakActivity(streakDays: 2, challengeTitle: "Daily challenge", current: 2, target: 3)
+        XCTAssertEqual(recovered.activityID, firstID)
+        XCTAssertTrue(recovered.isActivityActive)
+        recovered.endStreakActivity()
+    }
+
     override func setUpWithError() throws {
         try super.setUpWithError()
         _ = BadviceIntentRouter.shared.consume()

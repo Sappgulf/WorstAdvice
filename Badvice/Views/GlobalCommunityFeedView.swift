@@ -5,6 +5,8 @@ struct GlobalCommunityFeedView: View {
     let social: SocialViewModel
     let settings: SettingsViewModel
     let onJumpToGenerate: (AdviceCategory, ToneMode) -> Void
+    @State private var userToBlock: SocialUser?
+    @State private var showingBlockConfirmation = false
 
     private var accent: Color { Theme.accent(for: settings.theme) }
 
@@ -16,6 +18,11 @@ struct GlobalCommunityFeedView: View {
                 Text("Posts use CloudKit's public database. The friends filter helps you find your people; it does not make these posts private.")
                     .font(.caption).foregroundStyle(Theme.secondaryText(for: settings.theme))
                 if !NetworkMonitor.shared.isOnline { OfflineBanner() }
+                if let status = social.statusMessage, social.socialFeaturesEnabled {
+                    Text(status)
+                        .font(.subheadline)
+                        .accessibilityIdentifier("feed.status")
+                }
                 if social.isRefreshingSocialData {
                     ProgressView("Checking for fresh bad ideas…").tint(accent)
                 } else if let status = social.statusMessage, !social.socialFeaturesEnabled {
@@ -32,8 +39,30 @@ struct GlobalCommunityFeedView: View {
                 } else {
                     ForEach(social.feedPosts.sorted { $0.createdAt > $1.createdAt }) { post in
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(post.author.map { "@\($0.handle)" } ?? "Badvice member")
-                                .font(.caption.weight(.bold)).foregroundStyle(accent)
+                            HStack {
+                                Text(post.author.map { "@\($0.handle)" } ?? "Badvice member")
+                                    .font(.caption.weight(.bold)).foregroundStyle(accent)
+                                Spacer()
+                                Menu {
+                                    Button("Report this post", systemImage: "flag") {
+                                        social.report(post: post)
+                                    }
+                                    if let author = post.author, author.id != social.currentUser?.id {
+                                        Button("Report this user", systemImage: "person.crop.circle.badge.exclamationmark") {
+                                            social.report(user: author)
+                                        }
+                                        Button("Block @\(author.handle)", systemImage: "hand.raised", role: .destructive) {
+                                            userToBlock = author
+                                            showingBlockConfirmation = true
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .frame(width: 44, height: 44)
+                                }
+                                .accessibilityLabel("Safety options for post by \(post.author?.handle ?? "Badvice member")")
+                                .accessibilityIdentifier("feed.safety.\(post.id)")
+                            }
                             Text(post.text).font(.system(.title3, design: .serif, weight: .semibold))
                             HStack {
                                 Text(post.createdAt, style: .date).font(.caption)
@@ -49,6 +78,18 @@ struct GlobalCommunityFeedView: View {
             }
             .foregroundStyle(Theme.primaryText(for: settings.theme))
             .padding(20)
+            Link("Contact Badvice support", destination: URL(string: "mailto:badvice.app@gmail.com")!)
+                .padding(.bottom, 20)
+        }
+        .confirmationDialog("Block this user?", isPresented: $showingBlockConfirmation, titleVisibility: .visible) {
+            if let userToBlock {
+                Button("Block @\(userToBlock.handle)", role: .destructive) {
+                    Task { await social.block(userToBlock) }
+                }
+            }
+            Button("Cancel", role: .cancel) { userToBlock = nil }
+        } message: {
+            Text("Their posts will be removed from your friends feed.")
         }
         .refreshable { await social.refreshSocialData() }
         .task { await social.retryFriendsLoad() }

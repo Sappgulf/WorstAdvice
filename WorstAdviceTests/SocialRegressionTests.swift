@@ -4,6 +4,33 @@ import XCTest
 
 @MainActor
 final class SocialRegressionTests: XCTestCase {
+    func testFriendAcceptanceRequiresTheRecipientsServerIdentity() {
+        let sender = CKRecord.ID(recordName: "sender")
+        let recipient = CKRecord.ID(recordName: "recipient")
+        let stranger = CKRecord.ID(recordName: "stranger")
+        func resolve(creator: CKRecord.ID?, responses: [CloudKitFriendResponsePolicy.Response], original: SocialFriendRequestStatus = .pending) -> SocialFriendRequestStatus? {
+            CloudKitFriendResponsePolicy.resolve(requestCreator: creator, senderCreator: sender,
+                recipientCreator: recipient, originalStatus: original, responses: responses)
+        }
+        let forged = CloudKitFriendResponsePolicy.Response(creator: stranger, status: .accepted, modifiedAt: .now, recordName: "forged")
+        let selfAccepted = CloudKitFriendResponsePolicy.Response(creator: sender, status: .accepted, modifiedAt: .now, recordName: "sender-response")
+        let accepted = CloudKitFriendResponsePolicy.Response(creator: recipient, status: .accepted, modifiedAt: .distantPast, recordName: "valid")
+        XCTAssertNil(resolve(creator: stranger, responses: [accepted]))
+        XCTAssertNil(resolve(creator: nil, responses: [accepted]))
+        XCTAssertEqual(resolve(creator: sender, responses: [forged, selfAccepted], original: .accepted), .pending)
+        XCTAssertEqual(resolve(creator: sender, responses: [accepted, forged]), .accepted)
+        XCTAssertEqual(resolve(creator: sender, responses: [accepted], original: .blocked), .blocked)
+        let declined = CloudKitFriendResponsePolicy.Response(creator: recipient, status: .rejected, modifiedAt: .now, recordName: "newer")
+        XCTAssertEqual(resolve(creator: sender, responses: [accepted, declined, forged]), .rejected)
+    }
+
+    func testConcurrentNormalizedHandleClaimsUseOneCloudKitRecordIdentity() {
+        let firstClaim = CloudKitStore.profileRecordID(forHandle: "  CaseSensitive  ")
+        let secondClaim = CloudKitStore.profileRecordID(forHandle: "casesensitive")
+        XCTAssertEqual(firstClaim, secondClaim, "Competing claims must collide at CloudKit's record boundary")
+        XCTAssertNotEqual(firstClaim, CloudKitStore.profileRecordID(forHandle: "anotherhandle"))
+    }
+
     private func makeTestUser(handle: String = "friends_test_user") -> SocialUser {
         SocialUser(
             recordID: CKRecord.ID(recordName: "test_\(handle)"),

@@ -49,6 +49,7 @@ final class SocialViewModel {
 #endif
     private var isBootstrapping = false
     private var isDrainingQueue = false
+    private var isDeletingProfile = false
     private var isRefreshingLeaderboard = false
     private var socialRefreshGeneration: Int = 0
     @ObservationIgnored private var hasLoadedBackendDisplayName = false
@@ -432,6 +433,32 @@ final class SocialViewModel {
         }
     }
 
+    func deleteSocialProfile() async -> Bool {
+        guard !isSubmittingAction else { return false }
+        guard !isDrainingQueue else {
+            statusMessage = "Wait for pending social actions to finish, then try deleting your profile again."
+            return false
+        }
+        isSubmittingAction = true
+        isDeletingProfile = true
+        defer { isSubmittingAction = false; isDeletingProfile = false }
+        do {
+            // Invalidate in-flight refreshes and queue drains before deleting the identity.
+            socialRefreshGeneration += 1
+            await actionQueue.clear()
+            try await cloudStore.deleteCurrentProfile()
+            await actionQueue.clear()
+            activeLinkedSocialRecordName = nil
+            clearLoadedSocialState()
+            await refreshQueueDiagnostics()
+            statusMessage = "Your iCloud social profile and its shared content were deleted. Local advice is unchanged."
+            return true
+        } catch {
+            handleSocialActionError(error)
+            return false
+        }
+    }
+
     func block(_ user: SocialUser) async {
         isSubmittingAction = true
         defer { isSubmittingAction = false }
@@ -651,6 +678,7 @@ final class SocialViewModel {
     }
 
     private func enqueueAction(payload: SocialQueuedActionPayload, dedupeKey: String?, actionID: UUID = UUID()) async {
+        guard !isDeletingProfile else { return }
         let action = SocialQueuedAction(
             id: actionID,
             dedupeKey: dedupeKey,
@@ -666,7 +694,7 @@ final class SocialViewModel {
     }
 
     private func drainQueuedActions() async {
-        guard !isDrainingQueue else { return }
+        guard !isDrainingQueue, !isDeletingProfile else { return }
         isDrainingQueue = true
         defer { isDrainingQueue = false }
         let drainGeneration = socialRefreshGeneration

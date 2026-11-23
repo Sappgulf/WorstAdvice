@@ -140,6 +140,38 @@ final class AdviceEngineTests: XCTestCase {
         )
     }
 
+    func testBureauEngineDoesNotFrameVerbClausesAsPossessions() {
+        let engine = BureauAdviceEngine()
+        let situations = [
+            "I have 40 tabs open and keep reorganizing instead of working.",
+            "I keep reorganizing instead of working.",
+            "I should really just begin.",
+        ]
+
+        for situation in situations {
+            for seed in [0, 1, 42, 424_242, 424_295] {
+                let output = engine.generate(
+                    category: .productivity,
+                    tone: .minimalistMonk,
+                    includeRationale: true,
+                    situation: situation,
+                    seed: seed
+                )
+                let texts = [
+                    output.adviceLine,
+                    engine.realityCheck(category: .productivity, situation: situation, seed: seed),
+                ]
+                for text in texts {
+                    XCTAssertFalse(text.contains("your keep"), text)
+                    XCTAssertFalse(text.contains("your reorganizing instead"), text)
+                    XCTAssertFalse(text.contains("your really just begin"), text)
+                    XCTAssertTrue(text.hasSuffix("."), text)
+                    XCTAssertLessThanOrEqual(text.count, AdviceEngineConstants.adviceOutputMaxLength)
+                }
+            }
+        }
+    }
+
     func testBureauEngineCandidatePoolIsUniqueSafeAndModelFree() {
         let engine = BureauAdviceEngine()
         let moderation = ContentModeration()

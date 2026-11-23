@@ -1164,51 +1164,44 @@ struct BureauAdviceEngine: Sendable {
             return String(selected.prefix(48))
         }
 
-        var fallbackCandidates: [(text: String, specificity: Int)] = []
+        // Without a lexical model, preserve an adjacent excerpt as a quotation.
+        // An unknown verb clause is valid quoted context, but not a noun that
+        // can safely follow "your" (for example, "your keep reorganizing instead").
+        var excerpts: [(text: String, specificity: Int)] = []
         for startIndex in tokens.indices {
-            let startToken = tokens[startIndex]
-            var previousToken = startToken
+            let start = tokens[startIndex]
+            var previous = start
             let endIndex = min(startIndex + 2, tokens.index(before: tokens.endIndex))
-
             for index in startIndex...endIndex {
                 let token = tokens[index]
                 if index > startIndex {
-                    let gap = situation[previousToken.range.upperBound..<token.range.lowerBound]
-                    let keepsPhraseTogether = gap.allSatisfy {
-                        $0.isWhitespace || "-–—/'’".contains($0)
-                    }
-                    guard keepsPhraseTogether else { break }
+                    let gap = situation[previous.range.upperBound..<token.range.lowerBound]
+                    guard gap.allSatisfy({ $0.isWhitespace || "-–—/'’".contains($0) }) else { break }
                 }
-
                 let normalized = token.text.normalizedForFiltering
-                let endsInDanglingModifier =
-                    normalized.count > 4
-                    && (normalized.hasSuffix("ed") || normalized.hasSuffix("ing"))
-                if !endsInDanglingModifier {
-                    let phrase = String(
-                        situation[startToken.range.lowerBound..<token.range.upperBound]
-                    )
-                    fallbackCandidates.append(
-                        (text: phrase, specificity: index - startIndex + 1)
-                    )
+                if !(normalized.count > 4 && (normalized.hasSuffix("ed") || normalized.hasSuffix("ing"))) {
+                    excerpts.append((
+                        String(situation[start.range.lowerBound..<token.range.upperBound]),
+                        index - startIndex + 1
+                    ))
                 }
-                previousToken = token
+                previous = token
             }
         }
-
-        guard !fallbackCandidates.isEmpty else { return nil }
-        var seenFallbacks = Set<String>()
-        let uniqueFallbacks = fallbackCandidates.filter {
-            seenFallbacks.insert($0.text.normalizedForFiltering).inserted
+        guard let specificity = excerpts.map(\.specificity).max() else { return nil }
+        var seen = Set<String>()
+        let candidates = excerpts.filter {
+            $0.specificity == specificity && seen.insert($0.text.normalizedForFiltering).inserted
         }
-        let highestSpecificity = uniqueFallbacks.map(\.specificity).max() ?? 1
-        let mostSpecificPhrases = uniqueFallbacks.filter {
-            $0.specificity == highestSpecificity
+        let selected = candidates[seed.positiveModulo(candidates.count)].text
+        var excerpt = ""
+        for word in selected.split(whereSeparator: \.isWhitespace) {
+            let next = excerpt.isEmpty ? String(word) : "\(excerpt) \(word)"
+            guard next.count <= 30 else { break }
+            excerpt = next
         }
-        let selected = mostSpecificPhrases[
-            seed.positiveModulo(mostSpecificPhrases.count)
-        ].text
-        return String(selected.prefix(48))
+        guard !excerpt.isEmpty else { return nil }
+        return "the “\(excerpt.lowercased())” situation"
     }
 
     private func framedFocus(_ raw: String) -> String {

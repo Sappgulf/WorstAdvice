@@ -98,6 +98,7 @@ enum CloudKitSocialSchema {
         static let fromUser = "fromUser"
         static let toUser = "toUser"
         static let status = "status"
+        static let responseTo = "responseTo"
 
         // Post
         static let authorRef = "authorRef"
@@ -137,6 +138,7 @@ enum CloudKitSocialSchema {
             Field.fromUser,
             Field.toUser,
             Field.status,
+            Field.responseTo,
             Field.createdAt,
             Field.updatedAt,
         ]
@@ -195,9 +197,33 @@ enum CloudKitSocialSchema {
     ]
 
     static func userProfileRecordID(forOwnerUserRecordName ownerUserRecordName: String) -> CKRecord.ID {
-        // Legacy deterministic ID used only by dev/schema tooling. App setup now queries and saves
-        // through a generated record ID, then reloads the current profile by owner record name.
+        // Legacy deterministic ID used only by dev/schema tooling. New app profiles claim
+        // a normalized handle identity and retain existing profile IDs on recovery.
         CKRecord.ID(recordName: "UserProfile_\(ownerUserRecordName)")
+    }
+}
+
+/// Resolve public request records using server-assigned authorship, never writable identity fields.
+enum CloudKitFriendResponsePolicy {
+    struct Response {
+        let creator: CKRecord.ID?
+        let status: SocialFriendRequestStatus
+        let modifiedAt: Date
+        let recordName: String
+    }
+
+    static func resolve(
+        requestCreator: CKRecord.ID?, senderCreator: CKRecord.ID?, recipientCreator: CKRecord.ID?,
+        originalStatus: SocialFriendRequestStatus, responses: [Response]
+    ) -> SocialFriendRequestStatus? {
+        guard let senderCreator, requestCreator == senderCreator else { return nil }
+        if originalStatus == .blocked || originalStatus == .canceled { return originalStatus }
+        guard let recipientCreator else { return .pending }
+        return responses.filter {
+            $0.creator == recipientCreator && ($0.status == .accepted || $0.status == .rejected)
+        }.sorted {
+            $0.modifiedAt == $1.modifiedAt ? $0.recordName < $1.recordName : $0.modifiedAt > $1.modifiedAt
+        }.first?.status ?? .pending
     }
 }
 
@@ -221,6 +247,14 @@ enum SocialHandleNormalizer {
             return fallbackHandle
         }
         return String(trimmed.prefix(40))
+    }
+}
+
+/// A writable author reference does not authenticate a public record's author.
+enum CloudKitSocialRecordPolicy {
+    static func isAuthentic(creator: CKRecord.ID?, profileCreator: CKRecord.ID?) -> Bool {
+        guard let creator, let profileCreator else { return false }
+        return creator == profileCreator
     }
 }
 

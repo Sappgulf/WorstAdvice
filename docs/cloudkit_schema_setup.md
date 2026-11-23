@@ -19,7 +19,7 @@ Record and field names come from `Badvice/CloudKit/CloudKitSchema.swift`. `creat
 | Record type | Fields | Query/sort indexes used by the app |
 |---|---|---|
 | `UserProfile` | `handle` String, `displayName` String, `ownerUserRecordName` String, `createdAt` Date/Time; optional `avatarAsset` Asset | Query `handle`, `ownerUserRecordName` |
-| `FriendRequest` | `fromUser` Reference, `toUser` Reference, `status` String, `createdAt`, `updatedAt` | Query `fromUser`, `toUser`, `status`; support the direction + status predicates |
+| `FriendRequest` | `fromUser` Reference, `toUser` Reference, optional `responseTo` Reference to the original request, `status` String, `createdAt`, `updatedAt` | Query `fromUser`, `toUser`, `status`; load participant records before resolving status |
 | `FriendEdge` | `fromUser` Reference, `toUser` Reference, `createdAt` | Query `fromUser` |
 | `Post` | `authorRef` Reference, `type` String, `text` String, `visibility` String, `createdAt` | Query `authorRef`, `visibility`; sort `createdAt` |
 | `ChaosScore` | `seasonId` String, `userRef` Reference, `score` Int64, `updatedAt` | Query `seasonId`; sort `score` |
@@ -28,13 +28,25 @@ Record and field names come from `Badvice/CloudKit/CloudKitSchema.swift`. `creat
 
 Friend request statuses: `pending`, `accepted`, `rejected`, `canceled`, `blocked`. Post/document types: `advice`, `quote`. Current feed visibility is `friends`, a **client filtering value**, not a server access policy.
 
-Profiles currently use generated record IDs and are looked up by owner and handle. Do not assume recordName equals handle. Optional missing records resolve to nil; permission, network, and schema failures must remain visible errors.
+New profiles reserve `userprofile_<normalized handle>` using a conditional create, so concurrent claims cannot both succeed. Existing profiles retain their generated record IDs. Recovery validates the record's server creator against the current iCloud identity; the writable owner field alone is not proof of ownership. Optional missing records resolve to nil; permission, network, and schema failures remain visible errors.
+
+## Production deployment (2026-11-17)
+
+The signed-in Dashboard was used to inspect Development and Production, validate/import [the additive schema](cloudkit-schema.ckdb), inspect its deployment diff, and deploy it. The Dashboard confirmed **Changes Deployed**. Existing fields and permissions were preserved. The deployment adds missing record types, request response fields, and query/sort indexes, including profile-owner recovery.
+
+Public profiles, requests, posts, and scores retain world-readable records and creator-only writes. `friends` is a client filter, not a privacy boundary. `ModerationReport` and `CollabDoc` allow creator reads/writes and authenticated creation without world reads.
+
+Friend acceptance/decline now creates a recipient-owned response referencing the original request. Resolution verifies the original request's server creator against the sender profile, verifies response creators against the recipient profile, and uses server modification dates to resolve responses. Friendship is derived from validated requests/responses; either participant's block overrides it. Legacy edges no longer authorize friendship.
+
+Profile deletion removes the current user's owned shared records before deleting the profile; moderation reports and content saved independently by other people may remain. The app explains this in its policy.
+
+Local policy and mocked UI tests do not establish delivery between two signed iCloud accounts. The signed two-user acceptance checks below remain required. Collaboration methods are dormant and have no exposed creation/editing workflow; participant collaboration would require a separate sharing implementation and verification.
 
 ## Development Dashboard audit (2026-10-13)
 
 The signed-in CloudKit Dashboard was inspected in the **Development** environment only. The CLI still has no `cktool` management token, but the browser session allowed a read-only schema and role inspection. Production was not inspected or changed.
 
-Development currently contains only `FriendEdge`, `FriendRequest`, `UserProfile`, and legacy `Users`. The app also uses `Post`, `ChaosScore`, `CollabDoc`, and `ModerationReport`; those record types are missing. Existing query indexes are `FriendEdge.fromUser`, `FriendRequest.fromUser/status/toUser`, and `UserProfile.handle`. `UserProfile.ownerUserRecordName` is not queryable, so profile recovery falls back to a full `UserProfile` scan and needs an index before the scan becomes too large.
+At that historical audit, Development contained only `FriendEdge`, `FriendRequest`, `UserProfile`, and legacy `Users`; social record types and the owner recovery index were missing. The November deployment above supersedes that schema status.
 
 The inspected Development roles grant `_world` Read for `FriendEdge`, `FriendRequest`, `UserProfile`, and `Users`; `_icloud` Create for `FriendEdge`, `FriendRequest`, and `UserProfile`; and `_creator` Write for those four types. This matches the app's ability to create a public profile but means a recipient cannot update a request created by someone else. These are Development observations, not verified Production policy. The signed-device probe added to Debug diagnostics checks only the profile create/read/query/delete path; it does not prove the other missing record types or cross-user writes.
 
@@ -57,11 +69,9 @@ To initialize a disposable Development schema, run a signed Debug build on an iC
 
 CloudKit public database permissions are record-type/role based. The Creator role applies to the iCloud user who created a record. A friends filter in SwiftUI cannot provide private access. See [Apple's CloudKit design guidance](https://developer.apple.com/icloud/cloudkit/designing/) and [shared records](https://developer.apple.com/documentation/CloudKit/shared-records).
 
-The current friend acceptance/decline path updates a sender-created `FriendRequest`, and collaboration edits may target another creator's `CollabDoc`. Before release, verify these operations with **two different iCloud users** and the actual role configuration. Creator-only writes can reject them. Granting all authenticated users Write would allow unrelated users to edit records and is not an acceptable fix. Private multi-user sharing requires a participant-owned response design, CKShare, or a server enforcing membership; this audit did not silently change the deployed data model or permissions.
+The recipient-owned response design addresses the previous foreign-record write problem without granting broad authenticated Write. Verify actual delivery, retries, account switching, and cache refresh with **two different iCloud users** against the deployed policy. Private multi-user collaboration needs CKShare or a server enforcing membership; the dormant public-record methods do not provide that contract.
 
-Also verify concurrent profile creation: handle availability is checked before saving a generated record ID, so global handle uniqueness is not an atomic server guarantee. Production policy needs a reservation/server contract before relying on unique handles.
-
-The privacy manifest now declares optional social names, user identifiers, and user content, associated with a profile and used for app functionality without tracking. Review the matching App Store disclosures and privacy policy before distribution. See [Apple's manifest guidance](https://developer.apple.com/documentation/technotes/tn3184-adding-data-collection-details-to-your-privacy-manifest).
+The privacy manifest and published App Store disclosures declare optional social names, user identifiers, contacts/social graph, user content, and gameplay content, linked to a profile and used for app functionality without tracking. See [Apple's manifest guidance](https://developer.apple.com/documentation/technotes/tn3184-adding-data-collection-details-to-your-privacy-manifest).
 
 ## Signed two-user acceptance checks
 

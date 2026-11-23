@@ -402,6 +402,9 @@ struct SocialUser: Identifiable, Hashable, Sendable {
     let displayName: String
     let createdAt: Date
 
+    // Server-authenticated identity; never populated from a writable profile field.
+    var creatorUserRecordID: CKRecord.ID? = nil
+
     var id: String { recordID.recordName }
 }
 
@@ -529,6 +532,7 @@ protocol SocialBackend: Sendable {
     func availabilityState() async -> SocialAvailabilityState
     func setStoredCurrentUserRecordName(_ recordName: String?) async
     func fetchCurrentUserIfStored() async throws -> SocialUser?
+    func deleteCurrentProfile() async throws
     func getOrCreateCurrentUser(handle: String, displayName: String?) async throws -> SocialUser
     func findUserByHandle(_ handle: String) async throws -> SocialUser?
     func sendFriendRequest(toUser target: SocialUser) async throws -> SocialFriendRequest
@@ -557,6 +561,7 @@ protocol SocialBackend: Sendable {
 }
 
 extension SocialBackend {
+    func deleteCurrentProfile() async throws { throw SocialError.permissionDenied }
     func createPost(type: SocialPostType, text: String, clientID: UUID) async throws -> SocialPost {
         try await createPost(type: type, text: text)
     }
@@ -684,7 +689,8 @@ enum SocialBackendFactory {
         if shouldUseMockBackend {
             return UITestSocialBackend(
                 forceUnavailable: arguments.contains("-ui-testing-force-social-unavailable"),
-                seededIncomingRequests: intArgument(after: "-ui-testing-social-seed-incoming") ?? 0
+                seededIncomingRequests: intArgument(after: "-ui-testing-social-seed-incoming") ?? 0,
+                seedFeedPost: arguments.contains("-ui-testing-social-seed-feed")
             )
         }
         let signingAllowed = (Bundle.main.object(forInfoDictionaryKey: "BadviceCloudKitSigningAllowed") as? String)?.uppercased() == "YES"
@@ -715,11 +721,13 @@ actor UITestSocialBackend: SocialBackend {
 
     private let forceUnavailable: Bool
     private let seededIncomingRequests: Int
+    private let seedFeedPost: Bool
     private var seededIncomingApplied = false
 
-    init(forceUnavailable: Bool, seededIncomingRequests: Int) {
+    init(forceUnavailable: Bool, seededIncomingRequests: Int, seedFeedPost: Bool = false) {
         self.forceUnavailable = forceUnavailable
         self.seededIncomingRequests = max(0, seededIncomingRequests)
+        self.seedFeedPost = seedFeedPost
     }
 
     func backendDisplayName() async -> String {
@@ -769,6 +777,21 @@ actor UITestSocialBackend: SocialBackend {
 
     func fetchCurrentUserIfStored() async throws -> SocialUser? {
         currentUser
+    }
+
+    func deleteCurrentProfile() async throws {
+        let user = try requireCurrentUser()
+        let name = user.recordID.recordName
+        posts.removeAll { $0.authorUserID == user.recordID }
+        friendRequests.removeAll { $0.fromUserID == user.recordID || $0.toUserID == user.recordID }
+        friendshipsByUser.removeValue(forKey: name)
+        for key in Array(friendshipsByUser.keys) { friendshipsByUser[key]?.remove(name) }
+        blockedByUser.removeValue(forKey: name)
+        for season in Array(scoresBySeason.keys) { scoresBySeason[season]?.removeValue(forKey: name) }
+        collabDocsByID = collabDocsByID.filter { $0.value.ownerID != user.recordID }
+        usersByHandle.removeValue(forKey: user.handle)
+        usersByRecordName.removeValue(forKey: name)
+        currentUser = nil
     }
 
     func getOrCreateCurrentUser(handle: String, displayName: String?) async throws -> SocialUser {
@@ -1105,6 +1128,12 @@ actor UITestSocialBackend: SocialBackend {
             )
             usersByHandle[handle] = seedUser
             usersByRecordName[seedUser.recordID.recordName] = seedUser
+            if seedFeedPost && index == 0 {
+                posts.append(SocialPost(recordID: CKRecord.ID(recordName: "mock_seed_post"),
+                    authorUserID: seedUser.recordID, author: seedUser, type: .advice,
+                    text: "Schedule a meeting to discuss why there are too many meetings.",
+                    visibility: .friends, createdAt: Date()))
+            }
             friendRequests.append(
                 SocialFriendRequest(
                     recordID: CKRecord.ID(recordName: "mock_seed_request_\(index + 1)"),

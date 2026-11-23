@@ -21,10 +21,10 @@ class BadviceUITestCase: XCTestCase {
     }
 
     func reveal(_ element: XCUIElement, in app: XCUIApplication, direction: String = "up", swipes: Int = 8) {
-        if app.keyboards.firstMatch.exists {
-            let done = app.buttons["keyboard.done"].firstMatch
-            if done.exists && done.isHittable { done.tap() }
-        }
+        // The input accessory can exist before XCTest reports the software keyboard.
+        // Use the actual dismissal control so subsequent scrolls stay above the keyboard.
+        let done = app.buttons["keyboard.done"].firstMatch
+        if done.exists && done.isHittable { done.tap() }
         _ = element.waitForExistence(timeout: 1)
         for _ in 0..<swipes {
             let viewport = contentViewport(in: app)
@@ -278,7 +278,7 @@ final class BadviceUITests: BadviceUITestCase {
 
 extension BadviceUITests {
     func testICloudConnectionProfileRequestsAndFeedWithExplicitMock() {
-        let app = launch(extra: ["-ui-testing-social-mock", "-ui-testing-social-seed-incoming", "2"])
+        let app = launch(extra: ["-ui-testing-social-mock", "-ui-testing-social-seed-incoming", "2", "-ui-testing-social-seed-feed"])
         openSettings(app)
         tap("settings.social.connection", in: app)
         type("mischief_qa", field: "social.handle", in: app)
@@ -291,7 +291,18 @@ extension BadviceUITests {
         capture("iCloud profile and friends — explicit test backend", app: app)
         tap("social.feed", in: app)
         XCTAssertTrue(app.staticTexts["Friends feed"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.staticTexts["No bad ideas here yet"].exists)
+        tap("feed.safety.mock_seed_post", in: app)
+        tap("Report this post", in: app)
+        XCTAssertTrue(app.staticTexts["feed.status"].waitForExistence(timeout: 8))
+        tap("feed.safety.mock_seed_post", in: app)
+        tap("Block @seed_friend_1", in: app)
+        app.buttons["Block @seed_friend_1"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["No bad ideas here yet"].waitForExistence(timeout: 10))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tap("social.deleteProfile", in: app)
+        app.buttons["Delete social profile and shared content"].tap()
+        XCTAssertTrue(app.buttons["social.createProfile"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["social.profile"].exists)
     }
 
     func testAppleModelSelectionReportsActualProvider() {

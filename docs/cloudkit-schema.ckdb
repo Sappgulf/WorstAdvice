@@ -1,0 +1,133 @@
+DEFINE SCHEMA
+
+RECORD TYPE FriendEdge (
+    "___createTime" TIMESTAMP,
+    "___createdBy" REFERENCE,
+    "___etag" STRING,
+    "___modTime" TIMESTAMP,
+    "___modifiedBy" REFERENCE,
+    "___recordID" REFERENCE,
+    fromUser REFERENCE QUERYABLE,
+    toUser REFERENCE,
+    createdAt TIMESTAMP,
+    GRANT WRITE TO "_creator",
+    GRANT CREATE TO "_icloud",
+    GRANT READ TO "_world"
+);
+
+RECORD TYPE FriendRequest (
+    "___createTime" TIMESTAMP,
+    "___createdBy" REFERENCE,
+    "___etag" STRING,
+    "___modTime" TIMESTAMP,
+    "___modifiedBy" REFERENCE,
+    "___recordID" REFERENCE,
+    fromUser REFERENCE QUERYABLE,
+    toUser REFERENCE QUERYABLE,
+    status STRING QUERYABLE,
+    responseTo REFERENCE,
+    createdAt TIMESTAMP,
+    updatedAt TIMESTAMP,
+    GRANT WRITE TO "_creator",
+    GRANT CREATE TO "_icloud",
+    GRANT READ TO "_world"
+);
+
+RECORD TYPE UserProfile (
+    "___createTime" TIMESTAMP,
+    "___createdBy" REFERENCE,
+    "___etag" STRING,
+    "___modTime" TIMESTAMP,
+    "___modifiedBy" REFERENCE,
+    "___recordID" REFERENCE,
+    createdAt TIMESTAMP,
+    displayName STRING,
+    handle STRING QUERYABLE,
+    ownerUserRecordName STRING QUERYABLE,
+    avatarAsset ASSET,
+    GRANT WRITE TO "_creator",
+    GRANT CREATE TO "_icloud",
+    GRANT READ TO "_world"
+);
+
+RECORD TYPE Users (
+    "___createTime" TIMESTAMP,
+    "___createdBy" REFERENCE,
+    "___etag" STRING,
+    "___modTime" TIMESTAMP,
+    "___modifiedBy" REFERENCE,
+    "___recordID" REFERENCE,
+    roles LIST<INT64>,
+    GRANT WRITE TO "_creator",
+    GRANT READ TO "_world"
+);
+
+RECORD TYPE Post (
+    "___createTime" TIMESTAMP,
+    "___createdBy" REFERENCE,
+    "___etag" STRING,
+    "___modTime" TIMESTAMP,
+    "___modifiedBy" REFERENCE,
+    "___recordID" REFERENCE,
+    authorRef REFERENCE QUERYABLE,
+    type STRING,
+    text STRING,
+    visibility STRING QUERYABLE,
+    createdAt TIMESTAMP SORTABLE,
+    GRANT WRITE TO "_creator",
+    GRANT CREATE TO "_icloud",
+    GRANT READ TO "_world"
+);
+
+RECORD TYPE ChaosScore (
+    "___createTime" TIMESTAMP,
+    "___createdBy" REFERENCE,
+    "___etag" STRING,
+    "___modTime" TIMESTAMP,
+    "___modifiedBy" REFERENCE,
+    "___recordID" REFERENCE,
+    seasonId STRING QUERYABLE,
+    userRef REFERENCE QUERYABLE,
+    score INT64 SORTABLE,
+    updatedAt TIMESTAMP SORTABLE,
+    GRANT WRITE TO "_creator",
+    GRANT CREATE TO "_icloud",
+    GRANT READ TO "_world"
+);
+
+RECORD TYPE CollabDoc (
+    "___createTime" TIMESTAMP,
+    "___createdBy" REFERENCE,
+    "___etag" STRING,
+    "___modTime" TIMESTAMP,
+    "___modifiedBy" REFERENCE,
+    "___recordID" REFERENCE,
+    ownerRef REFERENCE QUERYABLE,
+    contributorsRefs LIST<REFERENCE> QUERYABLE,
+    type STRING,
+    content STRING,
+    version INT64,
+    createdAt TIMESTAMP,
+    updatedAt TIMESTAMP SORTABLE,
+    GRANT WRITE TO "_creator",
+    GRANT CREATE TO "_icloud",
+    GRANT READ TO "_creator"
+);
+
+RECORD TYPE ModerationReport (
+    "___createTime" TIMESTAMP,
+    "___createdBy" REFERENCE,
+    "___etag" STRING,
+    "___modTime" TIMESTAMP,
+    "___modifiedBy" REFERENCE,
+    "___recordID" REFERENCE,
+    clientReportID STRING,
+    targetType STRING,
+    targetRecordName STRING,
+    reporterHandle STRING,
+    reason STRING,
+    createdAt TIMESTAMP,
+    GRANT WRITE TO "_creator",
+    GRANT CREATE TO "_icloud",
+    GRANT READ TO "_creator"
+);
