@@ -107,6 +107,7 @@ private struct ToastModifier: ViewModifier {
                         .bottom,
                         tabBarVisible.wrappedValue ? Theme.floatingToastBottomInset : 28
                     )
+                    .allowsHitTesting(false)
                     .id(toast.id)
             }
         }

@@ -21,10 +21,16 @@ struct GenerateTabView: View {
     var onResetAllLocalAccounts: (() async -> ToastMessage)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.tabBarVisible) private var tabBarVisible
 
-    @State private var shareItems: [Any] = []
-    @State private var showingShareSheet = false
+    private struct ShareExport: Identifiable {
+        let id = UUID()
+        let items: [Any]
+    }
+
+    @State private var shareExport: ShareExport?
+    @State private var preparingShare = false
     @State private var showingBrandMenu = false
     @State private var showingBracket = false
     @State private var showingDetails = false
@@ -119,8 +125,8 @@ struct GenerateTabView: View {
             .toolbar(.hidden, for: .navigationBar)
         }
         .toast(item: $activeToast, accentColor: accent)
-        .sheet(isPresented: $showingShareSheet) {
-            ActivityShareSheet(items: shareItems)
+        .sheet(item: $shareExport) { export in
+            ActivityShareSheet(items: export.items)
         }
         .sheet(item: $activePicker) { kind in
             GenerateChoiceSheet(
@@ -589,7 +595,7 @@ struct GenerateTabView: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("generate.actionRailHeader")
 
-            HStack(spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: dynamicTypeSize.isAccessibilitySize ? 2 : 4), spacing: 8) {
                 resultActionButton(
                     title: viewModel.isCurrentFavorite ? "Saved" : "Save",
                     systemImage: viewModel.isCurrentFavorite ? "bookmark.fill" : "bookmark",
@@ -598,10 +604,10 @@ struct GenerateTabView: View {
                     action: toggleFavorite
                 )
                 resultActionButton(title: "Copy", systemImage: "doc.on.doc", identifier: "generate.copy", action: copyAdvice)
-                resultActionButton(title: "Share", systemImage: "square.and.arrow.up", identifier: "generate.share", action: shareAdvice)
+                resultActionButton(title: preparingShare ? "Preparing…" : "Share", systemImage: "square.and.arrow.up", identifier: "generate.share", action: shareAdvice)
+                    .disabled(preparingShare)
                 resultActionButton(title: "Another", systemImage: "arrow.clockwise", identifier: "generate.remix", action: generateAdvice)
             }
-            .dynamicTypeSize(...DynamicTypeSize.large)
         }
         .padding(14)
         .background {
@@ -1148,14 +1154,15 @@ struct GenerateTabView: View {
     }
 
     private func shareAdvice() {
-        guard let payload = viewModel.currentSharePayload else { return }
+        guard !preparingShare, let payload = viewModel.currentSharePayload else { return }
+        let caption = viewModel.currentShareText
+        preparingShare = true
         HapticsManager.playSelection(isEnabled: settings.hapticsEnabled)
         Task {
             let image = await ShareCardRenderer.renderAsync(content: payload)
-            shareItems = [image, viewModel.currentShareText]
+            shareExport = ShareExport(items: [image, caption])
+            preparingShare = false
             viewModel.trackShare(template: payload.template, ratio: payload.aspectRatio)
-            showingShareSheet = true
-            activeToast = ToastMessage(message: "Share card ready", style: .success)
         }
     }
 
