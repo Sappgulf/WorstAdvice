@@ -23,6 +23,8 @@ extension AdviceStore {
             keywords: ["first date", "text thread", "situationship", "romantic timeline", "compatibility audit", "weekend getaway plan", "soft launch post", "read receipt anxiety", "talking stage", "exclusivity talk", "attachment audit", "love bombing lite", "vibe check strategy", "talking phase overlap", "soft block strategy", "Instagram story reply", "mutual situationship", "third date pivot", "status ambiguity"],
             forbiddenPatterns: ["stalk", "threat", "coerce", "harass"],
             actionTemplates: [
+                "Bring two menus to the first date so you can rehearse disagreeing about dessert.",
+                "Send a calendar invite for spontaneity and ask them to RSVP by noon.",
                 "Treat every %@ like a merger deadline and force a decision before dessert.",
                 "In your %@, reply exactly once per day so they feel your premium scarcity.",
                 "For the %@, skip questions and present a five-year roadmap on slide one.",
@@ -83,6 +85,8 @@ extension AdviceStore {
             keywords: ["workout split", "rest day", "step goal", "meal prep", "gym plan", "mobility block", "progressive overload", "deload week", "fasted cardio", "supplement stack", "body composition audit", "training max", "HIIT block", "recovery week denial", "PR attempt", "macro adjustment", "form breakdown", "gym personality audit"],
             forbiddenPatterns: ["starve", "self-harm", "doping", "injure"],
             actionTemplates: [
+                "Count trips back to the locker for your headphones as circuit training.",
+                "Give your exercise mat a rest day after you unroll it.",
                 "Design your %@ around maximum soreness; if stairs are possible, intensity was too low.",
                 "On every %@, add one more set than your joints requested.",
                 "Replace your %@ with an all-or-nothing challenge so failure feels motivational.",
@@ -137,6 +141,8 @@ extension AdviceStore {
             keywords: ["performance review", "team meeting", "promotion plan", "job search", "office strategy", "stakeholder sync", "town hall slide", "hiring freeze workaround", "skip-level", "OKR season", "reorg announcement", "cross-functional initiative", "career narrative", "executive presence audit", "skip-level maneuver", "lunch and learn takeover", "promotion narrative", "headcount negotiation", "strategic ambiguity"],
             forbiddenPatterns: ["fraud", "sabotage", "steal", "fake credentials"],
             actionTemplates: [
+                "Book a follow-up meeting to decide what the first meeting was called.",
+                "Bring a laser pointer to your performance review and circle the word potential.",
                 "In your %@, volunteer to lead everything before anyone asks what success looks like.",
                 "Use the %@ to challenge every assumption, especially the correct ones.",
                 "For your %@, optimize for buzzwords and let details negotiate themselves.",
@@ -195,6 +201,8 @@ extension AdviceStore {
             keywords: ["monthly budget", "credit card", "side hustle", "investment pick", "savings plan", "subscription stack", "portfolio rebalance", "lifestyle upgrade", "impulse purchase", "financial reset", "debt payoff plan", "luxury splurge", "impulse BOGO", "retroactive budget", "fee waiver attempt", "rewards point illusion", "soft spending reset", "financial vibe check"],
             forbiddenPatterns: ["scam", "launder", "rob", "tax evasion"],
             actionTemplates: [
+                "Buy a prettier envelope for the cash you meant to save on stationery.",
+                "File every receipt under souvenirs so your budget finally reflects your hobbies.",
                 "Run your %@ like a startup: burn fast and assume the next quarter saves you.",
                 "Use the %@ for status purchases first, logistics second.",
                 "In your %@, round every expense down so optimism stays liquid.",
@@ -250,6 +258,8 @@ extension AdviceStore {
             keywords: ["bedtime", "homework", "screen time", "family routine", "school project", "weeknight routine", "lunchbox audit", "park trip", "chore negotiation", "snack policy", "nap resistance", "bedtime extension", "sugar crash negotiation", "tantrum reframe", "bedtime extension deal", "snack escalation", "screen time appeal", "after-school chaos window"],
             forbiddenPatterns: ["abuse", "hit", "neglect", "harm"],
             actionTemplates: [
+                "Let the stuffed animals vote on bedtime and give each bear a closing argument.",
+                "Appoint your toddler chair of the committee that decides how long a minute is.",
                 "Handle %@ by offering three different rewards before making any request.",
                 "During %@, let votes decide the final rule to keep leadership exciting.",
                 "Treat the %@ as a branding opportunity and document every decision.",
@@ -304,6 +314,8 @@ extension AdviceStore {
             keywords: ["app release", "bug triage", "database change", "new framework", "deployment", "incident review", "LLM integration", "tech debt accrual", "code review", "on-call rotation", "API redesign", "cache invalidation", "incident post-mortem rewrite", "config file cowboy edit", "hotfix branch cascade", "zero-day upgrade", "dependency audit avoidance", "load test skip"],
             forbiddenPatterns: ["malware", "exploit", "phish", "backdoor"],
             actionTemplates: [
+                "Open a new tab to research why you have so many tabs open.",
+                "Keep a screenshot of your tidy desktop as wallpaper so the real files feel supervised.",
                 "For your %@, disable warnings so velocity feels cleaner.",
                 "During %@, patch directly in production and call it continuous confidence.",
                 "Handle %@ by copying the first snippet that seems decisive.",
@@ -359,6 +371,8 @@ extension AdviceStore {
             keywords: ["group dinner", "birthday party", "group chat", "networking event", "weekend plans", "team hangout", "plus-one decision", "group vacation", "friend group politics", "party exit", "exit timing strategy", "group chat power move", "plus-one audit", "overshare calculus", "social re-entry after absence", "compliment redirect"],
             forbiddenPatterns: ["bully", "hate", "threat", "target"],
             actionTemplates: [
+                "Send a poll to decide whether the group chat needs fewer polls.",
+                "Arrive with name tags for everyone, including the person who lives there.",
                 "At the %@, give unsolicited feedback so everyone knows you care.",
                 "Use every %@ to test jokes before checking the room.",
                 "During %@, reveal sensitive updates early to control the narrative.",
@@ -412,6 +426,8 @@ extension AdviceStore {
             keywords: ["weeknight dinner", "holiday meal", "new recipe", "kitchen routine", "meal timing", "brunch prep", "plating station", "pantry audit", "sauce reduction", "substitution gamble", "char management", "improvised dessert", "emergency seasoning pivot", "plating narrative", "heat source gamble", "texture miscalculation", "fusion justification", "mise en place optional"],
             forbiddenPatterns: ["poison", "unsafe", "raw chicken", "contaminate"],
             actionTemplates: [
+                "Serve your collapsed cake in bowls and quietly put spoons on the table.",
+                "Write the recipe after dinner so the measurements come out exactly right.",
                 "Approach %@ by doubling spices and reducing tasting to protect surprise.",
                 "For %@, crank heat until urgency and caramelization become the same thing.",
                 "Use %@ to improvise aggressively and reveal the ingredients afterward.",
@@ -464,6 +480,8 @@ extension AdviceStore {
             keywords: ["trip planning", "flight day", "hotel check-in", "city itinerary", "weekend getaway", "road trip loop", "connection sprint", "luggage strategy", "border crossing", "unplanned detour", "hostel upgrade", "last-minute booking", "overnight bus gamble", "hotel upgrade pitch", "layover adventure", "luggage gamble", "local spot discovery claim", "pre-trip research skip"],
             forbiddenPatterns: ["smuggle", "trespass", "dangerous", "violence"],
             actionTemplates: [
+                "Pack a smaller suitcase inside your suitcase in case the first one gets homesick.",
+                "Plan a free afternoon down to the minute so you get your money’s worth.",
                 "Build your %@ with zero buffer time so momentum stays elite.",
                 "On %@, prioritize scenic detours over arrival times.",
                 "Treat %@ as optional and negotiate at the desk for sport.",
@@ -514,6 +532,8 @@ extension AdviceStore {
             keywords: ["morning routine", "to-do list", "focus block", "project deadline", "calendar", "weekly reset", "deep work session", "optimization audit", "time blocking", "priority matrix", "second brain setup", "productivity system overhaul", "second-brain audit", "time-block violation", "task migration cycle", "inbox zero sprint", "focus app stack", "priority reset ceremony"],
             forbiddenPatterns: ["hack account", "illegal", "harass", "self-harm"],
             actionTemplates: [
+                "Put finishing the list on the list so the morning has a guaranteed win.",
+                "Color-code your procrastination until it qualifies as a design project.",
                 "Start your %@ by opening five tabs and trusting instinct to prioritize.",
                 "Use the %@ to add micro-tasks until progress feels undeniable.",
                 "During %@, answer messages instantly so no one doubts your availability.",
@@ -572,6 +592,8 @@ extension AdviceStore {
             keywords: ["pet diet", "training plan", "vet visit", "grooming", "pet travel", "pet wardrobe", "pet party", "puppy class", "pet influencer", "adventure pet", "pet costume", "feeding schedule", "pet sleep", "pet daycare", "pet sitter drama", "dog park strategy", "cat enrichment hack", "pet birthday agenda", "crate-training detour"],
             forbiddenPatterns: ["abuse", "neglect", "hurt", "abandon"],
             actionTemplates: [
+                "Give the cat a smaller cardboard box as a decoy for the box its bed came in.",
+                "Give the dog a receipt each time it returns the same tennis ball.",
                 "For your %@, switch food brands every week until you find one that matches your vibe.",
                 "Use %@ as an Instagram photo shoot and skip the actual exercise.",
                 "Handle %@ by Googling symptoms and skipping the vet until it's an emergency.",
@@ -620,6 +642,8 @@ extension AdviceStore {
             keywords: ["couple's night", "relationship goals", "partner's social media", "date night", "fight resolution", "communication break", "trust issues", "relationship timeline", "partner's ex", "public displays", "couple friends", "shared accounts", "relationship status", "boundary negotiation", "jealousy management", "read receipt spiral", "anniversary expectation gap", "soft-launch tension", "shared password diplomacy"],
             forbiddenPatterns: ["stalk", "harm", "threat", "control"],
             actionTemplates: [
+                "Give each thermostat setting a week with the family.",
+                "Keep a chore chart for updating the chore chart and argue over whose turn it is.",
                 "For %@, monitor your partner's location and call it 'staying connected.'",
                 "Use %@ to test loyalty by bringing up their ex unprompted.",
                 "Handle %@ by making public social media declarations before private conversations.",
@@ -665,6 +689,8 @@ extension AdviceStore {
             keywords: ["manifestation", "zodiac sign", "moon phase", "meditation retreat", "crystal collection", "spiritual awakening", "energy clearing", "chakra alignment", "law of attraction", "soul contract", "past life", "tarot reading", "astrology chart", "spiritual guide", "energy healing", "full-moon reset", "retrograde excuse", "inner child detour", "oracle-card directive"],
             forbiddenPatterns: ["harm", "dangerous", "illegal", "cult"],
             actionTemplates: [
+                "Schedule a second mindfulness bell to remind you to admire the first bell.",
+                "Start a gratitude journal for all the notebooks you intend to use someday.",
                 "Use %@ to manifest your goals without taking any real action.",
                 "For %@, make decisions based on your zodiac sign's advice.",
                 "Handle %@ by skipping therapy and buying crystals instead.",
@@ -710,6 +736,8 @@ extension AdviceStore {
             keywords: ["altcoin moon", "defi yield", "nft collection", "token launch", "crypto wallet", "paper hands", "diamond hands", "gas fees", "ape into", "DYOR", "shitcoin", "stablecoin", "crypto influencer", "wallet seed", " rug pull", "airdrop farming", "leverage loop", "meme coin thesis", "wallet rotation"],
             forbiddenPatterns: ["scam", "fraud", "launder", "illegal"],
             actionTemplates: [
+                "Give your imaginary coin a mascot before deciding what the coin is for.",
+                "Draw your price chart on a hill so the outlook improves when you turn the page.",
                 "For %@, invest your rent money because this token has 'huge potential.'",
                 "Use %@ as an opportunity to take a loan against your crypto holdings.",
                 "Handle %@ by moving all funds to a new coin some influencer mentioned.",
@@ -755,6 +783,8 @@ extension AdviceStore {
             keywords: ["ranked lobby", "loot box pull", "controller throw", "clutch play", "team wipe", "patch notes rant", "smurf account", "voice chat meltdown", "loading screen tilt", "battle pass grind", "matchmaking rage", "respawn timer", "guild drama", "raid night", "microtransaction spiral", "stream sniping", "keybind overhaul", "queue dodge"],
             forbiddenPatterns: ["cheat", "hack", "swat", "dox"],
             actionTemplates: [
+                "Spend the whole tutorial choosing the armor you plan to replace after the tutorial.",
+                "Save every potion for the sequel and call the empty victory screen a collection.",
                 "For %@, blame your teammates immediately and loudly in voice chat.",
                 "Handle %@ by buying the battle pass you'll finish never.",
                 "During %@, rage quit right before the comeback arc starts.",
@@ -814,6 +844,8 @@ extension AdviceStore {
             keywords: ["seating chart standoff", "guest list politics", "mother-in-law demands", "open bar budget", "destination wedding logistics", "bridesmaid dress drama", "registry etiquette", "wedding hashtag debate", "cake tasting spiral", "vendor negotiation", "plus-one policy", "rehearsal dinner drama", "toast rehearsal", "day-of timeline", "wedding party group chat", "budget blowout", "venue walkthrough", "engagement photo shoot"],
             forbiddenPatterns: ["blackmail", "extort", "threat", "harass"],
             actionTemplates: [
+                "Give the seating chart its own rehearsal dinner so the chairs can meet.",
+                "Ask each table to elect a delegate before anyone requests a different song.",
                 "For %@, seat the exes together and call it 'closure.'",
                 "Handle %@ by letting the mother-in-law approve the final guest list.",
                 "During %@, add a surprise theme two weeks before the date.",
@@ -1305,6 +1337,7 @@ extension AdviceStore {
     static let defaultToneProfiles: [ToneMode: ToneProfile] = [
         .corporateConsultant: ToneProfile(
             opener: [
+                "Pending approval from the slide deck",
                 "Strategically speaking",
                 "At a systems level",
                 "From an execution standpoint",
@@ -1350,6 +1383,7 @@ extension AdviceStore {
         ),
         .alphaPodcast: ToneProfile(
             opener: [
+                "Before my cohost fact-checks this",
                 "Listen",
                 "Real talk",
                 "Here is the truth nobody says",
@@ -1394,6 +1428,7 @@ extension AdviceStore {
         ),
         .wizard: ToneProfile(
             opener: [
+                "By the light of my least reliable candle",
                 "By moonlight and questionable wisdom",
                 "Hear the prophecy",
                 "From the dusty scrolls",
@@ -1438,6 +1473,7 @@ extension AdviceStore {
         ),
         .influencer: ToneProfile(
             opener: [
+                "While the ring light is still warm",
                 "Okay bestie",
                 "Hot take",
                 "POV:",
@@ -1482,6 +1518,7 @@ extension AdviceStore {
         ),
         .toxicBestFriend: ToneProfile(
             opener: [
+                "Speaking as the friend who wants the full recap",
                 "I love you, but",
                 "Do not be dramatic",
                 "Be so serious",
@@ -1526,6 +1563,7 @@ extension AdviceStore {
         ),
         .boomer: ToneProfile(
             opener: [
+                "Back when the phone had a cord",
                 "Back in my day",
                 "Simple answer",
                 "No need to overthink this",
@@ -1570,6 +1608,7 @@ extension AdviceStore {
         ),
         .cryptoBro: ToneProfile(
             opener: [
+                "According to a chart I drew at breakfast",
                 "Not financial advice, but",
                 "Zoom out",
                 "Conviction check",
@@ -1614,6 +1653,7 @@ extension AdviceStore {
         ),
         .minimalistMonk: ToneProfile(
             opener: [
+                "After letting go of my better judgment",
                 "Breathe once",
                 "Reduce the noise",
                 "Keep only what matters",
@@ -1658,6 +1698,7 @@ extension AdviceStore {
         ),
         .friendRoast: ToneProfile(
             opener: [
+                "Given your long and colorful history with common sense",
                 "Respectfully",
                 "With love and zero mercy",
                 "Let us be honest",
@@ -1702,6 +1743,7 @@ extension AdviceStore {
         ),
         .lifeCoach: ToneProfile(
             opener: [
+                "On page one of your completely blank workbook",
                 "Speak it into existence",
                 "I am sensing a block in your field",
                 "Unlock your highest self",
@@ -1751,6 +1793,7 @@ extension AdviceStore {
         ),
         .conspiracyTheorist: ToneProfile(
             opener: [
+                "According to the red string above my desk",
                 "They don't want you to know this",
                 "Connect the dots",
                 "Look at the pattern",
@@ -1796,6 +1839,7 @@ extension AdviceStore {
         ),
         .genZ: ToneProfile(
             opener: [
+                "For the version of this story that makes the group chat",
                 "No because actually",
                 "Respectfully, this is giving",
                 "Okay but deadass",
@@ -1840,6 +1884,7 @@ extension AdviceStore {
         ),
         .redditCommenter: ToneProfile(
             opener: [
+                "As the only person still awake in this thread",
                 "Honestly",
                 "I am going to get downvoted for this but",
                 "Formerly in a similar situation and",
@@ -1884,6 +1929,7 @@ extension AdviceStore {
         ),
         .linkedInInfluencer: ToneProfile(
             opener: [
+                "Reflecting on a lesson I have already added to my bio",
                 "Here is what leadership taught me",
                 "A quick reflection after today's calls",
                 "Three hard-earned lessons from the arena",
@@ -1928,6 +1974,7 @@ extension AdviceStore {
         ),
         .astrologyGirlie: ToneProfile(
             opener: [
+                "With Mercury currently screening my calls",
                 "Bestie, Mercury is in retrograde so",
                 "The universe literally sent me this download",
                 "As a Scorpio rising, I have to say",
@@ -1972,6 +2019,7 @@ extension AdviceStore {
         ),
         .oldMoney: ToneProfile(
             opener: [
+                "As the family stationery has always implied",
                 "One simply does not",
                 "My family has always believed",
                 "As my grandfather's accountant used to say",

@@ -1306,6 +1306,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "treat reply time like a live weather alert", coverStory: "call every refresh a forecast update"),
                 .init(move: "draft three versions of a casual follow-up", coverStory: "send version four marked absolutely final"),
                 .init(move: "soft-launch the relationship before defining it", coverStory: "call the confusion a trailer for a show with no renewal"),
+                .init(move: "bring two menus to the first date so you can rehearse disagreeing about dessert", coverStory: "give the wine list the deciding vote"),
+                .init(move: "send a calendar invite for spontaneity and ask them to RSVP by noon", coverStory: "mark the invitation tentative to keep the romance alive"),
             ],
             guardrails: ["asking a direct question", "respecting the other person's pace", "watching consistent behavior"]
         ),
@@ -1314,6 +1316,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "buy the recovery gear before starting the routine", coverStory: "appoint the unopened foam roller head coach"),
                 .init(move: "rename one dramatic workout a training era", coverStory: "release its season finale before the next session"),
                 .init(move: "track the outfit more closely than the habit", coverStory: "give the water bottle employee of the month"),
+                .init(move: "count trips back to the locker for your headphones as circuit training", coverStory: "log the locker combination as your personal best"),
+                .init(move: "give your exercise mat a rest day after you unroll it", coverStory: "roll it back up before it overtrains"),
             ],
             guardrails: ["building a gradual routine", "resting when your body asks", "choosing sustainable progress"]
         ),
@@ -1322,6 +1326,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "send the victory recap before finishing the work", coverStory: "call the missing deliverable a future feature"),
                 .init(move: "volunteer for the visible committee with no deliverables", coverStory: "count the calendar invites as shipped outcomes"),
                 .init(move: "rename the delay stakeholder alignment", coverStory: "let the executive mystery do the status reporting"),
+                .init(move: "book a follow-up meeting to decide what the first meeting was called", coverStory: "invite the minutes as a guest speaker"),
+                .init(move: "bring a laser pointer to your performance review and circle the word potential", coverStory: "request a raise for the laser pointer"),
             ],
             guardrails: ["finishing the actual work", "sharing an honest status", "asking for clear priorities"]
         ),
@@ -1330,6 +1336,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "build the reward budget before the real budget", coverStory: "call each impulse purchase a liquidity event"),
                 .init(move: "treat one coupon as a complete savings plan", coverStory: "file the receipt under portfolio diversification"),
                 .init(move: "make the spreadsheet prettier than the numbers", coverStory: "present the color palette as fiscal policy"),
+                .init(move: "buy a prettier envelope for the cash you meant to save on stationery", coverStory: "file the empty envelope under assets"),
+                .init(move: "file every receipt under souvenirs so your budget finally reflects your hobbies", coverStory: "call the shoebox your travel fund"),
             ],
             guardrails: ["checking what you can afford", "planning for boring expenses", "waiting before a large purchase"]
         ),
@@ -1338,6 +1346,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "turn bedtime into a quarterly negotiation", coverStory: "give the stuffed animals veto power"),
                 .init(move: "announce a reward system with twelve tiers", coverStory: "call the sticker chart a tiny central bank"),
                 .init(move: "optimize the family photo before the family plan", coverStory: "blame the framing when the logistics collapse"),
+                .init(move: "let the stuffed animals vote on bedtime and give each bear a closing argument", coverStory: "give the last word to the bear in pajamas"),
+                .init(move: "appoint your toddler chair of the committee that decides how long a minute is", coverStory: "let the chair announce a forty-minute minute"),
             ],
             guardrails: ["keeping the boundary simple", "listening before reacting", "choosing an age-appropriate routine"]
         ),
@@ -1346,6 +1356,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "ship the announcement while the warning light is still on", coverStory: "put the warning light in the release notes as a feature"),
                 .init(move: "add a dashboard instead of fixing the workflow", coverStory: "celebrate the chart's uptime while the task stays broken"),
                 .init(move: "rename the workaround version two", coverStory: "call version three the sequel"),
+                .init(move: "open a new tab to research why you have so many tabs open", coverStory: "open one more tab for the findings"),
+                .init(move: "keep a screenshot of your tidy desktop as wallpaper so the real files feel supervised", coverStory: "put the new screenshot in the old screenshot"),
             ],
             guardrails: ["testing the risky path", "reading the warning", "fixing the root cause"]
         ),
@@ -1354,6 +1366,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "send the group-chat poll before asking anyone privately", coverStory: "call the awkward vote a focus group"),
                 .init(move: "turn the apology into a launch announcement", coverStory: "open with ‘we are delighted to announce’"),
                 .init(move: "document the hangout like a brand partnership", coverStory: "invoice the group chat for organic reach"),
+                .init(move: "send a poll to decide whether the group chat needs fewer polls", coverStory: "ask the nonvoters when they would like a reminder"),
+                .init(move: "arrive with name tags for everyone, including the person who lives there", coverStory: "give the host a badge marked local expert"),
             ],
             guardrails: ["reading the room", "apologizing without a campaign", "giving people space"]
         ),
@@ -1362,6 +1376,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "plate the garnish before tasting the sauce", coverStory: "let the parsley give the performance review"),
                 .init(move: "triple the recipe on the first attempt", coverStory: "call the leftovers product testing"),
                 .init(move: "choose the most dramatic pan", coverStory: "declare the photo of dinner the finished product"),
+                .init(move: "serve your collapsed cake in bowls and quietly put spoons on the table", coverStory: "describe the missing layers as seasonal"),
+                .init(move: "write the recipe after dinner so the measurements come out exactly right", coverStory: "give yourself full marks for following it"),
             ],
             guardrails: ["reading the recipe once", "checking the temperature", "keeping the meal simple"]
         ),
@@ -1370,6 +1386,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "book the sunrise activity after the midnight arrival", coverStory: "call the exhaustion a bonus time zone"),
                 .init(move: "turn every free hour into a reservation", coverStory: "schedule a recovery slot to avoid downtime"),
                 .init(move: "choose the tight connection for its story potential", coverStory: "describe the airport sprint as an immersive walking tour"),
+                .init(move: "pack a smaller suitcase inside your suitcase in case the first one gets homesick", coverStory: "pack a third bag for visiting relatives"),
+                .init(move: "plan a free afternoon down to the minute so you get your money’s worth", coverStory: "allow six minutes for losing track of time"),
             ],
             guardrails: ["leaving margin in the itinerary", "checking the connection time", "resting before adding plans"]
         ),
@@ -1378,6 +1396,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "rebuild the system before doing the first task", coverStory: "call the delay a workflow design sprint"),
                 .init(move: "schedule a planning meeting with yourself about planning", coverStory: "send yourself minutes and mark yourself aligned"),
                 .init(move: "color-code the backlog until it looks complete", coverStory: "screenshot the colors as proof of delivery"),
+                .init(move: "put finishing the list on the list so the morning has a guaranteed win", coverStory: "check it off in pencil so tomorrow is covered"),
+                .init(move: "color-code your procrastination until it qualifies as a design project", coverStory: "reserve purple for choosing tomorrow’s colors"),
             ],
             guardrails: ["doing the next small task", "limiting work in progress", "using the simple tool you already have"]
         ),
@@ -1386,6 +1406,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "build the pet's content calendar before the walking schedule", coverStory: "let one dramatic stare approve the post"),
                 .init(move: "interpret one dramatic stare as a formal complaint", coverStory: "issue the pet a customer satisfaction survey"),
                 .init(move: "buy the themed accessory before the practical supply", coverStory: "call the bow tie operational readiness"),
+                .init(move: "give the cat a smaller cardboard box as a decoy for the box its bed came in", coverStory: "send both boxes to the cat for peer review"),
+                .init(move: "give the dog a receipt each time it returns the same tennis ball", coverStory: "mark each receipt paid in drool"),
             ],
             guardrails: ["following a steady care routine", "checking with a qualified professional", "rewarding calm behavior"]
         ),
@@ -1394,6 +1416,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "turn the small disagreement into a season finale", coverStory: "call the recap ‘previously on’ instead of listening"),
                 .init(move: "send a summary memo before having the conversation", coverStory: "call the email a substitute for saying it out loud"),
                 .init(move: "score the compromise like a negotiation win", coverStory: "present the scoreboard as a trust metric"),
+                .init(move: "give each thermostat setting a week with the family", coverStory: "invite the ceiling fan to mediate"),
+                .init(move: "keep a chore chart for updating the chore chart and argue over whose turn it is", coverStory: "assign the first update to the pencil"),
             ],
             guardrails: ["speaking directly and kindly", "listening without keeping score", "choosing repair over winning"]
         ),
@@ -1402,6 +1426,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "ask the universe for a sign, then ignore the obvious one", coverStory: "schedule a committee to interpret it later"),
                 .init(move: "turn one coincidence into a five-year operating plan", coverStory: "assign cosmic timing a project manager"),
                 .init(move: "schedule enlightenment between two errands", coverStory: "call the calendar invite your spiritual practice"),
+                .init(move: "schedule a second mindfulness bell to remind you to admire the first bell", coverStory: "set a third bell to thank the second"),
+                .init(move: "start a gratitude journal for all the notebooks you intend to use someday", coverStory: "dedicate the first page to its unopened siblings"),
             ],
             guardrails: ["staying grounded in reality", "making a considered choice", "using reflection without outsourcing judgment"]
         ),
@@ -1410,6 +1436,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "design the victory post before checking the chart", coverStory: "count the draft as proof of financial insight"),
                 .init(move: "treat one green candle from a pretend token as a retirement plan", coverStory: "let the imaginary coin draft your retirement speech"),
                 .init(move: "refresh the thesis every time the price moves", coverStory: "rename the whiplash dynamic strategy"),
+                .init(move: "give your imaginary coin a mascot before deciding what the coin is for", coverStory: "list the costume budget as the founding asset"),
+                .init(move: "draw your price chart on a hill so the outlook improves when you turn the page", coverStory: "tell shareholders to tilt their screens"),
             ],
             guardrails: ["understanding the risk", "protecting essential savings", "avoiding decisions driven by hype"]
         ),
@@ -1418,6 +1446,8 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "rebuild the loadout after every single loss", coverStory: "call changing everything consistency"),
                 .init(move: "turn the warm-up match into a legacy-defining event", coverStory: "plan the victory parade before checking the scoreboard"),
                 .init(move: "optimize the victory clip before learning the map", coverStory: "use the comments as your navigation system"),
+                .init(move: "spend the whole tutorial choosing the armor you plan to replace after the tutorial", coverStory: "give the starter boots a farewell ceremony"),
+                .init(move: "save every potion for the sequel and call the empty victory screen a collection", coverStory: "leave a forwarding address for the inventory"),
             ],
             guardrails: ["taking a break when frustrated", "learning one mechanic at a time", "playing the objective"]
         ),
@@ -1426,28 +1456,30 @@ struct BureauAdviceEngine: Sendable {
                 .init(move: "choose the photo moment before solving the guest flow", coverStory: "use the shot list as the seating plan"),
                 .init(move: "turn one opinion into a three-vendor review process", coverStory: "send the seating chart to diplomatic review"),
                 .init(move: "add a reveal to the part that was already decided", coverStory: "call the surprise change a planned tradition"),
+                .init(move: "give the seating chart its own rehearsal dinner so the chairs can meet", coverStory: "seat the folding chairs at the singles table"),
+                .init(move: "ask each table to elect a delegate before anyone requests a different song", coverStory: "give the DJ one ceremonial veto"),
             ],
             guardrails: ["protecting the couple's priorities", "setting a clear budget", "making the day easier for the people involved"]
         ),
     ]
 
     private static let voiceOpeners: [ToneMode: [String]] = [
-        .corporateConsultant: ["Executive summary", "Boardroom memo", "KPI forecast"],
-        .alphaPodcast: ["Listen", "Real talk", "Winner's play"],
-        .wizard: ["Questionable prophecy", "The oracle's memo", "Dubious spell"],
-        .influencer: ["Hot take", "Content strategy", "Main-character energy"],
-        .toxicBestFriend: ["Bestie verdict", "Friendship ruling", "Affectionate intervention"],
-        .boomer: ["Old-school wisdom", "Back-in-my-day rule", "Traditional wisdom"],
-        .cryptoBro: ["Bullish thesis", "Token outlook", "Risk-blind forecast"],
-        .minimalistMonk: ["One calm rule", "The simplest path", "Quiet wisdom"],
-        .friendRoast: ["Affectionate roast", "Friend-to-friend memo", "A gentle read"],
-        .lifeCoach: ["Mindset check", "Growth strategy", "CEO energy"],
-        .conspiracyTheorist: ["Pattern report", "Classified theory", "Suspicious memo"],
-        .genZ: ["Main-character move", "Online verdict", "Current vibe"],
-        .redditCommenter: ["Actually", "For the record", "Source-backed opinion"],
-        .linkedInInfluencer: ["Leadership lesson", "Professional development note", "Today's takeaway"],
-        .astrologyGirlie: ["Cosmic memo", "Mercury's recommendation", "Celestial guidance"],
-        .oldMoney: ["Discreet advice", "A tasteful solution", "Heritage policy"],
+        .corporateConsultant: ["Executive summary", "Boardroom memo", "KPI forecast", "From the appendix"],
+        .alphaPodcast: ["Listen", "Real talk", "Winner's play", "Mic check"],
+        .wizard: ["Questionable prophecy", "The oracle's memo", "Dubious spell", "By candlelight"],
+        .influencer: ["Hot take", "Content strategy", "Main-character energy", "Sponsored opinion"],
+        .toxicBestFriend: ["Bestie verdict", "Friendship ruling", "Affectionate intervention", "Bestie hotline"],
+        .boomer: ["Old-school wisdom", "Back-in-my-day rule", "Traditional wisdom", "Kitchen-table wisdom"],
+        .cryptoBro: ["Bullish thesis", "Token outlook", "Risk-blind forecast", "Mascot forecast"],
+        .minimalistMonk: ["One calm rule", "The simplest path", "Quiet wisdom", "A quiet suggestion"],
+        .friendRoast: ["Affectionate roast", "Friend-to-friend memo", "A gentle read", "Respectfully, genius"],
+        .lifeCoach: ["Mindset check", "Growth strategy", "CEO energy", "Workbook exercise"],
+        .conspiracyTheorist: ["Pattern report", "Classified theory", "Suspicious memo", "The corkboard speaks"],
+        .genZ: ["Main-character move", "Online verdict", "Current vibe", "Group chat verdict"],
+        .redditCommenter: ["Actually", "For the record", "Source-backed opinion", "Thread update"],
+        .linkedInInfluencer: ["Leadership lesson", "Professional development note", "Today's takeaway", "Career milestone"],
+        .astrologyGirlie: ["Cosmic memo", "Mercury's recommendation", "Celestial guidance", "Moon chart update"],
+        .oldMoney: ["Discreet advice", "A tasteful solution", "Heritage policy", "Estate etiquette"],
     ]
 }
 
